@@ -1,6 +1,0 @@
-{
-  "name": "Default",
-  "description": " <a class='el-link el-link--primary' href='https://github.com/iiidevops-templates/default-dev/blob/master/README.md' target='_blank'>簡易網頁說明</a><hr /><ul>  <li><strong>v1.26</strong>:增加定義 SonarQube 與 Checkmarx 黑白名單功能</li>  <li><strong>v1.20</strong>:整合 rancher-cli 與 deployment-wait 至 iiidevops-cli</li>  <li><strong>v1.19</strong>:增加自動計算原始碼行數功能</li></ul>",
-  "arguments": [
-  ]
-}
