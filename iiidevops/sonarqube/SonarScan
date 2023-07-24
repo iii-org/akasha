@@ -1,0 +1,14 @@
+## sonar config // add it when you need some specific sonarqube settings
+#config="sonar.sources=/usr/src/app
+#sonar.tests=/usr/src/app
+#sonar.javascript.lcov.reportPaths=/usr/src/app/coverage/lcov.info
+#sonar.testExecutionReportPaths=/usr/src/app/coverage/reports/test-reporter.xml"
+#echo "$config" >> /usr/src/sonar-project.properties
+
+## install package or complile project
+#cd app;
+#npm install;
+
+## run sonarqube
+#cd ..
+/usr/bin/entrypoint.sh sonar-scanner;

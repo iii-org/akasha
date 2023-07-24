@@ -1,0 +1,38 @@
+# This is comment
+# ----  注意事項 Start ---- #
+# 1. 此黑名單[iiidevops/app.blacklist]僅供 SonarQube 與 CheckMarx 進行檔案或資料夾掃描過濾
+# 1.1 改用白名單，可直接新增 app.whitelist, 設置方式同黑名單。
+# 1.2 [!!]黑、白名單一次只能套用一種，它無法混用。故建議僅留您需要的篩選設定檔，不要同時留有黑白名單2種設定。
+# 
+# 2. 若僅需要對 SonarQube 進行設定，則請於目前路徑下，至sonarqube 資料夾內新增 app.blacklist（黑名單） 或 app.whitelist（白名單）[ex. iiidevops/sonarqube/app.blacklist]。
+# 2.1 若僅需要對 CheckMarx 進行設定，則請於目前路徑下，新增checkmarx 資料夾內新增 app.blacklist（黑名單） 或 app.whitelist（白名單）[ex. iiidevops/sonarqube/app.blacklist]。
+#
+# ----  注意事項 end ---- #
+
+# ----  本設置方式遵循 git ignore pattern ---- #
+## 1. 代表從專案目錄底下名稱為 app 的檔案或資料夾
+#/app
+## 可以使用 relative 型式，意思相同
+#./app
+
+## 2. 一行代表一個檔案或是資料夾，會遞迴搜尋
+#src
+
+## 3. / 結尾代表必須是資料夾，檔案不會被加入搜尋條件
+#log/
+
+## 4. 代表任意資料夾內 .html 結尾的檔案或資料夾
+#*.html
+#*.js
+
+## 5. 代表符合 inXXx.html 五個字的檔案或資料夾
+#in??x.html
+
+## 6. 代表 app0.log app1.log app2.log 的檔案或資料夾，但不包含 app3.log 或是 app012.log
+#app[012].log
+
+## 7. 方框可以表示範圍，如 a 到 z，代表符合任意 debuga.log，但不包含 debug1.log
+#debug[a-z].log
+
+## 8. 開頭 ! 代表會從上面的所有條件中排除 app.js
+#!app.js
