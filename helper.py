@@ -158,10 +158,10 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     model_name = model_name.lower()
     openai_list = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k","text-davinci-003", "text-davinci-002"]
     if model_name in openai_list:
-        model = ChatOpenAI(model=model_name)
+        model = ChatOpenAI(model=model_name, temperature = 0)
         info = "selected openai model.\n"
     else:
-        model = ChatOpenAI(model = "gpt-3.5-turbo",)
+        model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = 0)
         info = "can not find the model, use openai as default.\n"
 
     if verbose:
