@@ -13,5 +13,6 @@ prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	�
 with get_openai_callback() as cb:
 	response = QAIII.get_response(dir_path, prompt)
 	print(response)
-    print(cb.total_tokens, cb.total_cost)
+	print(cb.total_tokens, cb.total_cost)
+	
 ```
