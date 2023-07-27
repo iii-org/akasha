@@ -2,12 +2,13 @@ import os
 from pathlib import Path
 from langchain.chains.question_answering import load_qa_chain
 import helper
-
+import search
 
 
 
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding-ada-002"\
-                 , model:str = "gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2 )->str:
+                 , model:str = "gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
+                 language:str = 'ch' , search_type:str = 'merge' )->str:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -20,9 +21,13 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding
         verbose (bool, optional): show log texts or not. Defaults to False.
         topK (int, optional): search top k number of similar documents. Defaults to 2.
         threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
+        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.
+        search_type (str, optional): search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.
 
     Returns:
-        str: _description_
+        str: llm output str
     """
     logs = []
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
@@ -35,11 +40,13 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding
         logs.append(info)
         return ""
 
-    retriever = db.as_retriever(search_type="similarity_score_threshold",\
-                 search_kwargs={"k":topK,'score_threshold':threshold})
+
+
+    docs = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose, logs)
+    if docs is None:
+        return ""
     
 
-    docs = retriever.get_relevant_documents(prompt)
     chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
     
     if verbose:

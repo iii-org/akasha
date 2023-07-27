@@ -1,0 +1,6 @@
+__pycache__
+.pyc
+.pdf
+.env
+chromadb/
+logs/

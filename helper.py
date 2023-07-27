@@ -35,7 +35,25 @@ def _check_dir_exists(doc_path:str)->bool:
 
 
 def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, sleep_time:int = 60) -> vars:
+    """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
+        It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
 
+    Args:
+        doc_path (str): the path of directory that store all .pdf documents
+        logs (list): list that store logs
+        verbose (bool): print logs or not
+        embeddings (vars): the embeddings used in transfer documents into vector storage, could be openai 
+        tensorflow or huggingface embeddings. 
+        sleep_time (int, optional): sleep time to transfer documents into vector storage, this is for 
+            preventing rate limit exceed when request too much tokens at a time. Defaults to 60.
+
+    Raises:
+        FileNotFoundError: if can not found the doc_path directory, will raise error and return None.
+
+    Returns:
+        vars: return the created chroma client. If documents vector storage already exist, load the vector storage
+        and return.
+    """
     
 
     ### check if doc path exist ###
@@ -155,6 +173,16 @@ def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
 
 
 def handle_model(model_name:str, logs:list, verbose:bool)->vars:
+    """create model client used in document QA, default if openai "gpt-3.5-turbo"
+
+    Args:
+        model_name (str): open ai model name like "gpt-3.5-turbo","text-davinci-003", "text-davinci-002"
+        logs (list): list that store logs
+        verbose (bool): print logs or not
+
+    Returns:
+        vars: model client
+    """
     model_name = model_name.lower()
     openai_list = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k","text-davinci-003", "text-davinci-002"]
     if model_name in openai_list:
@@ -171,7 +199,11 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     return model
 
 def save_logs(logs:list)->None:
-    
+    """save running logs into logs/logs_{date}.txt
+
+    Args:
+        logs (list): list that store logs
+    """
     logs = '\n'.join(logs)
 
     cur_date = datetime.datetime.now().strftime("%Y-%m-%d")
