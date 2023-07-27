@@ -32,6 +32,8 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding
     logs = []
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)
+
+    print("building chroma db...\n")
     db = helper.create_chromadb(doc_path, logs, verbose, embeddings)
 
     if db is None:
