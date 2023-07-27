@@ -6,15 +6,13 @@ from sklearn import svm
 import jieba
 
 
-def _get_relevant_doc_tfidf(db, query:str, k:int):
+def _get_relevant_doc_tfidf(db, query:str, k:int)->list:
     """use Term Frequency-Inverse Document Frequency to find relevant doc from query.
 
     Args:
-        db (_type_): chromadb
-        query (_type_): query str
-        k (int, optional): return top k docs
-        relevany_threshold (float, optional): similarity threshold to select the doc
-        not used in tfidf method. Defaults to 0.2.
+        db (_type_): chroma db
+        query (str): the query str used to search similar documents
+        k (int): for each search type, return first k documents
 
     Returns:
         list: list of Documents
@@ -29,15 +27,15 @@ def _get_relevant_doc_tfidf(db, query:str, k:int):
     return result[:k]
 
 
-def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:float):
+def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:float)->list:
     """use SVM to find relevant doc from query.
 
     Args:
-        db (_type_): chromadb
-        query (_type_): _description_
-        embeddings (_type_): _description_
-        k (int, optional): _description_. Defaults to 2.
-        relevancy_threshold (float, optional): _description_. Defaults to 0.2.
+        db (_type_): chroma db
+        embeddings (_type_): embeddings used to store vector and search documents
+        query (str): the query str used to search similar documents
+        k (int): for each search type, return first k documents
+        relevancy_threshold (float): the similarity score threshold to select documents
 
     Returns:
         _type_: _description_
@@ -81,8 +79,19 @@ def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:
     return top_k_results
 
 
-def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float):
-    retriever = db.as_retriever(search_type="similarity_score_threshold",\
+def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float)->list:
+    """use Chroma.as_retriever().get_relevant_document() to search relevant documents.
+
+    Args:
+        db (_type_): chroma db
+        query (str): the query str used to search similar documents
+        k (int): for each search type, return first k documents
+        relevancy_threshold (float): the similarity score threshold to select documents
+
+    Returns:
+        list: list of selected relevant Documents 
+    """
+    retriever = db.as_retriever(search_type="mmr",\
                 search_kwargs={"k": k,'score_threshold': relevancy_threshold})
     
 
@@ -91,7 +100,21 @@ def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float):
 
 
 
-def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list):
+def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)->list:
+    """merge different search types documents, if total len of documents too large,
+        will not select all documents.
+        use jieba to count length of chinese words, use split space otherwise.
+
+    Args:
+        docs_list (list): list of all docs from selected search types
+        topK (int): for each search type, select topK documents
+        language (str): 'ch' for chinese, otherwise use split space to count words, default is chinese
+        verbose (bool): show log texts or not. Defaults to False.
+        logs (list): list that store logs.
+
+    Returns:
+        list: merged list of Documents
+    """
     res = []
     cur_count = 0
     for i in range(topK):
@@ -135,18 +158,20 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
         and merge them together. 
 
     Args:
-        db (_type_): _description_
-        embeddings (_type_): _description_
-        query (str): _description_
-        topK (int): _description_
-        threshold (float): _description_
-        language (str): _description_
-        search_type (str): _description_
-        verbose (bool): _description_
-        logs (list): _description_
+        db (_type_): chroma db
+        embeddings (_type_): embeddings used to store vector and search documents
+        query (str): the query str used to search similar documents
+        topK (int): for each search type, return first topK documents
+        threshold (float): the similarity score threshold to select documents
+        language (str): default to chinese 'ch', otherwise english, the language of documents and prompt,
+            use to make sure docs won't exceed max token size of llm input.
+        search_type (str): search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.
+        verbose (bool): show log texts or not. Defaults to False.
+        logs (list): list that store logs.
 
     Returns:
-        _type_: _description_
+        list: selected list of similar documents.
     """
 
     if search_type == 'merge':
