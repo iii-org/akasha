@@ -5,11 +5,9 @@ from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.embeddings import HuggingFaceEmbeddings, SentenceTransformerEmbeddings
-from langchain.embeddings import TensorflowHubEmbeddings
 from langchain.chat_models import ChatOpenAI
 
-def _check_dir_exists(doc_path:str)->bool:
+def _check_dir_exists(doc_path:str, embeddings_name:str)->bool:
     """create 'chromadb' directory if not exist, and check if the doc db storage exist
     or not. If exist, exit create_chromadb function. 
 
@@ -27,14 +25,15 @@ def _check_dir_exists(doc_path:str)->bool:
     
 
     suffix_path = doc_path.split('/')[-2]
-    chroma_docs_path = Path('chromadb/'+ suffix_path)
+    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0])
 
     if chroma_docs_path.exists():
         return True
 
 
 
-def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, sleep_time:int = 60) -> vars:
+def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,\
+                    sleep_time:int = 60) -> vars:
     """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
         It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
 
@@ -72,10 +71,10 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, slee
     
     if doc_path[-1] != '/':
         doc_path += '/'
-    storage_directory = 'chromadb/' + doc_path.split('/')[-2]
+    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embeddings_name.split(':')[0]
 
 
-    if _check_dir_exists(doc_path):
+    if _check_dir_exists(doc_path, embeddings_name):
         info = "storage db already exist.\n"
         
 
@@ -134,35 +133,47 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, slee
 
 
 def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
-    embedding_name = embedding_name.lower()
-    openAI_list = ["text-search-ada-doc-001", "text-search-ada-query-001", "text-search-babbage-doc-001"\
-                   "text-search-babbage-query-001", "text-search-curie-doc-001", \
-                    "text-search-curie-query-001", "text-search-davinci-doc-001", \
-                    "text-search-davinci-query-001"]
+    """create model client used in document QA, default if openai "gpt-3.5-turbo"
+        use openai:text-embedding-ada-002 as default.
+    Args:
+        embedding_name (str): embeddings client you want to use.
+            format is (type:name), which is the model type and model name.
+            for example, "openai:text-embedding-ada-002", "huggingface:all-MiniLM-L6-v2".
+        logs (list): list that store logs
+        verbose (bool): print logs or not
 
-    if embedding_name in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
-        embeddings = OpenAIEmbeddings()
-        info = "selected openai embeddings.\n"
-
-    elif embedding_name in openAI_list:
-        embeddings = OpenAIEmbeddings(model=embedding_name)
-        info = "selected openai embeddings.\n"
+    Returns:
+        vars: embeddings client
+    """
+    sep = embedding_name.split(':')
+    if len(sep) != 2:
+        ### if the format type not equal to type:name ###
+        embedding_type = sep[0].lower()
+        embedding_name = ''
+    else:
+        embedding_type = sep[0].lower()
+        embedding_name = sep[1]
     
-    elif embedding_name in ["huggingface" , "huggingfaceembeddings"]:
-        embeddings = HuggingFaceEmbeddings()
+
+    if embedding_type in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
+        embeddings = OpenAIEmbeddings(model = embedding_name)
+        info = "selected openai embeddings.\n"
+
+    
+    elif embedding_type in ["huggingface" , "huggingfaceembeddings","transformers", "transformer", "hf"]:
+        from langchain.embeddings import HuggingFaceEmbeddings, SentenceTransformerEmbeddings
+        embeddings = HuggingFaceEmbeddings(model_name = embedding_name)
         info = "selected hugging face embeddings.\n"
 
-    elif embedding_name in ["sentencetransformer" , "transformer", "transformers", "sentencetransformerembeddings"]:
-        embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        info = "selected sentence transformer embeddings.\n"
 
-    elif embedding_name in ["tf", "tensorflow", "tensorflowhub", "tensorflowhubembeddings", "tensorflowembeddings"]:
+    elif embedding_type in ["tf", "tensorflow", "tensorflowhub", "tensorflowhubembeddings", "tensorflowembeddings"]:
+        from langchain.embeddings import TensorflowHubEmbeddings
         embeddings = TensorflowHubEmbeddings()
         info = "selected tensorflow embeddings.\n"
 
     else:
         embeddings = OpenAIEmbeddings()
-        info = "can not find the embedding, use openai as default.\n"
+        info = "can not find the embeddings, use openai as default.\n"
     
     if verbose:
         print(info)
@@ -187,10 +198,43 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     openai_list = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k","text-davinci-003", "text-davinci-002"]
     if model_name in openai_list:
         model = ChatOpenAI(model=model_name, temperature = 0)
-        info = "selected openai model.\n"
+        info = f"selected openai model {model_name}.\n"
+        
+    elif model_name in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]:
+        from langchain.llms import LlamaCpp
+        from langchain import PromptTemplate, LLMChain
+        from langchain.callbacks.manager import CallbackManager
+        from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+        
+
+        # Callbacks support token-wise streaming
+        callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
+        # Verbose is required to pass to the callback manager
+
+        if model_name in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
+            model = LlamaCpp(
+                model_path="llama/llama-2-7b-ggml/llama-2-7b-chat.ggmlv3.q4_0.bin",
+                #input={"temperature": 0.75, "max_length": 2000, "top_p": 1},
+                callback_manager=callback_manager,
+                verbose=True,
+            )
+            info = "selected llama cpu model\n"
+
+        else:
+            n_gpu_layers = 40
+            n_batch = 512
+
+            model = LlamaCpp(
+                model_path=".llama/llama-2-7b-ggml/llama-2-7b-chat.ggmlv3.q4_0.bin",
+                n_gpu_layers=n_gpu_layers,
+                n_batch=n_batch,
+                callback_manager=callback_manager,
+                verbose=True,
+            )
+            info = "selected llama gpu model\n"
     else:
         model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = 0)
-        info = "can not find the model, use openai as default.\n"
+        info = f"can not find the model {model_name}, use openai as default.\n"
 
     if verbose:
         print(info)

@@ -3,10 +3,10 @@ from pathlib import Path
 from langchain.chains.question_answering import load_qa_chain
 import helper
 import search
+import datetime
 
 
-
-def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding-ada-002"\
+def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002"\
                  , model:str = "gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge' )->str:
     """input the documents directory path and question, will first store the documents
@@ -30,11 +30,14 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding
         str: llm output str
     """
     logs = []
+    embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)
+    logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
 
+    
     print("building chroma db...\n")
-    db = helper.create_chromadb(doc_path, logs, verbose, embeddings)
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name)
 
     if db is None:
         info = "document path not exist\n"
@@ -58,10 +61,11 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "text-embedding
     res = chain.run(input_documents=docs, question=prompt)
     response = res.split("Finished chain.")
 
+
     if verbose:
         print(response)
     logs.append("\n\nresponse:\n\n"+ response[-1])
-
+    
     helper.save_logs(logs)
     return response[-1]
 
