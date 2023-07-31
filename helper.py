@@ -1,5 +1,6 @@
 import time
 import datetime
+
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
@@ -31,6 +32,29 @@ def _check_dir_exists(doc_path:str, embeddings_name:str)->bool:
         return True
 
 
+
+
+def _separate_name(name):
+    
+    sep = name.split(':')
+    if len(sep) != 2:
+        ### if the format type not equal to type:name ###
+        res_type = sep[0].lower()
+        res_name = ''
+    else:
+        res_type = sep[0].lower()
+        res_name = sep[1]
+
+    return res_type, res_name
+
+def _download_llama():
+    import subprocess
+    command = "git clone --recursive -j8 https://github.com/abetlen/llama-cpp-python.git"
+    subprocess.run(command, shell=True)
+    subprocess.run("set FORCE_CMAKE=1", shell=True)
+    subprocess.run("cd llama-cpp-python", shell=True)
+    subprocess.run("python setup.py clean", shell=True)
+    subprocess.run("python setup.py install", shell=True)
 
 def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,\
                     sleep_time:int = 60) -> vars:
@@ -145,15 +169,8 @@ def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
     Returns:
         vars: embeddings client
     """
-    sep = embedding_name.split(':')
-    if len(sep) != 2:
-        ### if the format type not equal to type:name ###
-        embedding_type = sep[0].lower()
-        embedding_name = ''
-    else:
-        embedding_type = sep[0].lower()
-        embedding_name = sep[1]
     
+    embedding_type, embedding_name = _separate_name(embedding_name)
 
     if embedding_type in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
         embeddings = OpenAIEmbeddings(model = embedding_name)
@@ -194,29 +211,33 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     Returns:
         vars: model client
     """
-    model_name = model_name.lower()
-    openai_list = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k","text-davinci-003", "text-davinci-002"]
-    if model_name in openai_list:
+    model_type, model_name = _separate_name(model_name)
+
+    
+    
+    if model_type in ["openai" , "openaiembeddings"]:
         model = ChatOpenAI(model=model_name, temperature = 0)
         info = f"selected openai model {model_name}.\n"
+
+    elif model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"] and model_name != "":
         
-    elif model_name in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]:
         from langchain.llms import LlamaCpp
         from langchain import PromptTemplate, LLMChain
         from langchain.callbacks.manager import CallbackManager
         from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+        
         
 
         # Callbacks support token-wise streaming
         callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
         # Verbose is required to pass to the callback manager
 
-        if model_name in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
+        if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
             model = LlamaCpp(
-                model_path="llama/llama-2-7b-ggml/llama-2-7b-chat.ggmlv3.q4_0.bin",
-                #input={"temperature": 0.75, "max_length": 2000, "top_p": 1},
-                callback_manager=callback_manager,
-                verbose=True,
+                model_path = model_name,
+                input={"temperature": 0.1, "max_length": 2000, "top_p": 1},
+                callback_manager = callback_manager,
+                verbose = True,
             )
             info = "selected llama cpu model\n"
 
@@ -225,16 +246,29 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
             n_batch = 512
 
             model = LlamaCpp(
-                model_path=".llama/llama-2-7b-ggml/llama-2-7b-chat.ggmlv3.q4_0.bin",
-                n_gpu_layers=n_gpu_layers,
-                n_batch=n_batch,
-                callback_manager=callback_manager,
-                verbose=True,
+                model_path = model_name,
+                n_gpu_layers = n_gpu_layers,
+                n_batch = n_batch,
+                callback_manager = callback_manager,
+                verbose = True,
             )
             info = "selected llama gpu model\n"
+    
+    elif model_type in ["huggingface" , "huggingfacehub","transformers", "transformer", "huggingface-hub", "hf"]:
+        from langchain import HuggingFaceHub
+        from transformers import pipeline
+        from langchain.llms import HuggingFacePipeline
+        pipe = pipeline("text-generation", model=model_name)
+        model = HuggingFacePipeline(pipeline=pipe)
+        #model = HuggingFaceHub(
+        #    repo_id = model_name, model_kwargs={"temperature": 0.1})
+        
+        
+        
+        info = f"selected huggingface model {model_name}.\n"
     else:
         model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = 0)
-        info = f"can not find the model {model_name}, use openai as default.\n"
+        info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
 
     if verbose:
         print(info)
