@@ -258,7 +258,7 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
         from langchain import HuggingFaceHub
         from transformers import pipeline
         from langchain.llms import HuggingFacePipeline
-        pipe = pipeline("text-generation", model=model_name)
+        pipe = pipeline("text-generation", model=model_name, max_new_tokens=2048, temperature=0.1)
         model = HuggingFacePipeline(pipeline=pipe)
         #model = HuggingFaceHub(
         #    repo_id = model_name, model_kwargs={"temperature": 0.1})
