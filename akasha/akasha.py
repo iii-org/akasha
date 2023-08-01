@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 from langchain.chains.question_answering import load_qa_chain
 from langchain.schema import Document
-import helper
-import search
+import akasha.helper as helper
+import akasha.search as search
 import datetime
 
 
@@ -47,9 +47,9 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         return ""
 
 
-
+    
     docs = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose,\
-                            logs, model, compression)
+                     logs, model, compression)
     if docs is None:
         return ""
     

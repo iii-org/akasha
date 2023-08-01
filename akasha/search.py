@@ -157,6 +157,9 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
             includes 'merge', 'mmr', 'svm', 'tfidf'.
         verbose (bool): show log texts or not. Defaults to False.
         logs (list): list that store logs.
+        model (): large language model object
+        compression (bool): if True, using llm to filter out contents in the relevant documents
+            that are not related to the query.    
 
     Returns:
         list: selected list of similar documents.
