@@ -9,7 +9,7 @@ import datetime
 
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002"\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge' )->str:
+                 language:str = 'ch' , search_type:str = 'merge', compression:bool = False )->str:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -38,7 +38,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 
     print("building chroma db...\n")
-    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name)
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, model)
 
     if db is None:
         info = "document path not exist\n"
@@ -48,7 +48,8 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 
 
-    docs = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose, logs)
+    docs = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose,\
+                            logs, model, compression)
     if docs is None:
         return ""
     
@@ -79,7 +80,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002"\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge' )->str:
+                 language:str = 'ch' , search_type:str = 'merge',  compression:bool = False )->str:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -108,7 +109,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
 
 
     print("building chroma db...\n")
-    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name)
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, model)
 
     if db is None:
         info = "document path not exist\n"
@@ -118,7 +119,8 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
 
 
 
-    docs = search.get_docs(db, embeddings, prompt[0], topK, threshold, language, search_type, verbose, logs)
+    docs = search.get_docs(db, embeddings, prompt[0], topK, threshold, language, search_type,\
+                            verbose, logs, model, compression)
     if docs is None:
         return ""
     

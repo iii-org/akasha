@@ -4,3 +4,8 @@ __pycache__
 .env
 chromadb/
 logs/
+model/chinese_alpaca_pro_lora_33b.zip
+.gitignore
+model/llama-2-7b-chat.ggmlv3.q4_0.bin
+model/llama-2-7b-chat.ggmlv3.q8_0.bin
+model/Chinese-Llama-2-7b-ggml-q4.bin

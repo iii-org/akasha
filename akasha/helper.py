@@ -1,6 +1,6 @@
 import time
 import datetime
-
+import os
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
@@ -233,9 +233,9 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
         # Verbose is required to pass to the callback manager
 
         if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
-            model = LlamaCpp(
+            model = LlamaCpp(n_ctx=4096, temperature=0.1,
                 model_path = model_name,
-                input={"temperature": 0.1, "max_length": 2000, "top_p": 1},
+                input={"temperature": 0.1, "max_length": 4096, "top_p": 1},
                 callback_manager = callback_manager,
                 verbose = True,
             )
@@ -245,7 +245,7 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
             n_gpu_layers = 40
             n_batch = 512
 
-            model = LlamaCpp(
+            model = LlamaCpp(n_ctx=4096, temperature=0.1,
                 model_path = model_name,
                 n_gpu_layers = n_gpu_layers,
                 n_batch = n_batch,
@@ -258,7 +258,11 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
         from langchain import HuggingFaceHub
         from transformers import pipeline
         from langchain.llms import HuggingFacePipeline
-        pipe = pipeline("text-generation", model=model_name, max_new_tokens=2048, temperature=0.1)
+        hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        if hf_token is None:
+            pipe = pipeline("text-generation", model=model_name, max_new_tokens=2048)
+        else:
+            pipe = pipeline("text-generation", model=model_name, max_new_tokens=2048, use_auth_token=hf_token)
         model = HuggingFacePipeline(pipeline=pipe)
         #model = HuggingFaceHub(
         #    repo_id = model_name, model_kwargs={"temperature": 0.1})
