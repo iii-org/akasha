@@ -1,6 +1,7 @@
 import time
 import datetime
 import os
+import jieba
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
@@ -233,9 +234,9 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
         # Verbose is required to pass to the callback manager
 
         if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
-            model = LlamaCpp(n_ctx=4096, temperature=0.1,
+            model = LlamaCpp(n_ctx=4096, temperature=0.0,
                 model_path = model_name,
-                input={"temperature": 0.1, "max_length": 4096, "top_p": 1},
+                input={"temperature": 0.0, "max_length": 4096, "top_p": 1},
                 callback_manager = callback_manager,
                 verbose = True,
             )
@@ -245,7 +246,7 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
             n_gpu_layers = 40
             n_batch = 512
 
-            model = LlamaCpp(n_ctx=4096, temperature=0.1,
+            model = LlamaCpp(n_ctx=4096, temperature=0.0,
                 model_path = model_name,
                 n_gpu_layers = n_gpu_layers,
                 n_batch = n_batch,
@@ -253,7 +254,6 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
                 verbose = True,
             )
             info = "selected llama gpu model\n"
-    
     elif model_type in ["huggingface" , "huggingfacehub","transformers", "transformer", "huggingface-hub", "hf"]:
         from langchain import HuggingFaceHub
         from transformers import pipeline
@@ -277,7 +277,7 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     if verbose:
         print(info)
     logs.append(info)
-
+    
     return model
 
 def save_logs(logs:list)->None:
@@ -306,3 +306,21 @@ def save_logs(logs:list)->None:
             file.write(logs + "\n\n")
     
     return
+
+
+
+
+
+def get_doc_length(language, doc):
+    if language=='ch':
+        
+        doc_length = len(list(jieba.cut(doc.page_content)))
+    else:
+        doc_length = len(doc.page_content.split())
+    return doc_length
+
+def get_docs_length(language, docs):
+    docs_length = 0
+    for doc in docs:
+        docs_length += get_doc_length(language, doc)
+    return docs_length

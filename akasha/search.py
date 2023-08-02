@@ -5,8 +5,8 @@ from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
 from typing import Any, List, Optional
 import numpy as np
-from sklearn import svm
-import jieba
+import akasha.helper as helper
+
 
 
 
@@ -115,14 +115,14 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)
             
             
             if language=='ch':
-                words_len = len(list(jieba.cut(docs[i].page_content)))
-                if cur_count + words_len > 1800:
+                words_len = helper.get_doc_length(language, docs[i])
+                if cur_count + words_len > 1700:
                     if verbose:
                         print("words length: ", cur_count)
                     logs.append("words length: " + str(cur_count))
                     return res
             else:
-                words_len = len(docs[i].page_content.split())
+                words_len = helper.get_doc_length(language, docs[i])
                 if cur_count + words_len > 3000:
                     if verbose:
                         print("words length: ", cur_count)
@@ -221,8 +221,61 @@ class mySVMRetriever(BaseRetriever):
         return cls(embeddings=embeddings, index=index, texts=texts, metadata=metadata\
                    ,k=k, relevancy_threshold=relevancy_threshold, **kwargs)
     
-    @classmethod
-    def _get_relevant_documents(
+    
+    
+    def get_relevant_documents(
+        self, query: str
+    ) -> List[Document]:
+        return self._gs(query)
+    
+
+    
+    def _gs(
+        self, query: str
+    ) -> List[Document]:
+        try:
+            from sklearn import svm
+        except ImportError:
+            raise ImportError(
+                "Could not import scikit-learn, please install with `pip install "
+                "scikit-learn`."
+            )
+        
+        query_embeds = np.array(self.embeddings.embed_query(query))
+        x = np.concatenate([query_embeds[None, ...], self.index])
+        y = np.zeros(x.shape[0])
+        y[0] = 1
+
+        clf = svm.LinearSVC(
+            class_weight="balanced", verbose=False, max_iter=10000, tol=1e-6, C=0.1
+        )
+        clf.fit(x, y)
+
+        similarities = clf.decision_function(x)
+        sorted_ix = np.argsort(-similarities)
+
+        # svm.LinearSVC in scikit-learn is non-deterministic.
+        # if a text is the same as a query, there is no guarantee
+        # the query will be in the first index.
+        # this performs a simple swap, this works because anything
+        # left of the 0 should be equivalent.
+        zero_index = np.where(sorted_ix == 0)[0][0]
+        if zero_index != 0:
+            sorted_ix[0], sorted_ix[zero_index] = sorted_ix[zero_index], sorted_ix[0]
+
+        denominator = np.max(similarities) - np.min(similarities) + 1e-6
+        normalized_similarities = (similarities - np.min(similarities)) / denominator
+
+        top_k_results = []
+        for row in sorted_ix[1 : self.k + 1]:
+            if (
+                self.relevancy_threshold is None
+                or normalized_similarities[row] >= self.relevancy_threshold
+            ):
+                top_k_results.append(Document(page_content=self.texts[row - 1],metadata=self.metadata[row-1]))
+        return top_k_results
+    
+    def _aget_relevant_documents(
         self, query: str
     ) -> List[Document]:
         try:
