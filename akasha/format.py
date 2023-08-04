@@ -1,7 +1,7 @@
 
 
 
-def handle_params(model, embeddings, search_type, topK, threshold, language, compression)->dict:
+def handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)->dict:
 
     params = {}
 
@@ -12,7 +12,7 @@ def handle_params(model, embeddings, search_type, topK, threshold, language, com
     params["threshold"] = threshold
     params["language"] = language
     params["compression"] = compression
-
+    params["chunk_size"] = chunk_size
     return params
 
 def handle_metrics(doc_length:int, time:float)->dict:

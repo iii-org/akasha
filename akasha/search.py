@@ -116,7 +116,7 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)
             
             if language=='ch':
                 words_len = helper.get_doc_length(language, docs[i])
-                if cur_count + words_len > 1700:
+                if cur_count + words_len > 1500:
                     if verbose:
                         print("words length: ", cur_count)
                     logs.append("words length: " + str(cur_count))

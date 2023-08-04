@@ -11,7 +11,7 @@ import datetime
 from dotenv import load_dotenv
 load_dotenv() 
 
-def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002"\
+def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:bool = False, \
                  system_prompt:str = ""  )->str:
@@ -37,7 +37,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     """
     start_time = time.time()
     logs = []
-    params = format.handle_params(model, embeddings, search_type, topK, threshold, language, compression)
+    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)
@@ -45,7 +45,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     
 
     print("building chroma db...\n")
-    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, model)
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
         info = "document path not exist\n"
@@ -92,7 +92,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 
 
-def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002"\
+def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge',  compression:bool = False, record_exp:bool = False, system_prompt:str="" )->str:
     """input the documents directory path and question, will first store the documents
@@ -117,7 +117,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     """
     start_time = time.time()
     logs = []
-    params = format.handle_params(model, embeddings, search_type, topK, threshold, language, compression)
+    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)
@@ -125,7 +125,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     
 
     print("building chroma db...\n")
-    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, model)
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
         info = "document path not exist\n"
@@ -187,7 +187,7 @@ def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
 
 
 
-def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002"\
+def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:bool = False ):
     
@@ -200,14 +200,14 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
     start_time = time.time()
     logs = []
     table = {}
-    params = format.handle_params(model, embeddings, search_type, topK, threshold, language, compression)
+    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)
     logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
     
 
-    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, model)
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
         info = "document path not exist\n"

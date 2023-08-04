@@ -5,12 +5,12 @@ import jieba
 import json
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 
-def _check_dir_exists(doc_path:str, embeddings_name:str)->bool:
+def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     """create 'chromadb' directory if not exist, and check if the doc db storage exist
     or not. If exist, exit create_chromadb function. 
 
@@ -28,7 +28,7 @@ def _check_dir_exists(doc_path:str, embeddings_name:str)->bool:
     
 
     suffix_path = doc_path.split('/')[-2]
-    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0])
+    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0]) + '_' + str(chunk_size)
 
     if chroma_docs_path.exists():
         return True
@@ -58,7 +58,7 @@ def _download_llama():
     subprocess.run("python setup.py clean", shell=True)
     subprocess.run("python setup.py install", shell=True)
 
-def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,\
+def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
                     sleep_time:int = 60) -> vars:
     """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
         It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
@@ -97,10 +97,10 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
     
     if doc_path[-1] != '/':
         doc_path += '/'
-    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embeddings_name.split(':')[0]
+    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embeddings_name.split(':')[0] + '_' + str(chunk_size)
 
 
-    if _check_dir_exists(doc_path, embeddings_name):
+    if _check_dir_exists(doc_path, embeddings_name, chunk_size):
         info = "storage db already exist.\n"
         
 
@@ -129,8 +129,8 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
 
 
 
-        text_splitter = CharacterTextSplitter(separator='\n', chunk_size=1000, chunk_overlap=0)
-        
+        #text_splitter = CharacterTextSplitter(separator='\n', chunk_size=1000, chunk_overlap=0)
+        text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
         k = 0
         cum_ids = 0
         interval = 60
@@ -259,14 +259,18 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
         from langchain import HuggingFaceHub
         from transformers import pipeline
         from langchain.llms import HuggingFacePipeline
-        hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-        if hf_token is None:
-            pipe = pipeline("text-generation", model=model_name, max_new_tokens=2048)
-        else:
-            pipe = pipeline("text-generation", model=model_name, max_new_tokens=2048, use_auth_token=hf_token)
-        model = HuggingFacePipeline(pipeline=pipe)
-        #model = HuggingFaceHub(
-        #    repo_id = model_name, model_kwargs={"temperature": 0.1})
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=FutureWarning)
+            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+            if hf_token is None:
+                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0,"max_length":4096})
+            else:
+                
+                pipe = pipeline("text-generation", model=model_name, use_auth_token=hf_token,model_kwargs={"temperature":0,"max_length":4096})
+            model = HuggingFacePipeline(pipeline=pipe)
+            #model = HuggingFaceHub(
+            #    repo_id = model_name, model_kwargs={"temperature": 0.1})
         
         
         
