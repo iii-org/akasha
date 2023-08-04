@@ -2,6 +2,7 @@ import time
 import datetime
 import os
 import jieba
+import json
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
@@ -324,3 +325,37 @@ def get_docs_length(language, docs):
     for doc in docs:
         docs_length += get_doc_length(language, doc)
     return docs_length
+
+
+
+def get_question_from_file(path:str)->list:
+    f_path = Path(path)
+    with f_path.open(mode='r',encoding='utf-8') as file:
+        content = file.read()
+    questions = []
+    for con in content.split('\n'):
+        questions.append( [word for word in con.split(" ")if word != ""])
+    
+    return questions
+
+
+def extract_result(response:str):
+    """to prevent the output of llm format is not what we want, try to extract the answer (digit) from the llm output 
+
+    Args:
+        response (str): llm output
+
+    Returns:
+        int: digit of answer
+    """
+    try:
+        res = json.loads(response[-1])['ans']
+
+    except:
+        res = -1
+        for c in response:
+            if c.isdigit():
+                res = int(c)
+
+                break
+    return res
