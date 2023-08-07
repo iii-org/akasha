@@ -31,6 +31,8 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
             max token size of llm input.
         search_type (str, optional): search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.
+        compression (bool): compress the relevant documents or not.
+        record_exp (bool): use aiido to save running params and metrics to the remote mlflow or not. 
 
     Returns:
         str: llm output str
@@ -44,7 +46,6 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
     
 
-    print("building chroma db...\n")
     db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
@@ -111,6 +112,8 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
             max token size of llm input.
         search_type (str, optional): search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.
+        compression (bool): compress the relevant documents or not.
+        record_exp (bool): use aiido to save running params and metrics to the remote mlflow or not. 
 
     Returns:
         str: llm output str
@@ -124,7 +127,6 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
     
 
-    print("building chroma db...\n")
     db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
@@ -171,10 +173,10 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
 
 def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
     import aiido
-    mod = params["model"].split(':')[0]
+    mod = params["model"].split(':')
     emb = params["embeddings"].split(':')[0]
     sea = params["search_type"]
-    aiido.init(experiment=exp_name, run = mod+'-'+emb+'-'+sea)
+    aiido.init(experiment=exp_name, run = emb + '-' + sea + '-' + '-'.join(mod))
     aiido.log_params_and_metrics(params=params, metrics=metrics)
 
 
@@ -190,7 +192,30 @@ def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
 def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:bool = False ):
+    """input a txt file includes list of single choice questions and the answer, will test all of the questions and return the
+    correct rate of this parameters(model, embeddings, search_type, chunk_size)
+    the format of q_file(.txt) should be one line one question, and the possibles answers and questions are separate by space,
+    the last one is which possisble answers is the correct answer, for example, the file should look like: 
+        "What is the capital of Taiwan?" Taipei  Kaohsiung  Taichung  Tainan     1
+        何者是台灣的首都?  台北 高雄 台中 台南   1
     
+    Args:
+        q_file (str): the file path of the question file
+        doc_path (str): documents directory path
+        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002"\.
+        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
+        topK (int, optional): search top k number of similar documents. Defaults to 2.
+        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
+        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.
+        search_type (str, optional): search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.
+        compression (bool): compress the relevant documents or not.
+        record_exp (bool): use aiido to save running params and metrics to the remote mlflow or not. 
+
+    Returns:
+        float: the correct rate of all questions
+    """
     query_list = helper.get_question_from_file(q_file)
     correct_count = 0
     total_question = len(query_list)
@@ -253,7 +278,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         metrics = format.handle_metrics(doc_length, end_time - start_time)
         metrics['correct_rate'] = correct_count/total_question
         metrics['tokens'] = tokens
-        aiido_upload("exp_akasha_tp", params, metrics, table)
+        aiido_upload("exp_akasha_hf_400", params, metrics, table)
     helper.save_logs(logs)
 
     return correct_count/total_question

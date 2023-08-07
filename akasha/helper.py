@@ -28,7 +28,7 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     
 
     suffix_path = doc_path.split('/')[-2]
-    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0]) + '_' + str(chunk_size)
+    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0] + '_' + str(chunk_size)) 
 
     if chroma_docs_path.exists():
         return True
@@ -106,7 +106,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
 
 
     else:
-        
+        print("building chroma db...\n")
         dir = Path(doc_path)
         pdf_files = dir.glob("*.pdf")
         loaders = [file.name for file in pdf_files]
@@ -142,7 +142,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
                 
             else:
                 docsearch.add_documents(texts)
-            
+            print("added ", [doc.metadata['source'] for doc in cur_doc])
             k += interval
             cum_ids += len(texts)
             time.sleep( sleep_time )
@@ -258,16 +258,19 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     elif model_type in ["huggingface" , "huggingfacehub","transformers", "transformer", "huggingface-hub", "hf"]:
         from langchain import HuggingFaceHub
         from transformers import pipeline
+        import torch
         from langchain.llms import HuggingFacePipeline
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter(action='ignore', category=FutureWarning)
             hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
             if hf_token is None:
-                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0,"max_length":4096})
+                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0,"max_length":4096}, device_map="auto"\
+                                ,batch_size=1, torch_dtype=torch.float16)
             else:
                 
-                pipe = pipeline("text-generation", model=model_name, use_auth_token=hf_token,model_kwargs={"temperature":0,"max_length":4096})
+                pipe = pipeline("text-generation", model=model_name, use_auth_token=hf_token,\
+                    model_kwargs={"temperature":0,"max_length":4096}, device_map="auto",batch_size=1, torch_dtype=torch.float16)
             model = HuggingFacePipeline(pipeline=pipe)
             #model = HuggingFaceHub(
             #    repo_id = model_name, model_kwargs={"temperature": 0.1})
@@ -316,7 +319,16 @@ def save_logs(logs:list)->None:
 
 
 
-def get_doc_length(language, doc):
+def get_doc_length(language:str, doc)->int:
+    """based on chinese or english, calculate the length of words in a document
+
+    Args:
+        language (str): 'ch' for chinese and 'en' for others
+        doc (Document): Document file
+
+    Returns:
+        int: length of words
+    """
     if language=='ch':
         
         doc_length = len(list(jieba.cut(doc.page_content)))
@@ -324,7 +336,17 @@ def get_doc_length(language, doc):
         doc_length = len(doc.page_content.split())
     return doc_length
 
-def get_docs_length(language, docs):
+def get_docs_length(language:str, docs:list)->int:
+    """based on chinese or english, calculate the length of words in documents
+
+
+    Args:
+        language (_type_): 'ch' for chinese and 'en' for others
+        docs (list): list of Document files
+
+    Returns:
+        int: length of words
+    """
     docs_length = 0
     for doc in docs:
         docs_length += get_doc_length(language, doc)
@@ -333,6 +355,16 @@ def get_docs_length(language, docs):
 
 
 def get_question_from_file(path:str)->list:
+    """ parse questions from question file into a list format like this. Each question has question(q), possible answer(pa), and
+    the nth of correct answer(ca), the format looks like :
+    list[[q,pa1,pa2,pa3,ca], [q,pa1,pa2,pa3,pa4,ca]...]
+
+    Args:
+        path (str): path of question file
+
+    Returns:
+        list: list of questions 
+    """
     f_path = Path(path)
     with f_path.open(mode='r',encoding='utf-8') as file:
         content = file.read()
@@ -353,11 +385,11 @@ def extract_result(response:str):
         int: digit of answer
     """
     try:
-        res = json.loads(response[-1])['ans']
+        res = str(json.loads(response[-1])['ans']).replace(" ", "")
 
     except:
         res = -1
-        for c in response:
+        for c in response[-1]:
             if c.isdigit():
                 res = int(c)
 

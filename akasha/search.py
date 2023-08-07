@@ -1,5 +1,5 @@
 from langchain.schema import Document
-from langchain.retrievers import TFIDFRetriever, ContextualCompressionRetriever,SVMRetriever
+from langchain.retrievers import TFIDFRetriever, ContextualCompressionRetriever, SVMRetriever, KNNRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
@@ -8,7 +8,28 @@ import numpy as np
 import akasha.helper as helper
 
 
+def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold:float, model, compression:bool):
+    """use KNN to find relevant doc from query.
 
+    Args:
+        db (_type_): chroma db
+        embeddings (_type_): embeddings used to store vector and search documents
+        query (str): the query str used to search similar documents
+        k (int): for each search type, return first k documents
+        relevancy_threshold (float): the similarity score threshold to select documents
+
+    Returns:
+        list: list of Documents
+    """
+    knnR = myKNNRetriever.from_db(db, embeddings, k, relevancy_threshold)
+    if compression:
+        compressor = LLMChainExtractor.from_llm(model)
+        knnc = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=knnR)
+        docs = knnc.get_relevant_documents(query)
+    else:
+        docs = knnR.get_relevant_documents(query)
+    
+    return docs
 
 def _get_relevant_doc_tfidf(db, query:str, k:int, model, compression:bool)->list:
     """use Term Frequency-Inverse Document Frequency to find relevant doc from query.
@@ -48,7 +69,7 @@ def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:
         relevancy_threshold (float): the similarity score threshold to select documents
 
     Returns:
-        _type_: _description_
+        list: list of Documents
     """
     svmR = mySVMRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
@@ -164,13 +185,13 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
     Returns:
         list: selected list of similar documents.
     """
-
+    search_type = search_type.lower()
     if search_type == 'merge':
         docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
         docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
         docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
       
-        docs = _merge_docs([docs_mmr, docs_svm, docs_tfidf], topK, language, verbose, logs)
+        docs = _merge_docs([docs_tfidf, docs_svm, docs_mmr], topK, language, verbose, logs)
   
     elif search_type == 'mmr':
         docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
@@ -185,7 +206,10 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
     elif search_type == 'tfidf':
         docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
         docs = _merge_docs([docs_tfidf], topK, language, verbose, logs)
-        
+
+    elif search_type == 'knn':
+        docs_knn = __get_relevant_doc_knn(db,embeddings, query, topK, threshold, model, compression) 
+        docs = _merge_docs([docs_knn], topK, language, verbose, logs)
     
     else:
         info = f"cannot find search type {search_type}, end process\n"
@@ -197,6 +221,77 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
 
 
 
+class myKNNRetriever(BaseRetriever):
+    embeddings: Embeddings
+    """Embeddings model to use."""
+    index: Any
+    """Index of embeddings."""
+    texts: List[str]
+    """List of texts to index."""
+    metadata: List[dict]
+    k: int = 3
+    """Number of results to return."""
+    relevancy_threshold: Optional[float] = None
+
+    @classmethod
+    def from_db(
+        cls, db, embeddings: Embeddings, k:int = 3, relevancy_threshold:float=0.2,**kwargs: Any
+    ) -> KNNRetriever:
+        db_data = db.get(include=['embeddings', 'documents', 'metadatas'])
+        index = np.array(db_data['embeddings'])
+        texts = db_data['documents']
+        metadata = db_data['metadatas']
+        return cls(embeddings=embeddings, index=index, texts=texts, metadata=metadata\
+                   ,k=k, relevancy_threshold=relevancy_threshold, **kwargs)
+    
+    def get_relevant_documents(self, query:str) ->List[Document]:
+        return self._ks(query)
+    
+
+    def _ks(self, query:str)-> List[Document]:
+
+        query_embeds = np.array(self.embeddings.embed_query(query))
+        # calc L2 norm
+        index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
+        query_embeds = query_embeds / np.sqrt((query_embeds**2).sum())
+
+        similarities = index_embeds.dot(query_embeds)
+        sorted_ix = np.argsort(-similarities)
+
+        denominator = np.max(similarities) - np.min(similarities) + 1e-6
+        normalized_similarities = (similarities - np.min(similarities)) / denominator
+
+        top_k_results = [
+            Document(page_content=self.texts[row], metadata=self.metadata[row])
+            for row in sorted_ix[0 : self.k]
+            if (
+                self.relevancy_threshold is None
+                or normalized_similarities[row] >= self.relevancy_threshold
+            )
+        ]
+        return top_k_results
+    def _aget_relevant_documents(self, query:str)-> List[Document]:
+
+        query_embeds = np.array(self.embeddings.embed_query(query))
+        # calc L2 norm
+        index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
+        query_embeds = query_embeds / np.sqrt((query_embeds**2).sum())
+
+        similarities = index_embeds.dot(query_embeds)
+        sorted_ix = np.argsort(-similarities)
+
+        denominator = np.max(similarities) - np.min(similarities) + 1e-6
+        normalized_similarities = (similarities - np.min(similarities)) / denominator
+
+        top_k_results = [
+            Document(page_content=self.texts[row], metadata=self.metadata[row])
+            for row in sorted_ix[0 : self.k]
+            if (
+                self.relevancy_threshold is None
+                or normalized_similarities[row] >= self.relevancy_threshold
+            )
+        ]
+        return top_k_results
 
 class mySVMRetriever(BaseRetriever):
     embeddings: Embeddings
@@ -275,7 +370,9 @@ class mySVMRetriever(BaseRetriever):
                 top_k_results.append(Document(page_content=self.texts[row - 1],metadata=self.metadata[row-1]))
         return top_k_results
     
-    def _aget_relevant_documents(
+    
+    
+    async def _aget_relevant_documents(
         self, query: str
     ) -> List[Document]:
         try:
