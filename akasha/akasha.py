@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 import time
-from langchain.chains.question_answering import load_qa_chain
+from langchain.chains.question_answering import load_qa_chain, LLMChain
+from langchain import PromptTemplate
 from langchain.schema import Document
 import akasha.helper as helper
 import akasha.search as search
@@ -100,6 +101,11 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
 
+        In chain_of_thought function, you can separate your question into multiple small steps so that llm can have better response.
+        for the prompt list, we only search similar documents based on first prompt, and other prompts will be answered based on previous
+        response, so the first prompt you may want to contain all the information and key words, and adjacent prompts need to have some 
+        correlations to make chain of thought reponse better result.  
+
     Args:
         doc_path (str): documents directory path
         prompt (str, optional): question you want to ask. Defaults to "".
@@ -147,7 +153,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     if verbose:
         print(docs)
     logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
-   
+    ori_docs = docs
     
     
     for i in range(len(prompt)):
@@ -157,13 +163,13 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         print(response)
         logs.append("\n\nresponse:\n\n"+ response[-1])
         docs = [Document(page_content=''.join(response))]
-        print(docs)
+        
     
 
     end_time = time.time()    
     if record_exp:    
         metrics = format.handle_metrics(doc_length, end_time - start_time)
-        table = format.handle_table(prompt, docs, response)
+        table = format.handle_table('\n\n'.join([p for p in prompt]), ori_docs, response)
         aiido_upload("exp_akasha_cot", params, metrics, table)
     helper.save_logs(logs)
     return response[-1]
@@ -282,3 +288,22 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
     helper.save_logs(logs)
 
     return correct_count/total_question
+
+
+
+def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:bool = False, record_exp:bool = False):
+    logs = []
+    model = helper.handle_model(model, logs, verbose)
+    sys_b, sys_e = "<<SYS>>\n", "\n<</SYS>>\n\n"
+    system_prompt = "[INST]" + sys_b +\
+    "check if below texts have any of Ethical Concerns, discrimination, hate speech, "+\
+    "illegal information, harmful content, Offensive Language, or encourages users to share or access copyrighted materials"+\
+    " And return true or false. Texts are: " + sys_e  + "[/INST]"
+    template = system_prompt+""" 
+    
+    Texts: {texts}
+    Answer: """
+    prompt = PromptTemplate(template=template, input_variables={"texts"})
+    response = LLMChain(prompt=prompt,llm=model).run(texts)
+    print(response)
+    return response

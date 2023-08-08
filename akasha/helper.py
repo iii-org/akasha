@@ -37,7 +37,15 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
 
 
 def _separate_name(name):
-    
+    """separate name str by ':' , for examples, separate hf:model/llama2.bin 
+      and return hf, model/llama2.bin
+
+    Args:
+        name (str): name string
+
+    Returns:
+        (str, str): return separated two string
+    """
     sep = name.split(':')
     if len(sep) != 2:
         ### if the format type not equal to type:name ###
