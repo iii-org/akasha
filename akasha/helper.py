@@ -9,6 +9,9 @@ from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTe
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
+from akasha.models.hf import chatGLM, get_hf_model
+from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
+import os
 
 def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     """create 'chromadb' directory if not exist, and check if the doc db storage exist
@@ -28,7 +31,7 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     
 
     suffix_path = doc_path.split('/')[-2]
-    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0] + '_' + str(chunk_size)) 
+    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0] + '_' + str(chunk_size) ) 
 
     if chroma_docs_path.exists():
         return True
@@ -36,15 +39,14 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
 
 
 
-def _separate_name(name):
-    """separate name str by ':' , for examples, separate hf:model/llama2.bin 
-      and return hf, model/llama2.bin
+def _separate_name(name:str):
+    """ separate type:name by ':'
 
     Args:
-        name (str): name string
+        name (str): string with format "type:name" 
 
     Returns:
-        (str, str): return separated two string
+        (str, str): res_type , res_name
     """
     sep = name.split(':')
     if len(sep) != 2:
@@ -57,14 +59,7 @@ def _separate_name(name):
 
     return res_type, res_name
 
-def _download_llama():
-    import subprocess
-    command = "git clone --recursive -j8 https://github.com/abetlen/llama-cpp-python.git"
-    subprocess.run(command, shell=True)
-    subprocess.run("set FORCE_CMAKE=1", shell=True)
-    subprocess.run("cd llama-cpp-python", shell=True)
-    subprocess.run("python setup.py clean", shell=True)
-    subprocess.run("python setup.py install", shell=True)
+
 
 def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
                     sleep_time:int = 60) -> vars:
@@ -114,7 +109,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
 
 
     else:
-        print("building chroma db...\n")
+        
         dir = Path(doc_path)
         pdf_files = dir.glob("*.pdf")
         loaders = [file.name for file in pdf_files]
@@ -150,7 +145,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
                 
             else:
                 docsearch.add_documents(texts)
-            print("added ", [doc.metadata['source'] for doc in cur_doc])
+            
             k += interval
             cum_ids += len(texts)
             time.sleep( sleep_time )
@@ -231,61 +226,16 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
 
     elif model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"] and model_name != "":
         
-        from langchain.llms import LlamaCpp
-        from langchain import PromptTemplate, LLMChain
-        from langchain.callbacks.manager import CallbackManager
-        from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-        
-        
-
-        # Callbacks support token-wise streaming
-        callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
-        # Verbose is required to pass to the callback manager
-
-        if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
-            model = LlamaCpp(n_ctx=4096, temperature=0.0,
-                model_path = model_name,
-                input={"temperature": 0.0, "max_length": 4096, "top_p": 1},
-                callback_manager = callback_manager,
-                verbose = True,
-            )
-            info = "selected llama cpu model\n"
-
-        else:
-            n_gpu_layers = 40
-            n_batch = 512
-
-            model = LlamaCpp(n_ctx=4096, temperature=0.0,
-                model_path = model_name,
-                n_gpu_layers = n_gpu_layers,
-                n_batch = n_batch,
-                callback_manager = callback_manager,
-                verbose = True,
-            )
-            info = "selected llama gpu model\n"
+        model = get_llama_cpp_model(model_type, model_name)
+        info = "selected llama-cpp model\n"
     elif model_type in ["huggingface" , "huggingfacehub","transformers", "transformer", "huggingface-hub", "hf"]:
-        from langchain import HuggingFaceHub
-        from transformers import pipeline
-        import torch
-        from langchain.llms import HuggingFacePipeline
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter(action='ignore', category=FutureWarning)
-            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-            if hf_token is None:
-                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0,"max_length":4096}, device_map="auto"\
-                                ,batch_size=1, torch_dtype=torch.float16)
-            else:
-                
-                pipe = pipeline("text-generation", model=model_name, use_auth_token=hf_token,\
-                    model_kwargs={"temperature":0,"max_length":4096}, device_map="auto",batch_size=1, torch_dtype=torch.float16)
-            model = HuggingFacePipeline(pipeline=pipe)
-            #model = HuggingFaceHub(
-            #    repo_id = model_name, model_kwargs={"temperature": 0.1})
-        
-        
+        model = get_hf_model(model_name)
+                  
         
         info = f"selected huggingface model {model_name}.\n"
+    elif model_type in ["chatglm","chatglm2","glm"]:
+        model = chatGLM(model_name=model_name)
+        info = f"selected chatglm model {model_name}.\n"
     else:
         model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = 0)
         info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
@@ -327,16 +277,7 @@ def save_logs(logs:list)->None:
 
 
 
-def get_doc_length(language:str, doc)->int:
-    """based on chinese or english, calculate the length of words in a document
-
-    Args:
-        language (str): 'ch' for chinese and 'en' for others
-        doc (Document): Document file
-
-    Returns:
-        int: length of words
-    """
+def get_doc_length(language, doc):
     if language=='ch':
         
         doc_length = len(list(jieba.cut(doc.page_content)))
@@ -344,17 +285,7 @@ def get_doc_length(language:str, doc)->int:
         doc_length = len(doc.page_content.split())
     return doc_length
 
-def get_docs_length(language:str, docs:list)->int:
-    """based on chinese or english, calculate the length of words in documents
-
-
-    Args:
-        language (_type_): 'ch' for chinese and 'en' for others
-        docs (list): list of Document files
-
-    Returns:
-        int: length of words
-    """
+def get_docs_length(language, docs):
     docs_length = 0
     for doc in docs:
         docs_length += get_doc_length(language, doc)
@@ -363,16 +294,6 @@ def get_docs_length(language:str, docs:list)->int:
 
 
 def get_question_from_file(path:str)->list:
-    """ parse questions from question file into a list format like this. Each question has question(q), possible answer(pa), and
-    the nth of correct answer(ca), the format looks like :
-    list[[q,pa1,pa2,pa3,ca], [q,pa1,pa2,pa3,pa4,ca]...]
-
-    Args:
-        path (str): path of question file
-
-    Returns:
-        list: list of questions 
-    """
     f_path = Path(path)
     with f_path.open(mode='r',encoding='utf-8') as file:
         content = file.read()
@@ -399,7 +320,9 @@ def extract_result(response:str):
         res = -1
         for c in response[-1]:
             if c.isdigit():
-                res = int(c)
+                res = c
 
                 break
     return res
+
+

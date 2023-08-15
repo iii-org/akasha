@@ -99,3 +99,46 @@ print(response)
 4. 奶媽角色：選擇一位能提供回血的角色，如七七。七七的E技能可以持續回血，讓輸出位能夠持續站樁輸出。
 ```
 
+
+
+## use AiiDO to record experiment 
+
+If you want to record experiment metrics and results, you need to create a project on the AiiDO platform. Once done, 
+you will receive all the necessary parameters for automatically uploading the experiment. 
+
+Create a .env file on the same directory of your program, and paste all parameters.
+
+
+.env file
+
+```python
+MINIO_URL= YOUR_MINIO_URL
+MINIO_USER= YOUR_MINIO_USER
+MINIO_PASSWORD= YOUR_MINIO_PASSWORD
+TRACKING_SERVER_URI= YOUR_TRACKING_SERVER_URI
+```
+
+
+After you created .env file, you can use **record_exp** to set your experiment name and it will automatically record 
+experiment metrics and results to mlflow server.
+
+```python
+import akasha
+import os
+from dotenv import load_dotenv
+load_dotenv() 
+
+os.environ["OPENAI_API_KEY"] = "your openAI key"
+
+dir_path = "doc/"
+prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	「赤誠的心」	「浪子的真情」	「無法挽回的愛」"
+exp_name = "exp_akasha_gr"
+response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
+
+```
+
+
+
+
+
+you can also compare the responses from different models, search type and embeddings

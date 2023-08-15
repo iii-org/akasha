@@ -52,3 +52,12 @@ def format_llama_json(query):
     
     prompt =  query + "[/INST]"
     return sys_prompt + prompt
+
+
+def format_chinese_json(query):
+
+    sys_prompt = "### 指令: 我会给出一个问题和几个可能的选项，请只根据提供的文件找到其中正确的一个答案，"+\
+    "並回答答案為第幾個選項。若沒有提供，請照你的知識回答，并将答案以JSON的格式表示，如答案為第一個選項，"+\
+    "回答的格式為{'ans':1}，不要添加其他字。  ### 问题和选项:\n"
+
+    return sys_prompt + query

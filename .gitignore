@@ -12,3 +12,10 @@ model/Chinese-Llama-2-7b-ggml-q4.bin
 model/llama-2-13b-chat.ggmlv3.q8_0.bin
 model/llama-2-13b-chat.ggmlv3.q4_0.bin
 test.py
+test_plc.py
+model/datasets/new.jsonl
+model/datasets/ceval-val.jsonl
+model/datasets/ceval-test.jsonl
+model/datasets/ceval-dev.jsonl
+chroma_logs.log
+process_dataset.py
