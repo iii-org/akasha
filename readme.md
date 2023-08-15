@@ -101,6 +101,7 @@ print(response)
 
 <br/>
 <br/>
+
 ## use AiiDO to record experiment 
 
 If you want to record experiment metrics and results, you need to create a project on the AiiDO platform. Once done, 
@@ -119,6 +120,7 @@ TRACKING_SERVER_URI= YOUR_TRACKING_SERVER_URI
 ```
 <br/>
 <br/>
+
 After you created .env file, you can use **record_exp** to set your experiment name and it will automatically record 
 experiment metrics and results to mlflow server.
 
@@ -138,6 +140,7 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 ```
 <br/>
 <br/>
+
 ![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/upload_experiments.png)
 
 
@@ -146,4 +149,5 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 
 
 you can also compare the responses from different models, search type and embeddings
+
 ![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/response_comparison.png)
