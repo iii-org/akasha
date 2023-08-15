@@ -21,6 +21,13 @@ print(response)
 ``` python
 「塞西莉亞花」的花語為「浪子的真情」
 ```
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
 ## Select different embeddings
 
 Using parameter "embeddings", you can choose different embedding models, and the embedding model will be used to store documents into vector storage and search relevant documents from prompt.  Default is **openai:text-embedding-ada-002**.
@@ -33,6 +40,11 @@ Currently support **openai**, **huggingface** and **tensorflowhub**.
 akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2")
 ```
 To use huggingface embedding models, you can type huggingface:model_name or hf:model_name, for example, **huggingface:all-MiniLM-L6-v2**
+
+<br/>
+<br/>
+<br/>
+<br/>
 
 
 ## Select different models
@@ -47,6 +59,10 @@ akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2",
 ```
 
 To use text generation model from **huggingface**, for example, meta llama, you can type **hf:meta-llama/Llama-2-13b-chat-hf**
+
+
+<br/>
+<br/>
 
 ### 2.llama-cpp example
 llama-cpp can use quantized llama model and run on cpu, after you download or transfer llama-cpp model file using [llama-cpp-python](https://github.com/abetlen/llama-cpp-python).
@@ -63,11 +79,17 @@ akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2",
 
 ```
 you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin**
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
  
+## Use chain-of-thought to solve complicated problem
  
- ## Use chain-of-thought to solve complicated problem
- 
- instead of input one single prompt, you can input multiple small stop questions to get better answer.  
+instead of input one single prompt, you can input multiple small stop questions to get better answer.  
  
  
 ```python
@@ -101,7 +123,10 @@ print(response)
 
 <br/>
 <br/>
-## use AiiDO to record experiment 
+<br/>
+<br/>
+
+## Use AiiDO to record experiment 
 
 If you want to record experiment metrics and results, you need to create a project on the AiiDO platform. Once done, 
 you will receive all the necessary parameters for automatically uploading the experiment. 
@@ -136,16 +161,25 @@ exp_name = "exp_akasha_gr"
 response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 
 ```
-<br/>
-<br/>
-
-![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/upload_experiments.png)
-
 
 <br/>
 <br/>
+<br/>
+<br/>
 
 
-you can also compare the responses from different models, search type and embeddings
+### In an experiment you assign, the run name is the combinations of the usage of embedding, search type and model name
 
-![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/response_comparison.png)
+![image](pic/upload_experiments.png)
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+### You can also compare the responses from different models, search type and embeddings
+
+
+![image](pic/response_comparison.png)
+
