@@ -83,7 +83,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         metrics = format.handle_metrics(doc_length, end_time - start_time)
         table = format.handle_table(prompt, docs, response)
         model.get_num_tokens(''.join([doc.page_content for doc in docs]))
-        aiido_upload("record_exp", params, metrics, table)
+        aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
     return response[-1]
 
@@ -172,7 +172,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     if record_exp != "":    
         metrics = format.handle_metrics(doc_length, end_time - start_time)
         table = format.handle_table('\n\n'.join([p for p in prompt]), ori_docs, response)
-        aiido_upload("record_exp", params, metrics, table)
+        aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
     return response[-1]
 
@@ -293,7 +293,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         metrics = format.handle_metrics(doc_length, end_time - start_time)
         metrics['correct_rate'] = correct_count/total_question
         metrics['tokens'] = tokens
-        aiido_upload("record_exp", params, metrics, table)
+        aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
 
     return correct_count/total_question
