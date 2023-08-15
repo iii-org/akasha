@@ -59,5 +59,6 @@ def format_chinese_json(query):
     sys_prompt = "### 指令: 我会给出一个问题和几个可能的选项，请只根据提供的文件找到其中正确的一个答案，"+\
     "並回答答案為第幾個選項。若沒有提供，請照你的知識回答，并将答案以JSON的格式表示，如答案為第一個選項，"+\
     "回答的格式為{'ans':1}，不要添加其他字。  ### 问题和选项:\n"
-
+    #ts_prompt = "### Instruction: I will provide a question and several possible options in the input. Please find the correct answer based solely on the provided texts, and respond with the number of the option that is the correct answer. If no texts is provided, please respond based on your knowledge, and format the answer in JSON format. For example, if the answer is the first option, the format of the response should be {'Answer': 1}. Please do not add any additional words. ### Input:"
+    #sys_prompt = ts_prompt + query "  ### Response:"
     return sys_prompt + query

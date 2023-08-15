@@ -12,7 +12,7 @@ from langchain.chat_models import ChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
-
+jieba.setLogLevel(jieba.logging.INFO)
 def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     """create 'chromadb' directory if not exist, and check if the doc db storage exist
     or not. If exist, exit create_chromadb function. 
