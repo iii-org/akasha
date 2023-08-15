@@ -138,6 +138,7 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 ```
 <br/>
 <br/>
+
 ![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/upload_experiments.png)
 
 
@@ -146,4 +147,5 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 
 
 you can also compare the responses from different models, search type and embeddings
+
 ![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/response_comparison.png)
