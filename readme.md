@@ -68,14 +68,14 @@ To use text generation model from **huggingface**, for example, meta llama, you 
 llama-cpp can use quantized llama model and run on cpu, after you download or transfer llama-cpp model file using [llama-cpp-python](https://github.com/abetlen/llama-cpp-python).
 
 ```python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="hf:meta-llama/llama-cpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin")
+akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-cpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin")
 
 ```
 
 For example, if q4 model is in the "model/" directory, you can assign **llama-cpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin** to load model.
 
 ```python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="hf:meta-llama/llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin")
+akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin")
 
 ```
 you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin**
@@ -123,15 +123,12 @@ print(response)
 
 <br/>
 <br/>
-<<<<<<< HEAD
 
-## use AiiDO to record experiment 
-=======
 <br/>
 <br/>
 
 ## Use AiiDO to record experiment 
->>>>>>> feef9d4b5cdc10c091b9f5b20780a8d79d7c9a4f
+
 
 If you want to record experiment metrics and results, you need to create a project on the AiiDO platform. Once done, 
 you will receive all the necessary parameters for automatically uploading the experiment. 
@@ -170,22 +167,13 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 
 <br/>
 <br/>
-<<<<<<< HEAD
-
-![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/upload_experiments.png)
 
 
-=======
->>>>>>> feef9d4b5cdc10c091b9f5b20780a8d79d7c9a4f
 <br/>
 <br/>
 
 
-<<<<<<< HEAD
-you can also compare the responses from different models, search type and embeddings
 
-![image](https://gitlab-devops.iii.org.tw/root/qaiii-1/-/blob/master/pic/response_comparison.png)
-=======
 ### In an experiment you assign, the run name is the combinations of the usage of embedding, search type and model name
 
 ![image](pic/upload_experiments.png)
@@ -201,4 +189,4 @@ you can also compare the responses from different models, search type and embedd
 
 ![image](pic/response_comparison.png)
 
->>>>>>> feef9d4b5cdc10c091b9f5b20780a8d79d7c9a4f
+
