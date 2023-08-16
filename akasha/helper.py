@@ -12,7 +12,7 @@ from langchain.chat_models import ChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
-jieba.setLogLevel(jieba.logging.INFO)
+jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     """create 'chromadb' directory if not exist, and check if the doc db storage exist
     or not. If exist, exit create_chromadb function. 
@@ -230,16 +230,19 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
         info = "selected llama-cpp model\n"
     elif model_type in ["huggingface" , "huggingfacehub","transformers", "transformer", "huggingface-hub", "hf"]:
         model = get_hf_model(model_name)
-                  
-        
         info = f"selected huggingface model {model_name}.\n"
+
     elif model_type in ["chatglm","chatglm2","glm"]:
         model = chatGLM(model_name=model_name)
         info = f"selected chatglm model {model_name}.\n"
+    
+    elif model_type in ["lora", "peft"]:
+        model = peft_Llama2(model_name_or_path=model_name)
+        info = f"selected peft model {model_name}.\n"
     else:
         model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = 0)
         info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
-
+        print(info)
     if verbose:
         print(info)
     logs.append(info)
@@ -277,7 +280,16 @@ def save_logs(logs:list)->None:
 
 
 
-def get_doc_length(language, doc):
+def get_doc_length(language:str, doc)->int:
+    """calculate the length of terms in a giving Document
+
+    Args:
+        language (str): 'ch' for chinese and 'en' for others, default 'ch'
+        doc (Document): Docuemtn object
+
+    Returns:
+        doc_length: int Docuemtn length
+    """
     if language=='ch':
         
         doc_length = len(list(jieba.cut(doc.page_content)))
@@ -285,7 +297,16 @@ def get_doc_length(language, doc):
         doc_length = len(doc.page_content.split())
     return doc_length
 
-def get_docs_length(language, docs):
+def get_docs_length(language:str, docs:list)->int:
+    """calculate the total length of terms in giving documents
+
+    Args:
+        language (str): 'ch' for chinese and 'en' for others, default 'ch'
+        docs (list): list of Documents
+
+    Returns:
+        docs_length: int total Document length
+    """
     docs_length = 0
     for doc in docs:
         docs_length += get_doc_length(language, doc)
@@ -294,6 +315,16 @@ def get_docs_length(language, docs):
 
 
 def get_question_from_file(path:str)->list:
+    """load questions from file and save the questions into lists.
+    a question list include the question, mutiple options, and the answer (the number of the option),
+      and they are all separate by space in the file. 
+
+    Args:
+        path (str): path of the question file
+
+    Returns:
+        list: list of question list
+    """
     f_path = Path(path)
     with f_path.open(mode='r',encoding='utf-8') as file:
         content = file.read()
@@ -326,3 +357,54 @@ def extract_result(response:str):
     return res
 
 
+
+
+
+
+def get_all_combine(embeddings_list:list, chunk_size_list:list, model_list:list, topK_list:list, search_type_list:list)->list:
+    """record all combinations of giving lists
+
+    Args:
+        embeddings_list (list): list of embeddings(str)
+        chunk_size_list (list): list of chunk sizes(int)
+        model_list (list): list of models(str)
+        topK_list (list): list of topK(int)
+        search_type_list (list): list of search types(str)
+
+    Returns:
+        list: list of tuples of all different combinations
+    """
+    res = []
+    for embed in embeddings_list:
+        for chk in chunk_size_list:
+            for mod in model_list:
+                for tK in topK_list:
+                    for st in search_type_list:
+                        res.append((embed, chk, mod, tK, st))
+
+    return res
+
+
+def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
+    """input list of tuples and find the greatest tuple based on score or cost-effective (index 0 or index 1)
+    tuple looks like (score, cost-effective, embeddings, chunk size, model, topK, search type)
+
+    Args:
+        result_list (list): list of tuples that save the information of running experiments
+        idx (int): the index used to find the greatest result 0 is based on score and 1 is based on cost-effective
+
+    Returns:
+        list: return list of tuples that have same highest criteria
+    """
+    res = []
+    sorted_res = sorted(result_list, key=lambda x:x[idx], reverse=True)
+    max_score = sorted_res[0][idx]
+    for tup in sorted_res:
+        if tup[idx] < max_score:
+            break
+        res_str = "embeddings: " + tup[2] + ", chunk size: " + str(tup[3]) + ", model: " +tup[4] + ", topK: " + str(tup[5]) + ", search type: " + tup[6] + "\n"
+        print(res_str)
+        logs.append(res_str)
+        res.append(tup[2:])
+
+    return res

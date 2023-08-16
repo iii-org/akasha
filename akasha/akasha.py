@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import time
+import torch
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain import PromptTemplate
 from langchain.schema import Document
@@ -163,6 +164,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         res = chain.run(input_documents=docs, question=system_prompt + prompt[i])
         response = res.split("Finished chain.")
         print(response)
+
         logs.append("\n\nresponse:\n\n"+ response[-1])
         docs = [Document(page_content=''.join(response))]
         
@@ -225,7 +227,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
             max token size of llm input.
         search_type (str, optional): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.
+            includes 'merge', 'mmr', 'svm', 'tfidf', 'knn'.
         compression (bool): compress the relevant documents or not.
         record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.
@@ -268,10 +270,14 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         query_with_prompt = prompts.format_llama_json(query)
         
 
-    
-        chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
-        response = chain.run(input_documents = docs, question = query_with_prompt)
-        response = response.split("Finished chain.")
+        try:
+            chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
+            response = chain.run(input_documents = docs, question = query_with_prompt)
+            response = response.split("Finished chain.")
+        except:
+            print("running model error\n")
+            response = ["running model error"]
+            torch.cuda.empty_cache()
 
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
@@ -296,11 +302,23 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
 
-    return correct_count/total_question
+    return correct_count/total_question , tokens
 
 
 
 def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:bool = False, record_exp:str = ""):
+    """ check the given texts have harmful or sensitive information
+
+    Args:
+        texts (str): texts that we want llm to check.
+        model (str, optional): llm model name. Defaults to "openai:gpt-3.5-turbo".
+        verbose (bool, optional): show log texts or not. Defaults to False.
+        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.
+
+    Returns:
+        str: response from llm
+    """
 
     logs = []
     model = helper.handle_model(model, logs, verbose)
@@ -309,6 +327,7 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
     "check if below texts have any of Ethical Concerns, discrimination, hate speech, "+\
     "illegal information, harmful content, Offensive Language, or encourages users to share or access copyrighted materials"+\
     " And return true or false. Texts are: " + sys_e  + "[/INST]"
+       
     template = system_prompt+""" 
     
     Texts: {texts}
@@ -317,3 +336,68 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
     response = LLMChain(prompt=prompt,llm=model).run(texts)
     print(response)
     return response
+
+
+
+
+
+def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
+                 , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], threshold:float = 0.2,\
+                 language:str = 'ch' , search_type_list:list = ['merge','svm','tfidf','mmr'], compression:bool = False, record_exp:str = "" ):
+    """test all combinations of giving lists, and run test_performance to find parameters of the best result.
+
+    Args:
+        q_file (str): the file path of the question file
+        doc_path (str): documents directory path
+        embeddings_list (_type_, optional): list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].
+        chunk_size_list (list, optional): list of chunk sizes. Defaults to [500]\.
+        model_list (_type_, optional): list of models. Defaults to ["openai:gpt-3.5-turbo"].
+        topK_list (list, optional): list of topK. Defaults to [2].
+        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
+        search_type_list (list, optional): list of search types, currently have "merge", "svm", "knn", "tfidf", "mmr". Defaults to ['merge','svm','tfidf','mmr'].
+        compression (bool): compress the relevant documents or not.
+        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.
+    Returns:
+        _type_: _description_
+    """
+    logs = []
+    start_time = time.time()
+    combinations = helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
+
+
+    result_list = []
+    bcr = 0.0
+    for embed, chk, mod, tK, st in combinations:
+
+        cur_correct_rate, tokens = test_performance(q_file, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
+                            language=language, search_type=st, compression=compression, record_exp=record_exp) 
+        bcr = max(bcr,cur_correct_rate)
+        cur_tup = (cur_correct_rate, cur_correct_rate/tokens, embed, chk, mod, tK, st)
+        result_list.append(cur_tup)
+
+
+
+    ### record logs ###
+    print("Best correct rate: ", "{:.3f}".format(bcr))
+    score_comb = "Best score combination: \n"
+    print(score_comb)
+    logs.append(score_comb)
+    bs_combination = helper.get_best_combination(result_list, 0,logs)
+
+
+    print("\n\n")
+    cost_comb = "Best cost-effective: \n"
+    print(cost_comb)
+    logs.append(cost_comb)
+    bc_combination = helper.get_best_combination(result_list, 1,logs)
+
+
+
+   
+    end_time = time.time()
+    s_time = "time spend: "+str(end_time-start_time)
+    print(s_time)
+    logs.append(s_time)
+    helper.save_logs(logs)
+    return bs_combination, bc_combination
