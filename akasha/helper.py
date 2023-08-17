@@ -5,7 +5,8 @@ import jieba
 import json
 from tqdm import tqdm
 from pathlib import Path
-from langchain.document_loaders import PyPDFLoader
+from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
+from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
@@ -14,6 +15,35 @@ from akasha.models.hf import chatGLM, get_hf_model
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
+
+
+def _load_files(doc_path:str, extension="pdf")->list:
+
+    res = []
+    dir = Path(doc_path)
+    pdf_files = dir.glob("*."+extension)
+    loaders = [file.name for file in pdf_files]
+
+
+    for loader in loaders:
+    
+        try:
+            if extension == "pdf":
+                res.extend(PyPDFLoader(doc_path+loader).load())
+            elif extension == "docx":
+                res.extend(Docx2txtLoader(doc_path+loader).load())
+            elif extension == "csv":
+                res.extend(CSVLoader(doc_path+loader,encoding='utf-8').load())
+            else:
+                res.extend(TextLoader(doc_path+loader,encoding='utf-8').load())
+        except:
+            print("Load",loader,"failed, ignored.\n")
+    
+    return res
+       
+
+
+
 def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     """create 'chromadb' directory if not exist, and check if the doc db storage exist
     or not. If exist, exit create_chromadb function. 
@@ -111,25 +141,16 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
 
     else:
         
-        dir = Path(doc_path)
-        pdf_files = dir.glob("*.pdf")
-        loaders = [file.name for file in pdf_files]
 
-        
         documents = []
-        cou = 0
-
-        for loader in loaders:
+        txt_extensions = ['pdf', 'md','docx','csv','txt']
+        for extension in txt_extensions:
+            documents.extend(_load_files(doc_path, extension))
         
-            try:
-                documents.extend(PyPDFLoader(doc_path+loader).load())
-                
-            except:
-                cou+=1
+        info = "\n\nload files:" +  str(len(documents), "\n\n") 
         
-        info = "\n\nload files:\n\n" + doc_path+"total files:" + str(len(loaders)) +\
-            " .\nfailed to read:" + str(cou) + " files\n"
-        
+        if len(documents) == 0 :
+            return None
 
 
 
