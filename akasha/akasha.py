@@ -366,7 +366,7 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
     start_time = time.time()
     combinations = helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
     progress = tqdm(len(combinations),total = len(combinations), desc="RUN LLM")
-    print("total combinations: ", len(combinations))
+    print("\n\ntotal combinations: ", len(combinations))
     result_list = []
     bcr = 0.0
     for embed, chk, mod, tK, st in combinations:
