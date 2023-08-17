@@ -160,7 +160,7 @@ os.environ["OPENAI_API_KEY"] = "your openAI key"
 
 dir_path = "doc/"
 prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	「赤誠的心」	「浪子的真情」	「無法挽回的愛」"
-exp_name = "exp_akasha_gr"
+exp_name = "exp_akasha_get_response"
 response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 
 ```
@@ -190,3 +190,101 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 ![image](pic/response_comparison.png)
 
 
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+## Test Performance
+
+To evaluate the performance of current parameters, you can use function **test_performance** . First you need to build a question set .txt
+file based on the documents you want to use, each question in the question set must be a single choice question, every options and the correct
+answer is separated by space, each line is a question, **for example:**  (question_pvc.txt)
+
+```text
+
+應回收廢塑膠容器材質種類不包含哪種?  聚丙烯（PP） 聚苯乙烯（PS） 聚氯乙烯（PVC）  低密度聚乙烯（LDPE）  4
+庫存盤點包括庫存全盤作業及不定期抽盤作業，盤點計畫應包括下列項目不包含哪項?   盤點差異之處理   盤點清冊  各項物品存放區域配置圖  庫存全盤日期及參加盤點人員名單  1
+以下和者不是環保署指定之公民營地磅機構?    中森加油站企業有限公司   台益地磅站  大眾地磅站  新福行  4
+
+```
+
+**test_performance** will return the correct rate of the question set, details of each question would save in logs, or in mlflow server if you
+turn on **record_exp** 
+
+```python
+import akasha
+import os
+from dotenv import load_dotenv
+load_dotenv() 
+
+os.environ["OPENAI_API_KEY"] = "your openAI key"
+dir_path = "doc/pvc/"
+exp_name = "exp_akasha_test_performance"
+
+print(akasha.test_performance("question_pvc.txt", dir_path, search_type='merge',\
+     model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp=exp_name))
+## 1.0 ##
+```
+
+
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+## Find Optimum Combination
+
+To test all available combinations and find the best parameters, you can use function **optimum_combination** , you can give different 
+embeddings, document chunk sizes, models, document similarity searching type and number of most relative documents (topK), and the function will
+test all combinations to find the best combination based on the given question set and documents. 
+
+Noted that best score combination is the highest correct rate combination, and best cost-effective 
+combination is the combination that need least tokens to get a correct answer.
+
+
+```python
+import akasha
+import os
+from dotenv import load_dotenv
+load_dotenv() 
+
+os.environ["OPENAI_API_KEY"] = "your openAI key"
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "your huggingface key"
+dir_path = "doc/pvc/"
+exp_name = "exp_akasha_optimum_combination"
+embeddings_list = ["hf:shibing624/text2vec-base-chinese", "openai:text-embedding-ada-002"]
+model_list = ["openai:gpt-3.5-turbo","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit","hf:meta-llama/Llama-2-7b-chat-hf",\
+            "llama-gpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin", "llama-gpu:model/llama-2-13b-chat.ggmlv3.q8_0.bin"]
+akasha.optimum_combination("question_pvc.txt", dir_path, embeddings_list = embeddings_list,model_list = model_list,
+            chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name,topK_list=[2,3])
+
+```
+
+**The result would look like below**
+
+```text
+
+Best correct rate:  1.000
+Best score combination:  
+
+embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 3, search type: merge
+
+ 
+
+embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 3, search type: tfidf
+
+ 
+
+ 
+
+Best cost-effective:
+
+embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 2, search type: tfidf
+
+```

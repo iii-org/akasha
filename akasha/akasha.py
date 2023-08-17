@@ -398,8 +398,8 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
 
    
     end_time = time.time()
-    s_time = "time spend: "+str(end_time-start_time)
-    print(s_time)
-    logs.append(s_time)
+    format_time = "time spend: " + "{:.3f}".format(end_time-start_time)
+    print( format_time )
+    logs.append( format_time )
     helper.save_logs(logs)
     return bs_combination, bc_combination
