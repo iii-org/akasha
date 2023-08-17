@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import time
+from tqdm import tqdm
 import torch
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain import PromptTemplate
@@ -259,8 +260,8 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         return ""
 
 
-    for question in query_list:
-
+    for question in tqdm(query_list,total=total_question,desc="Run Question Set"):
+        
         query, ans = prompts.format_question_query(question)
 
         docs = search.get_docs(db, embeddings, query, topK, threshold, language, search_type, verbose,\
@@ -359,23 +360,24 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
         record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.
     Returns:
-        _type_: _description_
+        (list,list): return best score combination and best cost-effective combination
     """
     logs = []
     start_time = time.time()
     combinations = helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
-
-
+    progress = tqdm(len(combinations),total = len(combinations), desc="RUN LLM")
+    print("total combinations: ", len(combinations))
     result_list = []
     bcr = 0.0
     for embed, chk, mod, tK, st in combinations:
-
+        progress.update(1)
         cur_correct_rate, tokens = test_performance(q_file, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
                             language=language, search_type=st, compression=compression, record_exp=record_exp) 
         bcr = max(bcr,cur_correct_rate)
         cur_tup = (cur_correct_rate, cur_correct_rate/tokens, embed, chk, mod, tK, st)
         result_list.append(cur_tup)
-
+        
+    progress.close()
 
 
     ### record logs ###

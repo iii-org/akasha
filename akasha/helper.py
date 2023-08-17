@@ -3,6 +3,7 @@ import datetime
 import os
 import jieba
 import json
+from tqdm import tqdm
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
@@ -136,20 +137,33 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
         k = 0
         cum_ids = 0
-        interval = 60
+        interval = 5
+        progress = tqdm(total = len(documents), desc="Vec Storage")
         while k < len(documents):
+
+            progress.update(min(interval,len(documents)-k))
             cur_doc = documents[k:k+interval]
             texts = text_splitter.split_documents(cur_doc)
-            if k==0:
-                docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
-                
-            else:
-                docsearch.add_documents(texts)
-            
+            try :
+                if k==0:
+                    docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                    
+                else:
+                    docsearch.add_documents(texts)
+            except:
+                time.sleep( sleep_time )
+                if k==0:
+                    docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                    
+                else:
+                    docsearch.add_documents(texts)
+                    
             k += interval
             cum_ids += len(texts)
-            time.sleep( sleep_time )
+            
+            
         docsearch.persist()  
+        progress.close()
     db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
 
     if verbose:
