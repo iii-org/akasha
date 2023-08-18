@@ -16,8 +16,16 @@ import os
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
-def _load_files(doc_path:str, extension="pdf")->list:
+def _load_files(doc_path:str, extension:str="pdf")->list:
+    """load text files of select extension into list of Documents
 
+    Args:
+        doc_path (str): text files directory 
+        extension (str, optional): the extension type. Defaults to "pdf".
+
+    Returns:
+        list: list of Documents
+    """
     res = []
     dir = Path(doc_path)
     pdf_files = dir.glob("*."+extension)
@@ -146,7 +154,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         
 
         documents = []
-        txt_extensions = ['pdf', 'md','docx','csv','txt']
+        txt_extensions = ['pdf', 'md','docx','txt']
         for extension in txt_extensions:
             documents.extend(_load_files(doc_path, extension))
         
@@ -157,7 +165,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
 
 
         
-        #text_splitter = CharacterTextSplitter(separator='\n', chunk_size=1000, chunk_overlap=0)
+        
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
         k = 0
         cum_ids = 0
