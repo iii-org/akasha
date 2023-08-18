@@ -42,7 +42,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         str: llm output str
     """
     start_time = time.time()
-    logs = []
+    logs = ["\n\n---------------------------------------\n"]
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
@@ -129,7 +129,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         str: llm output str
     """
     start_time = time.time()
-    logs = []
+    logs = ["\n\n---------------------------------------\n"]
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
@@ -243,7 +243,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
     tokens = 0
     verbose = False
     start_time = time.time()
-    logs = []
+    logs = ["\n\n---------------------------------------\n"]
     table = {}
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
@@ -362,7 +362,7 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
     Returns:
         (list,list): return best score combination and best cost-effective combination
     """
-    logs = []
+    logs = ["\n\n---------------------------------------\n"]
     start_time = time.time()
     combinations = helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
     progress = tqdm(len(combinations),total = len(combinations), desc="RUN LLM")

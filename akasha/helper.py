@@ -6,7 +6,6 @@ import json
 from tqdm import tqdm
 from pathlib import Path
 from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
@@ -31,11 +30,15 @@ def _load_files(doc_path:str, extension="pdf")->list:
             if extension == "pdf":
                 res.extend(PyPDFLoader(doc_path+loader).load())
             elif extension == "docx":
-                res.extend(Docx2txtLoader(doc_path+loader).load())
-            elif extension == "csv":
-                res.extend(CSVLoader(doc_path+loader,encoding='utf-8').load())
+                docs = Docx2txtLoader(doc_path+loader).load()
+                for i in range(len(docs)):
+                    docs[i].metadata['page'] = i
+                res.extend(docs)
             else:
-                res.extend(TextLoader(doc_path+loader,encoding='utf-8').load())
+                docs = TextLoader(doc_path+loader,encoding='utf-8').load()
+                for i in range(len(docs)):
+                    docs[i].metadata['page'] = i
+                res.extend(docs)
         except:
             print("Load",loader,"failed, ignored.\n")
     
@@ -147,13 +150,13 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         for extension in txt_extensions:
             documents.extend(_load_files(doc_path, extension))
         
-        info = "\n\nload files:" +  str(len(documents), "\n\n") 
+        info = "\n\nload files:" +  str(len(documents)) + "\n\n" 
         
         if len(documents) == 0 :
             return None
 
 
-
+        
         #text_splitter = CharacterTextSplitter(separator='\n', chunk_size=1000, chunk_overlap=0)
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
         k = 0
@@ -161,7 +164,8 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         interval = 5
         progress = tqdm(total = len(documents), desc="Vec Storage")
         while k < len(documents):
-
+            
+            
             progress.update(min(interval,len(documents)-k))
             cur_doc = documents[k:k+interval]
             texts = text_splitter.split_documents(cur_doc)
@@ -185,8 +189,8 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
             
         docsearch.persist()  
         progress.close()
+    
     db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-
     if verbose:
         print(info)
     logs.append(info)
