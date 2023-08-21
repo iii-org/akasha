@@ -48,7 +48,7 @@ To use huggingface embedding models, you can type huggingface:model_name or hf:m
 
 
 ## Select different models
-Using parameter "model", you can choose different text generation models, default is **openai:gpt-3.5-turbo**.
+Using parameter **"model"**, you can choose different text generation models, default is **openai:gpt-3.5-turbo**.
 
 Currently support **openai**, **llama-cpp** and **huggingface**.
 
@@ -86,7 +86,29 @@ you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llam
 <br/>
 
 
+## Select different search type
+Using parameter **"search_type"**, you can choose different search methods to find similar documents , default is **merge**, which is
+the combination of mmr, svm and tfidf. Currently you can select merge, mmr, svm and tfidf.
+
+**Max Marginal Relevance(mmr)** select similar documents by cosine similarity, but it also consider diversity, so it will also penalize document for closeness to already selected documents.
+
+**Support Vector Machines(svm)** use the input prompt and the documents vectors to train svm model, after training, the svm can be used to score new vectors based on their similarity to the training data. 
+
+**Term Frequency–Inverse Document Frequency(tfidf)** is a commonly used weighting technique in information retrieval and text mining. TF-IDF is a statistical method used to evaluate the importance of a term in a collection of documents or a corpus with respect to one specific document in the collection.
+
+
+``` python
+akasha.get_response(dir_path, prompt, search_type="mmr")
+
+```
  
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+
 ## Use chain-of-thought to solve complicated problem
  
 instead of input one single prompt, you can input multiple small stop questions to get better answer.  
@@ -99,26 +121,88 @@ import os
 
 os.environ["OPENAI_API_KEY"] = "your openAI key"
 
-dir_path = "boss/"
-prompt = ["若陀龍王boss的詳細資訊", "若陀龍王boss的弱點是甚麼，該如何攻略","根據若陀龍王boss的弱點，幫我組出一隊四人的角色去攻略boss"]
+dir_path = "mic/"
+queries2 = ["西門子自有工廠如何朝工業4.0 發展","詳細解釋「工業4.0 成熟度指數」發展路徑的六個成熟度","根據西門子自有工廠朝工業4.0發展，探討其各項工業4.0的成熟度指標"]
 
-response = akasha.chain_of_thought(dir_path, prompt)
+response = akasha.chain_of_thought(dir_path, queries2, search_type='svm')
 print(response)
 	
 	
 ```
 
 
-```python
-根據若陀龍王的弱點，以下是一支適合攻略boss的四人隊伍建議：
+```text
+response 1:
+西門子自有工廠朝工業4.0發展的方式包括以下幾個方面：
 
-1. 主DPS角色：選擇一位遠程輸出角色，如甘雨。她的遠距離射擊能夠完全發揮優勢，並且她的技能可以造成大量傷害。
+1. 數位化戰略：西門子提出數位化戰略，從工業4.0策略擬定到落地執行，為客戶提供一條龍服務。他們設計數位工廠原型
+，搭配OT、IT方案，並使用西門子的MindSphere工業物聯網平台，發展數據可視化和數據分析相關應用。
 
-2. 副DPS角色：選擇一位近戰輸出角色，如凱亞。凱亞的技能可以造成冰元素傷害，並且他的元素爆發可以提供額外的輸出。
+2. 跨領域合作：西門子近年積極與雲服務商、系統商等跨領域合作，推動智慧製造解決方案。此外，他們也與SAP進行ERP整合，專注於物聯網領域。
 
-3. 護盾角色：選擇一位能提供護盾的角色，如鐘離。鐘離的護盾厚度高且能夠提供額外的輸出，可以幫助隊伍減少受到的傷害。
+3. 虛實整合：西門子在中國大陸成都生產研發基地的案例中，從研發、生產、訂單管理、供應商管理到物流作業
+，實現了整條價值鏈的虛實整合。他們不斷提高配料、傳輸、檢測等流程的自動化程度。
 
-4. 奶媽角色：選擇一位能提供回血的角色，如七七。七七的E技能可以持續回血，讓輸出位能夠持續站樁輸出。
+總體而言，西門子通過數位化戰略、跨領域合作和虛實整合等方式，推動自有工廠朝工業4.0發 
+展。他們致力於提升生產效率和效能，並利用先進的技術和解決方案實現智慧工廠的建設。
+
+
+
+
+
+
+response 2:
+「工業4.0成熟度指數」的發展路徑劃分為六個成熟度，分別是電腦化、可連結、可視化、可分析、可預測和自適應。
+
+1. 電腦化：這是工業4.0發展的起點，指企業開始使用計算機技
+術，人員不再手動操作機械。然而，機械仍未聯網，各個IT系統仍各自獨立，資料尚未串聯。例如，企業的ERP系統與生產相關的系統獨立運作，訂單與產品品檢紀錄分散於兩套系統，導致 
+訂單無法回溯出現品質問題的環節。
+
+2. 可連結：在這個成熟度階段，企業開始將各個IT系統進行連接，實現資料的串聯。這使得不同系統之間可以共享資料，提高資訊的流通效率。例 
+如，企業的ERP系統與生產相關的系統進行連接，訂單與產品品檢紀錄可以實現資料的回溯。
+
+3. 可視化：在這個成熟度階段，企業開始實現資料的可視化，將資料以圖形化或圖表化的方
+式呈現，使得管理者可以直觀地了解企業的運營狀況。例如，企業可以使用數據儀表板或報表來呈現生產線的運行情況和產品的品質指標。
+
+4. 可分析：在這個成熟度階段，企業開始進 
+行資料的分析，利用數據分析工具和算法來挖掘資料中的價值和洞察。這使得企業可以更深入地了解生產過程中的問題和潛在的改進空間。例如，企業可以使用數據分析工具來分析生產線的
+效率和品質問題，並提出改進措施。
+
+5. 可預測：在這個成熟度階段，企業開始利用資料分析的結果來進行預測和預測模型的建立。這使得企業可以預測生產過程中可能出現的問題，並 
+提前採取相應的措施。例如，企業可以利用預測模型來預測生產線的故障和產品的品質問題，並提前進行維護和調整。
+
+6. 自適應：在這個成熟度階段，企業開始實現自動化和自適應能 
+力，使得生產過程可以根據實時的數據和環境變化進行調整和優化。這使得企業可以更靈活地應對市場需求和生產變化。例如，企業可以實現生產線的自動調整和產品的自動優化，以適應市
+場需求的變化。
+
+這六個成熟度階段代表了企業在工業4.0發展過程中的不同階段和能力水平，企業可以根據自身的情況和目標，逐步提升成熟度，實現工業4.0的目標。
+
+
+
+
+
+
+response 3:
+根據西門子自有工廠朝工業4.0發展的方式，可以探討其在工業4.0成熟度指標中的幾個方面：
+
+ 
+
+1. 數位化戰略：西門子提出數位化戰略，從工業4.0策略擬定到落地執行提供一條龍服務
+。這代表企業在工業4.0成熟度指標中已經達到了可連結和可視化的階段，並開始將數據應用於生產優化和資源利用。
+
+ 
+
+2. 整合系統：西門子在廠內進行軟體間整合，包括PLM、ERP、MOM 
+、WMS和Automation五大系統的整合，使數據互聯互通。這代表企業在工業4.0成熟度指標中已經達到了可分析和可預測的階段，並能夠利用數據分析技術進行深入分析和預測。
+
+ 
+
+3. 數據 應用：西門子利用自有的數位雙生軟體Tecnomatix，打造虛擬工廠，模擬生產狀況或監控實際生產狀況。這代表企業在工業4.0成熟度指標中已經達到了可分析和可預測的階段，並能夠利用 
+數據應用提供的資訊，優化生產設備和工序。
+
+ 
+
+總的來說，根據西門子自有工廠朝工業4.0發展的方式，可以看出他們在工業4.0成熟度指標中已經達到了可連結、可視化、可分析和可預測，優化生產設備和工序。
 ```
 
 <br/>

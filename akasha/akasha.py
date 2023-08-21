@@ -105,9 +105,9 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         llm model will use these documents to generate the response of the question.
 
         In chain_of_thought function, you can separate your question into multiple small steps so that llm can have better response.
-        for the prompt list, we only search similar documents based on first prompt, and other prompts will be answered based on previous
-        response, so the first prompt you may want to contain all the information and key words, and adjacent prompts need to have some 
-        correlations to make chain of thought reponse better result.  
+        chain_of_thought function will use all responses from the previous prompts, and combine the documents search from current prompt to generate
+        response.
+        
 
     Args:
         doc_path (str): documents directory path
@@ -145,29 +145,31 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         logs.append(info)
         return ""
 
-
-
-    docs = search.get_docs(db, embeddings, prompt[0], topK, threshold, language, search_type,\
-                            verbose, logs, model, compression)
-    if docs is None:
-        return ""
-    
-    doc_length = helper.get_docs_length(language, docs)
     chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
-    if verbose:
-        print(docs)
-    logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
-    ori_docs = docs
+
     
-    
+    ori_docs = []
+    doc_length = 0
+    pre_result = []
     for i in range(len(prompt)):
 
-        res = chain.run(input_documents=docs, question=system_prompt + prompt[i])
+        docs = search.get_docs(db, embeddings, prompt[i], topK, threshold, language, search_type,\
+                            verbose, logs, model, compression)
+        
+        doc_length += helper.get_docs_length(language, docs)
+        ori_docs.extend(docs)
+        if verbose:
+            print(docs)
+        logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
+
+
+
+        res = chain.run(input_documents=docs + pre_result, question=system_prompt + prompt[i])
         response = res.split("Finished chain.")
         print(response)
 
         logs.append("\n\nresponse:\n\n"+ response[-1])
-        docs = [Document(page_content=''.join(response))]
+        pre_result.append(Document(page_content=''.join(response)))
         
     
 
