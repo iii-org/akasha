@@ -54,7 +54,7 @@ def format_llama_json(query):
     return sys_prompt + prompt
 
 
-def format_chinese_json(query):
+def format_chinese_json(query:str):
 
     sys_prompt = "### 指令: 我会给出一个问题和几个可能的选项，请只根据提供的文件找到其中正确的一个答案，"+\
     "並回答答案為第幾個選項。若沒有提供，請照你的知識回答，并将答案以JSON的格式表示，如答案為第一個選項，"+\
@@ -62,3 +62,17 @@ def format_chinese_json(query):
     #ts_prompt = "### Instruction: I will provide a question and several possible options in the input. Please find the correct answer based solely on the provided texts, and respond with the number of the option that is the correct answer. If no texts is provided, please respond based on your knowledge, and format the answer in JSON format. For example, if the answer is the first option, the format of the response should be {'Answer': 1}. Please do not add any additional words. ### Input:"
     #sys_prompt = ts_prompt + query "  ### Response:"
     return sys_prompt + query
+
+
+
+
+def format_create_question_prompt(doc_text:str)->str:
+    
+    #q_prompt = "Human: You are a teacher coming up with questions to ask on a quiz. \nGiven the following document, please generate a question and answer based on that document.\n\nExample Format:\n<Begin Document>\n...\n<End Document>\nQUESTION: question here\nANSWER: answer here\n\nThese questions should be detailed and be based explicitly on information in the document. Begin!\n\n<Begin Document>\n\n"
+    q_prompt = "人類：您是一位教師，正在為測驗準備問題。\n根據以下文件，請基於該文件只生成一個問題和一個答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！\n\n<開始文件>\n"
+    #end_prompt = "<End Document>\n"
+    end_prompt = "<結束文件>\n"
+    # generate question prompt = generate_question_prompt(Document)
+    q_prompt = q_prompt + doc_text + end_prompt
+    
+    return q_prompt

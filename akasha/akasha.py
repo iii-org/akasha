@@ -10,6 +10,7 @@ import akasha.helper as helper
 import akasha.search as search
 import akasha.format as format
 import akasha.prompts as prompts
+import akasha.eval as eval
 import datetime
 from dotenv import load_dotenv
 load_dotenv() 
@@ -42,7 +43,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         str: llm output str
     """
     start_time = time.time()
-    logs = ["\n\n---------------------------------------\n"]
+    logs = ["\n\n-----------------get_response----------------------\n"]
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
@@ -73,6 +74,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
     
     res = chain.run(input_documents=docs, question=system_prompt + prompt)
+    res =  helper.sim_to_trad(res)
     response = res.split("Finished chain.")
     
     
@@ -129,7 +131,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         str: llm output str
     """
     start_time = time.time()
-    logs = ["\n\n---------------------------------------\n"]
+    logs = ["\n\n---------------chain_of_thought------------------------\n"]
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
@@ -165,6 +167,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
 
 
         res = chain.run(input_documents=docs + pre_result, question=system_prompt + prompt[i])
+        res = helper.sim_to_trad(res)
         response = res.split("Finished chain.")
         print(response)
 
@@ -245,7 +248,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
     tokens = 0
     verbose = False
     start_time = time.time()
-    logs = ["\n\n---------------------------------------\n"]
+    logs = ["\n\n---------------test_performance------------------------\n"]
     table = {}
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
     embeddings_name = embeddings
@@ -276,6 +279,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         try:
             chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
             response = chain.run(input_documents = docs, question = query_with_prompt)
+            response = helper.sim_to_trad(response)
             response = response.split("Finished chain.")
         except:
             print("running model error\n")
@@ -364,7 +368,7 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
     Returns:
         (list,list): return best score combination and best cost-effective combination
     """
-    logs = ["\n\n---------------------------------------\n"]
+    logs = ["\n\n----------------optimum_combination-----------------------\n"]
     start_time = time.time()
     combinations = helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
     progress = tqdm(len(combinations),total = len(combinations), desc="RUN LLM")
@@ -405,3 +409,206 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
     logs.append( format_time )
     helper.save_logs(logs)
     return bs_combination, bc_combination
+
+
+
+
+
+def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
+                 , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
+                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = "", \
+                 system_prompt:str = "" ):
+    
+    doc_range = (1999+chunk_size)//chunk_size
+    start_time = time.time()
+    logs = ["\n\n-----------------auto_create_questionset----------------------\n"]
+    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
+    embeddings_name = embeddings
+    embeddings = helper.handle_embeddings(embeddings, logs, verbose)
+    model = helper.handle_model(model, logs, verbose)
+    logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
+    table = {}
+    doc_length = 0
+    tokens = 0
+    question = []
+    answer = []
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
+
+    if db is None:
+        info = "document path not exist\n"
+        print(info)
+        logs.append(info)
+        return ""
+    
+    
+    import numpy as np
+    
+    db_data = db.get(include=['documents','metadatas'])
+    texts = db_data['documents']
+    metadata =  db_data['metadatas']
+    
+    
+    
+    for i in range(question_num):
+        random_index = np.random.randint(len(texts) - doc_range)
+        doc_text = '\n'.join(texts[random_index:random_index + doc_range])
+        docs = [Document(page_content=texts[k], metadata=metadata[k]) for k in range(random_index,random_index+doc_range)]
+        doc_length += helper.get_docs_length(language, docs)
+        tokens += model.get_num_tokens(doc_text)
+        
+        q_prompt = prompts.format_create_question_prompt(doc_text)
+        
+        
+        try:    ### try call openai llm model 
+            response = model.predict(q_prompt)
+            
+        except:
+            response = model._call(q_prompt)
+
+        response = helper.sim_to_trad(response)
+        print(response)
+        logs.append(doc_text)
+        logs.append("\n\nresponse:\n\n"+ response)
+        process = ''.join(response.split("問題：")).split("答案：")
+        question.append("問題："+process[0])
+        answer.append("答案："+process[1])
+        
+        new_table = format.handle_table(question, docs, answer)
+        for key in new_table:
+            if key not in table:
+                table[key] = []
+            table[key].append(new_table[key])
+        
+        
+    
+    end_time = time.time()
+
+    ### record logs ###
+    if record_exp != "":    
+        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        params['doc_range'] = doc_range
+        metrics['tokens'] = tokens
+        aiido_upload(record_exp, params, metrics, table)
+    helper.save_logs(logs)
+    
+    
+    ### how to write question and answer into txt file, but first check if "questionset" directory exist or not, it not, first create it.
+    ### for filename, count the files in the questionset directory that has doc_path in the file name, and use it as the file name.
+    if not os.path.exists("questionset"):
+        os.makedirs("questionset")
+    count = 0
+    suf_path = doc_path.split('/')[-2]
+    for filename in os.listdir("questionset"):
+        if suf_path in filename:
+            count += 1
+    file_name = "questionset/"+suf_path+"_"+str(count)+".txt"
+    with open(file_name, "w", encoding="utf-8") as f:
+        
+        for w in range(len(question)):
+            f.write(question[w]  + answer[w] + "\n\n")
+    
+    print("question set saved in ", file_name,"\n\n")
+    return question, answer
+    
+    
+
+
+def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
+                 , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
+                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = "")->(float, float):
+    
+    #read the whole txt file and separate it into question and answer list by "\n\n"
+    with open(questionset_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    content = content.split("\n\n")
+    question = []
+    answer = []
+    bert = []
+    rouge = []
+
+    for i in range(len(content)):
+        if content[i] == "":
+            continue
+        process = ''.join(content[i].split("問題：")).split("答案：")
+        
+        question.append(process[0])
+        answer.append(process[1])
+    
+    
+    
+    
+    
+    total_question = len(question)
+    doc_length = 0
+    tokens = 0
+    start_time = time.time()
+    logs = ["\n\n---------------auto_evaluation------------------------\n"]
+    table = {}
+    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
+    embeddings_name = embeddings
+    embeddings = helper.handle_embeddings(embeddings, logs, verbose)
+    model = helper.handle_model(model, logs, verbose)
+    progress = tqdm(total = total_question, desc="Run Auto Evaluation")
+    logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
+    
+
+    db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
+
+    if db is None:
+        info = "document path not exist\n"
+        print(info)
+        logs.append(info)
+        return -1.0, -1.0
+
+    
+    for i in range(total_question):
+        
+        
+        progress.update(1)
+        docs = search.get_docs(db, embeddings, question[i], topK, threshold, language, search_type, verbose,\
+                     logs, model, False)
+        doc_length += helper.get_docs_length(language, docs)
+        tokens += model.get_num_tokens(''.join([doc.page_content for doc in docs]))
+        
+        
+
+        try:
+            chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
+            response = chain.run(input_documents = docs, question = question[i])
+            response = helper.sim_to_trad(response)
+            response = response.split("Finished chain.")
+        except:
+            print("running model error\n")
+            response = ["running model error"]
+            torch.cuda.empty_cache()
+
+        
+        bert.append(eval.get_bert_score(response[-1],answer[i],language))
+        rouge.append(eval.get_rouge_score(response[-1],answer[i],language))
+        
+        logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
+        logs.append("\n\nresponse:\n\n"+ response[-1])
+        
+        new_table = format.handle_table(question[i], docs, response)
+        new_table = format.handle_score_table(new_table, bert[-1], rouge[-1])
+        for key in new_table:
+            if key not in table:
+                table[key] = []
+            table[key].append(new_table[key])
+                
+        
+    progress.close()
+    end_time = time.time()
+
+    if record_exp != "":    
+        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        metrics['avg_bert'] = sum(bert)/len(bert)
+        metrics['avg_rouge'] = sum(rouge)/len(rouge)
+        metrics['tokens'] = tokens
+        aiido_upload(record_exp, params, metrics, table)
+    helper.save_logs(logs)
+    
+    
+    return metrics['avg_bert'], metrics['avg_rouge']
+  
+

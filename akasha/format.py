@@ -61,11 +61,21 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
     
     inputs = '\n\n'.join([doc.page_content for doc in docs])
     try:
-        metadata = '\n\n'.join([doc.metadata['source'] for doc in docs])
+        metadata = '\n\n'.join([doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs])
     except:
         metadata = "none"
     table["prompt"] = prompt
     table["inputs"] = inputs
     table["response"] = response
     table["metadata"] = metadata
+    return table
+
+
+def handle_score_table(table:dict, bert:float, rouge:float)->dict:
+    
+    
+    table["bert"] = bert
+    table["rouge"] = rouge
+    
+    
     return table

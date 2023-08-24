@@ -5,6 +5,7 @@ import jieba
 import json
 from tqdm import tqdm
 from pathlib import Path
+import opencc
 from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -455,3 +456,18 @@ def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
         res.append(tup[2:])
 
     return res
+
+
+
+
+def sim_to_trad(text:str)->str:
+    """convert simplified chinese to traditional chinese
+
+    Args:
+        text (str): simplified chinese
+
+    Returns:
+        str: traditional chinese
+    """
+    cc = opencc.OpenCC('s2t.json')
+    return cc.convert(text)
