@@ -537,7 +537,10 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     
     
     
-    
+    if language=='ch':
+        system_prompt = "[INST] <<SYS>> 用中文回答 <<SYS>> [/INST]" 
+    else:
+        system_prompt = ""
     total_question = len(question)
     doc_length = 0
     tokens = 0
@@ -574,7 +577,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
 
         try:
             chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
-            response = chain.run(input_documents = docs, question = question[i])
+            response = chain.run(input_documents = docs, question =  system_prompt + question[i])
             response = helper.sim_to_trad(response)
             response = response.split("Finished chain.")
         except:
