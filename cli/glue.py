@@ -33,6 +33,82 @@ def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model
     print(res)
 
 
+
+
+
+
+
+
+
+@click.command()
+@click.option('--doc_path', '-d', help='document directory path, parse all .txt, .pdf, .docx files in the directory', required=True)
+@click.option('--embeddings','-e', default="openai:text-embedding-ada-002", help='embeddings for storing the documents')
+@click.option('--chunk_size', '-c', default = 1000, help='chunk size for storing the documents')
+@click.option('--model', '-m', default="openai:gpt-3.5-turbo",help='llm model for generating the response')
+@click.option('--topk', '-k', default = 2, help='select topK relevant documents')
+@click.option('--threshold', '-t', default=0.2, help='threshold score for selecting the relevant documents')
+@click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
+@click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
+@click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
+def keep_response(doc_path:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
+                 language:str, search_type:str, system_prompt:str):
+
+    import akasha.helper as helper
+    import akasha.search as search
+    from langchain.chains.question_answering import load_qa_chain
+    logs = ["\n\n-----------------keep_response----------------------\n"]
+    embeddings_name = embeddings
+    embeddings = helper.handle_embeddings(embeddings, logs, False)
+    model = helper.handle_model(model, logs, False)
+    
+    
+
+    db = helper.create_chromadb(doc_path, logs, False, embeddings, embeddings_name, chunk_size)
+
+    if db is None:
+        info = "document path not exist\n"
+        print(info)
+        logs.append(info)
+        helper.save_logs(logs)
+        return ""
+
+
+    user_input = click.prompt("Please input your question(type \"exit()\" to quit): ")
+    while user_input != "exit()":
+        
+        docs = search.get_docs(db, embeddings, user_input, topk, threshold, language, search_type, False,\
+                        logs, model, False)
+        if docs is None:
+            docs = []
+        
+        
+        
+        chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
+
+        logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
+        
+        res = chain.run(input_documents=docs, question=system_prompt + user_input)
+        res =  helper.sim_to_trad(res)
+        response = res.split("Finished chain.")
+        
+        
+        logs.append("\n\nresponse:\n\n"+ response[-1])
+        
+        
+        print(res)
+        user_input = click.prompt("Please input your question(type \"exit()\" to quit): ")
+
+
+
+
+
+
+
+
+
+
+
+
 @click.command()
 @click.option('--doc_path', '-d', help='document directory path, parse all .txt, .pdf, .docx files in the directory', required=True)
 @click.option('--prompt','-p',multiple=True, help='prompt you want to ask to llm, if you want to ask multiple questions, use -p multiple times', required=True)
