@@ -25,7 +25,8 @@ def akasha():
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
 def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model:str, wwww:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str):
-    print(pathlib.Path().resolve())
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=pathlib.Path().resolve()) 
     res = ak.get_response(doc_path, prompt, embeddings, chunk_size\
                  , model, False, wwww, threshold,\
                  language , search_type, False, record_exp, \
