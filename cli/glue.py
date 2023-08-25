@@ -50,7 +50,7 @@ def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model
 @click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
-def keep_response(doc_path:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
+def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, system_prompt:str):
 
     import akasha.helper as helper
@@ -214,7 +214,7 @@ def auto_evaluation(question_path:str, doc_path:str, embeddings:str, chunk_size:
 
 
 
-
+akasha.add_command(keep_responsing)
 akasha.add_command(get_response)
 akasha.add_command(chain_of_thought)
 akasha.add_command(test_performance)
