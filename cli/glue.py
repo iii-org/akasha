@@ -119,13 +119,13 @@ def auto_create_questionset(doc_path:str, question_num:int , embeddings:str , ch
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
 def auto_evaluation(question_path:str, doc_path:str, embeddings:str, chunk_size:int\
-                 , model:str, topK:int, threshold:float,\
+                 , model:str, topk:int, threshold:float,\
                     language:str , search_type:str , record_exp:str):
     
     
     
     avg_bert, avg_rouge = ak.auto_evaluation(question_path, doc_path, embeddings, chunk_size\
-                 , model, False, topK, threshold,\
+                 , model, False, topk, threshold,\
                  language, search_type, record_exp)
 
     print("avg bert score: ", avg_bert)
