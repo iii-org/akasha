@@ -13,7 +13,7 @@ import akasha.prompts as prompts
 import akasha.eval as eval
 import datetime
 from dotenv import load_dotenv
-load_dotenv(pathlib.Path().resolve()) 
+load_dotenv(dotenv_path=pathlib.Path().resolve()) 
 
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
