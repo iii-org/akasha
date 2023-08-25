@@ -14,7 +14,7 @@ import akasha.eval as eval
 import datetime
 from dotenv import load_dotenv
 load_dotenv(pathlib.Path().resolve()) 
-print(pathlib.Path().resolve())
+
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", \
@@ -42,6 +42,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     Returns:
         str: llm output str
     """
+    
     start_time = time.time()
     logs = ["\n\n-----------------get_response----------------------\n"]
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
