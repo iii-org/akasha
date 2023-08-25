@@ -1,4 +1,4 @@
-import os
+import os,sys
 import numpy as np
 import time
 from tqdm import tqdm
@@ -13,8 +13,8 @@ import akasha.prompts as prompts
 import akasha.eval as eval
 import datetime
 from dotenv import load_dotenv
-load_dotenv() 
-
+load_dotenv(sys.path[1]) 
+print(sys.path[1])
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", \
