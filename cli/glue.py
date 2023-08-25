@@ -1,9 +1,6 @@
 import click
 
 import akasha as ak
-from dotenv import load_dotenv
-load_dotenv() 
-
 
 @click.group()
 def akasha():
