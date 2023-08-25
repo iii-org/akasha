@@ -1,5 +1,5 @@
 import os
-from pathlib import Path
+import numpy as np
 import time
 from tqdm import tqdm
 import torch
@@ -418,8 +418,34 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', record_exp:str = "", \
                  system_prompt:str = "" ):
+    """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory, 
+    then use llm model to generate a question and answer pair, and save it into a txt file.
+
+    Args:
+        doc_path (str): documents directory path
+        question_num (int, optional): number of questions you want to create. Defaults to 10.
+        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".
+        chunk_size (int, optional): chunk size of texts from documents. Defaults to 1000.
+        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
+        verbose (bool, optional): show log texts or not. Defaults to False.
+        topK (int, optional): search top k number of similar documents. Defaults to 2.
+        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
+        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.
+        search_type (str, optional): search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.
+        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default "".
+        system_prompt (str, optional): the system prompt that you assign special instruction to llm model, so will not be used
+        in searching relevant documents. Defaults to "".
+        
+    Returns:
+        (list, list): question list and answer list
+    """
     
-    doc_range = (1999+chunk_size)//chunk_size
+    
+    ### define variables ###
+    doc_range = (1999+chunk_size)//chunk_size   # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
     start_time = time.time()
     logs = ["\n\n-----------------auto_create_questionset----------------------\n"]
     params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
@@ -432,6 +458,9 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     tokens = 0
     question = []
     answer = []
+    
+    
+    ### load docuemtns from db ###
     db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
@@ -441,14 +470,14 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
         return ""
     
     
-    import numpy as np
-    
     db_data = db.get(include=['documents','metadatas'])
     texts = db_data['documents']
     metadata =  db_data['metadatas']
     
     
     
+    
+    ### random select a range of documents from the documents , and use llm model to generate a question and answer pair ###
     for i in range(question_num):
         random_index = np.random.randint(len(texts) - doc_range)
         doc_text = '\n'.join(texts[random_index:random_index + doc_range])
@@ -465,7 +494,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
         except:
             response = model._call(q_prompt)
 
-        response = helper.sim_to_trad(response)
+        response = helper.sim_to_trad(response) #transform simplified chinese to traditional chinese
         print(response)
         logs.append(doc_text)
         logs.append("\n\nresponse:\n\n"+ response)
@@ -492,7 +521,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     helper.save_logs(logs)
     
     
-    ### how to write question and answer into txt file, but first check if "questionset" directory exist or not, it not, first create it.
+    ### write question and answer into txt file, but first check if "questionset" directory exist or not, it not, first create it.
     ### for filename, count the files in the questionset directory that has doc_path in the file name, and use it as the file name.
     if not os.path.exists("questionset"):
         os.makedirs("questionset")
@@ -516,7 +545,30 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', record_exp:str = "")->(float, float):
-    
+    """parse the question set txt file generated from "auto_create_questionset" function, and use llm model to generate response, 
+    evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
+    and rouge_l to evaluate the response.
+
+    Args:
+        questionset_path (str): the path of question set txt file
+        doc_path (str): documents directory path
+        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".
+        chunk_size (int, optional): chunk size of texts from documents. Defaults to 1000.
+        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
+        verbose (bool, optional): show log texts or not. Defaults to False.
+        topK (int, optional): search top k number of similar documents. Defaults to 2.
+        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
+        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.
+        search_type (str, optional): search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.
+        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default "".
+        
+        
+    Returns:
+        (float, float): average bert_score and average rouge_l score of all questions
+    """
     #read the whole txt file and separate it into question and answer list by "\n\n"
     with open(questionset_path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -526,6 +578,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     bert = []
     rouge = []
 
+    ### parse the questions and answers into question list and answer list ###
     for i in range(len(content)):
         if content[i] == "":
             continue
@@ -536,11 +589,14 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     
     
     
-    
+    ### if language is "ch", use chinese system prompt ###
     if language=='ch':
-        system_prompt = "[INST] <<SYS>> 用中文回答 <<SYS>> [/INST]" 
+        system_prompt = "[INST] <<SYS>> 用中文回答 <</SYS>> [/INST]" 
     else:
         system_prompt = ""
+        
+    
+    ### define variables ###
     total_question = len(question)
     doc_length = 0
     tokens = 0
@@ -555,6 +611,8 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
     
 
+    
+    ### load documents from db ###
     db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
 
     if db is None:
@@ -564,6 +622,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
         return -1.0, -1.0
 
     
+    ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
     for i in range(total_question):
         
         

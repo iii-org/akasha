@@ -72,7 +72,16 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
 
 
 def handle_score_table(table:dict, bert:float, rouge:float)->dict:
-    
+    """add each response's bert and rouge score into table dictionary
+
+    Args:
+        table (dict): table dictionary that store texts data for a run of experiment.
+        bert (float): bert score
+        rouge (float): rouge score
+
+    Returns:
+        dict: table dictionary
+    """
     
     table["bert"] = bert
     table["rouge"] = rouge
