@@ -1,13 +1,13 @@
 import click
 
-
 import akasha as ak
-import pathlib
+from dotenv import load_dotenv
+load_dotenv() 
+
 
 @click.group()
 def akasha():
-    from dotenv import load_dotenv
-    load_dotenv(dotenv_path=pathlib.Path().resolve()) 
+
     pass
 
 
