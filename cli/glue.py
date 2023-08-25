@@ -95,7 +95,8 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
         logs.append("\n\nresponse:\n\n"+ response[-1])
         
         
-        print(res)
+        print("Response: ",res)
+        print("\n\n")
         user_input = click.prompt("Please input your question(type \"exit()\" to quit) ")
 
 
