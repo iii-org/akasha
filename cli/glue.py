@@ -19,17 +19,17 @@ def akasha():
 @click.option('--embeddings','-e', default="openai:text-embedding-ada-002", help='embeddings for storing the documents')
 @click.option('--chunk_size', '-c', default = 1000, help='chunk size for storing the documents')
 @click.option('--model', '-m', default="openai:gpt-3.5-turbo",help='llm model for generating the response')
-@click.option('--wwww', '-k', default = 2, help='select topK relevant documents')
+@click.option('--topk', '-k', default = 2, help='select topK relevant documents')
 @click.option('--threshold', '-t', default=0.2, help='threshold score for selecting the relevant documents')
 @click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
-def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model:str, wwww:int, threshold:float,\
+def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str):
 
     res = ak.get_response(doc_path, prompt, embeddings, chunk_size\
-                 , model, False, wwww, threshold,\
+                 , model, False, topk, threshold,\
                  language , search_type, False, record_exp, \
                  system_prompt)
     
@@ -42,17 +42,17 @@ def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model
 @click.option('--embeddings','-e', default="openai:text-embedding-ada-002", help='embeddings for storing the documents')
 @click.option('--chunk_size', '-c', default = 1000, help='chunk size for storing the documents')
 @click.option('--model', '-m', default="openai:gpt-3.5-turbo",help='llm model for generating the response')
-@click.option('--topK', '-k', default=2, help='select topK relevant documents')
+@click.option('--topk', '-k', default=2, help='select topK relevant documents')
 @click.option('--threshold', '-t', default=0.2, help='threshold score for selecting the relevant documents')
 @click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
-def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model:str, topK:int, threshold:float,\
+def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str):
     
      res = ak.chain_of_thought(doc_path, prompt, embeddings, chunk_size\
-                 , model, False, topK, threshold,\
+                 , model, False, topk, threshold,\
                  language , search_type, False, record_exp, \
                  system_prompt)
      
