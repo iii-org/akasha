@@ -73,7 +73,7 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
         return ""
 
 
-    user_input = click.prompt("Please input your question(type \"exit()\" to quit): ")
+    user_input = click.prompt("Please input your question(type \"exit()\" to quit) ")
     while user_input != "exit()":
         
         docs = search.get_docs(db, embeddings, user_input, topk, threshold, language, search_type, False,\
@@ -96,7 +96,7 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
         
         
         print(res)
-        user_input = click.prompt("Please input your question(type \"exit()\" to quit): ")
+        user_input = click.prompt("Please input your question(type \"exit()\" to quit) ")
 
 
 
