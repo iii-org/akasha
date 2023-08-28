@@ -442,6 +442,7 @@ Please input your question(type "exit()" to quit) : exit()
 
 <br/>
 <br/>
+
 Currently you can use **get-response**, **keep-responsing**, **chain-of-thought** and **test-performance**.
   
 
