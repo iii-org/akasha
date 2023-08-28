@@ -400,9 +400,7 @@ chatglm_model = "chatglm:THUDM/chatglm2-6b"
 
 
 <br/>
-<br/>
-<br/>
-<br/>
+
 
 
 ## Some embeddings you can use
@@ -415,6 +413,10 @@ text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"
 
 ```
 
+<br/>
+<br/>
+<br/>
+<br/>
 
 
 
