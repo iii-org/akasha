@@ -83,7 +83,7 @@ def format_create_question_prompt(doc_text:str)->str:
         str: _description_
     """
     #q_prompt = "Human: You are a teacher coming up with questions to ask on a quiz. \nGiven the following document, please generate a question and answer based on that document.\n\nExample Format:\n<Begin Document>\n...\n<End Document>\nQUESTION: question here\nANSWER: answer here\n\nThese questions should be detailed and be based explicitly on information in the document. Begin!\n\n<Begin Document>\n\n"
-    q_prompt = "人類：您是一位教師，正在為測驗準備問題。\n根據以下文件，請基於該文件只生成一個問題和一個答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！\n\n<開始文件>\n"
+    q_prompt =  "[INST] <<SYS>>" + "人類：您是一位教師，正在為測驗準備問題。\n根據以下文件，請基於該文件只生成一個問題和一個答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"+ "<<SYS>> [/INST]\n\n<開始文件>\n"
     #end_prompt = "<End Document>\n"
     end_prompt = "<結束文件>\n"
     # generate question prompt = generate_question_prompt(Document)

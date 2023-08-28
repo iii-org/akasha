@@ -463,7 +463,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     
     ### load docuemtns from db ###
     db = helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
-
+    print(db.get(include=['documents','metadatas','embeddings']))
     if db is None:
         info = "document path not exist\n"
         print(info)

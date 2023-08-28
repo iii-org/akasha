@@ -7,6 +7,7 @@ from tqdm import tqdm
 from pathlib import Path
 import opencc
 from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
+from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
@@ -42,6 +43,12 @@ def _load_files(doc_path:str, extension:str="pdf")->list:
                 docs = Docx2txtLoader(doc_path+loader).load()
                 for i in range(len(docs)):
                     docs[i].metadata['page'] = i
+                res.extend(docs)
+            elif extension == "csv":
+                docs = CSVLoader(doc_path+loader).load()
+                for i in range(len(docs)):
+                    docs[i].metadata['page'] = docs[i].metadata['row']
+                    del docs[i].metadata['row']
                 res.extend(docs)
             else:
                 docs = TextLoader(doc_path+loader,encoding='utf-8').load()
@@ -155,7 +162,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         
 
         documents = []
-        txt_extensions = ['pdf', 'md','docx','txt']
+        txt_extensions = ['pdf', 'md','docx','txt','csv']
         for extension in txt_extensions:
             documents.extend(_load_files(doc_path, extension))
         

@@ -372,3 +372,98 @@ Best cost-effective:
 embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 2, search type: tfidf
 
 ```
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+## Some models you can use
+
+```python
+openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY"
+huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
+quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
+
+### If you want to use llama-cpp to run model on cpu, you can download ggml version of models 
+### from  https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/tree/main  and the name behind "llama-gpu:" or "llama-cpu:"
+### is the path of the downloaded .bin file
+llama_cpp_model = "llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin"  
+llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"
+chatglm_model = "chatglm:THUDM/chatglm2-6b"
+
+
+```
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+## Some embeddings you can use
+
+```python
+openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"
+huggingface_emd = "hf:all-MiniLM-L6-v2" 
+text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"
+
+
+```
+
+
+
+
+## command line interface
+You can also use akasha in command line, for example, you can use **keep-responsing** to create a document QA model 
+and keep asking different questions and get response based on the documents in the given -d directory.
+
+
+
+```console
+$ akasha keep-responsing -d ../doc/plc/  -c 400 -k 1
+Please input your question(type "exit()" to quit) : 應回收廢塑膠容器材質種類不包含哪種?  聚丙烯（PP） 聚苯乙烯（PS） 聚氯乙烯（PVC）  低密度聚乙烯（LDPE）
+Response:  應回收廢塑膠容器材質種類不包含低密度聚乙烯（LDPE）。
+
+
+
+Please input your question(type "exit()" to quit) : 所謂市盈率，是指每股市價除以每股盈餘，也就是股票的?   本益比  帳面值比  派息   資金
+英國和德國等多個市場。然而，義大利、加拿大和澳洲並不在這些可交易的國家之列。
+
+
+
+Please input your question(type "exit()" to quit) : exit()
+
+```
+
+<br/>
+<br/>
+Currently you can use **get-response**, **keep-responsing**, **chain-of-thought** and **test-performance**.
+  
+
+
+```console
+$ akasha keep-responsing --help
+Usage: akasha keep-responsing [OPTIONS]
+
+Options:
+  -d, --doc_path TEXT         document directory path, parse all .txt, .pdf,
+                              .docx files in the directory  [required]
+  -e, --embeddings TEXT       embeddings for storing the documents
+  -c, --chunk_size INTEGER    chunk size for storing the documents
+  -m, --model TEXT            llm model for generating the response
+  -k, --topk INTEGER          select topK relevant documents
+  -t, --threshold FLOAT       threshold score for selecting the relevant
+                              documents
+  -l, --language TEXT         language for the documents, default is 'ch' for
+                              chinese
+  -s, --search_type TEXT      search type for the documents, include merge,
+                              svm, mmr, tfidf
+  -sys, --system_prompt TEXT  system prompt for the llm model
+  --help                      Show this message and exit.
+
+```
