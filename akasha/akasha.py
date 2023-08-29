@@ -23,18 +23,18 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
     Args:
         **doc_path (str)**: documents directory path\n
-        prompt (str, optional): question you want to ask. Defaults to "".\n
-        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
-        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".\n
-        verbose (bool, optional): show log texts or not. Defaults to False.\n
-        topK (int, optional): search top k number of similar documents. Defaults to 2.\n
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.\n
-        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
+        **prompt (str, optional)**: question you want to ask. Defaults to "".\n
+        **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+        **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+        **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
             max token size of llm input.\n
-        search_type (str, optional): search type to find similar documents from db, default 'merge'.
+        **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.\n
-        compression (bool): compress the relevant documents or not.\n
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+        **compression (bool)**: compress the relevant documents or not.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.\n
 
     Returns:
@@ -111,20 +111,20 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         
 
     Args:
-        doc_path (str): documents directory path
-        prompt (str, optional): question you want to ask. Defaults to "".
-        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002"\.
-        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
-        verbose (bool, optional): show log texts or not. Defaults to False.
-        topK (int, optional): search top k number of similar documents. Defaults to 2.
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
-        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
-            max token size of llm input.
-        search_type (str, optional): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.
-        compression (bool): compress the relevant documents or not.
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default ''.
+        **doc_path (str)**: documents directory path\n
+        **prompt (str, optional)**: question you want to ask. Defaults to "".\n
+        **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+        **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+        **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.\n
+        **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        **compression (bool)**: compress the relevant documents or not.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.\n
 
     Returns:
         str: llm output str
@@ -190,10 +190,10 @@ def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
     """upload params_metrics, table to mlflow server for tracking.
 
     Args:
-        exp_name (str): experiment name on the tracking server, if not found, will create one .
-        params (dict, optional): parameters dictionary. Defaults to {}.
-        metrics (dict, optional): metrics dictionary. Defaults to {}.
-        table (dict, optional): table dictionary, used to compare text context between different runs in the experiment. Defaults to {}.
+        **exp_name (str)**: experiment name on the tracking server, if not found, will create one .\n
+        **params (dict, optional)**: parameters dictionary. Defaults to {}.\n
+        **metrics (dict, optional)**: metrics dictionary. Defaults to {}.\n
+        **table (dict, optional)**: table dictionary, used to compare text context between different runs in the experiment. Defaults to {}.\n
     """
     import aiido
     mod = params["model"].split(':')
@@ -216,26 +216,26 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
                  , model:str = "openai:gpt-3.5-turbo", topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "" ):
     """input a txt file includes list of single choice questions and the answer, will test all of the questions and return the
-    correct rate of this parameters(model, embeddings, search_type, chunk_size)
+    correct rate of this parameters(model, embeddings, search_type, chunk_size)\n
     the format of q_file(.txt) should be one line one question, and the possibles answers and questions are separate by space,
-    the last one is which possisble answers is the correct answer, for example, the file should look like: 
+    the last one is which possisble answers is the correct answer, for example, the file should look like: \n
         "What is the capital of Taiwan?" Taipei  Kaohsiung  Taichung  Tainan     1
         何者是台灣的首都?  台北 高雄 台中 台南   1
     
     Args:
-        q_file (str): the file path of the question file
-        doc_path (str): documents directory path
-        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002"\.
-        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
-        topK (int, optional): search top k number of similar documents. Defaults to 2.
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
-        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
-            max token size of llm input.
-        search_type (str, optional): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf', 'knn'.
-        compression (bool): compress the relevant documents or not.
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default ''.
+        **q_file (str)**: the file path of the question file\n
+        **doc_path (str)**: documents directory path\n
+        **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+        **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.\n
+        **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf', 'knn'.\n
+        **compression (bool)**: compress the relevant documents or not.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.\n
 
     Returns:
         float: the correct rate of all questions
@@ -316,11 +316,11 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
     """ check the given texts have harmful or sensitive information
 
     Args:
-        texts (str): texts that we want llm to check.
-        model (str, optional): llm model name. Defaults to "openai:gpt-3.5-turbo".
-        verbose (bool, optional): show log texts or not. Defaults to False.
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default ''.
+        **texts (str)**: texts that we want llm to check.\n
+        **model (str, optional)**: llm model name. Defaults to "openai:gpt-3.5-turbo".\n
+        **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.\n
 
     Returns:
         str: response from llm
@@ -353,17 +353,17 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
     """test all combinations of giving lists, and run test_performance to find parameters of the best result.
 
     Args:
-        q_file (str): the file path of the question file
-        doc_path (str): documents directory path
-        embeddings_list (_type_, optional): list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].
-        chunk_size_list (list, optional): list of chunk sizes. Defaults to [500]\.
-        model_list (_type_, optional): list of models. Defaults to ["openai:gpt-3.5-turbo"].
-        topK_list (list, optional): list of topK. Defaults to [2].
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
-        search_type_list (list, optional): list of search types, currently have "merge", "svm", "knn", "tfidf", "mmr". Defaults to ['merge','svm','tfidf','mmr'].
-        compression (bool): compress the relevant documents or not.
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default ''.
+        **q_file (str)**: the file path of the question file\n
+        **doc_path (str)**: documents directory path\n
+        **embeddings_list (_type_, optional)**: list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].\n
+        **chunk_size_list (list, optional)**: list of chunk sizes. Defaults to [500].\n
+        **model_list (_type_, optional)**: list of models. Defaults to ["openai:gpt-3.5-turbo"].\n
+        **topK_list (list, optional)**: list of topK. Defaults to [2].\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **search_type_list (list, optional)**: list of search types, currently have "merge", "svm", "knn", "tfidf", "mmr". Defaults to ['merge','svm','tfidf','mmr'].
+        **compression (bool)**: compress the relevant documents or not.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.\n
     Returns:
         (list,list): return best score combination and best cost-effective combination
     """

@@ -12,11 +12,11 @@ def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold
     """use KNN to find relevant doc from query.
 
     Args:
-        db (_type_): chroma db
-        embeddings (_type_): embeddings used to store vector and search documents
-        query (str): the query str used to search similar documents
-        k (int): for each search type, return first k documents
-        relevancy_threshold (float): the similarity score threshold to select documents
+        **db (Chromadb):** chroma db\n
+        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **query (str)**: the query str used to search similar documents\n
+        **k (int)**: for each search type, return first k documents\n
+        **relevancy_threshold (float)**: the similarity score threshold to select documents\n
 
     Returns:
         list: list of Documents
@@ -35,9 +35,9 @@ def _get_relevant_doc_tfidf(db, query:str, k:int, model, compression:bool)->list
     """use Term Frequency-Inverse Document Frequency to find relevant doc from query.
 
     Args:
-        db (_type_): chroma db
-        query (str): the query str used to search similar documents
-        k (int): for each search type, return first k documents
+        **db (Chromadb)**: chroma db\n
+        **query (str)**: the query str used to search similar documents\n
+        **k (int)**: for each search type, return first k documents\n
 
     Returns:
         list: list of Documents
@@ -62,11 +62,11 @@ def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:
     """use SVM to find relevant doc from query.
 
     Args:
-        db (_type_): chroma db
-        embeddings (_type_): embeddings used to store vector and search documents
-        query (str): the query str used to search similar documents
-        k (int): for each search type, return first k documents
-        relevancy_threshold (float): the similarity score threshold to select documents
+        **db (Chromadb**): chroma db\n
+        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **query (str)**: the query str used to search similar documents\n
+        **k (int)**: for each search type, return first k documents\n
+        **relevancy_threshold (float)**: the similarity score threshold to select documents\n
 
     Returns:
         list: list of Documents
@@ -86,10 +86,10 @@ def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float, model
     """use Chroma.as_retriever().get_relevant_document() to search relevant documents.
 
     Args:
-        db (_type_): chroma db
-        query (str): the query str used to search similar documents
-        k (int): for each search type, return first k documents
-        relevancy_threshold (float): the similarity score threshold to select documents
+        **db (Chromadb)**: chroma db\n
+        **query (str)**: the query str used to search similar documents\n
+        **k (int)**: for each search type, return first k documents\n
+        **relevancy_threshold (float)**: the similarity score threshold to select documents\n
 
     Returns:
         list: list of selected relevant Documents 
@@ -115,11 +115,11 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)
         use jieba to count length of chinese words, use split space otherwise.
 
     Args:
-        docs_list (list): list of all docs from selected search types
-        topK (int): for each search type, select topK documents
-        language (str): 'ch' for chinese, otherwise use split space to count words, default is chinese
-        verbose (bool): show log texts or not. Defaults to False.
-        logs (list): list that store logs.
+        **docs_list (list)**: list of all docs from selected search types\n
+        **topK (int)**: for each search type, select topK documents\n
+        **language (str)**: 'ch' for chinese, otherwise use split space to count words, default is chinese\n
+        **verbose (bool)**: show log texts or not. Defaults to False.\n
+        **logs (list)**: list that store logs.\n
 
     Returns:
         list: merged list of Documents
@@ -167,20 +167,20 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
         and merge them together. 
 
     Args:
-        db (_type_): chroma db
-        embeddings (_type_): embeddings used to store vector and search documents
-        query (str): the query str used to search similar documents
-        topK (int): for each search type, return first topK documents
-        threshold (float): the similarity score threshold to select documents
-        language (str): default to chinese 'ch', otherwise english, the language of documents and prompt,
-            use to make sure docs won't exceed max token size of llm input.
-        search_type (str): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.
-        verbose (bool): show log texts or not. Defaults to False.
-        logs (list): list that store logs.
-        model (): large language model object
-        compression (bool): if True, using llm to filter out contents in the relevant documents
-            that are not related to the query.    
+        **db (Chromadb)**: chroma db\n
+        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **query (str)**: the query str used to search similar documents\n
+        **topK (int)**: for each search type, return first topK documents\n
+        **threshold (float)**: the similarity score threshold to select documents\n
+        **language (str)**: default to chinese 'ch', otherwise english, the language of documents and prompt,
+            use to make sure docs won't exceed max token size of llm input.\n
+        **search_type (str)**: search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        **verbose (bool)**: show log texts or not. Defaults to False.\n
+        **logs (list)**: list that store logs.\n
+        **model ()**: large language model object\n
+        **compression (bool)**: if True, using llm to filter out contents in the relevant documents
+            that are not related to the query.    \n
 
     Returns:
         list: selected list of similar documents.
@@ -221,7 +221,7 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
 
 
 
-class myKNNRetriever(BaseRetriever):
+class myKNNRetriever(BaseRetriever):  
     embeddings: Embeddings
     """Embeddings model to use."""
     index: Any
@@ -245,11 +245,26 @@ class myKNNRetriever(BaseRetriever):
                    ,k=k, relevancy_threshold=relevancy_threshold, **kwargs)
     
     def get_relevant_documents(self, query:str) ->List[Document]:
+        """general function to retrieve relevant documents
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]:  relevant documents
+        """
         return self._ks(query)
     
 
     def _ks(self, query:str)-> List[Document]:
+        """implement k-means search to find relevant documents
 
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]: relevant documents
+        """
         query_embeds = np.array(self.embeddings.embed_query(query))
         # calc L2 norm
         index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
@@ -271,7 +286,14 @@ class myKNNRetriever(BaseRetriever):
         ]
         return top_k_results
     def _aget_relevant_documents(self, query:str)-> List[Document]:
+        """implement k-means search to find relevant documents
 
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]: relevant documents
+        """
         query_embeds = np.array(self.embeddings.embed_query(query))
         # calc L2 norm
         index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
@@ -321,6 +343,14 @@ class mySVMRetriever(BaseRetriever):
     def get_relevant_documents(
         self, query: str
     ) -> List[Document]:
+        """general function to retrieve relevant documents
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]:  relevant documents
+        """
         return self._gs(query)
     
 
@@ -328,6 +358,14 @@ class mySVMRetriever(BaseRetriever):
     def _gs(
         self, query: str
     ) -> List[Document]:
+        """implement svm to find relevant documents
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]: relevant documents
+        """
         try:
             from sklearn import svm
         except ImportError:
@@ -375,6 +413,14 @@ class mySVMRetriever(BaseRetriever):
     async def _aget_relevant_documents(
         self, query: str
     ) -> List[Document]:
+        """implement svm to find relevant documents
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]: relevant documents
+        """
         try:
             from sklearn import svm
         except ImportError:

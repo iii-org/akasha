@@ -8,7 +8,15 @@ from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 def get_llama_cpp_model(model_type:str, model_name:str):
+    """define llama-cpp model, use llama-cpu for pure cpu, use llama-gpu for gpu acceleration.
 
+    Args:
+        **model_type (str)**: llama-cpu or llama-gpu\n
+        **model_name (str)**: path of ggml .bin file\n 
+
+    Returns:
+        _type_: llm model
+    """
     callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
 
 

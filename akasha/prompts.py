@@ -3,7 +3,7 @@
 
 def format_question_query(question:list)->(str, str):
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
-       return the question query string and the answer string.
+       return the question query string and the answer string.\n
       example:    ["what is 1+1 euqals to?", "2", "4", "8", "10", "1"]
       after : 
         query = " what is 1+1 euqals to?
@@ -14,7 +14,7 @@ def format_question_query(question:list)->(str, str):
             "
         ans = "1"
     Args:
-        question (list): list of question and selections and answer
+        **question (list)**: list of question and selections and answer\n
 
     Returns:
         (str, str): return the question query string and the answer string
@@ -37,7 +37,7 @@ def format_llama_json(query):
     """insert system prompt for llm to generate JSON format of {"ans":selection number}
 
     Args:
-        query (str): a question string with selections that we want llm to answer
+        **query (str)**: a question string with selections that we want llm to answer\n
 
     Returns:
        prompt (str): the whole prompt includes system prompt and question  
@@ -58,7 +58,7 @@ def format_chinese_json(query:str):
     """system prompt for single choice question in chinese
 
     Args:
-        query (str): question string
+        **query (str)**: question string\n
 
     Returns:
         str: combined prompt
@@ -77,7 +77,7 @@ def format_create_question_prompt(doc_text:str)->str:
     """prompts for auto generate question from document
 
     Args:
-        doc_text (str): texts from documents
+        **doc_text (str)**: texts from documents\n
 
     Returns:
         str: _description_

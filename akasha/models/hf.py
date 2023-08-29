@@ -17,6 +17,11 @@ class chatGLM(LLM):
     model: Any
 
     def __init__(self, model_name:str):
+        """define chatglm model and the tokenizer
+
+        Args:
+            **model_name (str)**: chatglm model name\n
+        """
         if model_name == "":
             model_name = "THUDM/chatglm2-6b"
         
@@ -26,9 +31,23 @@ class chatGLM(LLM):
 
     @property
     def _llm_type(self) -> str:
+        """return llm type
+
+        Returns:
+            str: llm type
+        """
         return "ChatGLM"
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
         self.model = self.model.eval()
         response, history = self.model.chat(self.tokenizer, prompt, history=[])
         return response
@@ -39,7 +58,14 @@ class chatGLM(LLM):
 
 
 def get_hf_model(model_name):
+    """try different methods to define huggingface model, first use pipline and then use llama2.
 
+    Args:
+        model_name (str): huggingface model name\n
+
+    Returns:
+        _type_: llm model
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action='ignore', category=FutureWarning)
         hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")

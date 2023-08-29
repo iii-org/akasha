@@ -22,8 +22,8 @@ def _load_files(doc_path:str, extension:str="pdf")->list:
     """load text files of select extension into list of Documents
 
     Args:
-        doc_path (str): text files directory 
-        extension (str, optional): the extension type. Defaults to "pdf".
+        **doc_path (str)**: text files directory\n 
+        **extension (str, optional):** the extension type. Defaults to "pdf".\n 
 
     Returns:
         list: list of Documents
@@ -68,7 +68,7 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     or not. If exist, exit create_chromadb function. 
 
     Args:
-        doc_path (str): the path of documents directory, also used to check if it's in chromabd storage. 
+        **doc_path (str)**: the path of documents directory, also used to check if it's in chromabd storage. \n 
 
     Returns:
         bool: return True of False if the doc db storage exist
@@ -93,7 +93,7 @@ def _separate_name(name:str):
     """ separate type:name by ':'
 
     Args:
-        name (str): string with format "type:name" 
+        **name (str)**: string with format "type:name" \n 
 
     Returns:
         (str, str): res_type , res_name
@@ -117,13 +117,13 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
 
     Args:
-        doc_path (str): the path of directory that store all .pdf documents
-        logs (list): list that store logs
-        verbose (bool): print logs or not
-        embeddings (vars): the embeddings used in transfer documents into vector storage, could be openai 
-        tensorflow or huggingface embeddings. 
-        sleep_time (int, optional): sleep time to transfer documents into vector storage, this is for 
-            preventing rate limit exceed when request too much tokens at a time. Defaults to 60.
+        **doc_path (str)**: the path of directory that store all .pdf documents\n 
+        **logs (list)**: list that store logs\n 
+        **verbose (bool)**: print logs or not\n 
+        **embeddings (vars)**: the embeddings used in transfer documents into vector storage, could be openai 
+        tensorflow or huggingface embeddings. \n 
+        **sleep_time (int, optional)**: sleep time to transfer documents into vector storage, this is for 
+            preventing rate limit exceed when request too much tokens at a time. Defaults to 60.\n 
 
     Raises:
         FileNotFoundError: if can not found the doc_path directory, will raise error and return None.
@@ -220,11 +220,11 @@ def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
-        embedding_name (str): embeddings client you want to use.
-            format is (type:name), which is the model type and model name.
-            for example, "openai:text-embedding-ada-002", "huggingface:all-MiniLM-L6-v2".
-        logs (list): list that store logs
-        verbose (bool): print logs or not
+        **embedding_name (str)**: embeddings client you want to use.
+            format is (type:name), which is the model type and model name.\n
+            for example, "openai:text-embedding-ada-002", "huggingface:all-MiniLM-L6-v2".\n
+        **logs (list)**: list that store logs\n
+        **verbose (bool)**: print logs or not\n
 
     Returns:
         vars: embeddings client
@@ -264,9 +264,9 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
-        model_name (str): open ai model name like "gpt-3.5-turbo","text-davinci-003", "text-davinci-002"
-        logs (list): list that store logs
-        verbose (bool): print logs or not
+       ** model_name (str)**: open ai model name like "gpt-3.5-turbo","text-davinci-003", "text-davinci-002"\n
+        **logs (list)**: list that store logs\n
+        **verbose (bool)**: print logs or not\n
 
     Returns:
         vars: model client
@@ -308,7 +308,7 @@ def save_logs(logs:list)->None:
     """save running logs into logs/logs_{date}.txt
 
     Args:
-        logs (list): list that store logs
+        **logs (list)**: list that store logs\n
     """
     logs = '\n'.join(logs)
 
@@ -339,8 +339,8 @@ def get_doc_length(language:str, doc)->int:
     """calculate the length of terms in a giving Document
 
     Args:
-        language (str): 'ch' for chinese and 'en' for others, default 'ch'
-        doc (Document): Docuemtn object
+        **language (str)**: 'ch' for chinese and 'en' for others, default 'ch'\n
+        **doc (Document)**: Document object\n
 
     Returns:
         doc_length: int Docuemtn length
@@ -356,8 +356,8 @@ def get_docs_length(language:str, docs:list)->int:
     """calculate the total length of terms in giving documents
 
     Args:
-        language (str): 'ch' for chinese and 'en' for others, default 'ch'
-        docs (list): list of Documents
+        language (str): 'ch' for chinese and 'en' for others, default 'ch'\n
+        docs (list): list of Documents\n
 
     Returns:
         docs_length: int total Document length
@@ -375,7 +375,7 @@ def get_question_from_file(path:str)->list:
       and they are all separate by space in the file. 
 
     Args:
-        path (str): path of the question file
+        **path (str)**: path of the question file\n
 
     Returns:
         list: list of question list
@@ -394,7 +394,7 @@ def extract_result(response:str):
     """to prevent the output of llm format is not what we want, try to extract the answer (digit) from the llm output 
 
     Args:
-        response (str): llm output
+        **response (str)**: llm output\n
 
     Returns:
         int: digit of answer
@@ -420,11 +420,11 @@ def get_all_combine(embeddings_list:list, chunk_size_list:list, model_list:list,
     """record all combinations of giving lists
 
     Args:
-        embeddings_list (list): list of embeddings(str)
-        chunk_size_list (list): list of chunk sizes(int)
-        model_list (list): list of models(str)
-        topK_list (list): list of topK(int)
-        search_type_list (list): list of search types(str)
+        **embeddings_list (list)**: list of embeddings(str)\n
+        **chunk_size_list (list)**: list of chunk sizes(int)\n
+        **model_list (list)**: list of models(str)\n
+        **topK_list (list)**: list of topK(int)\n
+        **search_type_list (list)**: list of search types(str)\n
 
     Returns:
         list: list of tuples of all different combinations
@@ -445,8 +445,8 @@ def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
     tuple looks like (score, cost-effective, embeddings, chunk size, model, topK, search type)
 
     Args:
-        result_list (list): list of tuples that save the information of running experiments
-        idx (int): the index used to find the greatest result 0 is based on score and 1 is based on cost-effective
+        **result_list (list)**: list of tuples that save the information of running experiments\n
+        **idx (int)**: the index used to find the greatest result 0 is based on score and 1 is based on cost-effective\n
 
     Returns:
         list: return list of tuples that have same highest criteria
@@ -471,7 +471,7 @@ def sim_to_trad(text:str)->str:
     """convert simplified chinese to traditional chinese
 
     Args:
-        text (str): simplified chinese
+        **text (str)**: simplified chinese\n
 
     Returns:
         str: traditional chinese

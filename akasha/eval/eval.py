@@ -18,22 +18,22 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     then use llm model to generate a question and answer pair, and save it into a txt file.
 
     Args:
-        doc_path (str): documents directory path
-        question_num (int, optional): number of questions you want to create. Defaults to 10.
-        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".
-        chunk_size (int, optional): chunk size of texts from documents. Defaults to 1000.
-        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
-        verbose (bool, optional): show log texts or not. Defaults to False.
-        topK (int, optional): search top k number of similar documents. Defaults to 2.
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
-        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
-            max token size of llm input.
-        search_type (str, optional): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default "".
-        system_prompt (str, optional): the system prompt that you assign special instruction to llm model, so will not be used
-        in searching relevant documents. Defaults to "".
+        **doc_path (str)**: documents directory path\n
+        **question_num (int, optional)**: number of questions you want to create. Defaults to 10.\n
+        **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
+        **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+        **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+        **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.\n
+        **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default "".\n
+        **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+        in searching relevant documents. Defaults to "".\n
     Returns:
         (list, list): question list and answer list
     """
@@ -144,20 +144,20 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     and rouge_l to evaluate the response.
 
     Args:
-        questionset_path (str): the path of question set txt file
-        doc_path (str): documents directory path
-        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".
-        chunk_size (int, optional): chunk size of texts from documents. Defaults to 1000.
-        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
-        verbose (bool, optional): show log texts or not. Defaults to False.
-        topK (int, optional): search top k number of similar documents. Defaults to 2.
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
-        language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
-            max token size of llm input.
-        search_type (str, optional): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.
-        record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default "".
+        **questionset_path (str)**: the path of question set txt file\n
+        **doc_path (str)**: documents directory path\n
+        **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
+        **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+        **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+        **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+            max token size of llm input.\n
+        **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default "".\n
         
         
     Returns:

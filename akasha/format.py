@@ -5,14 +5,14 @@ def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, to
     """save running parameters into dictionary in order to parse to aiido
 
     Args:
-        model (str): model name
-        embeddings (str): embedding name
-        chunk_size (int): chunk size of texts from documents
-        search_type (str): search type of finding relevant documents
-        topK (int): return top k documents
-        threshold (float): only return documents that has similarity score larger than threshold
-        language (str): 'ch' for chinese and 'en' for other.
-        compression (bool): compress the relevant documents or not.
+        **model (str)**: model name\n
+        **embeddings (str)**: embedding name\n
+        **chunk_size (int)**: chunk size of texts from documents\n
+        **search_type (str)**: search type of finding relevant documents\n
+        **topK (int)**: return top k documents\n
+        **threshold (float)**: only return documents that has similarity score larger than threshold\n
+        **language (str)**: 'ch' for chinese and 'en' for other.\n
+        **compression (bool)**: compress the relevant documents or not.\n
 
     Returns:
         dict: parameter dictionary
@@ -33,8 +33,8 @@ def handle_metrics(doc_length:int, time:float)->dict:
     """save running metrics into dictionary in order to parse to aiido
 
     Args:
-        doc_length (int): length of texts from relevant documents  
-        time (float): total spent time
+        **doc_length (int)**: length of texts from relevant documents  \n
+        **time (float)**: total spent time\n
 
     Returns:
         dict: metric dictionary
@@ -50,9 +50,9 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
     """save running results into dictionary in order to parse to aiido
 
     Args:
-        prompt (str): input query/question
-        docs (list): Document list and metadata
-        response (str): results from llm response
+        **prompt (str)**: input query/question\n
+        **docs (list)**: Document list and metadata\n
+        **response (str)**: results from llm response\n
 
     Returns:
         dict: table dictionary
@@ -75,9 +75,9 @@ def handle_score_table(table:dict, bert:float, rouge:float)->dict:
     """add each response's bert and rouge score into table dictionary
 
     Args:
-        table (dict): table dictionary that store texts data for a run of experiment.
-        bert (float): bert score
-        rouge (float): rouge score
+        **table (dict)**: table dictionary that store texts data for a run of experiment.\n
+        **bert (float)**: bert score\n
+        **rouge (float)**: rouge score\n
 
     Returns:
         dict: table dictionary
