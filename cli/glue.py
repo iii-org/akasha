@@ -1,7 +1,7 @@
 import click
 
 import akasha as ak
-
+import akasha.eval.eval as eval
 @click.group()
 def akasha():
 
@@ -177,7 +177,7 @@ def auto_create_questionset(doc_path:str, question_num:int , embeddings:str , ch
 
     model = "openai:gpt-3.5-turbo"
     
-    ak.auto_create_questionset(doc_path, question_num, embeddings, chunk_size\
+    eval.auto_create_questionset(doc_path, question_num, embeddings, chunk_size\
                  , model, False, topk, threshold, language, search_type, record_exp) 
 
 
@@ -201,7 +201,7 @@ def auto_evaluation(question_path:str, doc_path:str, embeddings:str, chunk_size:
     
     
     
-    avg_bert, avg_rouge = ak.auto_evaluation(question_path, doc_path, embeddings, chunk_size\
+    avg_bert, avg_rouge = eval.auto_evaluation(question_path, doc_path, embeddings, chunk_size\
                  , model, False, topk, threshold,\
                  language, search_type, record_exp)
 
