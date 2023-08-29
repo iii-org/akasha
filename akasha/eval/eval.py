@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
-import eval.eval as eval
+
 
 def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
@@ -239,8 +239,8 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
             torch.cuda.empty_cache()
 
         
-        bert.append(eval.scores.get_bert_score(response[-1],answer[i],language))
-        rouge.append(eval.scores.get_rouge_score(response[-1],answer[i],language))
+        bert.append(akasha.eval.scores.get_bert_score(response[-1],answer[i],language))
+        rouge.append(akasha.eval.scores.get_rouge_score(response[-1],answer[i],language))
         
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
