@@ -2,6 +2,7 @@ import datetime
 import time
 from tqdm import tqdm
 import akasha
+import akasha.eval as eval
 import os
 import numpy as np
 import torch
@@ -238,8 +239,8 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
             torch.cuda.empty_cache()
 
         
-        bert.append(akasha.eval.scores.get_bert_score(response[-1],answer[i],language))
-        rouge.append(akasha.eval.scores.get_rouge_score(response[-1],answer[i],language))
+        bert.append(eval.scores.get_bert_score(response[-1],answer[i],language))
+        rouge.append(eval.get_rouge_score(response[-1],answer[i],language))
         
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
