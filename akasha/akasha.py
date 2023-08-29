@@ -20,11 +20,11 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", \
                  system_prompt:str = ""  )->str:
     """input the documents directory path and question, will first store the documents
-        into vectors db (chromadb), then search similar documents based on the prompt question.
-        llm model will use these documents to generate the response of the question.
+    into vectors db (chromadb), then search similar documents based on the prompt question.
+    llm model will use these documents to generate the response of the question.
 
     Args:
-        *doc_path (str)*: documents directory path\n
+        **doc_path (str)**: documents directory path\n
         prompt (str, optional): question you want to ask. Defaults to "".\n
         embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
         model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".\n
