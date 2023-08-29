@@ -24,7 +24,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         llm model will use these documents to generate the response of the question.
 
     Args:
-        doc_path (str): documents directory path\n
+        *doc_path (str)*: documents directory path\n
         prompt (str, optional): question you want to ask. Defaults to "".\n
         embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
         model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".\n
