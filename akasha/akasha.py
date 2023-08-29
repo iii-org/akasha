@@ -24,23 +24,23 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         llm model will use these documents to generate the response of the question.
 
     Args:
-        doc_path (str): documents directory path
-        prompt (str, optional): question you want to ask. Defaults to "".
-        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002"\.
-        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".
-        verbose (bool, optional): show log texts or not. Defaults to False.
-        topK (int, optional): search top k number of similar documents. Defaults to 2.
-        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.
+        doc_path (str): documents directory path\n
+        prompt (str, optional): question you want to ask. Defaults to "".\n
+        embeddings (str, optional): the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        model (str, optional): llm model to use. Defaults to "gpt-3.5-turbo".\n
+        verbose (bool, optional): show log texts or not. Defaults to False.\n
+        topK (int, optional): search top k number of similar documents. Defaults to 2.\n
+        threshold (float, optional): the similarity threshold of searching. Defaults to 0.2.\n
         language (str, optional): the language of documents and prompt, use to make sure docs won't exceed
-            max token size of llm input.
+            max token size of llm input.\n
         search_type (str, optional): search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.
-        compression (bool): compress the relevant documents or not.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        compression (bool): compress the relevant documents or not.\n
         record_exp (str, optional): use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
-            record_exp as experiment name.  default ''.
+            record_exp as experiment name.  default ''.\n
 
     Returns:
-        str: llm output str
+        str: llm output str\n
     """
     
     start_time = time.time()
@@ -439,7 +439,6 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
             record_exp as experiment name.  default "".
         system_prompt (str, optional): the system prompt that you assign special instruction to llm model, so will not be used
         in searching relevant documents. Defaults to "".
-        
     Returns:
         (list, list): question list and answer list
     """
