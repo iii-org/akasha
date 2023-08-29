@@ -239,8 +239,8 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
             torch.cuda.empty_cache()
 
         
-        bert.append(eval.scores.get_bert_score(response[-1],answer[i],language))
-        rouge.append(eval.get_rouge_score(response[-1],answer[i],language))
+        bert.append(eval.scores.get_bert_score(response[-1], answer[i], language))
+        rouge.append(eval.scores.get_rouge_score(response[-1], answer[i], language))
         
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
@@ -255,16 +255,18 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
         
     progress.close()
     end_time = time.time()
-
+    avg_bert = round(sum(bert)/len(bert),3)
+    avg_rouge = round(sum(rouge)/len(rouge),3)
+    
     if record_exp != "":    
         metrics = akasha.format.handle_metrics(doc_length, end_time - start_time)
-        metrics['avg_bert'] = sum(bert)/len(bert)
-        metrics['avg_rouge'] = sum(rouge)/len(rouge)
+        metrics['avg_bert'] = avg_bert
+        metrics['avg_rouge'] = avg_rouge
         metrics['tokens'] = tokens
         akasha.aiido_upload(record_exp, params, metrics, table)
     akasha.helper.save_logs(logs)
     
     
-    return metrics['avg_bert'], metrics['avg_rouge']
+    return avg_bert, avg_rouge
   
 
