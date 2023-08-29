@@ -56,7 +56,6 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     
     ### load docuemtns from db ###
     db = akasha.helper.create_chromadb(doc_path, logs, verbose, embeddings, embeddings_name, chunk_size)
-    print(db.get(include=['documents','metadatas','embeddings']))
     if db is None:
         info = "document path not exist\n"
         print(info)
@@ -96,7 +95,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
         question.append("問題："+process[0])
         answer.append("答案："+process[1])
         
-        new_table = format.handle_table(question, docs, answer)
+        new_table = akasha.format.handle_table(question, docs, answer)
         for key in new_table:
             if key not in table:
                 table[key] = []
@@ -245,8 +244,8 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
         
-        new_table = format.handle_table(question[i], docs, response)
-        new_table = format.handle_score_table(new_table, bert[-1], rouge[-1])
+        new_table = akasha.format.handle_table(question[i], docs, response)
+        new_table = akasha.format.handle_score_table(new_table, bert[-1], rouge[-1])
         for key in new_table:
             if key not in table:
                 table[key] = []
