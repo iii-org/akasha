@@ -42,7 +42,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     doc_range = (1999+chunk_size)//chunk_size   # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
     start_time = time.time()
     logs = ["\n\n-----------------auto_create_questionset----------------------\n"]
-    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
+    params = akasha.format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
     embeddings_name = embeddings
     embeddings = akasha.helper.handle_embeddings(embeddings, logs, verbose)
     model = akasha.helper.handle_model(model, logs, verbose)
@@ -108,7 +108,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 
     ### record logs ###
     if record_exp != "":    
-        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        metrics = akasha.format.handle_metrics(doc_length, end_time - start_time)
         params['doc_range'] = doc_range
         metrics['tokens'] = tokens
         akasha.aiido_upload(record_exp, params, metrics, table)
@@ -197,7 +197,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     start_time = time.time()
     logs = ["\n\n---------------auto_evaluation------------------------\n"]
     table = {}
-    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
+    params = akasha.format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
     embeddings_name = embeddings
     embeddings = akasha.helper.handle_embeddings(embeddings, logs, verbose)
     model = akasha.helper.handle_model(model, logs, verbose)
@@ -257,7 +257,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     end_time = time.time()
 
     if record_exp != "":    
-        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        metrics = akasha.format.handle_metrics(doc_length, end_time - start_time)
         metrics['avg_bert'] = sum(bert)/len(bert)
         metrics['avg_rouge'] = sum(rouge)/len(rouge)
         metrics['tokens'] = tokens
