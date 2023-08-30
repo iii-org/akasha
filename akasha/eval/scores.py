@@ -4,10 +4,12 @@ import rouge_chinese
 from bert_score import score
 import jieba
 import warnings
+import akasha.prompts as prompts
+import re
 warnings.filterwarnings("ignore")
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
-def get_bert_score(candidate_str:str, reference_str:str,langugage:str="ch", round_digit=3):
+def get_bert_score(candidate_str:str, reference_str:str,langugage:str="ch", round_digit:int=3):
     """bert score using pre-trained contextual embeddings from BERT to calculate the cosine similarity between two sentences.
     So different words with similar meaning will have higher score.
 
@@ -33,7 +35,7 @@ def get_bert_score(candidate_str:str, reference_str:str,langugage:str="ch", roun
     return F1
 
 
-def get_rouge_score(candidate_str:str, reference_str:str, language:str="ch", round_digit=3):
+def get_rouge_score(candidate_str:str, reference_str:str, language:str="ch", round_digit:int=3):
     """ use jieba to separate words from chinese sentence, and then use rouge_l to calculate the rouge score
     the difference between bleu and rouge is that bleu is focus on precision, but rouge is focus on the recall.
 
@@ -65,3 +67,20 @@ def get_rouge_score(candidate_str:str, reference_str:str, language:str="ch", rou
 
 
 
+
+def get_llm_score(candidate_str:str, reference_str:str, model, round_digit:int=3):
+
+    prompt = prompts.format_llm_score(candidate_str, reference_str)
+    try:
+        response = model.predict(prompt)
+            
+    except:
+        response = model._call(prompt)
+        
+    print(response)
+    # find the first float number in the response string and turn to float
+    try:
+        score = round(float(re.findall(r"\d+\.?\d*",response)[0]),round_digit)
+    except:
+        score = 0.0
+    return score

@@ -1,5 +1,6 @@
 
-
+sys_s = "[INST] <<SYS>> " 
+sys_e = " <<SYS>> [/INST]\n\n"
 
 def format_question_query(question:list)->(str, str):
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
@@ -42,16 +43,15 @@ def format_llama_json(query):
     Returns:
        prompt (str): the whole prompt includes system prompt and question  
     """
-    sys_b, sys_e = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    sys_prompt =  "[INST]" + sys_b +\
-    " i will give you a question with several possible answer, use the content of documents "+\
+    
+    sys_prompt =  "human will give you a question with several possible answer, use the content of documents "+\
     "to choose correct answer. and you need to return the answer of this question as" +\
     " JSON structure with key \"ans\", and only this JSON structure, please don't add any other word. for example, "+\
-    "User: what is 1+1 euqals to? 1.「2」  2.「4」 3.「10」 4.「15」 \n you: {\"ans\":1}" + sys_e
+    "User: what is 1+1 euqals to? 1.「2」  2.「4」 3.「10」 4.「15」 \n you: {\"ans\":1}" 
 
     
-    prompt =  query + "[/INST]"
-    return sys_prompt + prompt
+    prompt =  sys_s + sys_prompt + sys_e
+    return prompt + query
 
 
 def format_chinese_json(query:str):
@@ -83,10 +83,30 @@ def format_create_question_prompt(doc_text:str)->str:
         str: _description_
     """
     #q_prompt = "Human: You are a teacher coming up with questions to ask on a quiz. \nGiven the following document, please generate a question and answer based on that document.\n\nExample Format:\n<Begin Document>\n...\n<End Document>\nQUESTION: question here\nANSWER: answer here\n\nThese questions should be detailed and be based explicitly on information in the document. Begin!\n\n<Begin Document>\n\n"
-    q_prompt =  "[INST] <<SYS>>" + "人類：您是一位教師，正在為測驗準備問題。\n根據以下文件，請基於該文件只生成一個問題和一個答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"+ "<<SYS>> [/INST]\n\n<開始文件>\n"
+    q_prompt =  sys_s + "人類：您是一位教師，正在為測驗準備問題。\n根據以下文件，請基於該文件只生成一個問題和一個答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"+ sys_e +"<開始文件>\n"
     #end_prompt = "<End Document>\n"
     end_prompt = "<結束文件>\n"
     # generate question prompt = generate_question_prompt(Document)
     q_prompt = q_prompt + doc_text + end_prompt
     
     return q_prompt
+
+
+
+
+
+def format_llm_score(cand:str,ref:str):
+    """the system prompt for llm to calculate the cnadidate is correct or not.
+
+    Args:
+        cand (str): _description_
+        ref (str): _description_
+    """
+    
+    sys_prompt = "human will give you a [candidate] sentence and a [reference] sentence, please score the [candidate] sentence "+\
+        "based on the [reference] sentence, the higher score means the [candidate] sentence has enough information and correct answer that [reference] sentence has." +\
+        "remember, you can only return the score and need to return the score of this [candidate] sentence as a float number range from 0 to 1.\n" +\
+        "Example Format:\n Human: [candidate]: ...\n [reference]: ...\n\n You: 0.8\n\n"
+    
+    prompt =  sys_s + sys_prompt + sys_e
+    return prompt + "[candidate]: " + cand + "\n[reference]: " + ref + "\n"

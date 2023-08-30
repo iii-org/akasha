@@ -171,7 +171,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     answer = []
     bert = []
     rouge = []
-
+    llm_score = []
     ### parse the questions and answers into question list and answer list ###
     for i in range(len(content)):
         if content[i] == "":
@@ -241,32 +241,35 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
         
         bert.append(eval.scores.get_bert_score(response[-1], answer[i], language))
         rouge.append(eval.scores.get_rouge_score(response[-1], answer[i], language))
-        
+        llm_score.append(eval.scores.get_llm_score(response[-1], answer[i], model))
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
         
         new_table = akasha.format.handle_table(question[i], docs, response)
-        new_table = akasha.format.handle_score_table(new_table, bert[-1], rouge[-1])
+        new_table = akasha.format.handle_score_table(new_table, bert[-1], rouge[-1],llm_score[-1])
         for key in new_table:
             if key not in table:
                 table[key] = []
             table[key].append(new_table[key])
                 
         
-    progress.close()
+    progress.close() #end running llm progress bar
+    
+    ### record logs ###
     end_time = time.time()
     avg_bert = round(sum(bert)/len(bert),3)
     avg_rouge = round(sum(rouge)/len(rouge),3)
-    
+    avg_llm_score = round(sum(llm_score)/len(llm_score),3)
     if record_exp != "":    
         metrics = akasha.format.handle_metrics(doc_length, end_time - start_time)
         metrics['avg_bert'] = avg_bert
         metrics['avg_rouge'] = avg_rouge
+        metrics['avg_llm_score'] = avg_llm_score
         metrics['tokens'] = tokens
         akasha.aiido_upload(record_exp, params, metrics, table)
     akasha.helper.save_logs(logs)
     
     
-    return avg_bert, avg_rouge
+    return avg_bert, avg_rouge, avg_llm_score
   
 
