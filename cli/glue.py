@@ -22,13 +22,14 @@ def akasha():
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
+@click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
-                 language:str, search_type:str, record_exp:str, system_prompt:str):
+                 language:str, search_type:str, record_exp:str, system_prompt:str, max_token:int):
 
     res = ak.get_response(doc_path, prompt, embeddings, chunk_size\
                  , model, False, topk, threshold,\
                  language , search_type, False, record_exp, \
-                 system_prompt)
+                 system_prompt, max_token)
     
     print(res)
 
@@ -50,8 +51,9 @@ def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model
 @click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
+@click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
-                 language:str, search_type:str, system_prompt:str):
+                 language:str, search_type:str, system_prompt:str, max_token:int):
 
     import akasha.helper as helper
     import akasha.search as search
@@ -76,8 +78,8 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
     user_input = click.prompt("Please input your question(type \"exit()\" to quit) ")
     while user_input != "exit()":
         
-        docs = search.get_docs(db, embeddings, user_input, topk, threshold, language, search_type, False,\
-                        logs, model, False)
+        docs, tokens = search.get_docs(db, embeddings, user_input, topk, threshold, language, search_type, False,\
+                        logs, model, False, max_token)
         if docs is None:
             docs = []
         
@@ -122,13 +124,14 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
 @click.option('--system_prompt', '-sys', default="", help='system prompt for the llm model')
+@click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
-                 language:str, search_type:str, record_exp:str, system_prompt:str):
+                 language:str, search_type:str, record_exp:str, system_prompt:str, max_token:int):
     
      res = ak.chain_of_thought(doc_path, prompt, embeddings, chunk_size\
                  , model, False, topk, threshold,\
                  language , search_type, False, record_exp, \
-                 system_prompt)
+                 system_prompt, max_token)
      
      print(res)
 
@@ -148,12 +151,13 @@ def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model
 @click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
+@click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def test_performance(q_file:str, doc_path:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
-                 language:str, search_type:str, record_exp:str):
+                 language:str, search_type:str, record_exp:str, max_token:int):
 
 
     cor_rate, tokens = ak.test_performance(q_file, doc_path, embeddings, chunk_size, model, topk, threshold,\
-                 language , search_type, False, record_exp) 
+                 language , search_type, False, record_exp, max_token) 
     print("correct rate: ", cor_rate)
     print("total tokens: ", tokens)
     
@@ -195,15 +199,16 @@ def auto_create_questionset(doc_path:str, question_num:int , embeddings:str , ch
 @click.option('--language', '-l', default='ch', help='language for the documents, default is \'ch\' for chinese')
 @click.option('--search_type', '-s', default='merge', help='search type for the documents, include merge, svm, mmr, tfidf')
 @click.option('--record_exp', '-r', default="", help='input the experiment name if you want to record the experiment using aiido')
+@click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def auto_evaluation(question_path:str, doc_path:str, embeddings:str, chunk_size:int\
                  , model:str, topk:int, threshold:float,\
-                    language:str , search_type:str , record_exp:str):
+                    language:str , search_type:str , record_exp:str, max_token:int):
     
     
     
     avg_bert, avg_rouge = eval.auto_evaluation(question_path, doc_path, embeddings, chunk_size\
                  , model, False, topk, threshold,\
-                 language, search_type, record_exp)
+                 language, search_type, record_exp, max_token)
 
     print("avg bert score: ", avg_bert)
     print("average rouge score: ", avg_rouge)

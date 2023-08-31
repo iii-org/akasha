@@ -29,12 +29,13 @@ def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, to
     params["chunk_size"] = chunk_size
     return params
 
-def handle_metrics(doc_length:int, time:float)->dict:
+def handle_metrics(doc_length:int, time:float, tokens:int)->dict:
     """save running metrics into dictionary in order to parse to aiido
 
     Args:
         **doc_length (int)**: length of texts from relevant documents  \n
         **time (float)**: total spent time\n
+        **tokens (int)**: total tokens of texts from relevant documents\n
 
     Returns:
         dict: metric dictionary
@@ -43,7 +44,7 @@ def handle_metrics(doc_length:int, time:float)->dict:
 
     metrics["doc_length"] = doc_length
     metrics["time"] = time
-
+    metrics['tokens'] = tokens
     return metrics
 
 def handle_table(prompt:str, docs:list, response:str)->dict:

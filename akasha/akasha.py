@@ -16,7 +16,7 @@ load_dotenv(pathlib.Path().cwd()/'.env')
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", \
-                 system_prompt:str = ""  )->str:
+                 system_prompt:str = "", max_token:int=3000 )->str:
     """input the documents directory path and question, will first store the documents
     into vectors db (chromadb), then search similar documents based on the prompt question.
     llm model will use these documents to generate the response of the question.
@@ -36,7 +36,8 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         **compression (bool)**: compress the relevant documents or not.\n
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.\n
-
+        **system_prompt (str, optional)**: system prompt for llm to generate response. Defaults to "".\n
+        **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
     Returns:
         str: llm output str\n
     """
@@ -60,8 +61,8 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 
     
-    docs = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose,\
-                     logs, model, compression)
+    docs, tokens = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose,\
+                     logs, model, compression, max_token)
     if docs is None:
         return ""
     
@@ -83,7 +84,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     
     end_time = time.time()
     if record_exp != "":    
-        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        metrics = format.handle_metrics(doc_length, end_time - start_time, tokens)
         table = format.handle_table(prompt, docs, response)
         model.get_num_tokens(''.join([doc.page_content for doc in docs]))
         aiido_upload(record_exp, params, metrics, table)
@@ -100,7 +101,8 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge',  compression:bool = False, record_exp:str = "", system_prompt:str="" )->str:
+                 language:str = 'ch' , search_type:str = 'merge',  compression:bool = False, record_exp:str = "", system_prompt:str=""\
+                 , max_token:int=3000)->str:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -125,7 +127,9 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         **compression (bool)**: compress the relevant documents or not.\n
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.\n
-
+        **system_prompt (str, optional)**: system prompt for llm to generate response. Defaults to "".\n
+        **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+        
     Returns:
         str: llm output str
     """
@@ -151,13 +155,15 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     
     ori_docs = []
     doc_length = 0
+    tokens = 0
     pre_result = []
     for i in range(len(prompt)):
 
-        docs = search.get_docs(db, embeddings, prompt[i], topK, threshold, language, search_type,\
-                            verbose, logs, model, compression)
+        docs, docs_token = search.get_docs(db, embeddings, prompt[i], topK, threshold, language, search_type,\
+                            verbose, logs, model, compression, max_token)
         
         doc_length += helper.get_docs_length(language, docs)
+        tokens += docs_token
         ori_docs.extend(docs)
         if verbose:
             print(docs)
@@ -177,7 +183,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
 
     end_time = time.time()    
     if record_exp != "":    
-        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        metrics = format.handle_metrics(doc_length, end_time - start_time,tokens)
         table = format.handle_table('\n\n'.join([p for p in prompt]), ori_docs, response)
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
@@ -214,7 +220,7 @@ def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
 
 def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "" ):
+                 language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", max_token:int=3000 ):
     """input a txt file includes list of single choice questions and the answer, will test all of the questions and return the
     correct rate of this parameters(model, embeddings, search_type, chunk_size)\n
     the format of q_file(.txt) should be one line one question, and the possibles answers and questions are separate by space,
@@ -236,7 +242,8 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         **compression (bool)**: compress the relevant documents or not.\n
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.\n
-
+        **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+        
     Returns:
         float: the correct rate of all questions
     """
@@ -268,10 +275,10 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         
         query, ans = prompts.format_question_query(question)
 
-        docs = search.get_docs(db, embeddings, query, topK, threshold, language, search_type, verbose,\
-                     logs, model, compression)
+        docs, docs_token = search.get_docs(db, embeddings, query, topK, threshold, language, search_type, verbose,\
+                     logs, model, compression, max_token)
         doc_length += helper.get_docs_length(language, docs)
-        tokens += model.get_num_tokens(''.join([doc.page_content for doc in docs]))
+        tokens += docs_token
         query_with_prompt = prompts.format_llama_json(query)
         
 
@@ -302,9 +309,8 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
     end_time = time.time()
 
     if record_exp != "":    
-        metrics = format.handle_metrics(doc_length, end_time - start_time)
+        metrics = format.handle_metrics(doc_length, end_time - start_time, tokens)
         metrics['correct_rate'] = correct_count/total_question
-        metrics['tokens'] = tokens
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
 
@@ -349,7 +355,8 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
 
 def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
                  , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], threshold:float = 0.2,\
-                 language:str = 'ch' , search_type_list:list = ['merge','svm','tfidf','mmr'], compression:bool = False, record_exp:str = "" ):
+                 language:str = 'ch' , search_type_list:list = ['merge','svm','tfidf','mmr'], compression:bool = False, record_exp:str = ""\
+                    , max_token:int=3000):
     """test all combinations of giving lists, and run test_performance to find parameters of the best result.
 
     Args:
@@ -364,6 +371,8 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
         **compression (bool)**: compress the relevant documents or not.\n
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.\n
+        **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+        
     Returns:
         (list,list): return best score combination and best cost-effective combination
     """
@@ -377,7 +386,7 @@ def optimum_combination(q_file:str, doc_path:str, embeddings_list:list = ["opena
     for embed, chk, mod, tK, st in combinations:
         progress.update(1)
         cur_correct_rate, tokens = test_performance(q_file, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
-                            language=language, search_type=st, compression=compression, record_exp=record_exp) 
+                            language=language, search_type=st, compression=compression, record_exp=record_exp, max_token=max_token) 
         bcr = max(bcr,cur_correct_rate)
         cur_tup = (cur_correct_rate, cur_correct_rate/tokens, embed, chk, mod, tK, st)
         result_list.append(cur_tup)

@@ -109,7 +109,7 @@ def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float, model
 
 
 
-def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)->list:
+def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list, max_token:int, model)->(list,int):
     """merge different search types documents, if total len of documents too large,
         will not select all documents.
         use jieba to count length of chinese words, use split space otherwise.
@@ -120,6 +120,7 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)
         **language (str)**: 'ch' for chinese, otherwise use split space to count words, default is chinese\n
         **verbose (bool)**: show log texts or not. Defaults to False.\n
         **logs (list)**: list that store logs.\n
+        **max_token (int)**: max token size of llm input.\n
 
     Returns:
         list: merged list of Documents
@@ -134,21 +135,26 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)
             if docs[i] in res:
                 continue
             
-            
-            if language=='ch':
-                words_len = helper.get_doc_length(language, docs[i])
-                if cur_count + words_len > 1500:
-                    if verbose:
-                        print("words length: ", cur_count)
-                    logs.append("words length: " + str(cur_count))
-                    return res
-            else:
-                words_len = helper.get_doc_length(language, docs[i])
-                if cur_count + words_len > 3000:
-                    if verbose:
-                        print("words length: ", cur_count)
-                    logs.append("words length: " + str(cur_count))
-                    return res
+            words_len = model.get_num_tokens(docs[i].page_content)
+            if cur_count + words_len > max_token:
+                if verbose:
+                    print("words length: ", cur_count)
+                logs.append("words length: " + str(cur_count))
+                return res, cur_count
+            # if language=='ch':
+            #     words_len = helper.get_doc_length(language, docs[i])
+            #     if cur_count + words_len > 1500:
+            #         if verbose:
+            #             print("words length: ", cur_count)
+            #         logs.append("words length: " + str(cur_count))
+            #         return res
+            # else:
+            #     words_len = helper.get_doc_length(language, docs[i])
+            #     if cur_count + words_len > 3000:
+            #         if verbose:
+            #             print("words length: ", cur_count)
+            #         logs.append("words length: " + str(cur_count))
+            #         return res
             
             cur_count += words_len
             res.append(docs[i])
@@ -157,12 +163,12 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list)
         print("words length: ", cur_count)
     logs.append("words length: " + str(cur_count))
 
-    return res
+    return res, cur_count
 
 
 
 def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str, search_type:str,
-             verbose:bool, logs:list, model, compression:bool):
+             verbose:bool, logs:list, model, compression:bool, max_token:int)->(list,int):
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together. 
 
@@ -191,25 +197,25 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
         docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
         docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
       
-        docs = _merge_docs([docs_tfidf, docs_svm, docs_mmr], topK, language, verbose, logs)
+        docs, tokens = _merge_docs([docs_tfidf, docs_svm, docs_mmr], topK, language, verbose, logs, max_token, model)
   
     elif search_type == 'mmr':
         docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
-        docs = _merge_docs([docs_mmr], topK, language, verbose, logs)
+        docs, tokens = _merge_docs([docs_mmr], topK, language, verbose, logs, max_token, model)
         
     
     elif search_type == 'svm':
         docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
-        docs = _merge_docs([docs_svm], topK, language, verbose, logs)
+        docs, tokens = _merge_docs([docs_svm], topK, language, verbose, logs, max_token, model)
         
     
     elif search_type == 'tfidf':
         docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
-        docs = _merge_docs([docs_tfidf], topK, language, verbose, logs)
+        docs, tokens = _merge_docs([docs_tfidf], topK, language, verbose, logs, max_token, model)
 
     elif search_type == 'knn':
         docs_knn = __get_relevant_doc_knn(db,embeddings, query, topK, threshold, model, compression) 
-        docs = _merge_docs([docs_knn], topK, language, verbose, logs)
+        docs, tokens = _merge_docs([docs_knn], topK, language, verbose, logs, max_token, model)
     
     else:
         info = f"cannot find search type {search_type}, end process\n"
@@ -217,7 +223,7 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
         logs.append(info)
         return None
 
-    return docs
+    return docs, tokens
 
 
 
