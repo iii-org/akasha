@@ -1,4 +1,96 @@
-## OpenAI example
+# Installation
+
+We recommend using Python 3.8 to run our Akasha package. You can use Anaconda to create virtual environment.
+
+```bash
+
+# create environment
+
+conda create --name py3-8 python=3.8
+activate py3-8
+
+# install akasha
+pip install git+https://gitlab-devops.iii.org.tw/root/qaiii-1.git
+
+
+```
+
+
+<br/>
+<br/>
+
+## API Keys
+
+### OPENAI 
+If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key. 
+You can either save **OPENAI_API_KEY=your api key** into **.env** file to current working directory or,
+set as a environment variable, using **export** in bash or use **os.environ** in python.
+
+```bash
+
+# set a environment variable
+
+export OPENAI_API_KEY="your api key"
+
+
+```
+
+```python
+#PYTHON3.8
+response = akasha.get_response(dir_path, prompt, model="openai:gpt-3.5-turbo")
+
+
+```
+
+
+<br/>
+<br/>
+
+
+### LLAMA-2 
+If you want to use original meta-llama model, you need to both register to [huggingface](https://huggingface.co/settings/tokens) to get access token and [meta-llama](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) to request access. 
+
+**Remember, the account on Hugging Face and the email you use to request access to Meta-Llama must be the same, so that you can download models from Hugging Face once your account is approved.**
+
+You should see the **Gated model You have been granted access to this model** once your account is approved
+![image](pic/granted.png)
+
+
+
+<br/>
+<br/>
+
+Again, you can either save **HUGGINGFACEHUB_API_TOKEN=your api key** into **.env** file to current working directory or set as a environment variable, using **export** in bash or use **os.environ** in python.
+
+```bash
+
+# set a environment variable
+
+export HUGGINGFACEHUB_API_TOKEN="your api key"
+
+
+```
+
+```python
+#PYTHON3.8
+response = akasha.get_response(dir_path, prompt, model="hf:meta-llama/Llama-2-7b-chat-hf")
+
+
+```
+
+
+<br/>
+<br/>
+
+
+
+
+
+
+
+# Example and Parameters
+
+## Basic get_response OpenAI example
 
 
 ``` python
@@ -108,6 +200,49 @@ akasha.get_response(dir_path, prompt, search_type="mmr")
 <br/>
 
 
+
+## Some models you can use
+
+```python
+openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY"
+huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
+quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
+
+### If you want to use llama-cpp to run model on cpu, you can download ggml version of models 
+### from  https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/tree/main  and the name behind "llama-gpu:" or "llama-cpu:"
+### is the path of the downloaded .bin file
+llama_cpp_model = "llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin"  
+llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"
+chatglm_model = "chatglm:THUDM/chatglm2-6b"
+
+
+```
+
+
+
+<br/>
+
+
+
+## Some embeddings you can use
+
+```python
+openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"
+huggingface_emd = "hf:all-MiniLM-L6-v2" 
+text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"
+
+
+```
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+
+
+# Functions
 
 ## Use chain-of-thought to solve complicated problem
  
@@ -380,47 +515,10 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
 <br/>
 <br/>
 
-## Some models you can use
-
-```python
-openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY"
-huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
-quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
-
-### If you want to use llama-cpp to run model on cpu, you can download ggml version of models 
-### from  https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/tree/main  and the name behind "llama-gpu:" or "llama-cpu:"
-### is the path of the downloaded .bin file
-llama_cpp_model = "llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin"  
-llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"
-chatglm_model = "chatglm:THUDM/chatglm2-6b"
-
-
-```
 
 
 
-<br/>
-
-
-
-## Some embeddings you can use
-
-```python
-openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"
-huggingface_emd = "hf:all-MiniLM-L6-v2" 
-text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"
-
-
-```
-
-<br/>
-<br/>
-<br/>
-<br/>
-
-
-
-## command line interface
+# Command Line Interface
 You can also use akasha in command line, for example, you can use **keep-responsing** to create a document QA model 
 and keep asking different questions and get response based on the documents in the given -d directory.
 
@@ -449,7 +547,7 @@ Currently you can use **get-response**, **keep-responsing**, **chain-of-thought*
   
 
 
-```console
+```bash
 $ akasha keep-responsing --help
 Usage: akasha keep-responsing [OPTIONS]
 
