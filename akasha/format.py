@@ -18,15 +18,22 @@ def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, to
         dict: parameter dictionary
     """
     params = {}
-
-    params["model"] = model
-    params["embeddings"] = embeddings
-    params["search_type"] = search_type
-    params["topK"] = topK
-    params["threshold"] = threshold
-    params["language"] = language
+    if model != "":
+        params["model"] = model
+    if embeddings != "":
+        params["embeddings"] = embeddings
+    if search_type != "":
+        params["search_type"] = search_type
+    if topK != -1:
+        params["topK"] = topK
+    if threshold != -1.0:
+        params["threshold"] = threshold
+    if language != "":
+        params["language"] = language
+    
     params["compression"] = compression
-    params["chunk_size"] = chunk_size
+    if chunk_size != -1:
+        params["chunk_size"] = chunk_size
     return params
 
 def handle_metrics(doc_length:int, time:float, tokens:int)->dict:
@@ -59,16 +66,22 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
         dict: table dictionary
     """
     table = {}
+    table["prompt"] = [prompt]
+    table["response"] = [response]
+    if len(docs) != 0 :
+        
+        
+        try:
+            inputs = '\n\n'.join([doc.page_content for doc in docs])
+            metadata = '\n\n'.join([doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs])
+        except:
+            metadata = "none"
+            inputs = '\n\n'.join([doc for doc in docs])
+        table["inputs"] = [inputs]
+        table["metadata"] = [metadata]
+        
     
-    inputs = '\n\n'.join([doc.page_content for doc in docs])
-    try:
-        metadata = '\n\n'.join([doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs])
-    except:
-        metadata = "none"
-    table["prompt"] = prompt
-    table["inputs"] = inputs
-    table["response"] = response
-    table["metadata"] = metadata
+    
     return table
 
 
@@ -84,8 +97,8 @@ def handle_score_table(table:dict, bert:float, rouge:float, llm_score:float)->di
         dict: table dictionary
     """
     
-    table["bert"] = bert
-    table["rouge"] = rouge
-    table["llm_score"] = llm_score
+    table["bert"] = [bert]
+    table["rouge"] = [rouge]
+    table["llm_score"] = [llm_score]
     
     return table

@@ -25,6 +25,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         **doc_path (str)**: documents directory path\n
         **prompt (str, optional)**: question you want to ask. Defaults to "".\n
         **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **chunk_size (int, optional)**: the text length to split document to multiple chunks. Defaults to 1000.\n
         **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
         **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
         **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
@@ -116,6 +117,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         **doc_path (str)**: documents directory path\n
         **prompt (str, optional)**: question you want to ask. Defaults to "".\n
         **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **chunk_size (int, optional)**: the text length to split document to multiple chunks. Defaults to 1000.\n
         **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
         **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
         **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
@@ -192,7 +194,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
 
 
 
-def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
+def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}, path_name:str=""):
     """upload params_metrics, table to mlflow server for tracking.
 
     Args:
@@ -202,10 +204,16 @@ def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}):
         **table (dict, optional)**: table dictionary, used to compare text context between different runs in the experiment. Defaults to {}.\n
     """
     import aiido
-    mod = params["model"].split(':')
-    emb = params["embeddings"].split(':')[0]
-    sea = params["search_type"]
-    aiido.init(experiment=exp_name, run = emb + '-' + sea + '-' + '-'.join(mod))
+    
+    if "model" not in params or "embeddings" not in params:
+        aiido.init(experiment=exp_name, run = path_name)
+        
+    else:
+        mod = params["model"].split(':')
+        emb = params["embeddings"].split(':')[0]
+        sea = params["search_type"]
+        aiido.init(experiment=exp_name, run = emb + '-' + sea + '-' + '-'.join(mod))
+    
     aiido.log_params_and_metrics(params=params, metrics=metrics)
 
 
@@ -232,6 +240,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         **q_file (str)**: the file path of the question file\n
         **doc_path (str)**: documents directory path\n
         **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+        **chunk_size (int, optional)**: the text length to split document to multiple chunks. Defaults to 1000.\n
         **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
         **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
         **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n

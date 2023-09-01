@@ -110,3 +110,33 @@ def format_llm_score(cand:str,ref:str):
     
     prompt =  sys_s + sys_prompt + sys_e
     return prompt + "[candidate]: " + cand + "\n[reference]: " + ref + "\n"
+
+
+
+
+def format_reduce_summary_prompt(cur_text:str, summary_len:int = 500):
+    
+    underline = "------------"
+    if summary_len >0:
+        sys_prompt =f"Write a concise  {summary_len} words summary of the following:\n" + underline + "\n" + cur_text + underline
+    else:
+        sys_prompt = "Write a concise summary of the following:\n" + underline + "\n" + cur_text + underline
+    
+    
+    return sys_prompt
+
+
+
+
+def format_refine_summary_prompt(cur_text:str, previous_summary:str, summary_len:int = 500):
+    
+    
+    sys_prompt =f"""Your job is to produce a final summary of {summary_len} words.
+We have provided an existing summary up to a certain point, original summary is:  {previous_summary}
+------------\n
+{cur_text}\n
+------------\n
+Given the new context, refine the original summary.
+If the context isn't useful, return the original summary.
+"""
+    return sys_prompt
