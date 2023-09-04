@@ -543,8 +543,20 @@ bert_score, rouge, llm_score = eval.auto_evaluation(questionset_path="questionse
 
 
 ## File Summarization
+To create a summary of a text file in various formats like .pdf, .txt, or .docx, you can use the **summary.summarize_file** function. For example, the following code employs the **map_reduce** summary method to instruct LLM to generate a summary of approximately 500 words.
+
+There're two summary type, **map_reduce** and **refine**, **map_reduce** will summarize every text chunks and then use all summarized text chunks to generate a final summary; **refine** will summarize each text chunk at a time and using the previous summary as a prompt for 
+summarizing the next segment to get a higher level of summary consistency.
+
+```python
+
+import akasha.summary as summary
+summary.summarize_file("doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf", chunk_size=1000, chunk_overlap=40,\
+summary_type="map_reduce", summary_len=500)
 
 
+
+```
 
 
 
