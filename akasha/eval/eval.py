@@ -137,7 +137,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 
 def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = ""\
+                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = "", eval_model:str = "openai:gpt-3.5-turbo"\
                 , max_token:int=3000)->(float, float):
     """parse the question set txt file generated from "auto_create_questionset" function, and use llm model to generate response, 
     evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
@@ -158,7 +158,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
             includes 'merge', 'mmr', 'svm', 'tfidf'.\n
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default "".\n
-        
+        **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
         
     Returns:
         (float, float): average bert_score and average rouge_l score of all questions
@@ -241,7 +241,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
         
         bert.append(eval.scores.get_bert_score(response[-1], answer[i], language))
         rouge.append(eval.scores.get_rouge_score(response[-1], answer[i], language))
-        llm_score.append(eval.scores.get_llm_score(response[-1], answer[i], model))
+        llm_score.append(eval.scores.get_llm_score(response[-1], answer[i], eval_model))
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
         

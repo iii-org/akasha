@@ -5,6 +5,7 @@ from bert_score import score
 import jieba
 import warnings
 import akasha.prompts as prompts
+import akasha.helper
 import re
 warnings.filterwarnings("ignore")
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
@@ -68,16 +69,17 @@ def get_rouge_score(candidate_str:str, reference_str:str, language:str="ch", rou
 
 
 
-def get_llm_score(candidate_str:str, reference_str:str, model, round_digit:int=3):
+def get_llm_score(candidate_str:str, reference_str:str, model:str, round_digit:int=3):
 
     prompt = prompts.format_llm_score(candidate_str, reference_str)
+    model = akasha.helper.handle_model(model, [], False)
     try:
         response = model.predict(prompt)
             
     except:
         response = model._call(prompt)
         
-    print(response)
+    
     # find the first float number in the response string and turn to float
     try:
         score = round(float(re.findall(r"\d+\.?\d*",response)[0]),round_digit)
