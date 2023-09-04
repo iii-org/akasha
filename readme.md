@@ -517,6 +517,41 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
 
 
 
+## Use llm to create questionset and evaluate the performance
+If you prefer not to create your own question set to assess the performance of the current parameters, you can utilize the **eval.auto_create_questionset** feature to automatically generate a question set along with reference answers. Subsequently, you can use **eval.auto_evaluation** to obtain scores for metrics such as **Bert_score**, **Rouge**, and **LLM_score**. These scores range from 0 to 1, with higher values indicating that the generated response closely matches the reference answers.
+
+For example, the code create a questionset text file 'mic_1.txt' with ten questions and reference answers, each question is randomly generated from the content segments of given documents in 'doc/mic/' directory. Then you can use the questionset text file to evaluate the performance of the parameters you want to test.
+
+
+```python
+
+import akasha.eval as eval
+eval.auto_create_questionset(doc_path="doc/mic/", question_num=10, record_exp="exp_mic_auto_questionset")
+bert_score, rouge, llm_score = eval.auto_evaluation(questionset_path="questionset/mic_1.txt", doc_path="doc/mic/", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+
+# bert_score = 0.782
+# rouge = 0.81
+# llm_score = 0.393
+```
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+
+## File Summarization
+
+
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
 
 # Command Line Interface
 You can also use akasha in command line, for example, you can use **keep-responsing** to create a document QA model 
