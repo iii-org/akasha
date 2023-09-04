@@ -99,8 +99,8 @@ def format_llm_score(cand:str,ref:str):
     """the system prompt for llm to calculate the cnadidate is correct or not.
 
     Args:
-        cand (str): _description_
-        ref (str): _description_
+        **cand (str)**: llm generated response that we want to test the performance\n
+        **ref (str)**: reference answer\n
     """
     
     sys_prompt = "human will give you a [candidate] sentence and a [reference] sentence, please score the [candidate] sentence "+\
@@ -115,13 +115,22 @@ def format_llm_score(cand:str,ref:str):
 
 
 def format_reduce_summary_prompt(cur_text:str, summary_len:int = 500):
-    
+    """the prompt for llm to generate a summary of the given text
+
+    Args:
+        **cur_text (str)**: the text that we want llm to generate a summary\n
+        **summary_len (int, optional)**: the summary word length we want llm to generate. Defaults to 500.\n
+
+    Returns:
+        str: summary prompt.
+    """
+ 
     underline = "------------"
-    if summary_len >0:
-        sys_prompt =f"Write a concise  {summary_len} words summary of the following:\n" + underline + "\n" + cur_text + underline
+    if summary_len > 0:
+        sys_prompt =f"Write a concise {summary_len} words summary of the following:\n" + underline + "\n" + cur_text + underline
+
     else:
-        sys_prompt = "Write a concise summary of the following:\n" + underline + "\n" + cur_text + underline
-    
+        sys_prompt = f"Write a concise summary of the following:\n" + underline + "\n" + cur_text + underline
     
     return sys_prompt
 
@@ -129,14 +138,24 @@ def format_reduce_summary_prompt(cur_text:str, summary_len:int = 500):
 
 
 def format_refine_summary_prompt(cur_text:str, previous_summary:str, summary_len:int = 500):
+    """the prompt for llm to generate the summary of the given text and previous summary
     
+     Args:
+        **cur_text (str)**: the text that we want llm to generate a summary\n
+        **previous_summary (str)**: the previous summary that we want llm to generate a summary\n
+        **summary_len (int, optional)**: the summary word length we want llm to generate. Defaults to 500.\n
+
+    Returns:
+        str: summary prompt.
+        
+    """
     
     sys_prompt =f"""Your job is to produce a final summary of {summary_len} words.
-We have provided an existing summary up to a certain point, original summary is:  {previous_summary}
-------------\n
-{cur_text}\n
-------------\n
-Given the new context, refine the original summary.
-If the context isn't useful, return the original summary.
-"""
+    We have provided an existing summary up to a certain point, original summary is:  {previous_summary}
+    ------------\n
+    {cur_text}\n
+    ------------\n
+    Given the new context, refine the original summary.
+    If the context isn't useful, return the original summary.
+    """
     return sys_prompt

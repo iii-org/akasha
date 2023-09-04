@@ -98,7 +98,7 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
 
 
 
-def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:bool, tokens:int , total_list:list ):
+def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:bool, tokens:int , total_list:list):
     """Summarize each chunk and merge them until the combined chunks are smaller than the maximum token limit. 
     Then, generate the final summary. This method is faster and requires fewer tokens than the refine method.
 
@@ -137,6 +137,7 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
                 print("prompt: \n", prompt)
                 print("\n\n\n\n\n\n")
                 print("response: \n", response)
+                print("\n\n\n\n\n\n")
             
             return total_list, tokens
         
@@ -154,6 +155,7 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
             print("prompt: \n", prompt)
             print("\n\n\n\n\n\n")
             print("response: \n", response)
+            print("\n\n\n\n\n\n")
         response_list.append(response)       
         total_list.append(response)
     return _reduce_summary(response_list, model, max_token, summary_len, verbose, tokens, total_list)
@@ -206,6 +208,7 @@ def _refine_summary(model, verbose, texts:list, max_token:int = 3000, summary_le
             print(prompt)
             print("\n\n\n\n\n\n")
             print(response)
+            print("\n\n\n\n\n\n")
         response_list.append(response)       
         previous_summary = response
         
