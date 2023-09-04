@@ -84,3 +84,20 @@ def get_llm_score(candidate_str:str, reference_str:str, model, round_digit:int=3
     except:
         score = 0.0
     return score
+
+
+
+
+
+def get_toxic_score(texts:str, round_digit:int=3):
+    
+    from transformers import pipeline
+    pipe = pipeline("text-classification", model="martin-ha/toxic-comment-model")
+    res = pipe.predict(texts)[0]
+    
+    if res['label'] == 'toxic':
+        score = round(float(res['score']),round_digit)
+    else:
+        score = round(1-float(res['score']),round_digit)
+        
+    return score

@@ -18,6 +18,48 @@ import os
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
+
+
+def is_path_exist(path:str, logs:list)->bool:
+    
+    try:
+        des_path = Path(path)
+        if not des_path.exists():
+            raise FileNotFoundError
+    except FileNotFoundError as err:
+        
+        print(path, err)
+        logs.append(path)
+        save_logs(logs)
+        return False
+    return True
+
+
+
+def _load_file(file_path, extension):
+    try:
+        if extension == "pdf":
+            docs = PyPDFLoader(file_path).load()
+        elif extension == "docx":
+            docs = Docx2txtLoader(file_path).load()
+            for i in range(len(docs)):
+                docs[i].metadata['page'] = i
+           
+        elif extension == "csv":
+            docs = CSVLoader(file_path).load()
+            for i in range(len(docs)):
+                docs[i].metadata['page'] = docs[i].metadata['row']
+                del docs[i].metadata['row']
+            
+        else:
+            docs = TextLoader(file_path,encoding='utf-8').load()
+            for i in range(len(docs)):
+                docs[i].metadata['page'] = i
+        return docs
+    except:
+        print("Load",file_path,"failed, ignored.\n")
+        return ""
+
 def _load_files(doc_path:str, extension:str="pdf")->list:
     """load text files of select extension into list of Documents
 
@@ -36,28 +78,9 @@ def _load_files(doc_path:str, extension:str="pdf")->list:
 
     for loader in loaders:
     
-        try:
-            if extension == "pdf":
-                res.extend(PyPDFLoader(doc_path+loader).load())
-            elif extension == "docx":
-                docs = Docx2txtLoader(doc_path+loader).load()
-                for i in range(len(docs)):
-                    docs[i].metadata['page'] = i
-                res.extend(docs)
-            elif extension == "csv":
-                docs = CSVLoader(doc_path+loader).load()
-                for i in range(len(docs)):
-                    docs[i].metadata['page'] = docs[i].metadata['row']
-                    del docs[i].metadata['row']
-                res.extend(docs)
-            else:
-                docs = TextLoader(doc_path+loader,encoding='utf-8').load()
-                for i in range(len(docs)):
-                    docs[i].metadata['page'] = i
-                res.extend(docs)
-        except:
-            print("Load",loader,"failed, ignored.\n")
-    
+        temp = _load_file(doc_path+loader, extension)
+        if temp != "":
+            res.extend(temp)
     return res
        
 
@@ -135,18 +158,10 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
     
 
     ### check if doc path exist ###
-    try:
-        des_path = Path(doc_path)
-        if not des_path.exists:
-            raise FileNotFoundError
-    except FileNotFoundError as err:
-        if verbose:
-            print(err)
-        logs.append(err)
+    if not is_path_exist(doc_path, logs):
         return None
-    ### ###
-
-
+    
+    
     
     if doc_path[-1] != '/':
         doc_path += '/'
@@ -478,3 +493,20 @@ def sim_to_trad(text:str)->str:
     """
     cc = opencc.OpenCC('s2t.json')
     return cc.convert(text)
+
+
+
+def _get_text(texts:list,previous_summary:str, i:int, max_token:int,model):
+    
+    cur_count = model.get_num_tokens(previous_summary) 
+    words_len = model.get_num_tokens(texts[i])
+    cur_text = ""
+    while cur_count+words_len < max_token and i < len(texts):
+        cur_count += words_len
+        cur_text += texts[i]  + "\n"
+        i += 1
+        if i < len(texts):
+            words_len = model.get_num_tokens(texts[i])
+    
+    
+    return cur_count, cur_text, i

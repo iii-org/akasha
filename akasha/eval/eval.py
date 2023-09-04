@@ -108,9 +108,8 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 
     ### record logs ###
     if record_exp != "":    
-        metrics = akasha.format.handle_metrics(doc_length, end_time - start_time)
+        metrics = akasha.format.handle_metrics(doc_length, end_time - start_time, tokens)
         params['doc_range'] = doc_range
-        metrics['tokens'] = tokens
         akasha.aiido_upload(record_exp, params, metrics, table)
     akasha.helper.save_logs(logs)
     
@@ -138,7 +137,8 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 
 def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = "")->(float, float):
+                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = ""\
+                , max_token:int=3000)->(float, float):
     """parse the question set txt file generated from "auto_create_questionset" function, and use llm model to generate response, 
     evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
     and rouge_l to evaluate the response.
@@ -221,10 +221,10 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
         
         
         progress.update(1)
-        docs = akasha.search.get_docs(db, embeddings, question[i], topK, threshold, language, search_type, verbose,\
-                     logs, model, False)
+        docs, docs_token = akasha.search.get_docs(db, embeddings, question[i], topK, threshold, language, search_type, verbose,\
+                     logs, model, False, max_token)
         doc_length += akasha.helper.get_docs_length(language, docs)
-        tokens += model.get_num_tokens(''.join([doc.page_content for doc in docs]))
+        tokens += docs_token
         
         
 
@@ -261,11 +261,10 @@ def auto_evaluation(questionset_path:str, doc_path:str, embeddings:str = "openai
     avg_rouge = round(sum(rouge)/len(rouge),3)
     avg_llm_score = round(sum(llm_score)/len(llm_score),3)
     if record_exp != "":    
-        metrics = akasha.format.handle_metrics(doc_length, end_time - start_time)
+        metrics = akasha.format.handle_metrics(doc_length, end_time - start_time, tokens)
         metrics['avg_bert'] = avg_bert
         metrics['avg_rouge'] = avg_rouge
         metrics['avg_llm_score'] = avg_llm_score
-        metrics['tokens'] = tokens
         akasha.aiido_upload(record_exp, params, metrics, table)
     akasha.helper.save_logs(logs)
     
