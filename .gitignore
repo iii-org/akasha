@@ -5,6 +5,7 @@ __pycache__
 chromadb/
 logs/
 doc/
+questionset/
 model/chinese_alpaca_pro_lora_33b.zip
 .gitignore
 model/llama-2-7b-chat.ggmlv3.q4_0.bin
