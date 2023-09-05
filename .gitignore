@@ -37,3 +37,7 @@ questionset/doc_0.txt
 t.py
 questionset/doc_1.txt
 model/datasets/train.jsonl
+summarization/元大.txt
+summarization/eng5軸工具機因應市場訴求改變的發展態勢.txt
+summarization/dark_web.txt
+summarization/20230317_5軸工具機因應市場訴求改變的發展態勢.txt
