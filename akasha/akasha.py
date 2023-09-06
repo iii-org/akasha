@@ -103,7 +103,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:str = 'merge',  compression:bool = False, record_exp:str = "", system_prompt:str=""\
-                 , max_token:int=3000)->str:
+                 , max_token:int=3000)->list:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -159,6 +159,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     doc_length = 0
     tokens = 0
     pre_result = []
+    results = []
     for i in range(len(prompt)):
 
         docs, docs_token = search.get_docs(db, embeddings, prompt[i], topK, threshold, language, search_type,\
@@ -176,8 +177,9 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         res = chain.run(input_documents=docs + pre_result, question=system_prompt + prompt[i])
         res = helper.sim_to_trad(res)
         response = res.split("Finished chain.")
-        print(response)
-
+        if verbose:
+            print(response)
+        results.append(response[-1])
         logs.append("\n\nresponse:\n\n"+ response[-1])
         pre_result.append(Document(page_content=''.join(response)))
         
@@ -189,7 +191,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         table = format.handle_table('\n\n'.join([p for p in prompt]), ori_docs, response)
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
-    return response[-1]
+    return results
 
 
 

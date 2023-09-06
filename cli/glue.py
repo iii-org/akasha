@@ -132,8 +132,8 @@ def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model
                  , model, False, topk, threshold,\
                  language , search_type, False, record_exp, \
                  system_prompt, max_token)
-     
-     print(res)
+     for r in res:
+        print(r)
 
 
 
