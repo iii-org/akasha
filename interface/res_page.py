@@ -44,7 +44,6 @@ def response_page():
             if st.button("Submit", type="primary", use_container_width=True):
                 if st.session_state.openai_key != "": 
                     os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
-                print(final_doc_path)
                 ans = akasha.get_response(final_doc_path,prompt, embed, chunksize, model, False, topK, threshold, 'ch', search_type)
                 st.session_state.prompt_list.append(prompt)
                 st.session_state.response_list.append(ans)
