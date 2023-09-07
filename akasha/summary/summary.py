@@ -4,7 +4,7 @@ from pathlib import Path
 import time
 
 def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size:int = 1000, chunk_overlap:int = 40, verbose:bool = False\
-    ,language:str='ch',summary_type = "map_reduce", max_token:int = 3000, summary_len:int = 500, record_exp:str="")->str:
+    ,language:str='ch',summary_type = "map_reduce", max_token:int = 3000, summary_len:int = 500, record_exp:str="", system_prompt = "")->str:
     """input a file path and return a summary of the file
 
     Args:
@@ -49,10 +49,10 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
 
 
     if summary_type == "refine":
-        response_list, tokens = _refine_summary(model, verbose, texts, max_token, summary_len)
+        response_list, tokens = _refine_summary(model, verbose, texts, max_token, summary_len, system_prompt)
         
     else:
-        response_list, tokens =  _reduce_summary(texts, model, max_token, summary_len, verbose, 0, [])
+        response_list, tokens =  _reduce_summary(texts, model, max_token, summary_len, verbose, 0, [], system_prompt)
     
     summaries = response_list[-1]
     p = akasha.prompts.format_refine_summary_prompt("","", summary_len)
@@ -98,7 +98,7 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
 
 
 
-def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:bool, tokens:int , total_list:list):
+def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:bool, tokens:int , total_list:list, system_prompt:str):
     """Summarize each chunk and merge them until the combined chunks are smaller than the maximum token limit. 
     Then, generate the final summary. This method is faster and requires fewer tokens than the refine method.
 
@@ -126,15 +126,15 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
             prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, summary_len)
             
             try:    ### try call openai llm model
-                response = model.predict(prompt)
+                response = model.predict(system_prompt + prompt)
             
             except:
-                response = model._call(prompt)
+                response = model._call(system_prompt + prompt)
             
             total_list.append(response)
             
             if verbose:
-                print("prompt: \n", prompt)
+                print("prompt: \n", system_prompt + prompt)
                 print("\n\n\n\n\n\n")
                 print("response: \n", response)
                 print("\n\n\n\n\n\n")
@@ -144,28 +144,28 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
         prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, 0)
         
         try:    ### try call openai llm model
-            response = model.predict(prompt)
+            response = model.predict(system_prompt + prompt)
         
         except:
-            response = model._call(prompt)
+            response = model._call(system_prompt + prompt)
             
         
         i = newi  
         if verbose:  
-            print("prompt: \n", prompt)
+            print("prompt: \n", system_prompt +prompt)
             print("\n\n\n\n\n\n")
             print("response: \n", response)
             print("\n\n\n\n\n\n")
         response_list.append(response)       
         total_list.append(response)
-    return _reduce_summary(response_list, model, max_token, summary_len, verbose, tokens, total_list)
+    return _reduce_summary(response_list, model, max_token, summary_len, verbose, tokens, total_list, system_prompt)
 
         
         
         
         
         
-def _refine_summary(model, verbose, texts:list, max_token:int = 3000, summary_len:int = 500)->(list,int):
+def _refine_summary(model, verbose, texts:list, max_token:int = 3000, summary_len:int = 500, system_prompt:str="")->(list,int):
     """refine summary summarizing a chunk at a time and using the previous summary as a prompt for 
     summarizing the next chunk. This approach may be slower and require more tokens, but it results in a higher level of summary consistency.
 
@@ -199,13 +199,13 @@ def _refine_summary(model, verbose, texts:list, max_token:int = 3000, summary_le
         
         
         try:    ### try call openai llm model 
-            response = model.predict(prompt)
+            response = model.predict(system_prompt + prompt)
             
         except:
-            response = model._call(prompt)
+            response = model._call(system_prompt + prompt)
             
         if verbose:
-            print(prompt)
+            print(system_prompt + prompt)
             print("\n\n\n\n\n\n")
             print(response)
             print("\n\n\n\n\n\n")

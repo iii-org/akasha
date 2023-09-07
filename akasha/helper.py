@@ -38,9 +38,9 @@ def is_path_exist(path:str, logs:list)->bool:
 
 def _load_file(file_path, extension):
     try:
-        if extension == "pdf" or "PDF":
+        if extension == "pdf" or  extension == "PDF":
             docs = PyPDFLoader(file_path).load()
-        elif extension == "docx" or "DOCX":
+        elif extension == "docx" or extension == "DOCX":
             docs = Docx2txtLoader(file_path).load()
             for i in range(len(docs)):
                 docs[i].metadata['page'] = i
