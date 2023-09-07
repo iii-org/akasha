@@ -220,9 +220,8 @@ def aiido_upload(exp_name, params:dict={}, metrics:dict={}, table:dict={}, path_
 
 
     if len(table) > 0:
-        import mlflow
-        mlflow.log_table(table,"table.json")
-    aiido.end_run()
+        aiido.mlflow.log_table(table,"table.json")
+    aiido.mlflow.end_run()
     return
 
 
