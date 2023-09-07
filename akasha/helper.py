@@ -156,9 +156,10 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         and return.
     """
     
-
+    print(doc_path)
     ### check if doc path exist ###
     if not is_path_exist(doc_path, logs):
+        
         return None
     
     
@@ -177,7 +178,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         
 
         documents = []
-        txt_extensions = ['pdf', 'md','docx','txt','csv']
+        txt_extensions = ['pdf', 'md','docx','txt','csv','PDF']
         for extension in txt_extensions:
             documents.extend(_load_files(doc_path, extension))
         
