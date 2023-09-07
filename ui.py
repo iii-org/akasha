@@ -22,12 +22,12 @@ with st.sidebar:
 
 ### variable ###
 if 'embed_list' not in st.session_state:
-    st.session_state.embed_list = ["openai:text-embedding-ada-002", "hf:shibing624/text2vec-base-chinese", "hf:all-MiniLM-L6-v2"]
+    st.session_state.embed_list = ["openai:text-embedding-ada-002", "hf:shibing624/text2vec-base-chinese"]
 
 if 'model_list' not in st.session_state:
-    st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit",\
-        "hf:FlagAlpha/Llama2-Chinese-7b-Chat", "llama-gpu:model/llama-2-13b-chat.ggmlv3.q8_0.bin",\
-            "llama-gpu:model/llama-2-7b-chat.ggmlv3.q4_0.bin"]
+    st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k","hf:model/Llama2-Chinese-13b-Chat-4bit",\
+        "hf:model/Llama2-Chinese-7b-Chat", "llama-gpu:model/llama-2-13b-chat.ggmlv3.q8_0.bin",\
+            "llama-gpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"]
 
 if 'search_list' not in st.session_state:
     st.session_state.search_list = ["merge", "svm", "tfidf", "mmr"]

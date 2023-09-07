@@ -156,9 +156,10 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         and return.
     """
     
-
+    print(doc_path)
     ### check if doc path exist ###
     if not is_path_exist(doc_path, logs):
+        
         return None
     
     
