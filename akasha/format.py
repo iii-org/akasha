@@ -80,7 +80,9 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
         table["inputs"] = [inputs]
         table["metadata"] = [metadata]
         
-    
+    else:
+        table["inputs"] = ["none"]
+        table["metadata"] = ["none"]
     
     return table
 
