@@ -38,9 +38,9 @@ def is_path_exist(path:str, logs:list)->bool:
 
 def _load_file(file_path, extension):
     try:
-        if extension == "pdf":
+        if extension == "pdf" or "PDF":
             docs = PyPDFLoader(file_path).load()
-        elif extension == "docx":
+        elif extension == "docx" or "DOCX":
             docs = Docx2txtLoader(file_path).load()
             for i in range(len(docs)):
                 docs[i].metadata['page'] = i
@@ -177,7 +177,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
         
 
         documents = []
-        txt_extensions = ['pdf', 'md','docx','txt','csv']
+        txt_extensions = ['pdf', 'md','docx','txt','csv','PDF','DOCX']
         for extension in txt_extensions:
             documents.extend(_load_files(doc_path, extension))
         
