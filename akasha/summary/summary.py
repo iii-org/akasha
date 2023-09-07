@@ -4,7 +4,8 @@ from pathlib import Path
 import time
 
 def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size:int = 1000, chunk_overlap:int = 40, verbose:bool = False\
-    ,language:str='ch',summary_type = "map_reduce", max_token:int = 3000, summary_len:int = 500, record_exp:str="", system_prompt = "")->str:
+    ,language:str='ch',summary_type = "map_reduce", max_token:int = 3000, summary_len:int = 500, record_exp:str="", system_prompt = "",
+    format_prompt = "")->str:
     """input a file path and return a summary of the file
 
     Args:
@@ -19,7 +20,8 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
         **max_token (int, optional)**: the max tokens that input to llm model each time. Defaults to 3000.\n
         **summary_len (int, optional)**: _description_. Defaults to 500.\n
         **record_exp (str, optional)**: _description_. Defaults to "".\n
-
+        **system_prompt (str, optional)** : use it to ask llm to custom output beside summarize. Defaults to "".\n
+        **format_prompt(str, optional)** : only use it to ask llm at the end. Defaults to "".\n
     Returns:
         str: _description_
     """
@@ -32,6 +34,8 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
     params['summary_type'] = "refine" if summary_type == "refine" else "map_reduce"
     
 
+    if system_prompt != "":
+        system_prompt = "<<sys>>" + system_prompt + "<</sys>>"
     
     ### check if doc path exist ###
     if not akasha.helper.is_path_exist(file_path, logs):
@@ -59,13 +63,23 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
 
     logs.extend(response_list)
     ### write summary to file, and if language is chinese , translate it ###
-    if language == 'ch':
+    
+    
+    if format_prompt != "":
+        format_prompt = "<<sys>>" + system_prompt + format_prompt + "<</sys>>"
+        try:    ### try call openai llm model 
+            response = model.predict(format_prompt+": \n\n" + summaries)
+            
+        except:
+            response = model._call(format_prompt+": \n\n" + summaries)
+            
+    elif language == 'ch':
         try:    ### try call openai llm model 
             response = model.predict("translate the following text into chinese: \n\n" + summaries)
             
         except:
             response = model._call("translate the following text into chinese: \n\n" + summaries)
-        summaries = akasha.helper.sim_to_trad(response)
+    summaries = akasha.helper.sim_to_trad(response)
     logs.append(summaries)
     
     ### write summary to file ###
@@ -135,7 +149,7 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
             
             if verbose:
                 print("prompt: \n", system_prompt + prompt)
-                print("\n\n\n\n\n\n")
+                print("\n\n")
                 print("response: \n", response)
                 print("\n\n\n\n\n\n")
             
@@ -153,7 +167,7 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
         i = newi  
         if verbose:  
             print("prompt: \n", system_prompt +prompt)
-            print("\n\n\n\n\n\n")
+            print("\n\n")
             print("response: \n", response)
             print("\n\n\n\n\n\n")
         response_list.append(response)       
@@ -205,9 +219,9 @@ def _refine_summary(model, verbose, texts:list, max_token:int = 3000, summary_le
             response = model._call(system_prompt + prompt)
             
         if verbose:
-            print(system_prompt + prompt)
-            print("\n\n\n\n\n\n")
-            print(response)
+            print("prompt: \n", system_prompt + prompt)
+            print("\n\n")
+            print("resposne: \n", response)
             print("\n\n\n\n\n\n")
         response_list.append(response)       
         previous_summary = response
