@@ -516,7 +516,7 @@ combination is the combination that need least tokens to get a correct answer.
 
 
 ```python
-import akasha
+import akasha.eval as eval
 import os
 from dotenv import load_dotenv
 load_dotenv() 
@@ -528,7 +528,7 @@ exp_name = "exp_akasha_optimum_combination"
 embeddings_list = ["hf:shibing624/text2vec-base-chinese", "openai:text-embedding-ada-002"]
 model_list = ["openai:gpt-3.5-turbo","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit","hf:meta-llama/Llama-2-7b-chat-hf",\
             "llama-gpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin", "llama-gpu:model/llama-2-13b-chat.ggmlv3.q8_0.bin"]
-akasha.optimum_combination("question_pvc.txt", dir_path, embeddings_list = embeddings_list,model_list = model_list,
+eval.optimum_combination("question_pvc.txt", dir_path, "single_choice", embeddings_list = embeddings_list, model_list = model_list,
             chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name,topK_list=[2,3])
 
 ```
@@ -615,7 +615,7 @@ Please input your question(type "exit()" to quit) : exit()
 <br/>
 <br/>
 
-Currently you can use **get-response**, **keep-responsing**, **chain-of-thought** and **test-performance**.
+Currently you can use **get-response**, **keep-responsing**, **chain-of-thought** and **auto_create_questionset** and **auto_evaluation**.
   
 
 
@@ -637,6 +637,7 @@ Options:
   -s, --search_type TEXT      search type for the documents, include merge,
                               svm, mmr, tfidf
   -sys, --system_prompt TEXT  system prompt for the llm model
+  -mt, --max_token INTEGER    max token for the llm model input
   --help                      Show this message and exit.
 
 ```
