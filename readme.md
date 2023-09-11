@@ -415,46 +415,94 @@ response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
 <br/>
 
 
-## Test Performance
 
-To evaluate the performance of current parameters, you can use function **test_performance** . First you need to build a question set .txt
-file based on the documents you want to use, each question in the question set must be a single choice question, every options and the correct
-answer is separated by space, each line is a question, **for example:**  (question_pvc.txt)
 
-```text
 
-應回收廢塑膠容器材質種類不包含哪種?  聚丙烯（PP） 聚苯乙烯（PS） 聚氯乙烯（PVC）  低密度聚乙烯（LDPE）  4
-庫存盤點包括庫存全盤作業及不定期抽盤作業，盤點計畫應包括下列項目不包含哪項?   盤點差異之處理   盤點清冊  各項物品存放區域配置圖  庫存全盤日期及參加盤點人員名單  1
-以下和者不是環保署指定之公民營地磅機構?    中森加油站企業有限公司   台益地磅站  大眾地磅站  新福行  4
 
-```
+## Auto Evaluation
 
-**test_performance** will return the correct rate of the question set, details of each question would save in logs, or in mlflow server if you
-turn on **record_exp** 
+To evaluate the performance of current parameters, you can use function **auto_evaluation** . First you need to build a question set .txt
+file based on the documents you want to use.
+You can either generate **single choice question file** or **essay question file**.
+  1. For **single choice question file**, every options and the correct answer is separated by tab(\t), each line is a question, 
+  **for example:**  (question_pvc.txt)
+
+  ```text
+
+  應回收廢塑膠容器材質種類不包含哪種?	聚丙烯（PP）	聚苯乙烯（PS）	聚氯乙烯（PVC）	低密度聚乙烯（LDPE）	4
+  庫存盤點包括庫存全盤作業及不定期抽盤作業，盤點計畫應包括下列項目不包含哪項?	盤點差異之處理	盤點清冊	各項物品存放區域配置圖	庫存全盤日期及參加盤點人員名單	1
+  以下何者不是環保署指定之公民營地磅機構?	中森加油站企業有限公司	台益地磅站	大眾地磅站	新福行	4
+
+  ```
+
+  it will return the correct rate and tokens of the question set, details of each question would save in logs, or in mlflow server if you
+  turn on **record_exp** 
+
+  ```python
+  import akasha.eval as eval
+  import os
+  from dotenv import load_dotenv
+  load_dotenv() 
+
+  os.environ["OPENAI_API_KEY"] = "your openAI key"
+  dir_path = "doc/pvc/"
+  exp_name = "exp_akasha_auto_evaluation"
+
+  print(eval.auto_evaluation("question_pvc.txt", dir_path, question_type="single_choice", search_type='merge',\
+      model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp=exp_name))
+  ## correct rate: 0.9, tokens: 3228 ##
+  ```
+
+  <br/>
+  <br/>
+  
+  2. For **essay question file** , each question has "問題：" before it, and each reference answer has "答案：" before it. 
+  Each question is separated by two newline(\n\n)
+
+  ```text
+
+  問題：根據文件中的訊息，智慧製造的複雜性已超越系統整合商的負荷程度，未來產業鏈中的角色將傾向朝共和共榮共創智慧製造商機，而非過往的單打獨鬥模式發展。請問為什麼  供  應商、電信商、軟體開發商、平台商、雲端服務供應商、系統整合商等角色會傾向朝共和共榮共創智慧製造商機的方向發展？
+  答案：因為智慧製造的複雜性已超越系統整合商的負荷程度，單一角色難以完成整個智慧製造的需求，而共和共榮共創的模式可以整合各方的優勢，共同創造智慧製造的商機。
+
+  問題：根據文件中提到的資訊技術商（IT）和營運技術商（OT），請列舉至少兩個邊緣運算產品或解決方案。
+  答案：根據文件中的資訊，NVIDIA的邊緣運算產品包括Jetson系列和EGX系列，而IBM的邊緣運算產品包括IBM Edge Application Manager和IBM Watson Anywhere。
+  ```
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+
+
+
+
+## Use llm to create questionset and evaluate the performance
+If you prefer not to create your own question set to assess the performance of the current parameters, you can utilize the **eval.auto_create_questionset** feature to automatically generate a question set along with reference answers. Subsequently, you can use **eval.auto_evaluation** to obtain metrics scores such as **Bert_score**, **Rouge**, and **LLM_score** for essay questionset and **correct rate** for single choice questionset. These scores range from 0 to 1, with higher values indicating that the generated response closely matches the reference answers.
+
+For example, the code create a questionset text file 'mic_1.txt' with ten questions and reference answers, each question is randomly generated from the content segments of given documents in 'doc/mic/' directory. Then you can use the questionset text file to evaluate the performance of the parameters you want to test.
+
 
 ```python
-import akasha
-import os
-from dotenv import load_dotenv
-load_dotenv() 
 
-os.environ["OPENAI_API_KEY"] = "your openAI key"
-dir_path = "doc/pvc/"
-exp_name = "exp_akasha_test_performance"
+import akasha.eval as eval
+eval.auto_create_questionset(doc_path="doc/mic/", question_num=10, question_type="essay", record_exp="exp_mic_auto_questionset")
+bert_score, rouge, llm_score = eval.auto_evaluation(questionset_path="questionset/mic_1.txt", doc_path="doc/mic/", question_type = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
 
-print(akasha.test_performance("question_pvc.txt", dir_path, search_type='merge',\
-     model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp=exp_name))
-## 1.0 ##
+# bert_score = 0.782
+# rouge = 0.81
+# llm_score = 0.393
 ```
 
 
+<br/>
+<br/>
+<br/>
+<br/>
 
 
-
-<br/>
-<br/>
-<br/>
-<br/>
 
 
 ## Find Optimum Combination
@@ -516,29 +564,6 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
 <br/>
 
 
-
-## Use llm to create questionset and evaluate the performance
-If you prefer not to create your own question set to assess the performance of the current parameters, you can utilize the **eval.auto_create_questionset** feature to automatically generate a question set along with reference answers. Subsequently, you can use **eval.auto_evaluation** to obtain scores for metrics such as **Bert_score**, **Rouge**, and **LLM_score**. These scores range from 0 to 1, with higher values indicating that the generated response closely matches the reference answers.
-
-For example, the code create a questionset text file 'mic_1.txt' with ten questions and reference answers, each question is randomly generated from the content segments of given documents in 'doc/mic/' directory. Then you can use the questionset text file to evaluate the performance of the parameters you want to test.
-
-
-```python
-
-import akasha.eval as eval
-eval.auto_create_questionset(doc_path="doc/mic/", question_num=10, record_exp="exp_mic_auto_questionset")
-bert_score, rouge, llm_score = eval.auto_evaluation(questionset_path="questionset/mic_1.txt", doc_path="doc/mic/", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
-
-# bert_score = 0.782
-# rouge = 0.81
-# llm_score = 0.393
-```
-
-
-<br/>
-<br/>
-<br/>
-<br/>
 
 
 
