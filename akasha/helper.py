@@ -1,6 +1,6 @@
 import time
 import datetime
-import os
+import numpy as np
 import jieba
 import json
 from tqdm import tqdm
@@ -555,3 +555,15 @@ def  call_model(model, prompt:str)->str:
     except:
         response = model._call(prompt)
     return response
+
+
+
+def get_non_repeat_rand_int(vis:set, num:int):
+    
+    temp = np.random.randint(num)
+    if len(vis) >= num:
+        vis = set()
+    if temp not in vis:
+        vis.add(temp)
+        return temp
+    return get_non_repeat_rand_int(vis, num)

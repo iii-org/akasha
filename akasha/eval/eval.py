@@ -100,6 +100,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     
     ### define variables ###
     doc_range = (1999+chunk_size)//chunk_size   # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
+    vis_doc_range = set()
     start_time = time.time()
     logs = ["\n\n-----------------auto_create_questionset----------------------\n"]
     params = akasha.format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
@@ -134,7 +135,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     for i in range(question_num):
         progress.update(1)
         
-        random_index = np.random.randint(len(texts) - doc_range)
+        random_index = akasha.helper.get_non_repeat_rand_int(vis_doc_range, len(texts) - doc_range)
         
         doc_text = '\n'.join(texts[random_index:random_index + doc_range])
         docs = [Document(page_content=texts[k], metadata=metadata[k]) for k in range(random_index,random_index+doc_range)]
@@ -177,7 +178,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
             print(response)
         logs.append(doc_text)
         logs.append("\n\nresponse:\n\n"+ response)
-        new_table = akasha.format.handle_table(question, docs, answer)
+        new_table = akasha.format.handle_table(question[-1], docs, answer[-1])
         for key in new_table:
             if key not in table:
                 table[key] = []
