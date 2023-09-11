@@ -67,18 +67,12 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
     
     if format_prompt != "":
         format_prompt = "<<sys>>" + system_prompt + format_prompt + "<</sys>>"
-        try:    ### try call openai llm model 
-            response = model.predict(format_prompt+": \n\n" + summaries)
-            
-        except:
-            response = model._call(format_prompt+": \n\n" + summaries)
+        response = akasha.helper.call_model(model, format_prompt + ": \n\n" + summaries)
+        
             
     elif language == 'ch':
-        try:    ### try call openai llm model 
-            response = model.predict("translate the following text into chinese: \n\n" + summaries)
-            
-        except:
-            response = model._call("translate the following text into chinese: \n\n" + summaries)
+        response = akasha.helper.call_model(model, "translate the following text into chinese: \n\n" + summaries)
+        
     summaries = akasha.helper.sim_to_trad(response)
     logs.append(summaries)
     
@@ -139,11 +133,7 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
         if i==0 and newi==len(texts):
             prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, summary_len)
             
-            try:    ### try call openai llm model
-                response = model.predict(system_prompt + prompt)
-            
-            except:
-                response = model._call(system_prompt + prompt)
+            response = akasha.helper.call_model(model, system_prompt + prompt)
             
             total_list.append(response)
             
@@ -157,11 +147,7 @@ def _reduce_summary(texts:list, model, max_token:int ,summary_len:int ,verbose:b
         
         prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, 0)
         
-        try:    ### try call openai llm model
-            response = model.predict(system_prompt + prompt)
-        
-        except:
-            response = model._call(system_prompt + prompt)
+        response = akasha.helper.call_model(model, system_prompt + prompt)
             
         
         i = newi  
@@ -212,11 +198,7 @@ def _refine_summary(model, verbose, texts:list, max_token:int = 3000, summary_le
             prompt = akasha.prompts.format_refine_summary_prompt(cur_text, previous_summary, summary_len)
         
         
-        try:    ### try call openai llm model 
-            response = model.predict(system_prompt + prompt)
-            
-        except:
-            response = model._call(system_prompt + prompt)
+        response = akasha.helper.call_model(model, system_prompt + prompt)
             
         if verbose:
             print("prompt: \n", system_prompt + prompt)

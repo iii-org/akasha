@@ -232,10 +232,10 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
                  language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", max_token:int=3000 ):
     """input a txt file includes list of single choice questions and the answer, will test all of the questions and return the
     correct rate of this parameters(model, embeddings, search_type, chunk_size)\n
-    the format of q_file(.txt) should be one line one question, and the possibles answers and questions are separate by space,
+    the format of q_file(.txt) should be one line one question, and the possibles answers and questions are separate by tab(\t),
     the last one is which possisble answers is the correct answer, for example, the file should look like: \n
         "What is the capital of Taiwan?" Taipei  Kaohsiung  Taichung  Tainan     1
-        何者是台灣的首都?  台北 高雄 台中 台南   1
+        何者是台灣的首都?   台北    高雄    台中    台南    1
     
     Args:
         **q_file (str)**: the file path of the question file\n
@@ -305,7 +305,7 @@ def test_performance(q_file:str, doc_path:str, embeddings:str = "openai:text-emb
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
         
-        new_table = format.handle_table(query, docs, response)
+        new_table = format.handle_table(query, docs, response[-1])
         for key in new_table:
             if key not in table:
                 table[key] = []

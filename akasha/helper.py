@@ -159,6 +159,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
 
     ### check if doc path exist ###
     if not is_path_exist(doc_path, logs):
+        
         return None
     
     
@@ -384,7 +385,7 @@ def get_docs_length(language:str, docs:list)->int:
 
 
 
-def get_question_from_file(path:str)->list:
+def get_question_from_file(path:str, question_type:str):
     """load questions from file and save the questions into lists.
     a question list include the question, mutiple options, and the answer (the number of the option),
       and they are all separate by space in the file. 
@@ -399,13 +400,27 @@ def get_question_from_file(path:str)->list:
     with f_path.open(mode='r',encoding='utf-8') as file:
         content = file.read()
     questions = []
-    for con in content.split('\n'):
-        questions.append( [word for word in con.split(" ")if word != ""])
+    answers = []    
+ 
+        
+    if question_type.lower() == "essay":
+        content = content.split("\n\n")
+        for i in range(len(content)):
+            if content[i] == "":
+                continue
+            process = ''.join(content[i].split("問題：")).split("答案：")
+            
+            questions.append(process[0])
+            answers.append(process[1])
+        return questions, answers
     
-    return questions
+    for con in content.split('\n'):
+        if con=="":
+            continue
+        questions.append( [word for word in con.split("\t")if word != ""])
+    return questions, answers
 
-
-def extract_result(response:str):
+def extract_result(response:list):
     """to prevent the output of llm format is not what we want, try to extract the answer (digit) from the llm output 
 
     Args:
@@ -496,8 +511,19 @@ def sim_to_trad(text:str)->str:
 
 
 
-def _get_text(texts:list,previous_summary:str, i:int, max_token:int,model):
-    
+def _get_text(texts:list,previous_summary:str, i:int, max_token:int,model)->(int, str, int):
+    """used in summary, combine chunks of texts into one chunk that can fit into llm model
+
+    Args:
+        texts (list): chunks of texts
+        previous_summary (str): _description_
+        i (int): start from i-th chunk
+        max_token (int): the max token we want to fit into llm model at one time
+        model (var): llm model
+
+    Returns:
+        (int, str, int): return the total tokens of combined chunks, combined chunks of texts, and the index of next chunk
+    """
     cur_count = model.get_num_tokens(previous_summary) 
     words_len = model.get_num_tokens(texts[i])
     cur_text = ""
@@ -510,3 +536,22 @@ def _get_text(texts:list,previous_summary:str, i:int, max_token:int,model):
     
     
     return cur_count, cur_text, i
+
+
+
+def  call_model(model, prompt:str)->str:
+    """call llm model and return the response
+
+    Args:
+        model (_type_): llm model
+        prompt (str): input prompt
+
+    Returns:
+        str: llm response
+    """
+    try:    ### try call openai llm model 
+        response = model.predict(prompt)
+                
+    except:
+        response = model._call(prompt)
+    return response

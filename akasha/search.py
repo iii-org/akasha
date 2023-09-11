@@ -138,8 +138,8 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list,
             words_len = model.get_num_tokens(docs[i].page_content)
             if cur_count + words_len > max_token:
                 if verbose:
-                    print("words length: ", cur_count)
-                logs.append("words length: " + str(cur_count))
+                    print("\nwords length: ", cur_count)
+                logs.append("\nwords length: " + str(cur_count))
                 return res, cur_count
             # if language=='ch':
             #     words_len = helper.get_doc_length(language, docs[i])
