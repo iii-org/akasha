@@ -72,18 +72,43 @@ def format_chinese_json(query:str):
 
 
 
+def format_wrong_answer(num:int, doc_text:str,question:str, correct_ans:str)->str:
+    """prompt for generate wrong answers to create single choice question
 
-def format_create_question_prompt(doc_text:str)->str:
+    Args:
+        **num (int)**: number of wrong answers that we want to generate\n
+        **doc_text (str)**: document texts that used to generate question\n
+        **question (str)**: question string\n
+        **correct_ans (str)**: correct answer string\n
+
+    Returns:
+        str: combined prompt
+    """
+    
+    q_prompt =  sys_s + f"根據以下的文件、問題和正確答案，請基於文件、問題和正確答案生成{num}個錯誤答案，錯誤答案應該與正確答案有相關性但數字、內容或定義錯誤，或者與正確答案不相同但有合理性。並注意各個錯誤答案必須都不相同。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n<開始問題>\n...\n<結束問題>\n<開始正確答案>\n...\n<結束正確答案>\n\n錯誤答案：錯誤答案1在這里\n\n錯誤答案：錯誤答案2在這里\n\n錯誤答案：錯誤答案3在這里\n\n。開始吧！"+ sys_e +"<開始文件>\n"
+    end_doc = "<結束文件>\n"
+    st_q = "<開始問題>\n"
+    end_q = "<結束問題>\n"
+    st_cor = "<開始正確答案>\n"
+    end_cor = "<結束正確答案>\n"
+    q_prompt = q_prompt + doc_text + end_doc + st_q + question + end_q + st_cor + correct_ans + end_cor + "\n\n"
+    
+    return q_prompt
+def format_create_question_prompt(doc_text:str,question_type:str)->str:
     """prompts for auto generate question from document
 
     Args:
         **doc_text (str)**: texts from documents\n
+        **question_type (str)**: question type, can be "single choice", "essay"\n
 
     Returns:
-        str: _description_
+        str: combined prompt
     """
+    qt = ""
+    if question_type != "essay":
+        qt = "少於100字的"
     #q_prompt = "Human: You are a teacher coming up with questions to ask on a quiz. \nGiven the following document, please generate a question and answer based on that document.\n\nExample Format:\n<Begin Document>\n...\n<End Document>\nQUESTION: question here\nANSWER: answer here\n\nThese questions should be detailed and be based explicitly on information in the document. Begin!\n\n<Begin Document>\n\n"
-    q_prompt =  sys_s + "人類：您是一位教師，正在為測驗準備問題。\n根據以下文件，請基於該文件只生成一個問題和一個答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"+ sys_e +"<開始文件>\n"
+    q_prompt =  sys_s + f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"+ sys_e +"<開始文件>\n"
     #end_prompt = "<End Document>\n"
     end_prompt = "<結束文件>\n"
     # generate question prompt = generate_question_prompt(Document)
