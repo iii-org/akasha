@@ -72,6 +72,17 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
                  system_prompt:str = "", question_type:str="essay",choice_num:int = 4 ):
     """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory, 
     then use llm model to generate a question and answer pair, and save it into a txt file.
+    1.The format of "single_choice" questionset should be one line one question, and the possibles answers and questions are separate by tab(\t),
+    the last one is which options is the correct answer, for example, the file should look like: \n
+        "What is the capital of Taiwan?" Taipei  Kaohsiung  Taichung  Tainan     1
+        何者是台灣的首都?   台北    高雄    台中    台南    1
+    2. The format of "essay" questionset should be one line one question, and the reference answer is next line, every questions are separate by 
+    two newline(\n\n). For example, the file should look like: \n
+        問題：根據文件中的訊息，智慧製造的複雜性已超越系統整合商的負荷程度，未來產業鏈中的角色將傾向朝共和共榮共創智慧製造商機，而非過往的單打獨鬥模式發展。請問為什麼供應商、電信商、軟體開發商、平台商、雲端服務供應商、系統整合商等角色會傾向朝共和共榮共創智慧製造商機的方向發展？
+        答案：因為智慧製造的複雜性已超越系統整合商的負荷程度，單一角色難以完成整個智慧製造的需求，而共和共榮共創的模式可以整合各方的優勢，共同創造智慧製造的商機。
+
+        問題：根據文件中提到的資訊技術商（IT）和營運技術商（OT），請列舉至少兩個邊緣運算產品或解決方案。
+        答案：根據文件中的資訊，NVIDIA的邊緣運算產品包括Jetson系列和EGX系列，而IBM的邊緣運算產品包括IBM Edge Application Manager和IBM Watson Anywhere。
 
     Args:
         **doc_path (str)**: documents directory path\n
@@ -102,7 +113,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     doc_range = (1999+chunk_size)//chunk_size   # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
     vis_doc_range = set()
     start_time = time.time()
-    logs = ["\n\n-----------------auto_create_questionset----------------------\n"]
+    logs = [f"\n\n-----------------auto_create_questionset({question_type})----------------------\n"]
     params = akasha.format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
     embeddings_name = embeddings
     embeddings = akasha.helper.handle_embeddings(embeddings, logs, verbose)
@@ -377,3 +388,114 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
         return correct_count/total_question , tokens
   
 
+
+
+
+
+
+
+def optimum_combination(q_file:str, doc_path:str, question_type:str="essay", embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
+                 , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], threshold:float = 0.2,\
+                 language:str = 'ch' , search_type_list:list = ['svm','tfidf','mmr'], record_exp:str = ""\
+                    , max_token:int=3000):
+    """test all combinations of giving lists, and run test_performance to find parameters of the best result.
+
+    Args:
+        **q_file (str)**: the file path of the question file\n
+        **doc_path (str)**: documents directory path\n
+        **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
+        **embeddings_list (_type_, optional)**: list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].\n
+        **chunk_size_list (list, optional)**: list of chunk sizes. Defaults to [500].\n
+        **model_list (_type_, optional)**: list of models. Defaults to ["openai:gpt-3.5-turbo"].\n
+        **topK_list (list, optional)**: list of topK. Defaults to [2].\n
+        **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+        **search_type_list (list, optional)**: list of search types, currently have "merge", "svm", "knn", "tfidf", "mmr". Defaults to ['svm','tfidf','mmr'].
+        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+            record_exp as experiment name.  default ''.\n
+        **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+        
+    Returns:
+        (list,list): return best score combination and best cost-effective combination
+    """
+    logs = ["\n\n----------------optimum_combination-----------------------\n"]
+    start_time = time.time()
+    combinations = akasha.helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
+    progress = tqdm(len(combinations),total = len(combinations), desc="RUN LLM COMBINATION")
+    print("\n\ntotal combinations: ", len(combinations))
+    result_list = []
+    if question_type.lower() == "essay":
+        bcb = 0.0
+        bcr = 0.0
+        bcl = 0.0
+    else:
+        bcr = 0.0
+    
+    for embed, chk, mod, tK, st in combinations:
+        progress.update(1)
+        
+        if question_type.lower() == "essay":
+            cur_bert, cur_rouge, cur_llm, tokens = auto_evaluation(q_file, doc_path, question_type,embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
+                                language=language, search_type=st, record_exp=record_exp, max_token=max_token) 
+            bcb = max(bcb,cur_bert)
+            bcr = max(bcr,cur_rouge)
+            bcl = max(bcl,cur_llm)
+            cur_tup = (cur_bert, cur_rouge, cur_llm, embed, chk, mod, tK, st)
+        else:
+            cur_correct_rate, tokens = auto_evaluation(q_file, doc_path, question_type,embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
+                                language=language, search_type=st, record_exp=record_exp, max_token=max_token) 
+            bcr = max(bcr,cur_correct_rate)
+            cur_tup = (cur_correct_rate, cur_correct_rate/tokens, embed, chk, mod, tK, st)
+        result_list.append(cur_tup)
+        
+    progress.close()
+
+
+    if question_type.lower() == "essay":
+        ### record bert score logs ###
+        print("Best Bert Score: ", "{:.3f}".format(bcb))
+        
+        bs_combination = akasha.helper.get_best_combination(result_list, 0, logs)
+        print("\n\n")
+        
+        ### record rouge score logs ###
+        print("Best Rouge Score: ", "{:.3f}".format(bcr))
+        
+        rs_combination = akasha.helper.get_best_combination(result_list, 1, logs)
+        print("\n\n")
+        
+        ### record llm_score logs ###
+        print("Best llm score: ", "{:.3f}".format(bcl))
+        # score_comb = "Best score combination: \n"
+        # print(score_comb)
+        # logs.append(score_comb)
+        ls_combination = akasha.helper.get_best_combination(result_list, 2, logs)
+        print("\n\n")
+        
+        
+    else:
+        ### record logs ###
+        print("Best correct rate: ", "{:.3f}".format(bcr))
+        score_comb = "Best score combination: \n"
+        print(score_comb)
+        logs.append(score_comb)
+        bs_combination = akasha.helper.get_best_combination(result_list, 0,logs)
+
+
+        print("\n\n")
+        cost_comb = "Best cost-effective: \n"
+        print(cost_comb)
+        logs.append(cost_comb)
+        bc_combination = akasha.helper.get_best_combination(result_list, 1,logs)
+
+
+
+   
+    end_time = time.time()
+    format_time = "time spend: " + "{:.3f}".format(end_time-start_time)
+    print( format_time )
+    logs.append( format_time )
+    akasha.helper.save_logs(logs)
+    
+    if question_type.lower() == "essay":
+        return bs_combination, rs_combination, ls_combination
+    return bs_combination, bc_combination

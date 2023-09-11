@@ -487,10 +487,10 @@ def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
     for tup in sorted_res:
         if tup[idx] < max_score:
             break
-        res_str = "embeddings: " + tup[2] + ", chunk size: " + str(tup[3]) + ", model: " +tup[4] + ", topK: " + str(tup[5]) + ", search type: " + tup[6] + "\n"
+        res_str = "embeddings: " + tup[-5] + ", chunk size: " + str(tup[-4]) + ", model: " +tup[-3] + ", topK: " + str(tup[-2]) + ", search type: " + tup[-1] + "\n"
         print(res_str)
         logs.append(res_str)
-        res.append(tup[2:])
+        res.append(tup[-5:])
 
     return res
 

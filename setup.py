@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='akasha',
-      version = '0.4',
+      version = '0.5',
       description = "document QA package using langchain and chromadb",
       author = 'chih chuan chang',
       author_email = 'ccchang@iii.org.tw',
