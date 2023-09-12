@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional
 from langchain.llms.base import LLM
 import torch,sys
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer,TextStreamer
 from peft import AutoPeftModelForCausalLM
 from langchain.llms import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
@@ -127,3 +127,41 @@ class peft_Llama2(LLM):
         result_message  = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
         return result_message
+    
+    
+    
+    
+    
+class TaiwanLLaMaGPTQ(LLM):
+    max_token: int = 500
+    temperature: float = 0.1
+    top_p: float = 0.95
+    tokenizer: Any
+    model: Any
+    streamer: Any
+    
+    def __init__(self, model_name_or_path:str):
+        super().__init__()
+        from auto_gptq import AutoGPTQForCausalLM
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, use_fast=True,max_length=4096,truncation=True,add_eos_token=True)
+        self.model = AutoGPTQForCausalLM.from_quantized(model_name_or_path,
+            trust_remote_code=True,
+            use_safetensors=True,
+            device_map="auto",
+            use_triton=False,
+            strict=False)
+        
+        self.streamer = TextStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=True)
+    
+    @property
+    def _llm_type(self) -> str:
+        return "Taiwan_LLaMa"
+    
+    def _call(self, message: str, stop: Optional[List[str]] = None):
+        prompt = message
+        tokens = self.tokenizer(prompt, return_tensors='pt').input_ids
+        generate_ids = self.model.generate(input_ids=tokens.cuda(), max_new_tokens=self.max_token, streamer=self.streamer,top_p=0.95, top_k=50\
+            ,temperature=self.temperature, do_sample=True)
+        output = self.tokenizer.decode(generate_ids[0, len(tokens[0]):-1]).strip()
+        
+        return output

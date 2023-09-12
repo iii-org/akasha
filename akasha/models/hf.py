@@ -5,7 +5,7 @@ from transformers import pipeline
 from langchain.llms import HuggingFacePipeline
 import torch
 import warnings,os
-from akasha.models.llama2 import Llama2
+from akasha.models.llama2 import Llama2, TaiwanLLaMaGPTQ
 
 
 class chatGLM(LLM):
@@ -69,18 +69,22 @@ def get_hf_model(model_name):
     with warnings.catch_warnings():
         warnings.simplefilter(action='ignore', category=FutureWarning)
         hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-        if hf_token is None:
-            pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0}, device_map="auto")
-            model = HuggingFacePipeline(pipeline=pipe)
-        else:
-            try:
+        try:
+            if hf_token is None:
+                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0}, device_map="auto")
+                model = HuggingFacePipeline(pipeline=pipe)
+            else:
+            
                 pipe = pipeline("text-generation", model=model_name, use_auth_token=hf_token,\
                 max_new_tokens = 512, model_kwargs={"temperature":0,}, device_map="auto", batch_size = 1, torch_dtype=torch.float16)
                 model = HuggingFacePipeline(pipeline=pipe)
-            except:
+        except:
+                
+            if model_name.lower().find("taiwan-llama")!=-1:
+            
+                model = TaiwanLLaMaGPTQ(model_name_or_path=model_name)
+            else:
                 
                 model = Llama2(model_name_or_path=model_name, bit4=True, max_token=4096)
-                #model = HuggingFaceHub(
-            #    repo_id = model_name, model_kwargs={"temperature": 0.1})
         
     return model

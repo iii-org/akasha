@@ -207,7 +207,7 @@ akasha.get_response(dir_path, prompt, search_type="mmr")
 openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY"
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
 quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
-
+taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
 ### If you want to use llama-cpp to run model on cpu, you can download ggml version of models 
 ### from  https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/tree/main  and the name behind "llama-gpu:" or "llama-cpu:"
 ### is the path of the downloaded .bin file
