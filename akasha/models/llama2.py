@@ -133,7 +133,7 @@ class peft_Llama2(LLM):
     
     
 class TaiwanLLaMaGPTQ(LLM):
-    max_token: int = 500
+    max_token: int = 300
     temperature: float = 0.1
     top_p: float = 0.95
     tokenizer: Any
