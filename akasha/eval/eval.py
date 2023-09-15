@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
-
+from typing import Callable, Union
 
 
 
@@ -68,7 +68,7 @@ def  _generate_single_choice_question(doc_text:str, question:str, cor_ans:str, m
 
 def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = "", \
+                 language:str = 'ch' , search_type:Union[str,Callable] = 'merge', record_exp:str = "", \
                  system_prompt:str = "", question_type:str="essay",choice_num:int = 4 ):
     """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory, 
     then use llm model to generate a question and answer pair, and save it into a txt file.
@@ -114,7 +114,11 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
     vis_doc_range = set()
     start_time = time.time()
     logs = [f"\n\n-----------------auto_create_questionset({question_type})----------------------\n"]
-    params = akasha.format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
+    if callable(search_type):
+        search_type_str = search_type.__name__
+    else:
+        search_type_str = search_type
+    params = akasha.format.handle_params(model, embeddings, chunk_size, search_type_str, topK, threshold, language, False)
     embeddings_name = embeddings
     embeddings = akasha.helper.handle_embeddings(embeddings, logs, verbose)
     model = akasha.helper.handle_model(model, logs, verbose)
@@ -236,7 +240,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 
 def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge', record_exp:str = "", eval_model:str = "openai:gpt-3.5-turbo"\
+                 language:str = 'ch' , search_type:Union[str,Callable]= 'merge', record_exp:str = "", eval_model:str = "openai:gpt-3.5-turbo"\
                 , max_token:int=3000):
     """parse the question set txt file generated from "auto_create_questionset" function if you use essay type to generate questionset, 
     and then use llm model to generate response, 
@@ -290,7 +294,11 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
     start_time = time.time()
     logs = [f"\n\n---------------auto_evaluation({question_type})------------------------\n"]
     table = {}
-    params = akasha.format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, False)
+    if callable(search_type):
+        search_type_str = search_type.__name__
+    else:
+        search_type_str = search_type
+    params = akasha.format.handle_params(model, embeddings, chunk_size, search_type_str, topK, threshold, language, False)
     embeddings_name = embeddings
     embeddings = akasha.helper.handle_embeddings(embeddings, logs, verbose)
     model = akasha.helper.handle_model(model, logs, verbose)

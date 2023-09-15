@@ -1,7 +1,7 @@
 import pathlib
 import time
 from tqdm import tqdm
-import torch
+from typing import Callable, Union
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain import PromptTemplate
 from langchain.schema import Document
@@ -15,7 +15,7 @@ load_dotenv(pathlib.Path().cwd()/'.env')
 
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge', compression:bool = False, record_exp:str = "", \
+                 language:str = 'ch' , search_type:Union[str,Callable] = 'merge', compression:bool = False, record_exp:str = "", \
                  system_prompt:str = "", max_token:int=3000 )->str:
     """input the documents directory path and question, will first store the documents
     into vectors db (chromadb), then search similar documents based on the prompt question.
@@ -45,7 +45,12 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     
     start_time = time.time()
     logs = ["\n\n-----------------get_response----------------------\n"]
-    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
+    if callable(search_type):
+        search_type_str = search_type.__name__
+        
+    else:
+        search_type_str = search_type
+    params = format.handle_params(model, embeddings, chunk_size, search_type_str, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)
@@ -102,7 +107,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 
 def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
-                 language:str = 'ch' , search_type:str = 'merge',  compression:bool = False, record_exp:str = "", system_prompt:str=""\
+                 language:str = 'ch' , search_type:Union[str,Callable] = 'merge',  compression:bool = False, record_exp:str = "", system_prompt:str=""\
                  , max_token:int=3000)->list:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
@@ -137,7 +142,11 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     """
     start_time = time.time()
     logs = ["\n\n---------------chain_of_thought------------------------\n"]
-    params = format.handle_params(model, embeddings, chunk_size, search_type, topK, threshold, language, compression)
+    if callable(search_type):
+        search_type_str = search_type.__name__
+    else:
+        search_type_str = search_type
+    params = format.handle_params(model, embeddings, chunk_size, search_type_str, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
     model = helper.handle_model(model, logs, verbose)

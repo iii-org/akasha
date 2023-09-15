@@ -3,10 +3,22 @@ from langchain.retrievers import TFIDFRetriever, ContextualCompressionRetriever,
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Callable, Union
 import numpy as np
 import akasha.helper as helper
 
+
+def _get_relevant_doc_custom(db, embeddings, func:Callable, query:str, k:int, relevancy_threshold:float, model, compression:bool):
+    
+    customR = customRetriever.from_db(db, embeddings, func, k, relevancy_threshold)
+    if compression:
+        compressor = LLMChainExtractor.from_llm(model)
+        customc = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=customR)
+        docs = customc.get_relevant_documents(query)
+    else:
+        docs = customR.get_relevant_documents(query)
+    
+    return docs
 
 def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold:float, model, compression:bool):
     """use KNN to find relevant doc from query.
@@ -167,7 +179,7 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, logs:list,
 
 
 
-def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str, search_type:str,
+def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str, search_type:Union[str,Callable],
              verbose:bool, logs:list, model, compression:bool, max_token:int)->(list,int):
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together. 
@@ -191,41 +203,125 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
     Returns:
         list: selected list of similar documents.
     """
-    search_type = search_type.lower()
-    if search_type == 'merge':
-        docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
-        docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
-        docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
-      
-        docs, tokens = _merge_docs([docs_tfidf, docs_svm, docs_mmr], topK, language, verbose, logs, max_token, model)
-  
-    elif search_type == 'mmr':
-        docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
-        docs, tokens = _merge_docs([docs_mmr], topK, language, verbose, logs, max_token, model)
-        
-    
-    elif search_type == 'svm':
-        docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
-        docs, tokens = _merge_docs([docs_svm], topK, language, verbose, logs, max_token, model)
-        
-    
-    elif search_type == 'tfidf':
-        docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
-        docs, tokens = _merge_docs([docs_tfidf], topK, language, verbose, logs, max_token, model)
-
-    elif search_type == 'knn':
-        docs_knn = __get_relevant_doc_knn(db,embeddings, query, topK, threshold, model, compression) 
-        docs, tokens = _merge_docs([docs_knn], topK, language, verbose, logs, max_token, model)
-    
+    if callable(search_type):
+        docs_cust = _get_relevant_doc_custom(db, embeddings, search_type, query, topK, threshold, model, compression)
+        docs, tokens = _merge_docs([docs_cust], topK, language, verbose, logs, max_token, model)    
     else:
-        info = f"cannot find search type {search_type}, end process\n"
-        print(info)
-        logs.append(info)
-        return None
+        search_type = search_type.lower()
+    
+        if search_type == 'merge':
+            docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
+            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
+            docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
+        
+            docs, tokens = _merge_docs([docs_tfidf, docs_svm, docs_mmr], topK, language, verbose, logs, max_token, model)
+    
+        elif search_type == 'mmr':
+            docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
+            docs, tokens = _merge_docs([docs_mmr], topK, language, verbose, logs, max_token, model)
+            
+        
+        elif search_type == 'svm':
+            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
+            docs, tokens = _merge_docs([docs_svm], topK, language, verbose, logs, max_token, model)
+            
+        
+        elif search_type == 'tfidf':
+            docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
+            docs, tokens = _merge_docs([docs_tfidf], topK, language, verbose, logs, max_token, model)
+
+        elif search_type == 'knn':
+            docs_knn = __get_relevant_doc_knn(db,embeddings, query, topK, threshold, model, compression) 
+            docs, tokens = _merge_docs([docs_knn], topK, language, verbose, logs, max_token, model)
+        
+        else:
+            info = f"cannot find search type {search_type}, end process\n"
+            print(info)
+            logs.append(info)
+            return None, None
 
     return docs, tokens
 
 
+
+class customRetriever(BaseRetriever):
+    embeddings: Embeddings
+    """Embeddings model to use."""
+    index: Any
+    """Index of embeddings."""
+    texts: List[str]
+    """List of texts to index."""
+    metadata: List[dict]
+    k: int = 3
+    """Number of results to return."""
+    relevancy_threshold: Optional[float] = None
+    func: Callable
+    
+    @classmethod
+    def from_db(
+        cls, db, embeddings: Embeddings, func:Callable, k:int = 3, relevancy_threshold:float=0.2
+    ) :
+        db_data = db.get(include=['embeddings', 'documents', 'metadatas'])
+        index = np.array(db_data['embeddings'])
+        texts = db_data['documents']
+        metadata = db_data['metadatas']
+        return cls(embeddings=embeddings, index=index, func = func, texts=texts, metadata=metadata\
+                   ,k=k, relevancy_threshold=relevancy_threshold)
+        
+    def get_relevant_documents(
+        self, query: str
+    ) -> List[Document]:
+        """general function to retrieve relevant documents
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]:  relevant documents
+        """
+        return self._gs(query)
+    
+
+    
+    def _gs(
+        self, query: str
+    ) -> List[Document]:
+        """implement using custom function to find relevant documents, the custom function func should 
+        have four input.
+            1. a np.array of embedding vectors of query query_embeds np.array)
+            2. a np.array of np.array contain embedding vectors of query and documents docs_embeds (np.array)
+            3. the number of topK return documents k (int)
+            4. relevant threshold from 0.0 ~ 1.0 threshold (float)
+        And the function func should return a list of index which length is equals to k, represent
+        the index of documents that are most relevant to the input query.
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]: relevant documents
+        """
+        
+        
+        
+        top_k_results = []
+        query_embeds = np.array(self.embeddings.embed_query(query))
+        docs_embeds = self.index
+        
+        relevant_docs_idx = self.func(query_embeds, docs_embeds, self.k, self.relevancy_threshold)
+        
+        ### from index rebuild the documents ###
+        for idx in relevant_docs_idx[:self.k]:
+            top_k_results.append(Document(page_content=self.texts[idx],metadata=self.metadata[idx]))
+            
+        return top_k_results
+     
+    
+    async def _aget_relevant_documents(
+        self, query: str
+    ) -> List[Document]:
+        return self._gs(query)
+    
 
 class myKNNRetriever(BaseRetriever):  
     embeddings: Embeddings
