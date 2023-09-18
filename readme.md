@@ -210,6 +210,7 @@ quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
 ### If you want to use llama-cpp to run model on cpu, you can download ggml version of models 
 ### from  https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/tree/main  and the name behind "llama-gpu:" or "llama-cpu:"
+### from   https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF     https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
 ### is the path of the downloaded .bin file
 llama_cpp_model = "llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin"  
 llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"

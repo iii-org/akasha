@@ -71,6 +71,10 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     
     docs, tokens = search.get_docs(db, embeddings, prompt, topK, threshold, language, search_type, verbose,\
                      logs, model, compression, max_token)
+    
+    del embeddings
+    gc.collect()
+    torch.cuda.empty_cache()
     if docs is None:
         return ""
     
@@ -101,7 +105,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
     
-    del model,chain,embeddings,db,docs
+    del model,chain,db,docs
     gc.collect()
     torch.cuda.empty_cache()
     
