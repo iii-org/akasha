@@ -5,7 +5,7 @@ import akasha
 import akasha.eval as eval
 import os
 import numpy as np
-import torch
+import torch,gc
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
 from typing import Callable, Union
@@ -233,6 +233,10 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
                     f.write(question[w].replace('\n','') + answer[w].replace('\n','') + "\n")
     
     print("question set saved in ", file_name,"\n\n")
+    
+    del model,embeddings,db,docs
+    gc.collect()
+    torch.cuda.empty_cache()
     return question, answer
     
     
@@ -372,6 +376,10 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
                 
         
     progress.close() #end running llm progress bar
+    
+    del model,chain,embeddings,db
+    gc.collect()
+    torch.cuda.empty_cache()
     
     ### record logs ###
     end_time = time.time()

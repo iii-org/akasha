@@ -10,7 +10,9 @@ import akasha.search as search
 import akasha.format as format
 import akasha.prompts as prompts
 import datetime
+import gc
 from dotenv import load_dotenv
+import torch
 load_dotenv(pathlib.Path().cwd()/'.env') 
 
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
@@ -78,11 +80,14 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     if verbose:
         print(docs)
     logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
-    
-    res = chain.run(input_documents=docs, question=system_prompt + prompt)
-    res =  helper.sim_to_trad(res)
-    response = res.split("Finished chain.")
-    
+    try:
+        res = chain.run(input_documents=docs, question=system_prompt + prompt)
+        res =  helper.sim_to_trad(res)
+        response = res.split("Finished chain.")
+    except:
+        del model,chain,embeddings,db,docs
+        gc.collect()
+        torch.cuda.empty_cache()
     
     if verbose:
         print(response)
@@ -95,6 +100,11 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         model.get_num_tokens(''.join([doc.page_content for doc in docs]))
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
+    
+    del model,chain,embeddings,db,docs
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     return response[-1]
 
 
@@ -182,10 +192,16 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
 
 
-
-        res = chain.run(input_documents=docs + pre_result, question=system_prompt + prompt[i])
-        res = helper.sim_to_trad(res)
-        response = res.split("Finished chain.")
+        try:
+            res = chain.run(input_documents=docs + pre_result, question=system_prompt + prompt[i])
+            res = helper.sim_to_trad(res)
+            response = res.split("Finished chain.")
+        except:
+            
+            del model,chain,embeddings,db,docs
+            gc.collect()
+            torch.cuda.empty_cache()
+            print("llm error")
         if verbose:
             print(response)
         results.append(response[-1])
@@ -200,6 +216,11 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
         table = format.handle_table('\n\n'.join([p for p in prompt]), ori_docs, response)
         aiido_upload(record_exp, params, metrics, table)
     helper.save_logs(logs)
+    
+
+    del model,chain,embeddings,db,docs
+    gc.collect()
+    torch.cuda.empty_cache()
     return results
 
 

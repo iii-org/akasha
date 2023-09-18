@@ -2,6 +2,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import akasha
 from pathlib import Path 
 import time
+import torch, gc
 
 def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size:int = 1000, chunk_overlap:int = 40, verbose:bool = False\
     ,language:str='ch',summary_type = "map_reduce", max_token:int = 3000, summary_len:int = 500, record_exp:str="", system_prompt = "",
@@ -89,6 +90,9 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
     
     
     
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
     
     
     end_time = time.time()    
