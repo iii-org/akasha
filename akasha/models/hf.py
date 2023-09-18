@@ -71,12 +71,13 @@ def get_hf_model(model_name):
         hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
         try:
             if hf_token is None:
-                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0}, device_map="auto")
+                pipe = pipeline("text-generation", model=model_name,model_kwargs={"temperature":0,"repetition_penalty":1.2}, device_map="auto",     max_new_tokens = 512,batch_size = 1,
+                                torch_dtype=torch.float16)
                 model = HuggingFacePipeline(pipeline=pipe)
             else:
             
                 pipe = pipeline("text-generation", model=model_name, use_auth_token=hf_token,\
-                max_new_tokens = 512, model_kwargs={"temperature":0,}, device_map="auto", batch_size = 1, torch_dtype=torch.float16)
+                max_new_tokens = 512, model_kwargs={"temperature":0,"repetition_penalty":1.2}, device_map="auto", batch_size = 1, torch_dtype=torch.float16)
                 model = HuggingFacePipeline(pipeline=pipe)
         except:
                 
