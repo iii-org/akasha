@@ -245,7 +245,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:Union[str,Callable]= 'merge', record_exp:str = "", eval_model:str = "openai:gpt-3.5-turbo"\
-                , max_token:int=3000):
+                , max_token:int=3000, systemp_prompt:str=""):
     """parse the question set txt file generated from "auto_create_questionset" function if you use essay type to generate questionset, 
     and then use llm model to generate response, 
     evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
@@ -286,10 +286,9 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
     
     ### if language is "ch", use chinese system prompt ###
     if language=='ch':
-        system_prompt = "[INST] <<SYS>> 用中文回答 <</SYS>> [/INST]" 
-    else:
-        system_prompt = ""
-        
+        system_prompt =  system_prompt + " 用中文回答 " 
+    if systemp_prompt != "":
+        system_prompt = "[INST] <<SYS>> " + system_prompt + " <</SYS>> [/INST]"
     
     ### define variables ###
     total_question = len(question)
@@ -350,8 +349,12 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
             torch.cuda.empty_cache()
 
         if verbose:
-            print(question[i],"\n\n")
-            print(response[-1],"\n\n")
+            print("Question: ", question[i],"\n\n")
+            if question_type.lower() == "essay":
+                print("Reference Answer: ", answer[i],"\n\n")
+            else:    
+                print("Reference Answer: ", ans,"\n\n")
+            print("Generated Response: ", response[-1],"\n\n")
         
         logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
         logs.append("\n\nresponse:\n\n"+ response[-1])
@@ -361,10 +364,10 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
             rouge.append(eval.scores.get_rouge_score(response[-1], answer[i], language))
             llm_score.append(eval.scores.get_llm_score(response[-1], answer[i], eval_model))
         
-            new_table = akasha.format.handle_table(question[i], docs, response[-1])
+            new_table = akasha.format.handle_table(question[i] + "\nAnswer:  "+ answer[i], docs, response[-1])
             new_table = akasha.format.handle_score_table(new_table, bert[-1], rouge[-1],llm_score[-1])
         else:
-            new_table = akasha.format.handle_table(query, docs, response)
+            new_table = akasha.format.handle_table(query + "\nAnswer:  " + ans, docs, response)
             result = akasha.helper.extract_result(response)
             if str(result) == str(ans):
                 correct_count += 1
@@ -413,7 +416,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
 def optimum_combination(q_file:str, doc_path:str, question_type:str="essay", embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
                  , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], threshold:float = 0.2,\
                  language:str = 'ch' , search_type_list:list = ['svm','tfidf','mmr'], record_exp:str = ""\
-                    , max_token:int=3000):
+                    , max_token:int=3000, system_prompt:str=""):
     """test all combinations of giving lists, and run test_performance to find parameters of the best result.
 
     Args:
@@ -451,7 +454,7 @@ def optimum_combination(q_file:str, doc_path:str, question_type:str="essay", emb
         
         if question_type.lower() == "essay":
             cur_bert, cur_rouge, cur_llm, tokens = auto_evaluation(q_file, doc_path, question_type,embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
-                                language=language, search_type=st, record_exp=record_exp, max_token=max_token) 
+                                language=language, search_type=st, record_exp=record_exp, max_token=max_token, systemp_prompt=system_prompt) 
             bcb = max(bcb,cur_bert)
             bcr = max(bcr,cur_rouge)
             bcl = max(bcl,cur_llm)

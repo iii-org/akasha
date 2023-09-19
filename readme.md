@@ -160,17 +160,17 @@ To use text generation model from **huggingface**, for example, meta llama, you 
 llama-cpp can use quantized llama model and run on cpu, after you download or transfer llama-cpp model file using [llama-cpp-python](https://github.com/abetlen/llama-cpp-python).
 
 ```python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-cpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin")
+akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-cpu:model/llama-2-13b-chat.Q5_K_S.gguf")
 
 ```
 
-For example, if q4 model is in the "model/" directory, you can assign **llama-cpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin** to load model.
+For example, if q5 model is in the "model/" directory, you can assign **llama-cpu:model/llama-2-13b-chat.Q5_K_S.gguf** to load model.
 
 ```python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin")
+akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-gpu:model/llama-2-3b-chat.Q5_K_S.gguf")
 
 ```
-you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin**
+you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf**
 
 <br/>
 <br/>
@@ -208,12 +208,12 @@ openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_K
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
 quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
-### If you want to use llama-cpp to run model on cpu, you can download ggml version of models 
-### from  https://huggingface.co/TheBloke/Llama-2-13B-chat-GGML/tree/main  and the name behind "llama-gpu:" or "llama-cpu:"
-### from   https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF     https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
-### is the path of the downloaded .bin file
-llama_cpp_model = "llama-gpu:model/llama-2-13b-chat.ggmlv3.q4_0.bin"  
-llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"
+### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 
+### from https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF  and the name behind "llama-gpu:" or "llama-cpu:"
+### from https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
+### is the path of the downloaded .gguf file
+llama_cpp_model = "llama-gpu:model/llama-2-13b-chat-hf.Q5_K_S.gguf"  
+llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.Q5_K_S.gguf"
 chatglm_model = "chatglm:THUDM/chatglm2-6b"
 
 
@@ -528,7 +528,7 @@ dir_path = "doc/pvc/"
 exp_name = "exp_akasha_optimum_combination"
 embeddings_list = ["hf:shibing624/text2vec-base-chinese", "openai:text-embedding-ada-002"]
 model_list = ["openai:gpt-3.5-turbo","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit","hf:meta-llama/Llama-2-7b-chat-hf",\
-            "llama-gpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin", "llama-gpu:model/llama-2-13b-chat.ggmlv3.q8_0.bin"]
+            "llama-gpu:model/llama-2-7b-chat.Q5_K_S.gguf", "llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf"]
 eval.optimum_combination("question_pvc.txt", dir_path, "single_choice", embeddings_list = embeddings_list, model_list = model_list,
             chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name,topK_list=[2,3])
 

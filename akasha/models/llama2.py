@@ -26,6 +26,7 @@ def get_llama_cpp_model(model_type:str, model_name:str):
             input={"temperature": 0.0, "max_length": 4096, "top_p": 1},
             callback_manager = callback_manager,
             verbose = False,
+            repetition_penalty = 1.5,
         )
 
     else:
@@ -38,6 +39,8 @@ def get_llama_cpp_model(model_type:str, model_name:str):
             n_batch = n_batch,
             callback_manager = callback_manager,
             verbose = False,
+            repetition_penalty = 1.5,
+            
         )
     return model
 
