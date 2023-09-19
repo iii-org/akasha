@@ -26,8 +26,8 @@ if 'embed_list' not in st.session_state:
 
 if 'model_list' not in st.session_state:
     st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k","hf:model/Llama2-Chinese-13b-Chat-4bit",\
-        "hf:model/Llama2-Chinese-7b-Chat", "llama-gpu:model/llama-2-13b-chat.ggmlv3.q8_0.bin",\
-            "llama-gpu:model/llama-2-7b-chat.ggmlv3.q8_0.bin"]
+        "hf:model/Llama2-Chinese-7b-Chat", "llama-cpu:model/llama-2-13b-chat-hf.Q5_K_S.gguf",\
+            "llama-gpu:model/llama-2-7b-chat.Q5_K_S.gguf"]
 
 if 'search_list' not in st.session_state:
     st.session_state.search_list = ["merge", "svm", "tfidf", "mmr"]
