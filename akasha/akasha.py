@@ -89,7 +89,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         res =  helper.sim_to_trad(res)
         response = res.split("Finished chain.")
     except:
-        del model,chain,embeddings,db,docs
+        del model,chain,db,docs
         gc.collect()
         torch.cuda.empty_cache()
     
