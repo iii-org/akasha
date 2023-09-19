@@ -42,3 +42,8 @@ summarization/元大.txt
 summarization/eng5軸工具機因應市場訴求改變的發展態勢.txt
 summarization/dark_web.txt
 summarization/20230317_5軸工具機因應市場訴求改變的發展態勢.txt
+model/chinese-llama-2-13b.Q5_K_S.gguf
+model/chinese-llama-2-7b.Q5_K_S.gguf
+model/llama-2-7b-chat.Q5_K_S.gguf
+summarization/mic_10.txt
+model/llama-2-13b-chat-hf.Q5_K_S.gguf
