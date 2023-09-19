@@ -245,7 +245,7 @@ def auto_create_questionset(doc_path:str, question_num:int = 10, embeddings:str 
 def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:Union[str,Callable]= 'merge', record_exp:str = "", eval_model:str = "openai:gpt-3.5-turbo"\
-                , max_token:int=3000, systemp_prompt:str=""):
+                , max_token:int=3000, system_prompt:str=""):
     """parse the question set txt file generated from "auto_create_questionset" function if you use essay type to generate questionset, 
     and then use llm model to generate response, 
     evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
@@ -287,7 +287,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
     ### if language is "ch", use chinese system prompt ###
     if language=='ch':
         system_prompt =  system_prompt + " 用中文回答 " 
-    if systemp_prompt != "":
+    if system_prompt != "":
         system_prompt = "[INST] <<SYS>> " + system_prompt + " <</SYS>> [/INST]"
     
     ### define variables ###
@@ -454,7 +454,7 @@ def optimum_combination(q_file:str, doc_path:str, question_type:str="essay", emb
         
         if question_type.lower() == "essay":
             cur_bert, cur_rouge, cur_llm, tokens = auto_evaluation(q_file, doc_path, question_type,embeddings=embed, chunk_size=chk, model=mod, topK=tK, threshold=threshold,\
-                                language=language, search_type=st, record_exp=record_exp, max_token=max_token, systemp_prompt=system_prompt) 
+                                language=language, search_type=st, record_exp=record_exp, max_token=max_token, system_prompt=system_prompt) 
             bcb = max(bcb,cur_bert)
             bcr = max(bcr,cur_rouge)
             bcl = max(bcl,cur_llm)
