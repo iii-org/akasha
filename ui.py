@@ -12,10 +12,10 @@ icon_list = ['chat-left-text', 'puzzle', 'upload']
 
 with st.sidebar:
     user_menu = option_menu('AKASHA', menu_list, menu_icon='house',
-        icons= icon_list, styles={"container": {"padding": "5!important", "background-color":"#fafafa"}, \
+        icons= icon_list, styles={"container": {"padding": "5!important",}, \
                 "icon": {"color":"orange", "font-size": "25px"}, "nav-link":  {"font-size": "16px", "text-align": "left", "margin": "0px",
-                "--hover-color": "#eee"},
-                "nav-link-selected": {"background-color": "#467500"} })
+                },
+                })
     
 
 
