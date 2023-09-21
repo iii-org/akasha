@@ -276,7 +276,7 @@ def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
 
 
 
-def handle_model(model_name:str, logs:list, verbose:bool)->vars:
+def handle_model(model_name:str, logs:list, verbose:bool, temperature:float = 0.0)->vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -292,26 +292,26 @@ def handle_model(model_name:str, logs:list, verbose:bool)->vars:
     
     
     if model_type in ["openai" , "openaiembeddings"]:
-        model = ChatOpenAI(model=model_name, temperature = 0)
+        model = ChatOpenAI(model=model_name, temperature = temperature)
         info = f"selected openai model {model_name}.\n"
 
     elif model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"] and model_name != "":
         
-        model = get_llama_cpp_model(model_type, model_name)
+        model = get_llama_cpp_model(model_type, model_name, temperature)
         info = "selected llama-cpp model\n"
     elif model_type in ["huggingface" , "huggingfacehub","transformers", "transformer", "huggingface-hub", "hf"]:
-        model = get_hf_model(model_name)
+        model = get_hf_model(model_name, temperature)
         info = f"selected huggingface model {model_name}.\n"
 
     elif model_type in ["chatglm","chatglm2","glm"]:
-        model = chatGLM(model_name=model_name)
+        model = chatGLM(model_name=model_name, temperature=temperature)
         info = f"selected chatglm model {model_name}.\n"
     
     elif model_type in ["lora", "peft"]:
-        model = peft_Llama2(model_name_or_path=model_name)
+        model = peft_Llama2(model_name_or_path=model_name,temperature=temperature)
         info = f"selected peft model {model_name}.\n"
     else:
-        model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = 0)
+        model = ChatOpenAI(model = "gpt-3.5-turbo", temperature = temperature)
         info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
         print(info)
     if verbose:

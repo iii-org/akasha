@@ -6,7 +6,7 @@ import torch, gc
 
 def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size:int = 1000, chunk_overlap:int = 40, verbose:bool = False\
     ,language:str='ch',summary_type = "map_reduce", max_token:int = 3000, summary_len:int = 500, record_exp:str="", system_prompt = "",
-    format_prompt = "")->str:
+    format_prompt = "", temperature:float=0.0)->str:
     """input a file path and return a summary of the file
 
     Args:
@@ -50,7 +50,7 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
     docs = text_splitter.split_documents(documents)
     doc_length = akasha.helper.get_docs_length(language, docs)
     texts = [doc.page_content for doc in docs]
-    model = akasha.helper.handle_model(model, logs, verbose)
+    model = akasha.helper.handle_model(model, logs, verbose, temperature)
 
 
     if summary_type == "refine":

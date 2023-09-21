@@ -18,7 +18,7 @@ load_dotenv(pathlib.Path().cwd()/'.env')
 def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:Union[str,Callable] = 'merge', compression:bool = False, record_exp:str = "", \
-                 system_prompt:str = "", max_token:int=3000 )->str:
+                 system_prompt:str = "", max_token:int=3000, temperature:float=0.0 )->str:
     """input the documents directory path and question, will first store the documents
     into vectors db (chromadb), then search similar documents based on the prompt question.
     llm model will use these documents to generate the response of the question.
@@ -55,7 +55,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
     params = format.handle_params(model, embeddings, chunk_size, search_type_str, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
-    model = helper.handle_model(model, logs, verbose)
+    model = helper.handle_model(model, logs, verbose, temperature)
     logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
     
 
@@ -122,7 +122,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
 def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
                  , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
                  language:str = 'ch' , search_type:Union[str,Callable] = 'merge',  compression:bool = False, record_exp:str = "", system_prompt:str=""\
-                 , max_token:int=3000)->list:
+                 , max_token:int=3000, temperature:float=0.0)->list:
     """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -163,7 +163,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
     params = format.handle_params(model, embeddings, chunk_size, search_type_str, topK, threshold, language, compression)
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, logs, verbose)
-    model = helper.handle_model(model, logs, verbose)
+    model = helper.handle_model(model, logs, verbose, temperature)
     logs.append(datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S"))
     
 

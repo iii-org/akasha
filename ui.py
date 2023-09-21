@@ -10,15 +10,6 @@ menu_list = ['Get Response','Chain Of Thoughts', 'Upload Files']
 icon_list = ['chat-left-text', 'puzzle', 'upload']
 
 
-with st.sidebar:
-    user_menu = option_menu('AKASHA', menu_list, menu_icon='house',
-        icons= icon_list, styles={"container": {"padding": "5!important",}, \
-                "icon": {"color":"orange", "font-size": "25px"}, "nav-link":  {"font-size": "16px", "text-align": "left", "margin": "0px",
-                },
-                })
-    
-
-
 
 ### variable ###
 if 'embed_list' not in st.session_state:
@@ -57,6 +48,21 @@ if 'openai_key' not in st.session_state:
     
 
 ################
+
+
+
+
+
+
+with st.sidebar:
+    user_menu = option_menu('AKASHA', menu_list, menu_icon='house',
+        icons= icon_list, styles={"container": {"padding": "5!important",}, \
+                "icon": {"color":"orange", "font-size": "25px"}, "nav-link":  {"font-size": "16px", "text-align": "left", "margin": "0px",
+                },
+                })
+    
+
+
 
 if user_menu == 'Get Response':
     response_page()
