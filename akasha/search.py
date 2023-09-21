@@ -381,8 +381,11 @@ class mySVMRetriever(BaseRetriever):
             )
         
         query_embeds = np.array(self.embeddings.embed_query(query))
+        print("\n\n\n\nquery_embed: \n",query_embeds)
         x = np.concatenate([query_embeds[None, ...], self.index])
         y = np.zeros(x.shape[0])
+        print("\n\n\n\nx: \n",x[:20])
+        print("\n\n\n\ny: \n",y[:20])
         y[0] = 1
 
         clf = svm.LinearSVC(
@@ -419,52 +422,5 @@ class mySVMRetriever(BaseRetriever):
     async def _aget_relevant_documents(
         self, query: str
     ) -> List[Document]:
-        """implement svm to find relevant documents
-
-        Args:
-            **query (str)**: query string that used to find relevant documents\n
-
-        Returns:
-            List[Document]: relevant documents
-        """
-        try:
-            from sklearn import svm
-        except ImportError:
-            raise ImportError(
-                "Could not import scikit-learn, please install with `pip install "
-                "scikit-learn`."
-            )
-
-        query_embeds = np.array(self.embeddings.embed_query(query))
-        x = np.concatenate([query_embeds[None, ...], self.index])
-        y = np.zeros(x.shape[0])
-        y[0] = 1
-
-        clf = svm.LinearSVC(
-            class_weight="balanced", verbose=False, max_iter=10000, tol=1e-6, C=0.1
-        )
-        clf.fit(x, y)
-
-        similarities = clf.decision_function(x)
-        sorted_ix = np.argsort(-similarities)
-
-        # svm.LinearSVC in scikit-learn is non-deterministic.
-        # if a text is the same as a query, there is no guarantee
-        # the query will be in the first index.
-        # this performs a simple swap, this works because anything
-        # left of the 0 should be equivalent.
-        zero_index = np.where(sorted_ix == 0)[0][0]
-        if zero_index != 0:
-            sorted_ix[0], sorted_ix[zero_index] = sorted_ix[zero_index], sorted_ix[0]
-
-        denominator = np.max(similarities) - np.min(similarities) + 1e-6
-        normalized_similarities = (similarities - np.min(similarities)) / denominator
-
-        top_k_results = []
-        for row in sorted_ix[1 : self.k + 1]:
-            if (
-                self.relevancy_threshold is None
-                or normalized_similarities[row] >= self.relevancy_threshold
-            ):
-                top_k_results.append(Document(page_content=self.texts[row - 1],metadata=self.metadata[row-1]))
-        return top_k_results
+        
+        return self._gs(query)
