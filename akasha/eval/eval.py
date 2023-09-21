@@ -268,7 +268,7 @@ def auto_evaluation(questionset_path:str, doc_path:str, question_type:str="essay
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default "".\n
         **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
-        
+        **max_token (int, optional)**: the max token size of llm input. Defaults to 3000.\n
     Returns:
         (float, float, float): average bert_score, average rouge_l score  and avg llm_score of all questions
     """
@@ -432,7 +432,8 @@ def optimum_combination(q_file:str, doc_path:str, question_type:str="essay", emb
         **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
             record_exp as experiment name.  default ''.\n
         **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
-        
+        **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, currently only be used in the essay
+        question type\n
     Returns:
         (list,list): return best score combination and best cost-effective combination
     """

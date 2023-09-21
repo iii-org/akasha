@@ -23,6 +23,7 @@ def summarize_file(file_path:str, model:str = "openai:gpt-3.5-turbo", chunk_size
         **record_exp (str, optional)**: _description_. Defaults to "".\n
         **system_prompt (str, optional)** : use it to ask llm to custom output beside summarize. Defaults to "".\n
         **format_prompt(str, optional)** : only use it to ask llm at the end. Defaults to "".\n
+        **temperature(float, optional)** : temperature of llm model. Defaults to 0.0.\n
     Returns:
         str: _description_
     """

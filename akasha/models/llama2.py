@@ -12,7 +12,7 @@ def get_llama_cpp_model(model_type:str, model_name:str, temperature:float=0.0):
 
     Args:
         **model_type (str)**: llama-cpu or llama-gpu\n
-        **model_name (str)**: path of ggml .bin file\n 
+        **model_name (str)**: path of gguf  file\n 
 
     Returns:
         _type_: llm model
@@ -119,7 +119,7 @@ class peft_Llama2(LLM):
     def _llm_type(self) -> str:
         return "peft_Llama2"
 
-    def _call(self, prompt: str) -> str:
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -168,7 +168,8 @@ class TaiwanLLaMaGPTQ(LLM):
         prompt = message
         tokens = self.tokenizer(prompt, return_tensors='pt').input_ids
         generate_ids = self.model.generate(input_ids=tokens.cuda(), max_new_tokens=self.max_token, streamer=self.streamer,top_p=0.95, top_k=50\
-            ,temperature=self.temperature, do_sample=True)
+            ,temperature=self.temperature, do_sample=True, eos_token_id =self.tokenizer.eos_token_id,
+            bos_token_id=self.tokenizer.bos_token_id, pad_token_id = self.tokenizer.pad_token_id)
         output = self.tokenizer.decode(generate_ids[0, len(tokens[0]):-1]).strip()
         
         return output

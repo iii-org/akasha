@@ -41,6 +41,7 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
             record_exp as experiment name.  default ''.\n
         **system_prompt (str, optional)**: system prompt for llm to generate response. Defaults to "".\n
         **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+        **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
     Returns:
         str: llm output str\n
     """
@@ -88,11 +89,14 @@ def get_response(doc_path:str, prompt:str = "", embeddings:str = "openai:text-em
         res = chain.run(input_documents=docs, question=system_prompt + prompt)
         res =  helper.sim_to_trad(res)
         response = res.split("Finished chain.")
-    except:
+    except Exception as e:
         del model,chain,db,docs
         gc.collect()
         torch.cuda.empty_cache()
-    
+        print(e)
+        print("\n\nllm error\n\n")
+        
+        response = [""]
     if verbose:
         print(response)
     logs.append("\n\nresponse:\n\n"+ response[-1])
@@ -150,7 +154,7 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
             record_exp as experiment name.  default ''.\n
         **system_prompt (str, optional)**: system prompt for llm to generate response. Defaults to "".\n
         **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
-        
+        **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
     Returns:
         str: llm output str
     """
@@ -200,12 +204,14 @@ def chain_of_thought(doc_path:str, prompt:list, embeddings:str = "openai:text-em
             res = chain.run(input_documents=docs + pre_result, question=system_prompt + prompt[i])
             res = helper.sim_to_trad(res)
             response = res.split("Finished chain.")
-        except:
+        except Exception as e:
             
             del model,chain,embeddings,db,docs
             gc.collect()
             torch.cuda.empty_cache()
-            print("llm error")
+            print(e)
+            print("\n\nllm error\n\n")
+            response = [""]
         if verbose:
             print(response)
         results.append(response[-1])
