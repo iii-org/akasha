@@ -20,7 +20,7 @@ jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
 
-def is_path_exist(path:str, logs:list)->bool:
+def is_path_exist(path:str)->bool:
     
     try:
         des_path = Path(path)
@@ -29,8 +29,6 @@ def is_path_exist(path:str, logs:list)->bool:
     except FileNotFoundError as err:
         
         print(path, err)
-        logs.append(path)
-        save_logs(logs)
         return False
     return True
 
@@ -134,7 +132,7 @@ def _separate_name(name:str):
 
 
 
-def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
+def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
                     sleep_time:int = 60) -> vars:
     """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
         It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
@@ -158,7 +156,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
     
 
     ### check if doc path exist ###
-    if not is_path_exist(doc_path, logs):
+    if not is_path_exist(doc_path):
         
         return None
     
@@ -225,14 +223,14 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
     db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
     if verbose:
         print(info)
-    logs.append(info)
+    
     
     return db
 
 
 
 
-def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
+def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
@@ -270,13 +268,12 @@ def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
     
     if verbose:
         print(info)
-    logs.append(info)
     return embeddings
 
 
 
 
-def handle_model(model_name:str, logs:list, verbose:bool, temperature:float = 0.0)->vars:
+def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -316,9 +313,23 @@ def handle_model(model_name:str, logs:list, verbose:bool, temperature:float = 0.
         print(info)
     if verbose:
         print(info)
-    logs.append(info)
     
     return model
+
+def handle_search_type(search_type:str, verbose:bool)->str:
+    if callable(search_type):
+        search_type_str = search_type.__name__
+        
+    else:
+        search_type_str = search_type
+
+    if verbose:
+        print("search type is :", search_type_str)
+
+    return search_type_str
+
+
+
 
 def save_logs(logs:list)->None:
     """save running logs into logs/logs_{date}.txt

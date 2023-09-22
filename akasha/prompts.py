@@ -2,6 +2,21 @@
 sys_s = "[INST] <<SYS>> " 
 sys_e = " <<SYS>> [/INST]\n\n"
 
+
+def format_llama_sys_prompt(system_prompt:str, prompt:str):
+    
+    if system_prompt == "":
+        return "[INST] " + prompt + " [/INST]\n"
+    return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n\n " + prompt + " [/INST]\n"
+    
+def format_sys_prompt(system_prompt:str, prompt:str, model_type:str="llama"):
+    
+    if model_type == "llama":
+        return format_llama_sys_prompt(system_prompt, prompt)
+    
+    return format_llama_sys_prompt(system_prompt, prompt)
+
+
 def format_question_query(question:list)->(str, str):
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
        return the question query string and the answer string.\n

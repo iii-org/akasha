@@ -2,7 +2,6 @@ import datetime
 import time
 from tqdm import tqdm
 import akasha
-import akasha.eval as eval
 import os
 import numpy as np
 import torch,gc
@@ -519,3 +518,34 @@ def optimum_combination(q_file:str, doc_path:str, question_type:str="essay", emb
     if question_type.lower() == "essay":
         return bs_combination, rs_combination, ls_combination
     return bs_combination, bc_combination
+
+
+
+
+class Model_Eval(akasha.atman):
+    def __init__(self, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
+        , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
+        language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
+        system_prompt:str = "", max_token:int=3000, temperature:float=0.0):
+        
+        super().__init__(chunk_size, model, verbose, topK, threshold,\
+        language , search_type, record_exp, system_prompt, max_token, temperature)
+        ### set argruments ###
+        self.doc_path = ""
+        self.question_type = ""
+        self.question_num = 0
+        self.embeddings = embeddings
+
+        
+
+        ### set variables ###
+        self.logs = {}
+        self.model_obj = akasha.helper.handle_model(model, self.verbose, self.temperature)
+        self.embeddings_obj = akasha.helper.handle_embeddings(embeddings, self.verbose)
+        self.search_type = search_type
+        self.db = None
+        self.docs = []
+        self.doc_tokens = 0
+        self.doc_length = 0
+        self.response = ""
+        self.prompt = ""

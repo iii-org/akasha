@@ -1,7 +1,7 @@
 
 
 
-def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, topK:int, threshold:float, language:str, compression:bool)->dict:
+def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, topK:int, threshold:float, language:str, compression:bool=False)->dict:
     """save running parameters into dictionary in order to parse to aiido
 
     Args:
@@ -31,7 +31,7 @@ def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, to
     if language != "":
         params["language"] = language
     
-    params["compression"] = compression
+    
     if chunk_size != -1:
         params["chunk_size"] = chunk_size
     return params
@@ -66,19 +66,19 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
         dict: table dictionary
     """
     table = {}
-    table["prompt"] = [prompt]
-    table["response"] = [response]
+    table["prompt"] = prompt
+    table["response"] = response
     if len(docs) != 0 :
         
         
         try:
-            inputs = '\n\n'.join([doc.page_content for doc in docs])
-            metadata = '\n\n'.join([doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs])
+            inputs = [doc.page_content for doc in docs]
+            metadata = [doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs]
         except:
-            metadata = "none"
-            inputs = '\n\n'.join([doc for doc in docs])
-        table["inputs"] = [inputs]
-        table["metadata"] = [metadata]
+            metadata = ["none"]
+            inputs = [doc for doc in docs]
+        table["inputs"] = inputs
+        table["metadata"] = metadata
         
     else:
         table["inputs"] = ["none"]
@@ -99,8 +99,8 @@ def handle_score_table(table:dict, bert:float, rouge:float, llm_score:float)->di
         dict: table dictionary
     """
     
-    table["bert"] = [bert]
-    table["rouge"] = [rouge]
-    table["llm_score"] = [llm_score]
+    table["bert"] = bert
+    table["rouge"] = rouge
+    table["llm_score"] = llm_score
     
     return table
