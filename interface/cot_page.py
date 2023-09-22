@@ -51,6 +51,7 @@ def cot_page():
         with thre:
             threshold = st.number_input("Threshold",value= 0.2, min_value=0.1, max_value=0.9, step=0.05, help="The threshold used to select top relevant chunks.")
         
+        sys_prompt = st.text_area("System_Prompt", "", help="The special instruction you want to give to the model.")
         text_prompt, bsd = st.columns([99,1])
         sb1, sb2, sb3 = st.columns([1, 1,1])
         with text_prompt:
@@ -66,7 +67,8 @@ def cot_page():
                 
                 if st.session_state.openai_key != "": 
                     os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
-                ans = akasha.chain_of_thought(final_doc_path, prompts, embed, chunksize, model, False, topK, threshold, 'ch', search_type,max_token=2500)
+                ans = akasha.chain_of_thought(final_doc_path, prompts, embed, chunksize, model, False, topK, threshold, 'ch',\
+                    search_type,max_token=2500, system_prompt=sys_prompt)
                 st.session_state.prompt_list.extend(prompts)
                 st.session_state.response_list.extend(ans)
 

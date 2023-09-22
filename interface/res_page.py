@@ -34,9 +34,10 @@ def response_page():
             threshold = st.number_input("Threshold",value= 0.2, min_value=0.1, max_value=0.9, step=0.05, help="The threshold used to select top relevant chunks.")
         
         prompt = st.text_area("Prompt","" , help="The prompt you want to ask the model.")
+        sys_prompt = st.text_area("System_Prompt", "", help="The special instruction you want to give to the model.")
         sb1, sb2 = st.columns([1, 1])
         with sb1:
-            if st.button("Clear", type="primary", use_container_width=True, help="Clear the prompt and response."):
+            if st.button("Clear", type="primary", use_container_width=True, help="Clear the prompt and response history."):
                 st.session_state.prompt_list = []
                 st.session_state.response_list = []
                 st.experimental_rerun()
@@ -45,7 +46,8 @@ def response_page():
                 if st.session_state.openai_key != "": 
                     os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
                 print(final_doc_path)
-                ans = akasha.get_response(final_doc_path,prompt, embed, chunksize, model, False, topK, threshold, 'ch', search_type)
+                ans = akasha.get_response(final_doc_path,prompt, embed, chunksize, model, False, topK, threshold, 'ch', search_type,\
+                    system_prompt=sys_prompt)
                 st.session_state.prompt_list.append(prompt)
                 st.session_state.response_list.append(ans)
     
