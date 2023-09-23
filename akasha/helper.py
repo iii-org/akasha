@@ -431,7 +431,7 @@ def get_question_from_file(path:str, question_type:str):
         questions.append( [word for word in con.split("\t")if word != ""])
     return questions, answers
 
-def extract_result(response:list):
+def extract_result(response:str):
     """to prevent the output of llm format is not what we want, try to extract the answer (digit) from the llm output 
 
     Args:
@@ -441,7 +441,7 @@ def extract_result(response:list):
         int: digit of answer
     """
     try:
-        res = str(json.loads(response[-1])['ans']).replace(" ", "")
+        res = str(json.loads(response)['ans']).replace(" ", "")
 
     except:
         res = -1
@@ -481,7 +481,7 @@ def get_all_combine(embeddings_list:list, chunk_size_list:list, model_list:list,
     return res
 
 
-def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
+def get_best_combination(result_list:list, idx:int)->list:
     """input list of tuples and find the greatest tuple based on score or cost-effective (index 0 or index 1)
     tuple looks like (score, cost-effective, embeddings, chunk size, model, topK, search type)
 
@@ -500,7 +500,6 @@ def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
             break
         res_str = "embeddings: " + tup[-5] + ", chunk size: " + str(tup[-4]) + ", model: " +tup[-3] + ", topK: " + str(tup[-2]) + ", search type: " + tup[-1] + "\n"
         print(res_str)
-        logs.append(res_str)
         res.append(tup[-5:])
 
     return res
