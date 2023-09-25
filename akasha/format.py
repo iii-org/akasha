@@ -75,7 +75,7 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
             inputs = [doc.page_content for doc in docs]
             metadata = [doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs]
         except:
-            metadata = ["none"]
+            metadata = ["none" for _ in docs]
             inputs = [doc for doc in docs]
         table["inputs"] = inputs
         table["metadata"] = metadata

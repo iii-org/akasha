@@ -445,7 +445,7 @@ def extract_result(response:str):
 
     except:
         res = -1
-        for c in response[-1]:
+        for c in response:
             if c.isdigit():
                 res = c
 

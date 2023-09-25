@@ -16,24 +16,9 @@ def response_page():
     
             
     with para_set:
-        doc_path = st.selectbox("Document Path", st.session_state.docs_list, index=0, help="The path of the document folder.")
-        final_doc_path = st.session_state.docs_path + '/' + doc_path
-        embed = st.selectbox("Embedding Model", st.session_state.embed_list, index=0, help="The embedding model used to embed documents.")
-        model = st.selectbox("Model", st.session_state.model_list, index=0, help="The model used to generate response.")
-        cks, tpk = st.columns([1,1])
-        with cks:
-            chunksize = st.number_input("Chunk Size", value=500, min_value = 100, max_value = 2000, step = 100, help="The size of each chunk of the document.")
-        with tpk:
-            topK = st.number_input("Top K", value=2, min_value = 1, max_value = 10, step = 1, help="The number of top relevant chunks to be selected from documents.")
-        
-            
-        seat, thre = st.columns([1,1])
-        with seat:
-            search_type = st.selectbox("Search Type", st.session_state.search_list, index=0, help="The search method used to select top relevant chunks.")
-        with thre:
-            threshold = st.number_input("Threshold",value= 0.2, min_value=0.1, max_value=0.9, step=0.05, help="The threshold used to select top relevant chunks.")
         
         prompt = st.text_area("Prompt","" , help="The prompt you want to ask the model.")
+        st.session_state.sys_prompt = st.text_area("System_Prompt", st.session_state.sys_prompt, help="The special instruction you want to give to the model.")
         sb1, sb2 = st.columns([1, 1])
         with sb1:
             if st.button("Clear", type="primary", use_container_width=True, help="Clear the prompt and response."):
@@ -44,9 +29,20 @@ def response_page():
             if st.button("Submit", type="primary", use_container_width=True):
                 if st.session_state.openai_key != "": 
                     os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
-                print(final_doc_path)
-                ans = akasha.get_response(final_doc_path,prompt, embed, chunksize, model, False, topK, threshold, 'ch', search_type)
-                st.session_state.prompt_list.append(prompt)
+                print(st.session_state.chose_doc_path)
+                
+                ## check if the object is created correctly ##
+                if not isinstance(st.session_state.akasha_obj, akasha.Doc_QA):
+                    st.session_state.akasha_obj =  akasha.Doc_QA(embeddings=st.session_state.embed, chunk_size=st.session_state.chunksize, \
+                        model=st.session_state.model, search_type=st.session_state.search_type, topK=st.session_state.topK, threshold=st.session_state.threshold, \
+                        language='ch', verbose=True, record_exp="", max_token=st.session_state.max_token, \
+                        temperature=st.session_state.temperature)
+                    
+                ans = st.session_state.akasha_obj.get_response(st.session_state.chose_doc_path, prompt, embeddings=st.session_state.embed,\
+                    chunk_size=st.session_state.chunksize, model=st.session_state.model, topK=st.session_state.topK, \
+                    threshold=st.session_state.threshold, search_type=st.session_state.search_type,\
+                    system_prompt=st.session_state.sys_prompt, max_token=st.session_state.max_token, temperature=st.session_state.temperature)
+                st.session_state.prompt_list.append( prompt)
                 st.session_state.response_list.append(ans)
     
     

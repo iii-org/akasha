@@ -35,8 +35,8 @@ def QA():
     # timestamp_list = qa.timestamp_list
     # print(qa.logs[timestamp_list[-1]])
     # print(qa.logs[timestamp_list[-1]]['dd'])   # the variable you add to log in cust function
-
-
+    return qa
+#qa_obj = QA()
 
 
 
@@ -47,15 +47,33 @@ def QA():
 def EVAL(doc_path:str="./../doc/mic/"):
     eva = eval.Model_Eval(question_type="single_choice",record_exp="1234test",verbose=True)
     
-    #b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="single_choice")
+    #b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="single_choice",chunk_size=850)
+    #b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="essay")
     
-    #print(b,c)
     #qs_path = eva.logs[eva.timestamp_list[-1]]['questionset_path']    
-    #print(eva.auto_evaluation(questionset_file=qs_path, doc_path=doc_path,verbose=True ))
+    print(eva.auto_evaluation(questionset_file="questionset/mic_15.txt", doc_path=doc_path,verbose=True,model="llama-gpu:../qaiii-1/model/llama-2-7b-chat.Q5_K_S.gguf" ))
     #print(eva.__dict__)
     
-    eva.optimum_combination(q_file="questionset/mic_15.txt", doc_path=doc_path, chunk_size_list=[500]\
-        ,search_type_list=[cust,"svm","tfidf"])
+    # eva.optimum_combination(q_file="questionset/mic_15.txt", doc_path=doc_path, chunk_size_list=[500]\
+    #     ,search_type_list=[cust,"svm","tfidf"])
+    return eva
     
+eval_obj = EVAL()
+eval_obj.save_logs('./eva.json')
+
+
+### SUMMARY ###
+def SUM(file_name:str="./../doc/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"):
+    sum = summary.Summary(chunk_size=1000, chunk_overlap = 40\
+        , model= "openai:gpt-3.5-turbo", verbose = False, threshold= 0.2,\
+        language = 'ch', record_exp= "1234test", format_prompt = "請你在回答前面加上喵",
+        system_prompt = "用中文回答", max_token=3000, temperature=0.0)
     
-EVAL()
+    sum.summarize_file(file_name=file_name, summary_type="map_reduce", summary_len=100,verbose=True)
+    print(sum.logs)
+    return sum
+
+#summary_obj = SUM()
+
+#summary_obj.save_logs("./../summary_logs.json")
+#summary_obj.save_logs(file_type="txt")

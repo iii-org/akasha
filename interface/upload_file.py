@@ -3,8 +3,9 @@ from pathlib import Path
 
 def up_load():
     
-    st.session_state.openai_key = st.text_input("Openai Key", type="password")
-    
+    st.title("Upload Files")
+    st.markdown('##')
+    st.markdown('##')
     
     
     uploaded_files = st.file_uploader("Upload document files", accept_multiple_files=True,type=['txt', 'pdf', 'docx'])

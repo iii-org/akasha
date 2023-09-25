@@ -25,16 +25,14 @@ def akasha():
 @click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str, max_token:int):
-
-    res = ak.get_response(doc_path, prompt, embeddings, chunk_size\
-                 , model, False, topk, threshold,\
-                 language , search_type, False, record_exp, \
-                 system_prompt, max_token)
+    gr = ak.Doc_QA(verbose=False, embeddings=embeddings, chunk_size=chunk_size, model=model, topk=topk, threshold=threshold,\
+                 language=language, search_type=search_type, record_exp=record_exp, system_prompt=system_prompt, max_token=max_token)
+    res = gr.get_response(doc_path, prompt)
     
     print(res)
 
 
-
+    del gr
 
 
 
@@ -58,20 +56,17 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
     import akasha.helper as helper
     import akasha.search as search
     from langchain.chains.question_answering import load_qa_chain
-    logs = ["\n\n-----------------keep_response----------------------\n"]
     embeddings_name = embeddings
-    embeddings = helper.handle_embeddings(embeddings, logs, False)
-    model = helper.handle_model(model, logs, False)
+    embeddings = helper.handle_embeddings(embeddings, False)
+    model = helper.handle_model(model, False)
     
     
 
-    db = helper.create_chromadb(doc_path, logs, False, embeddings, embeddings_name, chunk_size)
+    db = helper.create_chromadb(doc_path, False, embeddings, embeddings_name, chunk_size)
 
     if db is None:
         info = "document path not exist\n"
         print(info)
-        logs.append(info)
-        helper.save_logs(logs)
         return ""
 
 
@@ -79,7 +74,7 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
     while user_input != "exit()":
         
         docs, tokens = search.get_docs(db, embeddings, user_input, topk, threshold, language, search_type, False,\
-                        logs, model, False, max_token)
+                        model, max_token, {})
         if docs is None:
             docs = []
         
@@ -87,14 +82,10 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
         
         chain = load_qa_chain(llm=model, chain_type="stuff",verbose=False)
 
-        logs.append("\n\ndocuments: \n\n" + ''.join([doc.page_content for doc in docs]))
+        
         
         res = chain.run(input_documents=docs, question=system_prompt + user_input)
         res =  helper.sim_to_trad(res)
-        response = res.split("Finished chain.")
-        
-        
-        logs.append("\n\nresponse:\n\n"+ response[-1])
         
         
         print("Response: ",res)
@@ -102,9 +93,7 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
         user_input = click.prompt("Please input your question(type \"exit()\" to quit) ")
 
 
-
-
-
+    del db,model,embeddings
 
 
 
@@ -128,14 +117,14 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
 def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str, max_token:int):
     
-     res = ak.chain_of_thought(doc_path, prompt, embeddings, chunk_size\
-                 , model, False, topk, threshold,\
-                 language , search_type, False, record_exp, \
-                 system_prompt, max_token)
-     for r in res:
+    gr = ak.Doc_QA(verbose=False, embeddings=embeddings, chunk_size=chunk_size, model=model, topk=topk, threshold=threshold,\
+                 language=language, search_type=search_type, record_exp=record_exp, system_prompt=system_prompt, max_token=max_token)
+    
+    res = gr.chain_of_thought(doc_path, prompt)
+    for r in res:
         print(r)
 
-
+    del gr
 
 
 
@@ -155,11 +144,11 @@ def auto_create_questionset(doc_path:str, question_num:int , question_type:str, 
                  language:str, search_type:str , record_exp:str):
 
     model = "openai:gpt-3.5-turbo"
-    
-    eval.auto_create_questionset(doc_path, question_num, question_type, embeddings, chunk_size\
-                 , model, False, topk, threshold, language, search_type, record_exp) 
+    eva = eval.Model_Eval()
+    eva.auto_create_questionset(doc_path, question_num, question_type=question_type, embeddings=embeddings, chunk_size=chunk_size\
+                 , model=model, verbose=False, topK=topk, threshold=threshold, language=language, search_type=search_type, record_exp=record_exp) 
 
-
+    del eva
 
 
 
@@ -180,19 +169,20 @@ def auto_evaluation(question_path:str, doc_path:str, question_type:str, embeddin
                  , model:str, topk:int, threshold:float,\
                     language:str , search_type:str , record_exp:str, max_token:int):
     
+    eva = eval.Model_Eval()
     
     if question_type.lower() == "single_choice":
-        cor_rate, tokens = eval.auto_evaluation(question_path, doc_path, question_type, embeddings, chunk_size\
-                 , model, False, topk, threshold,\
-                 language, search_type, record_exp, max_token)
+        cor_rate, tokens = eva.auto_evaluation(question_path, doc_path, question_type=question_type, embeddings=embeddings, chunk_size=chunk_size\
+                 , model=model, verbose=False, topK=topk, threshold=threshold,\
+                 language=language, search_type=search_type, record_exp=record_exp, max_token=max_token)
         
         print("correct rate: ", cor_rate)
         print("total tokens: ", tokens)
     
     else:
-        avg_bert, avg_rouge, avg_llm, tokens = eval.auto_evaluation(question_path, doc_path, question_type, embeddings, chunk_size\
-                 , model, False, topk, threshold,\
-                 language, search_type, record_exp, max_token)
+        avg_bert, avg_rouge, avg_llm, tokens = eva.auto_evaluation(question_path, doc_path, question_type=question_type, embeddings=embeddings, chunk_size=chunk_size\
+            , model=model, verbose=False, topK=topk, threshold=threshold,\
+            language=language, search_type=search_type, record_exp=record_exp, max_token=max_token)
 
         print("avg bert score: ", avg_bert)
         print("average rouge score: ", avg_rouge)

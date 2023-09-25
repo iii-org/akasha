@@ -47,3 +47,13 @@ model/chinese-llama-2-7b.Q5_K_S.gguf
 model/llama-2-7b-chat.Q5_K_S.gguf
 summarization/mic_10.txt
 model/llama-2-13b-chat-hf.Q5_K_S.gguf
+docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf
+docs/mic/20230317_5軸工具機因應市場訴求改變的發展態勢.pdf
+docs/mic/20230726_工業4_0發展重點與案例分析，以西門子、鴻海為例.pdf
+.gitignore
+docs/plant/风车菊.pdf
+docs/plant/石珀.pdf
+.gitignore
+docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf
+summarization/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.txt
+eva.json

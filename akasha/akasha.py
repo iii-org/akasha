@@ -105,7 +105,7 @@ class atman():
         self.timestamp_list = []
         
     
-    def _change_variables(self, **kwargs):
+    def _set_model(self, **kwargs):
         
         ## check if we need to change db, model_obj or embeddings_obj ##
         if "search_type" in kwargs:
@@ -121,10 +121,12 @@ class atman():
                 new_temp = kwargs["temperature"]
             if "model"  in kwargs:
                 new_model = kwargs["model"]
-            self.model_obj = helper.handle_model(new_model, self.verbose, new_temp)
+            if new_model != self.model or new_temp != self.temperature:
+                self.model_obj = helper.handle_model(new_model, self.verbose, new_temp)
                   
-            
-            
+    
+    def _change_variables(self, **kwargs):
+        
             
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
@@ -160,7 +162,7 @@ class atman():
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_token"] = self.max_token
         self.logs[timestamp]["doc_path"] = self.doc_path
-        print(self.logs[timestamp])
+        
         return
     
     
@@ -183,7 +185,65 @@ class atman():
         return
     
     
-
+    def save_logs(self, file_name:str="", file_type:str="json"):
+        
+        plain_txt = ""
+        extension = ""
+        ## set extension ##
+        if file_name != "":
+            tst_file = file_name.split('.')[-1]
+            if file_type=="json":
+                
+                if tst_file != "json" and tst_file != "JSON":
+                    extension = ".json"
+            else:
+                
+                if tst_file != 'txt' and tst_file != 'TXT': 
+                    extension = ".txt"
+        
+        
+        
+        ## set filename if not given ##
+        from pathlib import Path
+        if file_name=="":
+            file_name = datetime.datetime.now().strftime( "%Y-%m-%d-%H-%M-%S")
+        
+            logs_path = Path('logs')
+            if not logs_path.exists():
+                logs_path.mkdir()
+            file_path = Path("logs/" + file_name + extension)
+        else:
+            file_path = Path(file_name + extension)
+        
+        
+        
+        ## write file ##
+        if file_type=="json":
+            import json
+            with open(file_path, 'w', encoding='utf-8') as fp:
+                json.dump(self.logs, fp, indent=4, ensure_ascii=False)    
+        
+        else:
+            with open(file_path, 'w',  encoding='utf-8') as fp:
+                for key in self.logs:
+                    text = key + ":\n"
+                    fp.write(text)
+                    plain_txt += text
+                    for k in self.logs[key]:
+                        if type(self.logs[key][k]) == list:
+                            text = k + ": " + '\n'.join([str(w) for w in self.logs[key][k]]) + "\n\n"
+                            
+                            
+                        else:
+                            text = k + ": " + str(self.logs[key][k]) + "\n\n"
+                        
+                        fp.write(text)
+                        plain_txt += text
+                    fp.write("\n\n\n\n")
+                    plain_txt += "\n\n\n\n"
+                    
+        print("save logs to " + str(file_path))
+        return plain_txt
 
 
 
@@ -224,7 +284,7 @@ class Doc_QA(atman):
     
     def get_response(self,doc_path:str, prompt:str, **kwargs):
         
-        
+        self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
         self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
@@ -283,6 +343,8 @@ class Doc_QA(atman):
         
     def chain_of_thought(self, doc_path:str, prompt_list:list, **kwargs)->list:
         
+        
+        self._set_model( **kwargs)
         self._change_variables(**kwargs)
 
         self.doc_path = doc_path
