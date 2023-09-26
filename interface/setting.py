@@ -1,5 +1,5 @@
 import streamlit as st
-
+from pathlib import Path
 
 
 def setting():
@@ -20,7 +20,7 @@ def setting():
     #     """
     # st.markdown(custom_css, unsafe_allow_html=True)
     
-    
+    set_model_dir()
     dp, em, md = st.columns([1,2,2])
     with dp:
         doc_path = st.selectbox("Document Path", st.session_state.docs_list, index=st.session_state.select_idx[0], help="The path of the document folder.")
@@ -65,3 +65,15 @@ def setting():
     with mxt:
         st.session_state.max_token = st.number_input("Max Token", value= st.session_state.max_token, min_value=500, step=10,\
             help="The maximum number of tokens in the reference documents that will be used as input for the LLM model.")
+        
+        
+        
+    
+def set_model_dir():
+    st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"]
+    modes_dir = Path(st.session_state.mdl_dir)
+    for dir_path in modes_dir.iterdir():
+        if dir_path.is_dir():
+            st.session_state.model_list.append("hf:" + st.session_state.mdl_dir + '/' + dir_path.name)    
+        elif dir_path.suffix == ".gguf":
+            st.session_state.model_list.append("llama-gpu:" + st.session_state.mdl_dir + '/' + dir_path.name)

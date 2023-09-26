@@ -57,3 +57,5 @@ docs/plant/石珀.pdf
 docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf
 summarization/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.txt
 eva.json
+model/chinese-alpaca-2-7b.Q5_K_S.gguf
+model/chinese-alpaca-2-13b.Q5_K_M.gguf
