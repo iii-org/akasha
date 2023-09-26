@@ -1,6 +1,6 @@
 # Installation
 
-We recommend using Python 3.8 to run our Akasha package. You can use Anaconda to create virtual environment.
+We recommend using Python 3.8 to run our akasha package. You can use Anaconda to create virtual environment.
 
 ```bash
 
