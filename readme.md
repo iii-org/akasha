@@ -37,7 +37,9 @@ export OPENAI_API_KEY="your api key"
 
 ```python
 #PYTHON3.8
-response = akasha.get_response(dir_path, prompt, model="openai:gpt-3.5-turbo")
+import akasha
+ak = akasha.Doc_QA(model="openai:gpt-3.5-turbo")
+response = ak.get_response(dir_path, prompt)
 
 
 ```
@@ -60,7 +62,8 @@ You should see the **Gated model You have been granted access to this model** on
 <br/>
 <br/>
 
-Again, you can either save **HUGGINGFACEHUB_API_TOKEN=your api key** into **.env** file to current working directory or set as a environment variable, using **export** in bash or use **os.environ** in python.
+Again, you can either save **HUGGINGFACEHUB_API_TOKEN=your api key** into **.env** file to current working directory or set as a environment variable, using **export** in bash or use **os.environ** in python. 
+After you create Doc_QA() class, you can still change the model you want when you call the function.
 
 ```bash
 
@@ -73,7 +76,9 @@ export HUGGINGFACEHUB_API_TOKEN="your api key"
 
 ```python
 #PYTHON3.8
-response = akasha.get_response(dir_path, prompt, model="hf:meta-llama/Llama-2-7b-chat-hf")
+import akasha
+ak = akasha.Doc_QA()
+response = ak.get_response(dir_path, prompt, model="hf:meta-llama/Llama-2-7b-chat-hf")
 
 
 ```
@@ -102,8 +107,8 @@ os.environ["OPENAI_API_KEY"] = "your openAI key"
 
 dir_path = "doc/"
 prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	「赤誠的心」	「浪子的真情」	「無法挽回的愛」"
-
-response = akasha.get_response(dir_path, prompt)
+ak = akasha.Doc_QA()
+response = ak.get_response(dir_path, prompt)
 print(response)
 	
 	
@@ -129,7 +134,8 @@ Currently support **openai**, **huggingface** and **tensorflowhub**.
 ### huggingface example
 
 ``` 
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2")
+ak = akasha.Doc_QA(embeddings="huggingface:all-MiniLM-L6-v2")
+resposne = ak.get_response(dir_path, prompt)
 ```
 To use huggingface embedding models, you can type huggingface:model_name or hf:model_name, for example, **huggingface:all-MiniLM-L6-v2**
 
@@ -146,7 +152,8 @@ Currently support **openai**, **llama-cpp** and **huggingface**.
 
 ### 1.huggingface example
 ``` python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="hf:meta-llama/Llama-2-13b-chat-hf")
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="hf:meta-llama/Llama-2-13b-chat-hf")
 
 ```
 
@@ -160,14 +167,16 @@ To use text generation model from **huggingface**, for example, meta llama, you 
 llama-cpp can use quantized llama model and run on cpu, after you download or transfer llama-cpp model file using [llama-cpp-python](https://github.com/abetlen/llama-cpp-python).
 
 ```python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-cpu:model/llama-2-13b-chat.Q5_K_S.gguf")
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-cpu:model/llama-2-13b-chat.Q5_K_S.gguf")
 
 ```
 
 For example, if q5 model is in the "model/" directory, you can assign **llama-cpu:model/llama-2-13b-chat.Q5_K_S.gguf** to load model.
 
 ```python
-akasha.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-gpu:model/llama-2-3b-chat.Q5_K_S.gguf")
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="llama-gpu:model/llama-2-3b-chat.Q5_K_S.gguf")
 
 ```
 you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf**
@@ -190,6 +199,7 @@ the combination of mmr, svm and tfidf. Currently you can select merge, mmr, svm 
 
 
 ``` python
+ak = akasha.Doc_QA(search_type="merge")
 akasha.get_response(dir_path, prompt, search_type="mmr")
 
 ```
@@ -259,8 +269,8 @@ os.environ["OPENAI_API_KEY"] = "your openAI key"
 
 dir_path = "mic/"
 queries2 = ["西門子自有工廠如何朝工業4.0 發展","詳細解釋「工業4.0 成熟度指數」發展路徑的六個成熟度","根據西門子自有工廠朝工業4.0發展，探討其各項工業4.0的成熟度指標"]
-
-response = akasha.chain_of_thought(dir_path, queries2, search_type='svm')
+ak = akasha.Doc_QA()
+response = ak.chain_of_thought(dir_path, queries2, search_type='svm')
 print(response)
 	
 	
@@ -344,6 +354,78 @@ response 3:
 <br/>
 <br/>
 
+
+```python
+### Arguments of Doc_QA class ###
+"""
+Args:
+            **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
+            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+            **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+            **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+                max token size of llm input.\n
+            **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+                includes 'merge', 'mmr', 'svm', 'tfidf', also, you can custom your own search_type function, as long as your
+                function input is (query_embeds:np.array, docs_embeds:list[np.array], k:int, relevancy_threshold:float, log:dict) 
+                and output is a list [index of selected documents].\n
+            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set record_exp as experiment name.  default "".\n
+            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+                in searching relevant documents. Defaults to "".\n
+            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+
+"""
+```
+
+
+
+
+<br/>
+<br/>
+
+
+<br/>
+<br/>
+
+
+## Save Logs
+Each time you run any function from akasha, it will save logs that record the parameters of this run and the results. Each run will have a timestamp, you can use {obj_name}.timestamp_list to check them, and use it to find the log of the run you want see.
+
+You can also save logs into .txt file or .json file
+
+```python
+qa = akasha.Doc_QA(verbose=False, search_type="merge", max_token=2500,model="llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf")
+query1 = "五軸是什麼"
+qa.get_response(doc_path="./doc/mic/", prompt = query1)
+qa.get_response(doc_path="./doc/mic/", prompt = query1)
+
+tp = qa.timestamp_list
+print(tp)
+## ["2023/09/26, 10:52:36", "2023/09/26, 10:59:49", "2023/09/26, 11:09:23"]
+
+print(qa.logs[tp[-1]])
+## {"fn_type":"get_response","search_type":"merge", "max_token":2500,....."response":....}
+
+
+qa.save_logs(file_name="logs.json",file_type="json")
+```
+
+
+![image](pic/logs.png)
+
+
+
+
+
+
+
+<br/>
+<br/>
+
+
 <br/>
 <br/>
 
@@ -381,7 +463,8 @@ os.environ["OPENAI_API_KEY"] = "your openAI key"
 dir_path = "doc/"
 prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	「赤誠的心」	「浪子的真情」	「無法挽回的愛」"
 exp_name = "exp_akasha_get_response"
-response = akasha.get_response(dir_path, prompt,record_exp=exp_name)
+ak = akasha.Doc_QA(record_exp=exp_name)
+response = ak.get_response(dir_path, prompt)
 
 ```
 
@@ -449,8 +532,9 @@ You can either generate **single choice question file** or **essay question file
   dir_path = "doc/pvc/"
   exp_name = "exp_akasha_auto_evaluation"
 
-  print(eval.auto_evaluation("question_pvc.txt", dir_path, question_type="single_choice", search_type='merge',\
-      model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp=exp_name))
+  eva = eval.Model_Eval(question_type="single_choice", search_type='merge',\
+      model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp=exp_name)
+  print(eva.auto_evaluation("question_pvc.txt", dir_path ))
   ## correct rate: 0.9, tokens: 3228 ##
   ```
 
@@ -489,8 +573,13 @@ For example, the code create a questionset text file 'mic_1.txt' with ten questi
 ```python
 
 import akasha.eval as eval
-eval.auto_create_questionset(doc_path="doc/mic/", question_num=10, question_type="essay", record_exp="exp_mic_auto_questionset")
-bert_score, rouge, llm_score = eval.auto_evaluation(questionset_path="questionset/mic_1.txt", doc_path="doc/mic/", question_type = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+
+eva = eval.Model_Eval(question_type="essay", search_type='merge',\
+      model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp="exp_mic_auto_questionset")
+
+eva.auto_create_questionset(doc_path="doc/mic/", question_num=10)
+
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_1.txt", doc_path="doc/mic/", question_type = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
 
 # bert_score = 0.782
 # rouge = 0.81
@@ -529,7 +618,9 @@ exp_name = "exp_akasha_optimum_combination"
 embeddings_list = ["hf:shibing624/text2vec-base-chinese", "openai:text-embedding-ada-002"]
 model_list = ["openai:gpt-3.5-turbo","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit","hf:meta-llama/Llama-2-7b-chat-hf",\
             "llama-gpu:model/llama-2-7b-chat.Q5_K_S.gguf", "llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf"]
-eval.optimum_combination("question_pvc.txt", dir_path, "single_choice", embeddings_list = embeddings_list, model_list = model_list,
+
+eva = eval.Model_Eval(question_type="single_choice")
+eva.optimum_combination("question_pvc.txt", dir_path,  embeddings_list = embeddings_list, model_list = model_list,
             chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name,topK_list=[2,3])
 
 ```
@@ -557,6 +648,35 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
 
 ```
 
+<br/>
+<br/>
+
+```python
+"""
+### Arguments of Model_Eval class ###
+ Args:
+            **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".
+            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.
+            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".
+            **verbose (bool, optional)**: show log texts or not. Defaults to False.
+            **topK (int, optional)**: search top k number of similar documents. Defaults to 2.
+            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.
+            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+                max token size of llm input.
+            **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+                includes 'merge', 'mmr', 'svm', 'tfidf', also, you can custom your own search_type function, as long as your
+                function input is (query_embeds:np.array, docs_embeds:list[np.array], k:int, relevancy_threshold:float, log:dict) 
+                and output is a list [index of selected documents].
+            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set record_exp as experiment name.  default "".
+            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+                in searching relevant documents. Defaults to "".
+            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.
+            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.
+            **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".
+"""
+```
+
+
 
 
 <br/>
@@ -577,14 +697,34 @@ summarizing the next segment to get a higher level of summary consistency.
 ```python
 
 import akasha.summary as summary
-summary.summarize_file("doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf", chunk_size=1000, chunk_overlap=40,\
-summary_type="map_reduce", summary_len=500)
+sum = summary.Summary( chunk_size=1000, chunk_overlap=100)
+sum.summarize_file(file_name="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
+, chunk_overlap=40)
 
 
 
 ```
+<br/>
+<br/>
 
-
+```python
+"""
+### Arguments of Summary class ###
+ Args:
+            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.
+            **chunk_overlap (int, optional)**: chunk overlap of texts from documents. Defaults to 40.
+            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".
+            **verbose (bool, optional)**: show log texts or not. Defaults to False.
+            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.
+            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+                max token size of llm input.
+            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and setrecord_exp as experiment name.  default "".
+            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+                in searching relevant documents. Defaults to "".
+            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.
+            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.
+"""
+```
 
 <br/>
 <br/>
