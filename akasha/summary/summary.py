@@ -8,11 +8,32 @@ import torch, gc
 
 
 class Summary(akasha.atman):
+    """class for implement summary text file by llm model, include summarize_file method.
+
+    """
+    
+    
     def __init__(self, chunk_size:int=500, chunk_overlap:int = 40\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, threshold:float = 0.2,\
         language:str = 'ch', record_exp:str = "", format_prompt:str = "",
         system_prompt:str = "", max_token:int=3000, temperature:float=0.0):
-        
+        """initials of Summary class
+
+        Args:
+            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
+            **chunk_overlap (int, optional)**: chunk overlap of texts from documents. Defaults to 40.\n
+            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+            **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+                max token size of llm input.\n
+            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+                record_exp as experiment name.  default "".\n
+            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+                in searching relevant documents. Defaults to "".\n
+            **max_token (int, optional)**: max token size of llm document input. Defaults to 3000.\n
+            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+        """
 
         ### set argruments ###
         self.chunk_size = chunk_size
@@ -41,7 +62,14 @@ class Summary(akasha.atman):
         
         
     def _add_log(self, fn_type:str,timestamp:str, time:float, response_list:list):
-        
+        """ call this method to add log to logs dictionary
+
+        Args:
+            fn_type (str): the method current running
+            timestamp (str): the method current running timestamp
+            time (float): the spent time of the method
+            response_list (list): the response list of the method
+        """
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
         self.logs[timestamp]["fn_type"] = fn_type
@@ -65,7 +93,8 @@ class Summary(akasha.atman):
         self.logs[timestamp]["summary"] = self.summary
         
     def _set_model(self, **kwargs):
-        
+        """change model_obj if "model" or "temperature" changed
+        """
        
         if "model" in kwargs or "temperature" in kwargs:
             new_temp = self.temperature
@@ -85,10 +114,6 @@ class Summary(akasha.atman):
 
         Args:
             **texts (list)**: list of texts from documents\n
-            **model (var)**: llm model\n
-            **max_token (int, optional)**: the max tokens that input to llm model each time. Defaults to 3000.\n
-            **summary_len (int, optional)**: the desired word length for the final summary you want llm to generate. Defaults to 500.\n
-            **verbose (bool)**: show log texts or not. Defaults to False.\n
             **tokens (int)**: used to save total tokens in recursive call.\n
             **total_list (list)**: used to save total response in recursive call.\n
 
@@ -143,11 +168,7 @@ class Summary(akasha.atman):
         summarizing the next chunk. This approach may be slower and require more tokens, but it results in a higher level of summary consistency.
 
         Args:
-            **model (var)**: llm model\n
-            **verbose (bool)**: show log texts or not. Defaults to False.\n
             **texts (list)**: list of texts from documents\n
-            **max_token (int, optional)**: the max tokens that input to llm model each time. Defaults to 3000.\n
-            **summary_len (int, optional)**: the desired word length for the final summary you want llm to generate. Defaults to 500.\n
 
         Returns:
             (list,int): llm response list and total tokens
@@ -185,8 +206,19 @@ class Summary(akasha.atman):
     
     
     
-    def summarize_file(self, file_name:str, summary_type:str = "map_reduce", summary_len:int = 500, **kwargs):
-        
+    def summarize_file(self, file_name:str, summary_type:str = "map_reduce", summary_len:int = 500, **kwargs)->str:
+        """input a file path and return a summary of the file
+
+    Args:
+        **file_path (str)**:  the path of file you want to summarize, can be '.txt', '.docx', '.pdf' file.\n
+        **summary_type (str, optional)**: summary method, "map_reduce" or "refine". Defaults to "map_reduce".\n
+        **summary_len (int, optional)**: _description_. Defaults to 500.\n
+        **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
+            chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp, 
+            system_prompt, max_token, temperature.
+    Returns:
+        str: the summary of the file
+    """
         
         ## set variables ##
         self.file_name = file_name

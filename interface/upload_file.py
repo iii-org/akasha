@@ -2,7 +2,8 @@ import streamlit as st
 from pathlib import Path
 
 def up_load():
-    
+    """upload documents files to docs folder
+    """
     st.title("Upload Files")
     st.markdown('##')
     st.markdown('##')

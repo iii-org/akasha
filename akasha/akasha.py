@@ -84,11 +84,33 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
 
 
 class atman():
+    """basic class for akasha, implement _set_model, _change_variables, _check_db, add_log and save_logs function.
+    """
     def __init__(self, chunk_size:int=1000\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
         language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
         system_prompt:str = "", max_token:int=3000, temperature:float=0.0):
-        
+        """initials of atman class
+
+        Args:
+            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
+            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+            **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+            **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+                max token size of llm input.\n
+            **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+                includes 'merge', 'mmr', 'svm', 'tfidf', also, you can custom your own search_type function, as long as your
+                function input is (query_embeds:np.array, docs_embeds:list[np.array], k:int, relevancy_threshold:float, log:dict) 
+                and output is a list [index of selected documents].\n
+            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+                record_exp as experiment name.  default "".\n
+            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+                in searching relevant documents. Defaults to "".\n
+            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+        """
         
         self.chunk_size = chunk_size
         self.model = model
@@ -106,7 +128,8 @@ class atman():
         
     
     def _set_model(self, **kwargs):
-        
+        """change model, embeddings, search_type, temperature if user use **kwargs to change them.
+        """
         ## check if we need to change db, model_obj or embeddings_obj ##
         if "search_type" in kwargs:
             self.search_type_str = helper.handle_search_type(kwargs["search_type"], self.verbose)
@@ -126,7 +149,8 @@ class atman():
                   
     
     def _change_variables(self, **kwargs):
-        
+        """change other arguments if user use **kwargs to change them.
+        """
             
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
@@ -141,7 +165,11 @@ class atman():
     
     
     def _check_db(self):
-        
+        """check if user input doc_path is exist or not
+
+        Returns:
+            _type_: _description_
+        """
         if self.db is None:
             info = "document path not exist\n"
             print(info)
@@ -150,7 +178,12 @@ class atman():
             return True
     
     def _add_basic_log(self, timestamp:str, fn_type:str):
-        
+        """add pre-process log to self.logs
+
+        Args:
+            timestamp (str): timestamp of this run
+            fn_type (str): function type of this run
+        """
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
         self.logs[timestamp]["fn_type"] = fn_type
@@ -167,7 +200,12 @@ class atman():
     
     
     def _add_result_log(self, timestamp:str, time:float):
-        
+        """add post-process log to self.logs
+
+        Args:
+            timestamp (str): timestamp of this run
+            time (float): spent time of this run
+        """
         self.logs[timestamp]["time"] = time
         self.logs[timestamp]["doc_length"] = self.doc_length
         self.logs[timestamp]["doc_tokens"] = self.doc_tokens
@@ -185,7 +223,15 @@ class atman():
     
     
     def save_logs(self, file_name:str="", file_type:str="json"):
-        
+        """save logs into json or txt file
+
+        Args:
+            file_name (str, optional): file path and the file name. if not assign, use logs/{current time}. Defaults to "".
+            file_type (str, optional): the extension of the file, can be txt or json. Defaults to "json".
+
+        Returns:
+            plain_text(str): string of the log
+        """
         plain_txt = ""
         extension = ""
         ## set extension ##
@@ -252,6 +298,9 @@ class atman():
 
 
 class Doc_QA(atman):
+    """class for implement search db based on user prompt and generate response from llm model, include get_response and chain_of_thoughts.
+
+    """
     def __init__(self, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
         language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
@@ -281,8 +330,21 @@ class Doc_QA(atman):
     
     
     
-    def get_response(self,doc_path:str, prompt:str, **kwargs):
-        
+    def get_response(self,doc_path:str, prompt:str, **kwargs)->str:
+        """input the documents directory path and question, will first store the documents
+    into vectors db (chromadb), then search similar documents based on the prompt question.
+    llm model will use these documents to generate the response of the question.
+
+        Args:
+            **doc_path (str)**: documents directory path\n
+            **prompt (str)**:question you want to ask.\n
+            **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+            embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp, 
+            system_prompt, max_token, temperature.
+
+        Returns:
+            response (str): the response from llm model.
+        """
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
@@ -341,7 +403,24 @@ class Doc_QA(atman):
         return self.response
         
     def chain_of_thought(self, doc_path:str, prompt_list:list, **kwargs)->list:
-        
+        """input the documents directory path and question, will first store the documents
+        into vectors db (chromadb), then search similar documents based on the prompt question.
+        llm model will use these documents to generate the response of the question.
+
+        In chain_of_thought function, you can separate your question into multiple small steps so that llm can have better response.
+        chain_of_thought function will use all responses from the previous prompts, and combine the documents search from current prompt to generate
+        response.
+
+        Args:
+           **doc_path (str)**: documents directory path\n
+            **prompt (list)**:questions you want to ask.\n
+            **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+            embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp, 
+            system_prompt, max_token, temperature.
+
+        Returns:
+            response (list): the responses from llm model.
+        """
         
         self._set_model( **kwargs)
         self._change_variables(**kwargs)

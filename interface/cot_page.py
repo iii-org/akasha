@@ -7,6 +7,14 @@ sys.path.append('../')
 
 
 def get_prompts(add_b):
+    """add a prompt area if user push add prompt button and return the text input list
+
+    Args:
+        add_b (_type_): add prompt button area
+
+    Returns:
+        _type_: list of text_inputs
+    """
     with add_b:
         add = st.button(label="Add Prompt",type='primary', use_container_width=True)
 
@@ -25,6 +33,8 @@ def get_prompts(add_b):
     
 
 def cot_page():
+    """implement chain of thought ui
+    """
     st.title("Chain Of Thoughts")
     st.markdown('##')
     st.markdown('##')

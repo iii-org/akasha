@@ -331,36 +331,6 @@ def handle_search_type(search_type:str, verbose:bool)->str:
 
 
 
-def save_logs(logs:list)->None:
-    """save running logs into logs/logs_{date}.txt
-
-    Args:
-        **logs (list)**: list that store logs\n
-    """
-    logs = '\n'.join(logs)
-
-    cur_date = datetime.datetime.now().strftime("%Y-%m-%d")
-
-    logs_path = Path('logs')
-    if not logs_path.exists():
-        logs_path.mkdir()
-
-
-    file_name = f"log_{cur_date}.txt"
-    file_path = Path("logs/"+file_name)
-
-    if file_path.exists():
-        with file_path.open("a", encoding='utf-8') as file:
-            file.write(logs + "\n\n")
-    else:
-        with file_path.open("w",  encoding='utf-8') as file:
-            file.write(logs + "\n\n")
-    
-    return
-
-
-
-
 
 def get_doc_length(language:str, doc)->int:
     """calculate the length of terms in a giving Document

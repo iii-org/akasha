@@ -7,6 +7,8 @@ sys.path.append('../')
 
 
 def response_page():
+    """implement get response ui
+    """
     st.title("Get Response")
     st.markdown('##')
     st.markdown('##')

@@ -70,10 +70,36 @@ def  _generate_single_choice_question(doc_text:str, question:str, cor_ans:str, m
 
 
 class Model_Eval(akasha.atman):
+    """class for implement evaluation of llm model, include auto_create_questionset and auto_evaluation.
+
+    """
     def __init__(self, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
         language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
         system_prompt:str = "", max_token:int=3000, temperature:float=0.0, question_type:str="essay"):
+        """initials of Model_Eval class
+
+        Args:
+            **embeddings (str, optional)**: the embeddings used in query and vector storage. Defaults to "text-embedding-ada-002".\n
+            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
+            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
+            **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
+            **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
+            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
+                max token size of llm input.\n
+            **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
+                includes 'merge', 'mmr', 'svm', 'tfidf', also, you can custom your own search_type function, as long as your
+                function input is (query_embeds:np.array, docs_embeds:list[np.array], k:int, relevancy_threshold:float, log:dict) 
+                and output is a list [index of selected documents].\n
+            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set 
+                record_exp as experiment name.  default "".\n
+            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
+                in searching relevant documents. Defaults to "".\n
+            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
+        """
         
         super().__init__(chunk_size, model, verbose, topK, threshold,\
         language , search_type, record_exp, system_prompt, max_token, temperature)
@@ -101,8 +127,35 @@ class Model_Eval(akasha.atman):
         
         
         
-    def  auto_create_questionset(self, doc_path:str, question_num:int = 10, choice_num:int = 4, **kwargs):
-        
+    def auto_create_questionset(self, doc_path:str, question_num:int = 10, choice_num:int = 4, **kwargs)->(list,list):
+        """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory, 
+    then use llm model to generate a question and answer pair, and save it into a txt file.
+    1.The format of "single_choice" questionset should be one line one question, and the possibles answers and questions are separate by tab(\t),
+    the last one is which options is the correct answer, for example, the file should look like: \n
+        "What is the capital of Taiwan?" Taipei  Kaohsiung  Taichung  Tainan     1
+        何者是台灣的首都?   台北    高雄    台中    台南    1
+    2. The format of "essay" questionset should be one line one question, and the reference answer is next line, every questions are separate by 
+    two newline(\n\n). For example, the file should look like: \n
+        問題：根據文件中的訊息，智慧製造的複雜性已超越系統整合商的負荷程度，未來產業鏈中的角色將傾向朝共和共榮共創智慧製造商機，而非過往的單打獨鬥模式發展。請問為什麼供應商、電信商、軟體開發商、平台商、雲端服務供應商、系統整合商等角色會傾向朝共和共榮共創智慧製造商機的方向發展？
+        答案：因為智慧製造的複雜性已超越系統整合商的負荷程度，單一角色難以完成整個智慧製造的需求，而共和共榮共創的模式可以整合各方的優勢，共同創造智慧製造的商機。
+
+        問題：根據文件中提到的資訊技術商（IT）和營運技術商（OT），請列舉至少兩個邊緣運算產品或解決方案。
+        答案：根據文件中的資訊，NVIDIA的邊緣運算產品包括Jetson系列和EGX系列，而IBM的邊緣運算產品包括IBM Edge Application Manager和IBM Watson Anywhere。
+
+        Args:
+            **doc_path (str)**: documents directory path\n
+            **question_num (int, optional)**: number of questions you want to create. Defaults to 10.\n
+            **choice_num (int, optional)**: the number of choices for each single choice question, only use it if question_type is "single_choice".
+        Defaults to 4.\n
+            **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+            embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp, 
+            system_prompt, max_token, temperature.
+        Raises:
+            Exception: _description_
+
+        Returns:
+            (question_list:list, answer_list:list): the question and answer list that generated by llm model
+        """
         ## set class variables ##
         self._set_model( **kwargs)
         self._change_variables(**kwargs)
@@ -240,8 +293,22 @@ class Model_Eval(akasha.atman):
     
     
     
-    def auto_evaluation(self, questionset_file:str, doc_path:str, eval_model:str="openai:gpt-3.5-turbo", **kwargs):
-        
+    def auto_evaluation(self, questionset_file:str, doc_path:str, eval_model:str="openai:gpt-3.5-turbo", **kwargs)\
+    ->Union[(float,float,float,int) , (float,int)]:
+        """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response, 
+    evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
+    and rouge_l to evaluate the response if you use essay type to generate questionset.  And use correct_count to evaluate 
+    the response if you use single_choice type to generate questionset.  **Noted that the question_type must match the questionset_file's type**.
+    
+
+        Args:
+        **questionset_flie (str)**: the path of question set txt file, accept .txt, .docx and .pdf.\n
+        **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
+        **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
+        **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+            embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp, 
+            system_prompt, max_token, temperature.\n
+        """
          
         
         ## set class variables ##
@@ -378,13 +445,13 @@ class Model_Eval(akasha.atman):
         
         
         
-    def optimum_combination(self,q_file:str, doc_path:str, embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
+    def optimum_combination(self,questionset_flie:str, doc_path:str, embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
                     , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], search_type_list:list = ['svm','tfidf','mmr'],\
-                        ):
-        """test all combinations of giving lists, and run test_performance to find parameters of the best result.
+                        )->(list,list):
+        """test all combinations of giving lists, and run auto_evaluation to find parameters of the best result.
 
         Args:
-            **q_file (str)**: the file path of the question file\n
+            **questionset_flie (str)**: the path of question set txt file, accept .txt, .docx and .pdf.\n
             **doc_path (str)**: documents directory path\n
             **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **embeddings_list (_type_, optional)**: list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].\n
@@ -413,7 +480,7 @@ class Model_Eval(akasha.atman):
             progress.update(1)
             
             if self.question_type.lower() == "essay":
-                cur_bert, cur_rouge, cur_llm, tokens = self.auto_evaluation(q_file, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK,\
+                cur_bert, cur_rouge, cur_llm, tokens = self.auto_evaluation(questionset_flie, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK,\
                     search_type=st)
                 
                 bcb = max(bcb,cur_bert)
@@ -421,7 +488,7 @@ class Model_Eval(akasha.atman):
                 bcl = max(bcl,cur_llm)
                 cur_tup = (cur_bert, cur_rouge, cur_llm, embed, chk, mod, tK, self.search_type_str)
             else:
-                cur_correct_rate, tokens = self.auto_evaluation(q_file, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK,\
+                cur_correct_rate, tokens = self.auto_evaluation(questionset_flie, doc_path, embeddings=embed, chunk_size=chk, model=mod, topK=tK,\
                     search_type=st)
                 bcr = max(bcr,cur_correct_rate)
                 cur_tup = (cur_correct_rate, cur_correct_rate/tokens, embed, chk, mod, tK, self.search_type_str)

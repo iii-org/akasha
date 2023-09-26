@@ -47,6 +47,14 @@ def get_llama_cpp_model(model_type:str, model_name:str, temperature:float=0.0):
 
 
 class Llama2(LLM):
+    """define initials and _call function for llama2 gptq model
+
+    Args:
+        LLM (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     max_token: int = 4096
     temperature: float = 0.01
     top_p: float = 0.95
@@ -102,6 +110,14 @@ class Llama2(LLM):
 
 
 class peft_Llama2(LLM):
+    """define initials and _call function for llama2 peft model
+
+    Args:
+        LLM (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     max_token: int = 2048
     temperature: float = 0.01
     top_p: float = 0.95

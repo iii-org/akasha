@@ -3,7 +3,9 @@ from pathlib import Path
 
 
 def setting():
-   
+    """set the arguments for the model
+    
+    """
     
     
       
@@ -70,6 +72,8 @@ def setting():
         
     
 def set_model_dir():
+    """parse all model files(gguf) and directory in the model folder 
+    """
     st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"]
     modes_dir = Path(st.session_state.mdl_dir)
     for dir_path in modes_dir.iterdir():
