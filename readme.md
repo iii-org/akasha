@@ -1,6 +1,17 @@
+# akasha
+
+Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents. With Akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
+
+
+<br/>
+<br/>
+
+<br/>
+<br/>
+
 # Installation
 
-We recommend using Python 3.8 to run our Akasha package. You can use Anaconda to create virtual environment.
+We recommend using Python 3.8 to run our akasha package. You can use Anaconda to create virtual environment.
 
 ```bash
 
