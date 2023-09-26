@@ -181,7 +181,6 @@ class atman():
         
         self.logs[timestamp]["system_prompt"] = self.system_prompt
 
-        print(self.logs[timestamp])
         return
     
     
