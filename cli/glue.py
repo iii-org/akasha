@@ -25,7 +25,7 @@ def akasha():
 @click.option('--max_token', '-mt', default=3000, help='max token for the llm model input')
 def get_response(doc_path:str, prompt:str, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str, max_token:int):
-    gr = ak.Doc_QA(verbose=False, embeddings=embeddings, chunk_size=chunk_size, model=model, topk=topk, threshold=threshold,\
+    gr = ak.Doc_QA(verbose=False, embeddings=embeddings, chunk_size=chunk_size, model=model, topK=topk, threshold=threshold,\
                  language=language, search_type=search_type, record_exp=record_exp, system_prompt=system_prompt, max_token=max_token)
     res = gr.get_response(doc_path, prompt)
     
@@ -117,7 +117,7 @@ def keep_responsing(doc_path:str, embeddings:str, chunk_size:int, model:str, top
 def chain_of_thought(doc_path:str, prompt, embeddings:str, chunk_size:int, model:str, topk:int, threshold:float,\
                  language:str, search_type:str, record_exp:str, system_prompt:str, max_token:int):
     
-    gr = ak.Doc_QA(verbose=False, embeddings=embeddings, chunk_size=chunk_size, model=model, topk=topk, threshold=threshold,\
+    gr = ak.Doc_QA(verbose=False, embeddings=embeddings, chunk_size=chunk_size, model=model, topK=topk, threshold=threshold,\
                  language=language, search_type=search_type, record_exp=record_exp, system_prompt=system_prompt, max_token=max_token)
     
     res = gr.chain_of_thought(doc_path, prompt)
