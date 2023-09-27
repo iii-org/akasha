@@ -45,8 +45,8 @@ def cot_page():
             
     with para_set:
         
-        st.session_state.sys_prompt = st.text_area("System_Prompt", st.session_state.sys_prompt, help="The special instruction you want to give to the model.")
-        text_prompt, bsd = st.columns([99,1])
+        st.session_state.sys_prompt = st.text_area("System Prompt", st.session_state.sys_prompt, help="The special instruction you want to give to the model.")
+        text_prompt, bsd = st.columns([999,1])
         sb1, sb2, sb3 = st.columns([1, 1,1])
         with text_prompt:
             prompts = get_prompts(sb1)

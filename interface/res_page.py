@@ -19,8 +19,9 @@ def response_page():
             
     with para_set:
         
+        st.session_state.sys_prompt = st.text_area("System Prompt", st.session_state.sys_prompt, help="The special instruction you want to give to the model.")
         prompt = st.text_area("Prompt","" , help="The prompt you want to ask the model.")
-        st.session_state.sys_prompt = st.text_area("System_Prompt", st.session_state.sys_prompt, help="The special instruction you want to give to the model.")
+        
         sb1, sb2 = st.columns([1, 1])
         with sb1:
             if st.button("Clear", type="primary", use_container_width=True, help="Clear the prompt and response."):

@@ -99,8 +99,10 @@ if 'select_idx' not in st.session_state:
 
 ### function argument ###
 if 'chose_doc_path' not in st.session_state:
-    st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
-    
+    if len(st.session_state.docs_list) > 0:
+        st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
+    else:
+        st.info("Please upload your documents first.",icon="🚨")
 
 if 'embed' not in st.session_state:
     st.session_state.embed = st.session_state.embed_list[0]

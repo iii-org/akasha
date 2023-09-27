@@ -36,5 +36,7 @@ def up_load():
                     f.write(bytes_data)
 
                 st.write("uploaded file:", uploaded_file.name)
-        
+                
+        if len(st.session_state.docs_list) > 0:
+            st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
         print(st.session_state.docs_list)

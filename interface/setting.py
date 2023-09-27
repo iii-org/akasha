@@ -26,7 +26,8 @@ def setting():
     dp, em, md = st.columns([1,2,2])
     with dp:
         doc_path = st.selectbox("Document Path", st.session_state.docs_list, index=st.session_state.select_idx[0], help="The path of the document folder.")
-        st.session_state.select_idx[0] = st.session_state.docs_list.index(doc_path)   
+        if doc_path != None:
+            st.session_state.select_idx[0] = st.session_state.docs_list.index(doc_path)   
         try:
             st.session_state.chose_doc_path = st.session_state.docs_path + '/' + doc_path
         except:
