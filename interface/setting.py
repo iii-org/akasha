@@ -2,7 +2,7 @@ import streamlit as st
 from pathlib import Path
 
 
-def setting():
+def setting_page():
     """set the arguments for the model
     
     """

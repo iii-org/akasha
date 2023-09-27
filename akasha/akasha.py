@@ -232,7 +232,7 @@ class atman():
         Returns:
             plain_text(str): string of the log
         """
-        plain_txt = ""
+        
         extension = ""
         ## set extension ##
         if file_name != "":
@@ -273,7 +273,6 @@ class atman():
                 for key in self.logs:
                     text = key + ":\n"
                     fp.write(text)
-                    plain_txt += text
                     for k in self.logs[key]:
                         if type(self.logs[key][k]) == list:
                             text = k + ": " + '\n'.join([str(w) for w in self.logs[key][k]]) + "\n\n"
@@ -283,12 +282,12 @@ class atman():
                             text = k + ": " + str(self.logs[key][k]) + "\n\n"
                         
                         fp.write(text)
-                        plain_txt += text
+                        
                     fp.write("\n\n\n\n")
-                    plain_txt += "\n\n\n\n"
+                    
                     
         print("save logs to " + str(file_path))
-        return plain_txt
+        return 
 
 
 
@@ -446,10 +445,11 @@ class Doc_QA(atman):
         pre_result = []
         self.response = []
         self.docs = []
-        
+        self.prompt = []
         for i in range(len(prompt_list)):
             
             question = prompts.format_sys_prompt(self.system_prompt, prompt_list[i])
+            self.prompt.append(question)
             docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt_list[i], self.topK, self.threshold, \
                 self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp])
             

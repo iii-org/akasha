@@ -47,8 +47,8 @@ def response_page():
                     system_prompt=st.session_state.sys_prompt, max_token=st.session_state.max_token, temperature=st.session_state.temperature)
                 st.session_state.prompt_list.append( prompt)
                 st.session_state.response_list.append(ans)
-    
-    
+                timesp = st.session_state.akasha_obj.timestamp_list[-1]
+                st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp]  
     with response_board:
         
         for i in range(len(st.session_state.response_list)):

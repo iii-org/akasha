@@ -1,7 +1,7 @@
 import streamlit as st
 from pathlib import Path
 
-def up_load():
+def upload_page():
     """upload documents files to docs folder
     """
     st.title("Upload Files")

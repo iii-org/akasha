@@ -3,30 +3,38 @@ from pathlib import Path
 from streamlit_option_menu import option_menu
 from interface.cot_page import cot_page
 from interface.res_page import response_page
-from interface.upload_file import up_load
-from interface.setting import setting, set_model_dir
+from interface.upload_file import upload_page
+from interface.setting import setting_page, set_model_dir
+from interface.sum_page import summary_page
 import akasha
 import datetime
 st.set_page_config(layout="wide")
-menu_list = ['Get Response','Chain Of Thoughts', 'Upload Files', 'Setting']
+menu_list = ['Get Response','Chain Of Thoughts',  'Summary', 'Upload Files', 'Setting',]
 
-icon_list = ['chat-left-text', 'puzzle', 'upload', 'gear']
+icon_list = ['chat-left-text', 'puzzle', 'chat-quote', 'upload', 'gear', ]
 
 
-def get_log_file(file_name:str):
+def get_log_data():
     
-    
-    logs_path = Path('logs')
-    if not logs_path.exists():
-        logs_path.mkdir()
+    plain_txt = ""
+    for key in st.session_state.logs:
+        plain_txt += key + ":\n"
+        for k in st.session_state.logs[key]:
+            if type(st.session_state.logs[key][k]) == list:
+                text = k + ": " + '\n'.join([str(w) for w in st.session_state.logs[key][k]]) + "\n\n"             
+            else:
+                text = k + ": " + str(st.session_state.logs[key][k]) + "\n\n"
+            
+            plain_txt += text
+        plain_txt += "\n\n\n\n"
         
-    return st.session_state.akasha_obj.save_logs(f"./logs/{file_name}", file_type="txt")
+    return plain_txt
     
     
     
 def download_txt(file_name:str):
-    file_name = file_name + ".txt"
-    txt_data = get_log_file(file_name)
+    file_name = "log_" + file_name + ".txt"
+    txt_data = get_log_data()
     txt_filename = file_name
     st.download_button(
         "Download Text Log",
@@ -35,13 +43,13 @@ def download_txt(file_name:str):
         file_name=txt_filename,
         mime='text/plain'
     )
-    Path(f"./logs/{file_name}").unlink()
+    #Path(f"./logs/{file_name}").unlink()
 
 # Create a button to download a JSON file
 def download_json(file_name:str):
     import json
-    file_name = file_name + ".json"
-    json_data = st.session_state.akasha_obj.logs
+    file_name =  "log_" + file_name + ".json"
+    json_data = st.session_state.logs
     json_filename = file_name
     st.download_button(
         "Download JSON Log",
@@ -127,7 +135,8 @@ if 'max_token' not in st.session_state:
     st.session_state.max_token = 2500
 if 'sys_prompt' not in st.session_state:
     st.session_state.sys_prompt = ""
-
+if 'logs' not in st.session_state:
+    st.session_state.logs = {}
 
 if 'akasha_obj' not in st.session_state:
     st.session_state.akasha_obj = akasha.Doc_QA(embeddings=st.session_state.embed, chunk_size=st.session_state.chunksize, \
@@ -171,6 +180,8 @@ if user_menu == 'Get Response':
 elif user_menu == 'Chain Of Thoughts':
     cot_page()
 elif user_menu == 'Upload Files':
-    up_load()
+    upload_page()
 elif user_menu == 'Setting':
-    setting()
+    setting_page()
+elif user_menu == 'Summary':
+    summary_page()
