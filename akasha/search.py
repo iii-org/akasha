@@ -8,19 +8,24 @@ import numpy as np
 import akasha.helper as helper
 
 
-def _get_relevant_doc_custom(db, embeddings, func:Callable, query:str, k:int, relevancy_threshold:float, log:dict):
+def _get_relevant_doc_custom(db, embeddings, func:Callable, query:str, k:int, relevancy_threshold:float, log:dict, model, compression:bool=False):
     
     customR = customRetriever.from_db(db, embeddings, func, k, relevancy_threshold, log)
-    # if compression:
-    #     compressor = LLMChainExtractor.from_llm(model)
-    #     customc = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=customR)
-    #     docs = customc.get_relevant_documents(query)
-    # else:
-    docs = customR.get_relevant_documents(query)
+    if compression:
+        # compressor = LLMChainExtractor.from_llm(model)
+        # customc = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=customR)
+        # docs = customc.get_relevant_documents(query)
+        docs = []
+        pre_docs = customR.get_relevant_documents(query)
+        for pre_doc in pre_docs:
+            pre_doc.page_content = helper.call_model(model, "please only out the relevant part of "+query + " for the below article: \n\nArticle: " +pre_doc.page_content)
+            docs.append(pre_doc)
+    else:
+        docs = customR.get_relevant_documents(query)
     
     return docs
 
-def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold:float, model):
+def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold:float, model, compression:bool=False):
     """use KNN to find relevant doc from query.
 
     Args:
@@ -34,7 +39,7 @@ def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold
         list: list of Documents
     """
     
-    compression = False
+
     knnR = myKNNRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
         compressor = LLMChainExtractor.from_llm(model)
@@ -45,7 +50,7 @@ def __get_relevant_doc_knn(db, embeddings, query:str, k:int, relevancy_threshold
     
     return docs
 
-def _get_relevant_doc_tfidf(db, query:str, k:int, model)->list:
+def _get_relevant_doc_tfidf(db, query:str, k:int, model, compression:bool=False)->list:
     """use Term Frequency-Inverse Document Frequency to find relevant doc from query.
 
     Args:
@@ -56,24 +61,24 @@ def _get_relevant_doc_tfidf(db, query:str, k:int, model)->list:
     Returns:
         list: list of Documents
     """
-    compression = False
+
     all_docs = db.get(include=['documents','metadatas'])
     docs_list = []
     for i in range(len(all_docs['documents'])):
         docs_list.append(Document(page_content=all_docs['documents'][i],\
                                     metadata=all_docs['metadatas'][i]))
-    retriever = TFIDFRetriever.from_documents(docs_list,search_kwargs={"k":k})
-
+    retriever = TFIDFRetriever.from_documents(docs_list, k=k)
     if compression:
         compressor = LLMChainExtractor.from_llm(model)
         tfidfc = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriever)
         docs = tfidfc.get_relevant_documents(query)
     else:
         docs = retriever.get_relevant_documents(query)
+
     return docs[:k]
 
 
-def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:float, model)->list:
+def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:float, model, compression:bool=False)->list:
     """use SVM to find relevant doc from query.
 
     Args:
@@ -87,7 +92,6 @@ def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:
         list: list of Documents
     """
     
-    compression = False
     svmR = mySVMRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
         compressor = LLMChainExtractor.from_llm(model)
@@ -95,11 +99,10 @@ def _get_relevant_doc_svm(db, embeddings, query:str, k:int, relevancy_threshold:
         docs = svmc.get_relevant_documents(query)
     else:
         docs = svmR.get_relevant_documents(query)
-    
     return docs
     
 
-def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float, model)->list:
+def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float, model, compression:bool=False)->list:
     """use Chroma.as_retriever().get_relevant_document() to search relevant documents.
 
     Args:
@@ -111,7 +114,7 @@ def _get_relevant_doc_mmr(db, query:str, k:int, relevancy_threshold:float, model
     Returns:
         list: list of selected relevant Documents 
     """
-    compression = False
+    
     retriever = db.as_retriever(search_type="mmr",\
                 search_kwargs={"k": k,'score_threshold': relevancy_threshold})
     
@@ -182,7 +185,7 @@ def _merge_docs(docs_list:list, topK:int, language:str, verbose:bool, max_token:
 
 
 def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str, search_type:Union[str,Callable],
-             verbose:bool, model, max_token:int, log:dict)->(list,int):
+             verbose:bool, model, max_token:int, log:dict, compression:bool=False)->(list,int):
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together. 
 
@@ -203,34 +206,34 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
         list: selected list of similar documents.
     """
     if callable(search_type):
-        docs_cust = _get_relevant_doc_custom(db, embeddings, search_type, query, topK, threshold, log)
+        docs_cust = _get_relevant_doc_custom(db, embeddings, search_type, query, topK, threshold, log, model, compression)
         docs, tokens = _merge_docs([docs_cust], topK, language, verbose, max_token, model)    
     else:
         search_type = search_type.lower()
     
         if search_type == 'merge':
-            docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model)
-            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model)
-            docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model)
+            docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
+            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
+            docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
         
             docs, tokens = _merge_docs([docs_tfidf, docs_svm, docs_mmr], topK, language, verbose, max_token, model)
     
         elif search_type == 'mmr':
-            docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model)
+            docs_mmr = _get_relevant_doc_mmr(db, query, topK, threshold, model, compression)
             docs, tokens = _merge_docs([docs_mmr], topK, language, verbose, max_token, model)
             
         
         elif search_type == 'svm':
-            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model)
+            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK, threshold, model, compression)
             docs, tokens = _merge_docs([docs_svm], topK, language, verbose, max_token, model)
             
         
         elif search_type == 'tfidf':
-            docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model)
+            docs_tfidf = _get_relevant_doc_tfidf(db, query, topK, model, compression)
             docs, tokens = _merge_docs([docs_tfidf], topK, language, verbose, max_token, model)
 
         elif search_type == 'knn':
-            docs_knn = __get_relevant_doc_knn(db,embeddings, query, topK, threshold, model) 
+            docs_knn = __get_relevant_doc_knn(db,embeddings, query, topK, threshold, model, compression) 
             docs, tokens = _merge_docs([docs_knn], topK, language, verbose, max_token, model)
         
         else:

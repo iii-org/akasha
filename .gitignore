@@ -4,7 +4,7 @@ __pycache__
 .env
 chromadb/
 logs/
-doc/
+docs/
 questionset/
 model/chinese_alpaca_pro_lora_33b.zip
 .gitignore

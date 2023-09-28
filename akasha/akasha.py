@@ -303,14 +303,14 @@ class Doc_QA(atman):
     def __init__(self, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
         language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
-        system_prompt:str = "", max_token:int=3000, temperature:float=0.0):
+        system_prompt:str = "", max_token:int=3000, temperature:float=0.0, compression:bool=False):
         
         super().__init__(chunk_size, model, verbose, topK, threshold,\
         language , search_type, record_exp, system_prompt, max_token, temperature)
         ### set argruments ###
         self.doc_path = ""
         self.embeddings = embeddings
-
+        self.compression = compression
         
 
         ### set variables ###
@@ -357,11 +357,11 @@ class Doc_QA(atman):
         self._add_basic_log(timestamp, "get_response")
         self.logs[timestamp]["search_type"] = self.search_type_str
         self.logs[timestamp]["embeddings"] = self.embeddings
-
+        self.logs[timestamp]["compression"] = self.compression
         
         ### start to get response ###
         self.docs, self.doc_tokens = search.get_docs(self.db, self.embeddings_obj, prompt, self.topK, self.threshold, self.language,\
-            self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp])
+            self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compression = self.compression)
     
         if self.docs is None:
             
@@ -437,7 +437,7 @@ class Doc_QA(atman):
         self._add_basic_log(timestamp, "chain_of_thought")
         self.logs[timestamp]["search_type"] = self.search_type_str
         self.logs[timestamp]["embeddings"] = self.embeddings
-        
+        self.logs[timestamp]["compression"] = self.compression  
         chain = load_qa_chain(llm=self.model_obj, chain_type="stuff",verbose=self.verbose)
         
         self.doc_tokens = 0
@@ -451,7 +451,7 @@ class Doc_QA(atman):
             question = prompts.format_sys_prompt(self.system_prompt, prompt_list[i])
             self.prompt.append(question)
             docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt_list[i], self.topK, self.threshold, \
-                self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp])
+                self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compresssion = self.compression)
             
             self.docs.extend(docs)
             self.doc_length += helper.get_docs_length(self.language, docs)

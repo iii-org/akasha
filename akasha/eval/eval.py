@@ -8,7 +8,7 @@ import numpy as np
 import torch,gc
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
-from typing import Callable, Union
+from typing import Callable, Union, Tuple
 
 
 
@@ -294,7 +294,7 @@ class Model_Eval(akasha.atman):
     
     
     def auto_evaluation(self, questionset_file:str, doc_path:str, eval_model:str="openai:gpt-3.5-turbo", **kwargs)\
-    ->Union[(float,float,float,int) , (float,int)]:
+    ->Union[Tuple[float,float,float,int] , Tuple[float,int]]:
         """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response, 
     evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
     and rouge_l to evaluate the response if you use essay type to generate questionset.  And use correct_count to evaluate 
