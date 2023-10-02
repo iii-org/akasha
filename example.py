@@ -25,7 +25,7 @@ def cust(query_embeds, docs_embeds, k:int, relevancy_threshold:float, log:dict):
 def QA():
     qa = akasha.Doc_QA(verbose=False, search_type="svm")
 
-    qa.get_response(doc_path="./../doc/mic/", prompt = query1, chunk_size = 500, record_exp="", search_type=cust,\
+    qa.get_response(doc_path="./docs/mic/", prompt = query1, chunk_size = 500, record_exp="", search_type=cust,\
         max_token=3000, system_prompt="請你在回答前面加上喵")
 
     print(qa.response)
@@ -44,7 +44,7 @@ def QA():
 ### EVAL ###
 
 ### remember the question_type must match the q_file's type
-def EVAL(doc_path:str="./../doc/mic/"):
+def EVAL(doc_path:str="./docs/mic/"):
     eva = eval.Model_Eval(question_type="single_choice",record_exp="1234test",verbose=True)
     
     #b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="single_choice",chunk_size=850)
@@ -63,7 +63,7 @@ eval_obj.save_logs('./eva.json')
 
 
 ### SUMMARY ###
-def SUM(file_name:str="./../doc/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"):
+def SUM(file_name:str="./docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"):
     sum = summary.Summary(chunk_size=1000, chunk_overlap = 40\
         , model= "openai:gpt-3.5-turbo", verbose = False, threshold= 0.2,\
         language = 'ch', record_exp= "1234test", format_prompt = "請你在回答前面加上喵",
@@ -75,5 +75,5 @@ def SUM(file_name:str="./../doc/mic/20230531_智慧製造需求下之邊緣運�
 
 #summary_obj = SUM()
 
-#summary_obj.save_logs("./../summary_logs.json")
+#summary_obj.save_logs("./summary_logs.json")
 #summary_obj.save_logs(file_type="txt")
