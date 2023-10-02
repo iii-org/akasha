@@ -6,10 +6,11 @@ from langchain.embeddings.base import Embeddings
 from typing import Any, List, Optional, Callable, Union
 import numpy as np
 import akasha.helper as helper
+import akasha.prompts as prompts
 
 
 def _get_relevant_doc_custom(db, embeddings, func:Callable, query:str, k:int, relevancy_threshold:float, log:dict, model, compression:bool=False):
-    
+
     customR = customRetriever.from_db(db, embeddings, func, k, relevancy_threshold, log)
     if compression:
         # compressor = LLMChainExtractor.from_llm(model)
@@ -18,8 +19,10 @@ def _get_relevant_doc_custom(db, embeddings, func:Callable, query:str, k:int, re
         docs = []
         pre_docs = customR.get_relevant_documents(query)
         for pre_doc in pre_docs:
-            pre_doc.page_content = helper.call_model(model, "please only out the relevant part of "+query + " for the below article: \n\nArticle: " +pre_doc.page_content)
-            docs.append(pre_doc)
+            pre_doc.page_content = helper.call_model(model, prompts.format_compression_prompt(query,pre_doc.page_content) )
+            if pre_doc.page_content.replace(" ","") != "":
+                docs.append(pre_doc)
+                
     else:
         docs = customR.get_relevant_documents(query)
     

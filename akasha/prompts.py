@@ -199,3 +199,13 @@ def format_refine_summary_prompt(cur_text:str, previous_summary:str, summary_len
     If the context isn't useful, return the original summary.
     """
     return sys_prompt
+
+
+
+def format_compression_prompt(query:str, doc:str):
+    return  f"""Given the following question and context, extract any part of the context *AS IS* that is relevant to answer the question. If none of the context is relevant return an empty string. 
+
+Remember, *DO NOT* edit the extracted parts of the context.
+\nQuestion: {query}
+\nContext:
+{doc}"""
