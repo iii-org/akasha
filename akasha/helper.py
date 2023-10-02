@@ -20,7 +20,7 @@ jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
 
-def is_path_exist(path:str, logs:list)->bool:
+def is_path_exist(path:str)->bool:
     
     try:
         des_path = Path(path)
@@ -29,8 +29,6 @@ def is_path_exist(path:str, logs:list)->bool:
     except FileNotFoundError as err:
         
         print(path, err)
-        logs.append(path)
-        save_logs(logs)
         return False
     return True
 
@@ -134,7 +132,7 @@ def _separate_name(name:str):
 
 
 
-def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
+def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
                     sleep_time:int = 60) -> vars:
     """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
         It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
@@ -158,7 +156,7 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
     
 
     ### check if doc path exist ###
-    if not is_path_exist(doc_path, logs):
+    if not is_path_exist(doc_path):
         
         return None
     
@@ -225,14 +223,14 @@ def create_chromadb(doc_path:str, logs:list, verbose:bool, embeddings:vars, embe
     db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
     if verbose:
         print(info)
-    logs.append(info)
+    
     
     return db
 
 
 
 
-def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
+def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
@@ -270,13 +268,12 @@ def handle_embeddings(embedding_name:str, logs:list, verbose:bool)->vars :
     
     if verbose:
         print(info)
-    logs.append(info)
     return embeddings
 
 
 
 
-def handle_model(model_name:str, logs:list, verbose:bool, temperature:float = 0.0)->vars:
+def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -316,36 +313,20 @@ def handle_model(model_name:str, logs:list, verbose:bool, temperature:float = 0.
         print(info)
     if verbose:
         print(info)
-    logs.append(info)
     
     return model
 
-def save_logs(logs:list)->None:
-    """save running logs into logs/logs_{date}.txt
-
-    Args:
-        **logs (list)**: list that store logs\n
-    """
-    logs = '\n'.join(logs)
-
-    cur_date = datetime.datetime.now().strftime("%Y-%m-%d")
-
-    logs_path = Path('logs')
-    if not logs_path.exists():
-        logs_path.mkdir()
-
-
-    file_name = f"log_{cur_date}.txt"
-    file_path = Path("logs/"+file_name)
-
-    if file_path.exists():
-        with file_path.open("a", encoding='utf-8') as file:
-            file.write(logs + "\n\n")
+def handle_search_type(search_type:str, verbose:bool)->str:
+    if callable(search_type):
+        search_type_str = search_type.__name__
+        
     else:
-        with file_path.open("w",  encoding='utf-8') as file:
-            file.write(logs + "\n\n")
-    
-    return
+        search_type_str = search_type
+
+    if verbose:
+        print("search type is :", search_type_str)
+
+    return search_type_str
 
 
 
@@ -420,7 +401,7 @@ def get_question_from_file(path:str, question_type:str):
         questions.append( [word for word in con.split("\t")if word != ""])
     return questions, answers
 
-def extract_result(response:list):
+def extract_result(response:str):
     """to prevent the output of llm format is not what we want, try to extract the answer (digit) from the llm output 
 
     Args:
@@ -430,11 +411,11 @@ def extract_result(response:list):
         int: digit of answer
     """
     try:
-        res = str(json.loads(response[-1])['ans']).replace(" ", "")
+        res = str(json.loads(response)['ans']).replace(" ", "")
 
     except:
         res = -1
-        for c in response[-1]:
+        for c in response:
             if c.isdigit():
                 res = c
 
@@ -470,7 +451,7 @@ def get_all_combine(embeddings_list:list, chunk_size_list:list, model_list:list,
     return res
 
 
-def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
+def get_best_combination(result_list:list, idx:int)->list:
     """input list of tuples and find the greatest tuple based on score or cost-effective (index 0 or index 1)
     tuple looks like (score, cost-effective, embeddings, chunk size, model, topK, search type)
 
@@ -489,7 +470,6 @@ def get_best_combination(result_list:list, idx:int, logs:list=[])->list:
             break
         res_str = "embeddings: " + tup[-5] + ", chunk size: " + str(tup[-4]) + ", model: " +tup[-3] + ", topK: " + str(tup[-2]) + ", search type: " + tup[-1] + "\n"
         print(res_str)
-        logs.append(res_str)
         res.append(tup[-5:])
 
     return res

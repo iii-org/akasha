@@ -47,6 +47,14 @@ def get_llama_cpp_model(model_type:str, model_name:str, temperature:float=0.0):
 
 
 class Llama2(LLM):
+    """define initials and _call function for llama2 gptq model
+
+    Args:
+        LLM (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     max_token: int = 4096
     temperature: float = 0.01
     top_p: float = 0.95
@@ -59,6 +67,8 @@ class Llama2(LLM):
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.max_token = max_token
         self.temperature = temperature
+        if self.temperature == 0.0:
+            self.temperature = 0.01
         if bit4==False:
             from transformers import AutoModelForCausalLM
             self.model = AutoModelForCausalLM.from_pretrained(model_name_or_path,device_map='auto',torch_dtype=torch.float16,load_in_8bit=True)
@@ -100,6 +110,14 @@ class Llama2(LLM):
 
 
 class peft_Llama2(LLM):
+    """define initials and _call function for llama2 peft model
+
+    Args:
+        LLM (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     max_token: int = 2048
     temperature: float = 0.01
     top_p: float = 0.95
@@ -109,6 +127,8 @@ class peft_Llama2(LLM):
     def __init__(self, model_name_or_path:str, max_token:int = 2048, temperature:float=0.01):
         super().__init__()
         self.temperature = temperature
+        if self.temperature == 0.0:
+            self.temperature = 0.01
         self.max_token = max_token
         device_map = {"": 0}
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, trust_remote_code=True)

@@ -1,10 +1,12 @@
 import streamlit as st
 from pathlib import Path
 
-def up_load():
-    
-    st.session_state.openai_key = st.text_input("Openai Key", type="password")
-    
+def upload_page():
+    """upload documents files to docs folder
+    """
+    st.title("Upload Files")
+    st.markdown('##')
+    st.markdown('##')
     
     
     uploaded_files = st.file_uploader("Upload document files", accept_multiple_files=True,type=['txt', 'pdf', 'docx'])
@@ -34,5 +36,7 @@ def up_load():
                     f.write(bytes_data)
 
                 st.write("uploaded file:", uploaded_file.name)
-        
+                
+        if len(st.session_state.docs_list) > 0:
+            st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
         print(st.session_state.docs_list)

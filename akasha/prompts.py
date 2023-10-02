@@ -2,6 +2,21 @@
 sys_s = "[INST] <<SYS>> " 
 sys_e = " <<SYS>> [/INST]\n\n"
 
+
+def format_llama_sys_prompt(system_prompt:str, prompt:str):
+    
+    if system_prompt == "":
+        return "[INST] " + prompt + " [/INST]\n"
+    return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n\n " + prompt + " [/INST]\n"
+    
+def format_sys_prompt(system_prompt:str, prompt:str, model_type:str="llama"):
+    
+    if model_type == "llama":
+        return format_llama_sys_prompt(system_prompt, prompt)
+    
+    return format_llama_sys_prompt(system_prompt, prompt)
+
+
 def format_question_query(question:list)->(str, str):
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
        return the question query string and the answer string.\n
@@ -184,3 +199,13 @@ def format_refine_summary_prompt(cur_text:str, previous_summary:str, summary_len
     If the context isn't useful, return the original summary.
     """
     return sys_prompt
+
+
+
+def format_compression_prompt(query:str, doc:str):
+    return  f"""Given the following question and context, extract any part of the context *AS IS* that is relevant to answer the question. If none of the context is relevant return an empty string. 
+
+Remember, *DO NOT* edit the extracted parts of the context.
+\nQuestion: {query}
+\nContext:
+{doc}"""
