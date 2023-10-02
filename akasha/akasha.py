@@ -451,7 +451,7 @@ class Doc_QA(atman):
             question = prompts.format_sys_prompt(self.system_prompt, prompt_list[i])
             self.prompt.append(question)
             docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt_list[i], self.topK, self.threshold, \
-                self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compresssion = self.compression)
+                self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compression = self.compression)
             
             self.docs.extend(docs)
             self.doc_length += helper.get_docs_length(self.language, docs)

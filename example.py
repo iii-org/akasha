@@ -22,10 +22,10 @@ def cust(query_embeds, docs_embeds, k:int, relevancy_threshold:float, log:dict):
 
 
 
-def QA():
+def QA(doc_path = "./docs/mic/"):
     qa = akasha.Doc_QA(verbose=False, search_type="svm")
 
-    qa.get_response(doc_path="./docs/mic/", prompt = query1, chunk_size = 500, record_exp="", search_type=cust,\
+    qa.get_response(doc_path=doc_path, prompt = query1, chunk_size = 500, record_exp="", search_type=cust,\
         max_token=3000, system_prompt="請你在回答前面加上喵")
 
     print(qa.response)
@@ -35,6 +35,10 @@ def QA():
     # timestamp_list = qa.timestamp_list
     # print(qa.logs[timestamp_list[-1]])
     # print(qa.logs[timestamp_list[-1]]['dd'])   # the variable you add to log in cust function
+    
+    
+    #response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list = query2)
+    #print(response_list)
     return qa
 #qa_obj = QA()
 

@@ -52,3 +52,4 @@ summarization/20230531_智慧製造需求下之邊緣運算與新興通訊發展
 eva.json
 model/chinese-alpaca-2-7b.Q5_K_S.gguf
 model/chinese-alpaca-2-13b.Q5_K_M.gguf
+.coverage
