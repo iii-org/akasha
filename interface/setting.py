@@ -33,42 +33,64 @@ def setting_page():
         except:
             pass
     with em:
-        st.session_state.embed = st.selectbox("Embedding Model", st.session_state.embed_list, index=st.session_state.select_idx[1],\
+        embed = st.selectbox("Embedding Model", st.session_state.embed_list, index=st.session_state.select_idx[1],\
             help="The embedding model used to embed documents.")
-        st.session_state.select_idx[1] = st.session_state.embed_list.index(st.session_state.embed)
+        
+        if embed != st.session_state.embed:
+            st.session_state.embed = embed
+            st.session_state.select_idx[1] = st.session_state.embed_list.index(st.session_state.embed)
+            st.experimental_rerun()
     with md:
-        st.session_state.model = st.selectbox("Language Model", st.session_state.model_list, index=st.session_state.select_idx[2], \
+        md = st.selectbox("Language Model", st.session_state.model_list, index=st.session_state.select_idx[2], \
             help="The model used to generate response.")
-        st.session_state.select_idx[2] = st.session_state.model_list.index(st.session_state.model)
-    
+        if md !=  st.session_state.model:
+            st.session_state.model = md
+            st.session_state.select_idx[2] = st.session_state.model_list.index(st.session_state.model)
+            st.experimental_rerun()
     
     cks, tpk, seat = st.columns([1,1,1])
     with cks:
-        st.session_state.chunksize = st.number_input("Chunk Size", value=st.session_state.chunksize, min_value = 100, max_value = 2000, step = 100,\
+        ck = st.number_input("Chunk Size", value=st.session_state.chunksize, min_value = 100, max_value = 2000, step = 100,\
             help="The size of each chunk of the document.")
+        if ck != st.session_state.chunksize:
+            st.session_state.chunksize = ck
+            st.experimental_rerun()
+        
     with tpk:
-        st.session_state.topK = st.number_input("Top K", value=st.session_state.topK, min_value = 1, max_value = 10, step = 1,\
+        topk = st.number_input("Top K", value=st.session_state.topK, min_value = 1, max_value = 10, step = 1,\
             help="The number of top relevant chunks to be selected from documents.")
-      
+        if topk != st.session_state.topK:
+            st.session_state.topK = topk
+            st.experimental_rerun()
     with seat:
-        st.session_state.search_type = st.selectbox("Search Type", st.session_state.search_list, index=st.session_state.select_idx[3],\
+        stp = st.selectbox("Search Type", st.session_state.search_list, index=st.session_state.select_idx[3],\
             help="The search method used to select top relevant chunks.")
-        st.session_state.select_idx[3] = st.session_state.search_list.index(st.session_state.search_type)
+        if stp != st.session_state.search_type: 
+            st.session_state.search_type = stp
+            st.session_state.select_idx[3] = st.session_state.search_list.index(st.session_state.search_type)
+            st.experimental_rerun()
     
     thre, tem, mxt = st.columns([1,1,1])
     
     with thre:
-        st.session_state.threshold = st.number_input("Threshold",value= st.session_state.threshold , min_value=0.1, max_value=0.9, step=0.05,\
+        thres = st.number_input("Threshold",value= st.session_state.threshold , min_value=0.1, max_value=0.9, step=0.05,\
             help="The threshold used to select top relevant chunks.")
-    
+        if thres != st.session_state.threshold:
+            st.session_state.threshold = thres
+            st.experimental_rerun()
     with tem:
-        st.session_state.temperature = st.number_input("Temperature",value= st.session_state.temperature, min_value=0.0, max_value=1.0, step=0.05,\
+        tem = st.number_input("Temperature",value= st.session_state.temperature, min_value=0.0, max_value=1.0, step=0.05,\
             help="The randomness of language model.")
-    
+        if tem != st.session_state.temperature:
+            st.session_state.temperature = tem
+            st.experimental_rerun()
     with mxt:
-        st.session_state.max_token = st.number_input("Max Token", value= st.session_state.max_token, min_value=500, step=10,\
+        mt = st.number_input("Max Token", value= st.session_state.max_token, min_value=500, step=10,\
             help="The maximum number of tokens in the reference documents that will be used as input for the LLM model.")
         
+        if mt != st.session_state.max_token:
+            st.session_state.max_token = mt
+            st.experimental_rerun()
         
         
     
