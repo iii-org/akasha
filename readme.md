@@ -235,6 +235,8 @@ taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
 ### is the path of the downloaded .gguf file
 llama_cpp_model = "llama-gpu:model/llama-2-13b-chat-hf.Q5_K_S.gguf"  
 llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.Q5_K_S.gguf"
+llama_cpp_chinese_alpaca = "llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf"
+llama_cpp_chinese_alpaca = "llama-cpu:model/chinese-alpaca-2-13b.Q5_K_M.gguf"
 chatglm_model = "chatglm:THUDM/chatglm2-6b"
 
 

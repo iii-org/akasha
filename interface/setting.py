@@ -57,7 +57,7 @@ def setting_page():
             st.experimental_rerun()
         
     with tpk:
-        topk = st.number_input("Top K", value=st.session_state.topK, min_value = 1, max_value = 10, step = 1,\
+        topk = st.number_input("Top K", value=st.session_state.topK, min_value = 1, max_value = 100, step = 1,\
             help="The number of top relevant chunks to be selected from documents.")
         if topk != st.session_state.topK:
             st.session_state.topK = topk

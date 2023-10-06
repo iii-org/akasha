@@ -98,8 +98,8 @@ if 'n_text' not in st.session_state:
 if 'openai_key' not in st.session_state:
     st.session_state.openai_key = ""
 
-if 'hugging_face_key' not in st.session_state:
-    st.session_state.hugging_face_key = ""
+# if 'hugging_face_key' not in st.session_state:
+#     st.session_state.hugging_face_key = ""
 
 if 'select_idx' not in st.session_state:
     st.session_state.select_idx = [0,0,0,0]
@@ -159,7 +159,7 @@ with st.sidebar:
                 })
     
     st.session_state.openai_key = st.text_input("OpenAI Key", type="password")
-    st.session_state.hugging_face_key = st.text_input("Hugging Face Key", type="password")
+    # st.session_state.hugging_face_key = st.text_input("Hugging Face Key", type="password")
     
     
     st.markdown('##')

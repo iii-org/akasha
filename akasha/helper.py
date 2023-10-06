@@ -102,7 +102,8 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     
 
     suffix_path = doc_path.split('/')[-2]
-    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embeddings_name.split(':')[0] + '_' + str(chunk_size) ) 
+    embed_type,embed_name = embeddings_name.split(':')
+    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embed_type + '_' + embed_name.replace('/','-') +'_' + str(chunk_size) ) 
 
     if chroma_docs_path.exists():
         return True
@@ -164,7 +165,8 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
     
     if doc_path[-1] != '/':
         doc_path += '/'
-    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embeddings_name.split(':')[0] + '_' + str(chunk_size)
+    embed_type, embed_name = embeddings_name.split(':')
+    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
 
 
     if _check_dir_exists(doc_path, embeddings_name, chunk_size):

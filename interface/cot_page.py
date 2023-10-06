@@ -38,7 +38,7 @@ def cot_page():
     st.title("Chain Of Thoughts")
     st.markdown('##')
     st.markdown('##')
-    
+    run_flag = True
     response_board, para_set = st.columns([2,1])
     
     
@@ -55,37 +55,53 @@ def cot_page():
                 st.session_state.prompt_list = []
                 st.session_state.response_list = []
                 st.session_state.n_text = 1
+                run_flag = True
                 st.experimental_rerun()
+                
         with sb3:
             if st.button("Submit", type="primary", use_container_width=True):
+                run_flag = True
+                if st.session_state.embed.split(":")[0] == "openai" or st.session_state.model.split(":")[0] == "openai":
+                    if st.session_state.openai_key != "": 
+                        os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
+                        
+                    else:
+
+                        run_flag = False
                 
-                if st.session_state.openai_key != "": 
-                    os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
+                if run_flag:
+                    # remove empty prompts
+                    new_prompts = []
+                    for p in prompts:
+                        if p.replace(' ','') != "":    
+                            new_prompts.append(p)
                     
-                if not isinstance(st.session_state.akasha_obj, akasha.Doc_QA):
-                    st.session_state.akasha_obj =  akasha.Doc_QA(embeddings=st.session_state.embed, chunk_size=st.session_state.chunksize, \
-                        model=st.session_state.model, search_type=st.session_state.search_type, topK=st.session_state.topK, threshold=st.session_state.threshold, \
-                        language='ch', verbose=True, record_exp="", max_token=st.session_state.max_token, \
-                        temperature=st.session_state.temperature)
+                        
+                    if not isinstance(st.session_state.akasha_obj, akasha.Doc_QA):
+                        st.session_state.akasha_obj =  akasha.Doc_QA(embeddings=st.session_state.embed, chunk_size=st.session_state.chunksize, \
+                            model=st.session_state.model, search_type=st.session_state.search_type, topK=st.session_state.topK, threshold=st.session_state.threshold, \
+                            language='ch', verbose=True, record_exp="", max_token=st.session_state.max_token, \
+                            temperature=st.session_state.temperature)
                     
-                ans = st.session_state.akasha_obj.chain_of_thought(st.session_state.chose_doc_path, prompts, embeddings=st.session_state.embed,\
-                    chunk_size=st.session_state.chunksize, model=st.session_state.model, topK=st.session_state.topK, \
-                    threshold=st.session_state.threshold, search_type=st.session_state.search_type,\
-                    system_prompt=st.session_state.sys_prompt, max_token=st.session_state.max_token, temperature=st.session_state.temperature)
-                
-                
-                
-                
-                st.session_state.prompt_list.extend(prompts)
-                st.session_state.response_list.extend(ans)
-                timesp = st.session_state.akasha_obj.timestamp_list[-1]
-                st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp] 
+                    ans = st.session_state.akasha_obj.chain_of_thought(st.session_state.chose_doc_path, new_prompts, embeddings=st.session_state.embed,\
+                        chunk_size=st.session_state.chunksize, model=st.session_state.model, topK=st.session_state.topK, \
+                        threshold=st.session_state.threshold, search_type=st.session_state.search_type,\
+                        system_prompt=st.session_state.sys_prompt, max_token=st.session_state.max_token, temperature=st.session_state.temperature)
+                    
+                    
+                    
+                    
+                    st.session_state.prompt_list.extend(new_prompts)
+                    st.session_state.response_list.extend(ans)
+                    timesp = st.session_state.akasha_obj.timestamp_list[-1]
+                    st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp] 
 
                 
                 
                 
     
-    
+    if not run_flag:
+        st.error("Please input your openAI api key.")
     with response_board:
         
         for i in range(len(st.session_state.response_list)):
