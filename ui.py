@@ -139,10 +139,7 @@ if 'logs' not in st.session_state:
     st.session_state.logs = {}
 
 if 'akasha_obj' not in st.session_state:
-    st.session_state.akasha_obj = akasha.Doc_QA(embeddings=st.session_state.embed, chunk_size=st.session_state.chunksize, \
-        model=st.session_state.model, search_type=st.session_state.search_type, topK=st.session_state.topK, threshold=st.session_state.threshold, \
-            language='ch', verbose=True, record_exp="", max_token=st.session_state.max_token, \
-            temperature=st.session_state.temperature)
+    st.session_state.akasha_obj = ""
 
 ################
 
