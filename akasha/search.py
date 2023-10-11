@@ -542,16 +542,17 @@ def rerank(query:str, docs:list, threshold:float, embed_name:str):
     import torch
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
     model_name = embed_name.split(":")[1]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    #model.eval()
+    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
+    model.eval()
     
     
     k,score_list = 0,[]
     while k < len(docs):
         pairs = [[query, doc.page_content] for doc in docs[k:k+500]]
         with torch.no_grad():
-            inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512,verbose=True)
+            inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512,verbose=True).to(device)
             scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
         if k==0:
             score_list = scores
@@ -569,9 +570,8 @@ def rerank(query:str, docs:list, threshold:float, embed_name:str):
     # Get the documents in the order of their scores, if lower than threshold, break    
     documents = []
     for i in sorted_indices_list:
-        if scores[i] < threshold:
+        if score_list[i] < threshold:
             break
         documents.append(docs[i])       
-    print(len(documents))
     return documents
         
