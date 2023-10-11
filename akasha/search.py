@@ -546,24 +546,32 @@ def rerank(query:str, docs:list, threshold:float, embed_name:str):
     model = AutoModelForSequenceClassification.from_pretrained(model_name)
     #model.eval()
     
-    pairs = [[query, doc.page_content] for doc in docs]
-    with torch.no_grad():
-        inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512,verbose=True)
-        scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
+    
+    k,score_list = 0,[]
+    while k < len(docs):
+        pairs = [[query, doc.page_content] for doc in docs[k:k+500]]
+        with torch.no_grad():
+            inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512,verbose=True)
+            scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
+        if k==0:
+            score_list = scores
+        else:
+            score_list = torch.cat([score_list,scores],dim=0) 
+        k+=500
+    
+    # Get the sorted indices in descending order
+    sorted_indices = torch.argsort(score_list, descending=True)
 
-        # Get the sorted indices in descending order
-        sorted_indices = torch.argsort(scores, descending=True)
-
-        # Convert the indices to a Python list
-        sorted_indices_list = sorted_indices.tolist()
+    # Convert the indices to a Python list
+    sorted_indices_list = sorted_indices.tolist()
 
     
     # Get the documents in the order of their scores, if lower than threshold, break    
-    docs = []
+    documents = []
     for i in sorted_indices_list:
         if scores[i] < threshold:
             break
-        docs.append(docs[i])       
-    
-    return docs
+        documents.append(docs[i])       
+    print(len(documents))
+    return documents
         
