@@ -165,11 +165,23 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
     
     if doc_path[-1] != '/':
         doc_path += '/'
-    embed_type, embed_name = embeddings_name.split(':')
+    embed_type, embed_name = _separate_name(embeddings_name)
     storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
 
-
-    if _check_dir_exists(doc_path, embeddings_name, chunk_size):
+    if isinstance(embeddings, str):
+        # Split the documents into sentences
+        documents = []
+        txt_extensions = ['pdf', 'md','docx','txt','csv','PDF','DOCX']
+        for extension in txt_extensions:
+            documents.extend(_load_files(doc_path, extension))
+        if len(documents) == 0 :
+            return None
+        text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap = 40)
+        docs = text_splitter.split_documents(documents)
+        texts = [doc for doc in docs]
+        return texts
+        
+    elif _check_dir_exists(doc_path, embeddings_name, chunk_size):
         info = "storage db already exist.\n"
         
 
@@ -252,7 +264,12 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
         embeddings = OpenAIEmbeddings(model = embedding_name)
         info = "selected openai embeddings.\n"
 
-    
+    elif embedding_type in ["rerank", "re"]:
+        if embedding_name == "":
+            embedding_name = "BAAI/bge-reranker-base"
+        
+        embeddings = "rerank:" + embedding_name
+        info = "selected rerank embeddings.\n"
     elif embedding_type in ["huggingface" , "huggingfaceembeddings","transformers", "transformer", "hf"]:
         from langchain.embeddings import HuggingFaceEmbeddings, SentenceTransformerEmbeddings
         embeddings = HuggingFaceEmbeddings(model_name = embedding_name)

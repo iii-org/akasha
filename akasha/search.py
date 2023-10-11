@@ -214,6 +214,11 @@ def get_docs(db, embeddings, query:str, topK:int, threshold:float, language:str,
     if callable(search_type):
         docs_cust = _get_relevant_doc_custom(db, embeddings, search_type, query, topK, threshold, log, model, compression, verbose)
         docs, tokens = _merge_docs([docs_cust], topK, language, verbose, max_token, model)    
+        
+    elif isinstance(embeddings, str):
+        docs = rerank(query, db, threshold, embeddings)
+        docs, tokens = _merge_docs([docs], topK, language, verbose, max_token, model)
+        
     else:
         search_type = search_type.lower()
     
@@ -525,3 +530,40 @@ class mySVMRetriever(BaseRetriever):
     ) -> List[Document]:
         
         return self._gs(query)
+    
+    
+    
+    
+    
+    
+    
+def rerank(query:str, docs:list, threshold:float, embed_name:str):
+    
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    model_name = embed_name.split(":")[1]
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name)
+    #model.eval()
+    
+    pairs = [[query, doc.page_content] for doc in docs]
+    with torch.no_grad():
+        inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512,verbose=True)
+        scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
+
+        # Get the sorted indices in descending order
+        sorted_indices = torch.argsort(scores, descending=True)
+
+        # Convert the indices to a Python list
+        sorted_indices_list = sorted_indices.tolist()
+
+    
+    # Get the documents in the order of their scores, if lower than threshold, break    
+    docs = []
+    for i in sorted_indices_list:
+        if scores[i] < threshold:
+            break
+        docs.append(docs[i])       
+    
+    return docs
+        
