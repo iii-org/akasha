@@ -163,7 +163,7 @@ class Model_Eval(akasha.atman):
         self.question_num = question_num
 
         ## check db ##
-        self.db = akasha.helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db = akasha.helper.create_chromadb(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         
@@ -185,10 +185,11 @@ class Model_Eval(akasha.atman):
         self.logs[timestamp]["choice_num"] = choice_num
         
         
-        db_data = self.db.get(include=['documents','metadatas'])
-        texts = db_data['documents']
-        metadata =  db_data['metadatas']
-        
+        # db_data = self.db.get(include=['documents','metadatas'])
+        # texts = db_data['documents']
+        # metadata =  db_data['metadatas']
+        texts = [doc.page_content for doc in self.db]
+        metadata = [doc.metadata for doc in self.db]
         
         progress = tqdm(total = question_num, desc=f"Create Q({self.question_type})")
         regenerate_limit = question_num
