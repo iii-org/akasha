@@ -224,6 +224,8 @@ akasha.get_response(dir_path, prompt, search_type="mmr")
 
 ## Some models you can use
 
+Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY,' and for most Hugging Face models, a GPU is required to run the models. However, for .gguf models, you can use a CPU to run them.
+
 ```python
 openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY"
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
@@ -250,11 +252,22 @@ chatglm_model = "chatglm:THUDM/chatglm2-6b"
 
 ## Some embeddings you can use
 
-```python
-openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"
-huggingface_emd = "hf:all-MiniLM-L6-v2" 
-text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"
+Please noted that each embedding model has different window size, texts that over the max seq length will be truncated and won't be represent
+in embedding model.
 
+Rerank_base and rerank_large are not embedding models; instead, they compare the query to each chunk of the documents and return scores that represent the similarity. As a result, they offer higher accuracy compared to embedding models but may be slower.
+
+```python
+openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"  # 8192 max seq length
+huggingface_emd = "hf:all-MiniLM-L6-v2" 
+text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"   # 128 max seq length 
+text2vec_mul_emd = "hf:shibing624/text2vec-base-multilingual"  # 256 max seq length
+text2vec_ch_para_emd = "hf:shibing624/text2vec-base-chinese-paraphrase" # perform better for long text, 256 max seq length
+bge_en_emd = "hf:BAAI/bge-base-en-v1.5"  # 512 max seq length
+bge_ch_emd = "hf:BAAI/bge-base-zh-v1.5"  # 512 max seq length
+
+rerank_base = "rerank:BAAI/bge-reranker-base"    # 512 max seq length
+rerank_large = "rerank:BAAI/bge-reranker-large"  # 512 max seq length
 
 ```
 
