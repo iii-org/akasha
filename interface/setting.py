@@ -1,5 +1,7 @@
 import streamlit as st
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
 
 def setting_page():
@@ -73,7 +75,7 @@ def setting_page():
     thre, tem, mxt = st.columns([1,1,1])
     
     with thre:
-        thres = st.number_input("Threshold",value= st.session_state.threshold , min_value=0.1, max_value=0.9, step=0.05,\
+        thres = st.number_input("Threshold",value= st.session_state.threshold , min_value=0.0, step=0.05,\
             help="The threshold used to select top relevant chunks.")
         if thres != st.session_state.threshold:
             st.session_state.threshold = thres
@@ -104,3 +106,63 @@ def set_model_dir():
             st.session_state.model_list.append("hf:" + st.session_state.mdl_dir + '/' + dir_path.name)    
         elif dir_path.suffix == ".gguf":
             st.session_state.model_list.append("llama-gpu:" + st.session_state.mdl_dir + '/' + dir_path.name)
+            
+
+def handle_api_key():
+    """The function try to setup OPENAI_API_KEY and OPENAI_API_BASE to environment variable. If user input both api key and base url, will use azure openai api;
+    on the orther hand, if user only input api key, will use openai api. At first it check if the user input the api key and base url, 
+    if not, it will check if the user has set the api key and base url in .env file.
+
+    Returns:
+        bool: True or False setup api key or not, if false, won't run the model and raise error to notify user to input api key. 
+    """
+    
+    run_flag = True
+    if "OPENAI_API_BASE" in os.environ:
+        del os.environ["OPENAI_API_BASE"]
+    if "OPENAI_API_KEY" in os.environ:
+        del os.environ["OPENAI_API_KEY"]
+    load_dotenv(Path().cwd()/'.env') 
+    api_token = os.environ.get("OPENAI_API_KEY")
+    
+    base_token = os.environ.get("OPENAI_API_BASE")
+    if st.session_state.embed.split(":")[0] == "openai" or st.session_state.model.split(":")[0] == "openai":
+        if st.session_state.openai_base.replace(' ','') != "" and st.session_state.openai_key.replace(' ','') != "":
+            os.environ["OPENAI_API_BASE"] = st.session_state.openai_base
+            os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
+            if "OPENAI_API_TYPE" not in os.environ:
+                os.environ["OPENAI_API_TYPE"] = "azure"
+            if "OPENAI_API_VERSION" not in os.environ:
+                os.environ["OPENAI_API_VERSION"] = "2023-05-15"
+        elif st.session_state.openai_key.replace(' ','') != "": 
+            
+            os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
+            if "OPENAI_API_BASE" in os.environ:
+                del os.environ["OPENAI_API_BASE"]
+            if "OPENAI_API_TYPE" in os.environ:
+                del os.environ["OPENAI_API_TYPE"]
+            if "OPENAI_API_VERSION" in os.environ:
+                del os.environ["OPENAI_API_VERSION"]
+            
+        elif api_token != None and base_token != None:
+            if "OPENAI_API_TYPE" not in os.environ:
+                os.environ["OPENAI_API_TYPE"] = "azure"
+            if "OPENAI_API_VERSION" not in os.environ:
+                os.environ["OPENAI_API_VERSION"] = "2023-05-15"
+            os.environ["OPENAI_API_BASE"] = base_token
+            os.environ["OPENAI_API_KEY"] = api_token
+            
+            
+        elif api_token != None:
+            os.environ["OPENAI_API_KEY"] = api_token
+            if "OPENAI_API_BASE" in os.environ:
+                del os.environ["OPENAI_API_BASE"]
+            if "OPENAI_API_TYPE" in os.environ:
+                del os.environ["OPENAI_API_TYPE"]
+            if "OPENAI_API_VERSION" in os.environ:
+                del os.environ["OPENAI_API_VERSION"]
+            
+        else:
+
+            run_flag = False
+    return run_flag

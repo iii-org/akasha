@@ -61,7 +61,9 @@ def download_json(file_name:str):
 
 ### variable ###
 if 'embed_list' not in st.session_state:
-    st.session_state.embed_list = ["openai:text-embedding-ada-002", "hf:shibing624/text2vec-base-chinese"]
+    st.session_state.embed_list = ["openai:text-embedding-ada-002", "hf:shibing624/text2vec-base-chinese", "hf:shibing624/text2vec-base-multilingual"\
+        ,"hf:shibing624/text2vec-base-chinese-paraphrase", "hf:BAAI/bge-base-en-v1.5", "hf:BAAI/bge-base-zh-v1.5",\
+        "rerank:BAAI/bge-reranker-base", "rerank:BAAI/bge-reranker-large"]
     
 if 'mdl_dir' not in st.session_state:
     st.session_state.mdl_dir = "model"
@@ -98,8 +100,8 @@ if 'n_text' not in st.session_state:
 if 'openai_key' not in st.session_state:
     st.session_state.openai_key = ""
 
-# if 'hugging_face_key' not in st.session_state:
-#     st.session_state.hugging_face_key = ""
+if 'openai_base' not in st.session_state:
+    st.session_state.openai_base = ""
 
 if 'select_idx' not in st.session_state:
     st.session_state.select_idx = [0,0,0,0]
@@ -156,7 +158,7 @@ with st.sidebar:
                 })
     
     st.session_state.openai_key = st.text_input("OpenAI Key", type="password")
-    # st.session_state.hugging_face_key = st.text_input("Hugging Face Key", type="password")
+    st.session_state.openai_base = st.text_input("OpenAI Base URL", type="password")
     
     
     st.markdown('##')

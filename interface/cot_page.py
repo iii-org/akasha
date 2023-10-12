@@ -2,6 +2,7 @@ import streamlit as st
 import akasha
 import sys
 import os
+from interface.setting import handle_api_key
 sys.path.append('../')
 
 
@@ -35,6 +36,12 @@ def get_prompts(add_b):
 def cot_page():
     """implement chain of thought ui
     """
+    
+    if 'prompt_list' not in st.session_state:
+        st.session_state.prompt_list = []
+    
+    
+    
     st.title("Chain Of Thoughts")
     st.markdown('##')
     st.markdown('##')
@@ -60,14 +67,7 @@ def cot_page():
                 
         with sb3:
             if st.button("Submit", type="primary", use_container_width=True):
-                run_flag = True
-                if st.session_state.embed.split(":")[0] == "openai" or st.session_state.model.split(":")[0] == "openai":
-                    if st.session_state.openai_key != "": 
-                        os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
-                        
-                    else:
-
-                        run_flag = False
+                run_flag = handle_api_key()
                 
                 if run_flag:
                     # remove empty prompts

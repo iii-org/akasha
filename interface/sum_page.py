@@ -3,6 +3,7 @@ import sys
 import akasha.summary as summary
 from pathlib import Path
 import datetime
+from interface.setting import handle_api_key
 import os
 sys.path.append('../')
 
@@ -10,6 +11,12 @@ sys.path.append('../')
 
 
 def summary_page():
+    
+    
+    if 'prompt_list' not in st.session_state:
+        st.session_state.prompt_list = []
+    
+    
     
     st.title("Summarize file")
     st.markdown('##')
@@ -36,13 +43,7 @@ def summary_page():
                 st.experimental_rerun()
         with sb2:
             if st.button("Submit", type="primary", use_container_width=True):
-                run_flag = True
-                if st.session_state.model.split(":")[0] == "openai":
-                    if st.session_state.openai_key != "": 
-                        os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
-                        
-                    else:
-                        run_flag = False
+                run_flag = handle_api_key()
                 
                 if run_flag:
                 

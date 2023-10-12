@@ -539,7 +539,7 @@ class mySVMRetriever(BaseRetriever):
     
 def rerank(query:str, docs:list, threshold:float, embed_name:str):
     
-    import torch
+    import torch, gc
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
     model_name = embed_name.split(":")[1]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -550,15 +550,16 @@ def rerank(query:str, docs:list, threshold:float, embed_name:str):
     
     k,score_list = 0,[]
     while k < len(docs):
-        pairs = [[query, doc.page_content] for doc in docs[k:k+500]]
+        pairs = [[query, doc.page_content] for doc in docs[k:k+10]]
         with torch.no_grad():
-            inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512,verbose=True).to(device)
+            inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512).to(device)
             scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
         if k==0:
             score_list = scores
         else:
             score_list = torch.cat([score_list,scores],dim=0) 
-        k+=500
+        k+=10
+ 
     
     # Get the sorted indices in descending order
     sorted_indices = torch.argsort(score_list, descending=True)
@@ -572,6 +573,10 @@ def rerank(query:str, docs:list, threshold:float, embed_name:str):
     for i in sorted_indices_list:
         if score_list[i] < threshold:
             break
-        documents.append(docs[i])       
+        documents.append(docs[i])  
+             
+    del model, inputs, tokenizer
+    gc.collect()
+    torch.cuda.empty_cache()
+    
     return documents
-        
