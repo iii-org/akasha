@@ -1,6 +1,8 @@
 # akasha
 
-Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents. With Akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
+Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
+
+With Akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
 
 
 <br/>
@@ -809,11 +811,20 @@ Options:
 
 ```
 
+<br/>
+<br/>
+<br/>
+<br/>
 
 
 # akasha_ui
 
-If you prefer running Akasha via a web page, we offer a Streamlit-based user interface. To get started, you can download the project and install it in the same directory as the setup.py script.
+If you prefer running Akasha via a web page, we offer a Streamlit-based user interface.
+
+<br/>
+
+To get started, you can download the project and install it in the same directory as the setup.py script.
+
 
 ```bash
 
@@ -823,7 +834,21 @@ $ python -m pip install .
 
 ```
 
-Next, install Streamlit and Streamlit-option-menu. Then, use Streamlit to run the ui.py script. You should now be able to access the web page at http://localhost:8501/.
+<br/>
+<br/>
+
+
+
+Next, install Streamlit and Streamlit-option-menu. Then, use Streamlit to run the ui.py script.
+
+<br/>
+
+You should now be able to access the web page at http://localhost:8501/.
+
+<br/>
+<br/>
+
+
 ```bash
 
 $ python -m pip install streamlit
@@ -835,7 +860,15 @@ $ streamlit run ui.py
 <br/>
 <br/>
 
-You can start by going to the **Settings page** to configure your settings. The first option, **Document Path** , specifies the directory where you want the LLM to search for documents. You can either add document files and name the directory from the **Upload Files** page or place the directory containing documents in the ./docs/ directory.
+You can start by going to the **Settings page** to configure your settings. 
+
+<br/>
+
+The first option, **Document Path** , specifies the directory where you want the LLM to search for documents.
+
+<br/>
+
+You can either add document files and name the directory from the **Upload Files** page or place the directory containing documents in the ./docs/ directory.
 
 
 ![image](pic/ui_setting.png)
@@ -845,7 +878,7 @@ You can start by going to the **Settings page** to configure your settings. The 
 <br/>
 <br/>
 
-You can download the models you want into model/ directory, and they will be added to **Langauage Model** option in the Setting page
+You can download the models you want into model/ directory, and they will be added to **Langauage Model** option in the Setting page.
 
 ![image](pic/ui_model.png)
 
@@ -857,6 +890,22 @@ The default setting is to use the OpenAI model and embeddings, so please remembe
 ![image](pic/ui_openai.png)
 
 
-After you have finished setting up, you can start using Akasha. For example, you can instruct the language model with a query like '五軸是什麼,' and you can include a system prompt to specify how you want the model to answer in Chinese. It's important to note that the difference between a prompt and a system prompt is that the system prompt is not used for searching similar documents; it's more about defining the format or type of response you expect from the language model for a given prompt question.
+<br/>
+<br/>
+
+After you have finished setting up, you can start using Akasha. 
+
+<br/>
+
+For example, you can instruct the language model with a query like '五軸是什麼,' and you can include a system prompt to specify how you want the model to answer in Chinese. 
+
+<br/>
+
+It's important to note that the difference between a prompt and a system prompt is that the system prompt is not used for searching similar documents; it's more about defining the format or type of response you expect from the language model for a given prompt question.
+
+
+<br/>
+<br/>
+
 
 ![image](pic/ui_5.png)
