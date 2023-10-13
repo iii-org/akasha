@@ -58,7 +58,7 @@ def _load_file(file_path, extension):
         print("Load",file_path,"failed, ignored.\n")
         return ""
 
-def _load_files(doc_path:str, extension:str="pdf")->list:
+def _load_files(doc_path:str, extension:str="pdf", vis:set = set())->list:
     """load text files of select extension into list of Documents
 
     Args:
@@ -78,7 +78,9 @@ def _load_files(doc_path:str, extension:str="pdf")->list:
     
         temp = _load_file(doc_path+loader, extension)
         if temp != "":
-            res.extend(temp)
+            if temp[0].metadata['source'] not in vis:
+                res.extend(temp)
+                
     return res
        
 
@@ -168,12 +170,13 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
     embed_type, embed_name = _separate_name(embeddings_name)
     storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
     db_exi = _check_dir_exists(doc_path, embeddings_name, chunk_size)
+    vis = set()
     if isinstance(embeddings, str):
         # Split the documents into sentences
         documents = []
-        txt_extensions = ['pdf', 'md','docx','txt','csv','PDF','DOCX']
+        txt_extensions = ['pdf', 'md','docx','txt','csv']
         for extension in txt_extensions:
-            documents.extend(_load_files(doc_path, extension))
+            documents.extend(_load_files(doc_path, extension, vis))
         if len(documents) == 0 :
             return None
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap = 40)
@@ -181,31 +184,32 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         texts = [doc for doc in docs]
         return texts
         
-    elif _check_dir_exists(doc_path, embeddings_name, chunk_size):
+    elif db_exi:
         info = "storage db already exist.\n"
-        # db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-        # mtda = db.get(include=['metadatas'])
-        # vis = set()
-        # for source in mtda['metadatas']:
-        #     vis.add(source['source'])
+        db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+        mtda = db.get(include=['metadatas'])
+        
+        for source in mtda['metadatas']:
+            vis.add(source['source'])
+        del db,mtda
+      
 
-
-    else:
+    
         
 
-        documents = []
-        txt_extensions = ['pdf', 'md','docx','txt','csv','PDF','DOCX']
-        for extension in txt_extensions:
-            documents.extend(_load_files(doc_path, extension))
-        
+    documents = []
+    txt_extensions = ['pdf', 'md','docx','txt','csv']
+    for extension in txt_extensions:
+        documents.extend(_load_files(doc_path, extension, vis))
+    
+    
+    
+    if len(documents) == 0 and not db_exi:
+        return None
+
+
+    if len(documents) != 0 :
         info = "\n\nload files:" +  str(len(documents)) + "\n\n" 
-        
-        if len(documents) == 0 :
-            return None
-
-
-        
-        
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
         k = 0
         cum_ids = 0
@@ -218,15 +222,23 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
             cur_doc = documents[k:k+interval]
             texts = text_splitter.split_documents(cur_doc)
             try :
-                if k==0:
-                    docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                if k==0 :
+                    if db_exi:
+                        docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+                        docsearch.add_documents(texts)
+                    else:
+                        docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
                     
                 else:
                     docsearch.add_documents(texts)
             except:
                 time.sleep( sleep_time )
                 if k==0:
-                    docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                    if db_exi:
+                        docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+                        docsearch.add_documents(texts)
+                    else:
+                        docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
                     
                 else:
                     docsearch.add_documents(texts)
