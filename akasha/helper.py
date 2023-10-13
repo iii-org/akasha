@@ -167,7 +167,7 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         doc_path += '/'
     embed_type, embed_name = _separate_name(embeddings_name)
     storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
-
+    db_exi = _check_dir_exists(doc_path, embeddings_name, chunk_size)
     if isinstance(embeddings, str):
         # Split the documents into sentences
         documents = []
@@ -183,7 +183,11 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         
     elif _check_dir_exists(doc_path, embeddings_name, chunk_size):
         info = "storage db already exist.\n"
-        
+        # db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+        # mtda = db.get(include=['metadatas'])
+        # vis = set()
+        # for source in mtda['metadatas']:
+        #     vis.add(source['source'])
 
 
     else:
@@ -261,11 +265,12 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     embedding_type, embedding_name = _separate_name(embedding_name)
 
     if embedding_type in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
-        
+        import openai
         if "OPENAI_API_BASE" in os.environ:
             embedding_name = embedding_name.replace(".","")
             embeddings = OpenAIEmbeddings(deployment=embedding_name)
         else:
+            openai.api_type = "open_ai"
             embeddings = OpenAIEmbeddings(deployment=embedding_name,model=embedding_name)
         info = "selected openai embeddings.\n"
 
@@ -313,10 +318,12 @@ def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     
     
     if model_type in ["openai" , "openaiembeddings"]:
+        import openai
         if "OPENAI_API_BASE" in os.environ:
             model_name = model_name.replace(".","")
             model = AzureChatOpenAI(deployment_name=model_name, temperature=temperature)
         else:
+            openai.api_type = "open_ai"
             model = ChatOpenAI(model=model_name, temperature = temperature)
         info = f"selected openai model {model_name}.\n"
 

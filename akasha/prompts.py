@@ -8,13 +8,20 @@ def format_llama_sys_prompt(system_prompt:str, prompt:str):
     if system_prompt == "":
         return "[INST] " + prompt + " [/INST]\n"
     return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n\n " + prompt + " [/INST]\n"
-    
-def format_sys_prompt(system_prompt:str, prompt:str, model_type:str="llama"):
+
+def format_GPT_sys_prompt(system_prompt:str, prompt:str):
+        
+    if system_prompt == "":
+        return  prompt + "\n"
+    return " [SYSTEM] " + system_prompt + "\n\n" + prompt + "\n"
+
+
+def format_sys_prompt(system_prompt:str, prompt:str, model_type:str="GPT"):
     
     if model_type == "llama":
         return format_llama_sys_prompt(system_prompt, prompt)
     
-    return format_llama_sys_prompt(system_prompt, prompt)
+    return format_GPT_sys_prompt(system_prompt, prompt)
 
 
 def format_question_query(question:list)->(str, str):
