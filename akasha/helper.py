@@ -11,7 +11,7 @@ from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
@@ -205,7 +205,7 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
         k = 0
         cum_ids = 0
-        interval = 5
+        interval = 3
         progress = tqdm(total = len(documents), desc="Vec Storage")
         while k < len(documents):
             
@@ -261,7 +261,12 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     embedding_type, embedding_name = _separate_name(embedding_name)
 
     if embedding_type in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
-        embeddings = OpenAIEmbeddings(model = embedding_name)
+        
+        if "OPENAI_API_BASE" in os.environ:
+            embedding_name = embedding_name.replace(".","")
+            embeddings = OpenAIEmbeddings(deployment=embedding_name)
+        else:
+            embeddings = OpenAIEmbeddings(deployment=embedding_name,model=embedding_name)
         info = "selected openai embeddings.\n"
 
     elif embedding_type in ["rerank", "re"]:
@@ -308,7 +313,11 @@ def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     
     
     if model_type in ["openai" , "openaiembeddings"]:
-        model = ChatOpenAI(model=model_name, temperature = temperature)
+        if "OPENAI_API_BASE" in os.environ:
+            model_name = model_name.replace(".","")
+            model = AzureChatOpenAI(deployment_name=model_name, temperature=temperature)
+        else:
+            model = ChatOpenAI(model=model_name, temperature = temperature)
         info = f"selected openai model {model_name}.\n"
 
     elif model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"] and model_name != "":

@@ -122,11 +122,18 @@ def handle_api_key():
         del os.environ["OPENAI_API_BASE"]
     if "OPENAI_API_KEY" in os.environ:
         del os.environ["OPENAI_API_KEY"]
+    if "OPENAI_API_TYPE" in os.environ:
+        del os.environ["OPENAI_API_TYPE"]
+    if "OPENAI_API_VERSION" in os.environ:
+        del os.environ["OPENAI_API_VERSION"]
+        
     load_dotenv(Path().cwd()/'.env') 
     api_token = os.environ.get("OPENAI_API_KEY")
     
     base_token = os.environ.get("OPENAI_API_BASE")
     if st.session_state.embed.split(":")[0] == "openai" or st.session_state.model.split(":")[0] == "openai":
+        st.session_state.akasha_obj = ""
+        
         if st.session_state.openai_base.replace(' ','') != "" and st.session_state.openai_key.replace(' ','') != "":
             os.environ["OPENAI_API_BASE"] = st.session_state.openai_base
             os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
