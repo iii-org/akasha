@@ -370,8 +370,8 @@ def handle_search_type(search_type:str, verbose:bool)->str:
     else:
         search_type_str = search_type
 
-    if verbose:
-        print("search type is :", search_type_str)
+    # if verbose:
+    #     print("search type is :", search_type_str)
 
     return search_type_str
 
