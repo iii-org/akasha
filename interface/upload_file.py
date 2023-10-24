@@ -17,26 +17,26 @@ def upload_page():
         submit_but = st.button("Submit", type="primary",use_container_width=True)
     if submit_but:
         if path_name in st.session_state.docs_list:
-            st.error("Path name already exist, please use another path name.")
-        
-        else:
-            # create path
-            if path_name[-1]!='/':
-                path_name = path_name + '/'
-            save_path = Path(st.session_state.docs_path, path_name)
-            # check if path exist
-            if not save_path.exists():
-                save_path.mkdir(parents=True)
-                st.session_state.docs_list.append(path_name[:-1])    
-            ### write file to doc folder ###
-            for uploaded_file in uploaded_files:
-                bytes_data = uploaded_file.read()
-                
-                with open(save_path.joinpath(uploaded_file.name), "wb") as f:
-                    f.write(bytes_data)
+            st.info(f"Path name already exist, add files to the path {path_name}.",icon="🔥")
+                            
+       
+        # create path
+        if path_name[-1]!='/':
+            path_name = path_name + '/'
+        save_path = Path(st.session_state.docs_path, path_name)
+        # check if path exist
+        if not save_path.exists():
+            save_path.mkdir(parents=True)
+            st.session_state.docs_list.append(path_name[:-1])    
+        ### write file to doc folder ###
+        for uploaded_file in uploaded_files:
+            bytes_data = uploaded_file.read()
+            
+            with open(save_path.joinpath(uploaded_file.name), "wb") as f:
+                f.write(bytes_data)
 
-                st.write("uploaded file:", uploaded_file.name)
+            st.write("uploaded file:", uploaded_file.name)
                 
-        if len(st.session_state.docs_list) > 0:
-            st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
+        # if len(st.session_state.docs_list) > 0:
+        #     st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
         print(st.session_state.docs_list)
