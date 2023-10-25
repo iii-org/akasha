@@ -221,27 +221,39 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
             progress.update(min(interval,len(documents)-k))
             cur_doc = documents[k:k+interval]
             texts = text_splitter.split_documents(cur_doc)
+
             try :
                 if k==0 :
                     if db_exi:
                         docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                        docsearch.add_documents(texts)
+                        if len(texts) != 0:
+                            docsearch.add_documents(texts)
                     else:
-                        docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        if len(texts) != 0:
+                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        else:
+                            docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
                     
                 else:
-                    docsearch.add_documents(texts)
+                    if len(texts) != 0:
+                        docsearch.add_documents(texts)
             except:
                 time.sleep( sleep_time )
                 if k==0:
                     if db_exi:
                         docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                        docsearch.add_documents(texts)
+                        if len(texts) != 0:
+                            docsearch.add_documents(texts)
                     else:
-                        docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        if len(texts) != 0:
+                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        else:
+                            docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+                    
                     
                 else:
-                    docsearch.add_documents(texts)
+                    if len(texts) != 0:
+                        docsearch.add_documents(texts)
                     
             k += interval
             cum_ids += len(texts)
@@ -251,6 +263,11 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         progress.close()
     
     db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+    temp_docs = db.get(include=['documents'])['documents'] 
+    if len(temp_docs) == 0:
+
+        return None
+    
     if verbose:
         print(info)
     

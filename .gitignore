@@ -55,3 +55,4 @@ eva.json
 model/chinese-alpaca-2-7b.Q5_K_S.gguf
 model/chinese-alpaca-2-13b.Q5_K_M.gguf
 .coverage
+akasha_ui_1_5.tar
