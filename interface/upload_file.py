@@ -39,4 +39,4 @@ def upload_page():
                 
         # if len(st.session_state.docs_list) > 0:
         #     st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
-        print(st.session_state.docs_list)
+        
