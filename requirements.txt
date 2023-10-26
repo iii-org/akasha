@@ -16,6 +16,6 @@ docx2txt==0.8
 rouge==1.0.1
 rouge-chinese==1.0.3
 bert-score==0.3.13
-opencc
+opencc==1.1.6
 click
 tokenizers==0.13.3
