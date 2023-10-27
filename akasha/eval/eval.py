@@ -8,7 +8,7 @@ import numpy as np
 import torch,gc
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
-from typing import Callable, Union, Tuple
+from typing import Callable, Union, Tuple, List
 
 
 
@@ -127,7 +127,7 @@ class Model_Eval(akasha.atman):
         
         
         
-    def auto_create_questionset(self, doc_path:str, question_num:int = 10, choice_num:int = 4, **kwargs)->(list,list):
+    def auto_create_questionset(self, doc_path:Union[List[str],str], question_num:int = 10, choice_num:int = 4, **kwargs)->(list,list):
         """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory, 
     then use llm model to generate a question and answer pair, and save it into a txt file.
     1.The format of "single_choice" questionset should be one line one question, and the possibles answers and questions are separate by tab(\t),
@@ -163,7 +163,8 @@ class Model_Eval(akasha.atman):
         self.question_num = question_num
 
         ## check db ##
-        self.db = akasha.helper.create_chromadb(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
+        
+        self.db = akasha.helper.processMultiDB(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         
@@ -264,7 +265,10 @@ class Model_Eval(akasha.atman):
         if not os.path.exists("questionset"):
             os.makedirs("questionset")
         count = 1
-        suf_path = doc_path.split('/')[-2]
+        if isinstance(doc_path, list):
+            suf_path = doc_path[0].split('/')[-2]
+        else:
+            suf_path = doc_path.split('/')[-2]
         for filename in os.listdir("questionset"):
             if suf_path in filename:
                 count += 1
@@ -294,7 +298,7 @@ class Model_Eval(akasha.atman):
     
     
     
-    def auto_evaluation(self, questionset_file:str, doc_path:str, eval_model:str="openai:gpt-3.5-turbo", **kwargs)\
+    def auto_evaluation(self, questionset_file:str, doc_path:Union[List[str],str], eval_model:str="openai:gpt-3.5-turbo", **kwargs)\
     ->Union[Tuple[float,float,float,int] , Tuple[float,int]]:
         """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response, 
     evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score 
@@ -320,7 +324,7 @@ class Model_Eval(akasha.atman):
             self.system_prompt =  self.system_prompt + " 用中文回答 "
             
         ## check db ##
-        self.db = akasha.helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db = akasha.helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         
@@ -446,8 +450,8 @@ class Model_Eval(akasha.atman):
         
         
         
-    def optimum_combination(self,questionset_flie:str, doc_path:str, embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
-                    , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], search_type_list:list = ['svm','tfidf','mmr'],\
+    def optimum_combination(self,questionset_flie:str, doc_path:Union[List[str],str], embeddings_list:list = ["openai:text-embedding-ada-002"], chunk_size_list:list=[500]\
+                    , model_list:list = ["openai:gpt-3.5-turbo"], topK_list:list = [2], search_type_list:list = ['svm','tfidf','mmr'], **kwargs\
                         )->(list,list):
         """test all combinations of giving lists, and run auto_evaluation to find parameters of the best result.
 
@@ -464,6 +468,8 @@ class Model_Eval(akasha.atman):
         Returns:
             (list,list): return best score combination and best cost-effective combination
         """
+        
+        self._change_variables(**kwargs)
         start_time = time.time()
         combinations = akasha.helper.get_all_combine(embeddings_list, chunk_size_list, model_list, topK_list, search_type_list)
         progress = tqdm(len(combinations),total = len(combinations), desc="RUN LLM COMBINATION")

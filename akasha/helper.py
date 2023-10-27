@@ -3,6 +3,7 @@ import datetime
 import numpy as np
 import jieba
 import json
+from typing import Union, List
 from tqdm import tqdm
 from pathlib import Path
 import opencc
@@ -135,6 +136,57 @@ def _separate_name(name:str):
 
 
 
+def processMultiDB(doc_path_list: Union[List[str], str], verbose:bool, embeddings:vars, embeddings_name:str, chunk_size:int):
+    
+    ## if doc_path_list is a str, juest call create_chromadb function ##
+    if isinstance(doc_path_list, str):
+        return create_chromadb(doc_path_list, verbose, embeddings, embeddings_name, chunk_size)
+    
+    if len(doc_path_list) == 0:
+        return None
+    
+    ## if using rerank, extend all the documents into one list ## 
+    if isinstance(embeddings, str):
+        texts = []
+        for doc_path in doc_path_list:
+            temp = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size)
+            if temp is not None:
+                texts.extend(temp)
+        if len(texts) == 0:
+            return None
+        return texts
+
+    
+    ## if not using rerank, create chromadb for each doc_path and merge them ##
+    dbs = Chroma(embedding_function=embeddings)
+    for doc_path in doc_path_list:
+    
+       
+        db2 = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size)
+
+        
+        if db2 is None:
+            continue
+        else:
+            db2_data=db2.get(include=['documents','metadatas','embeddings'])
+            dbs._collection.add(
+                embeddings=db2_data['embeddings'],
+                metadatas=db2_data['metadatas'],
+                documents=db2_data['documents'],
+                ids=db2_data['ids']
+            )
+        
+    ## check if dbs has any document ##
+    temp_docs = dbs.get(include=['documents'])['documents'] 
+    if len(temp_docs) == 0:
+
+        return None
+    
+    
+    #print("create dbs",dbs.get(include=['metadatas'])['metadatas'])
+    return dbs
+
+
 def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
                     sleep_time:int = 60) -> vars:
     """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
@@ -182,6 +234,8 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap = 40)
         docs = text_splitter.split_documents(documents)
         texts = [doc for doc in docs]
+        if len(texts) == 0:
+            return None
         return texts
         
     elif db_exi:
@@ -221,27 +275,39 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
             progress.update(min(interval,len(documents)-k))
             cur_doc = documents[k:k+interval]
             texts = text_splitter.split_documents(cur_doc)
+
             try :
                 if k==0 :
                     if db_exi:
                         docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                        docsearch.add_documents(texts)
+                        if len(texts) != 0:
+                            docsearch.add_documents(texts)
                     else:
-                        docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        if len(texts) != 0:
+                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        else:
+                            docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
                     
                 else:
-                    docsearch.add_documents(texts)
+                    if len(texts) != 0:
+                        docsearch.add_documents(texts)
             except:
                 time.sleep( sleep_time )
                 if k==0:
                     if db_exi:
                         docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                        docsearch.add_documents(texts)
+                        if len(texts) != 0:
+                            docsearch.add_documents(texts)
                     else:
-                        docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        if len(texts) != 0:
+                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                        else:
+                            docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+                    
                     
                 else:
-                    docsearch.add_documents(texts)
+                    if len(texts) != 0:
+                        docsearch.add_documents(texts)
                     
             k += interval
             cum_ids += len(texts)
@@ -251,6 +317,11 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
         progress.close()
     
     db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+    temp_docs = db.get(include=['documents'])['documents'] 
+    if len(temp_docs) == 0:
+
+        return None
+    
     if verbose:
         print(info)
     
