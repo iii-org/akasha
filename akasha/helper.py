@@ -10,7 +10,7 @@ import opencc
 from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import Chroma,chroma
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model
@@ -275,39 +275,41 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
             progress.update(min(interval,len(documents)-k))
             cur_doc = documents[k:k+interval]
             texts = text_splitter.split_documents(cur_doc)
-
+            formatted_date = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S_%f")
             try :
                 if k==0 :
                     if db_exi:
                         docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
                         if len(texts) != 0:
-                            docsearch.add_documents(texts)
+                            docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
                     else:
                         if len(texts) != 0:
-                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory,\
+                                ids = [formatted_date +'_' + str(i) for i in range(len(texts))]) 
                         else:
                             docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
                     
                 else:
                     if len(texts) != 0:
-                        docsearch.add_documents(texts)
+                        docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
             except:
                 time.sleep( sleep_time )
                 if k==0:
                     if db_exi:
                         docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
                         if len(texts) != 0:
-                            docsearch.add_documents(texts)
+                            docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
                     else:
                         if len(texts) != 0:
-                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
+                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory,\
+                                ids = [formatted_date +'_' + str(i) for i in range(len(texts))]) 
                         else:
                             docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
                     
                     
                 else:
                     if len(texts) != 0:
-                        docsearch.add_documents(texts)
+                        docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
                     
             k += interval
             cum_ids += len(texts)
