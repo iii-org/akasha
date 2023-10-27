@@ -665,3 +665,12 @@ def get_non_repeat_rand_int(vis:set, num:int):
         vis.add(temp)
         return temp
     return get_non_repeat_rand_int(vis, num)
+
+
+
+def get_text_md5(text):
+    import hashlib
+    md5_hash = hashlib.md5(text.encode()).hexdigest()
+    
+    return md5_hash
+
