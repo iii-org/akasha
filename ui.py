@@ -69,6 +69,7 @@ if 'mdl_dir' not in st.session_state:
     st.session_state.mdl_dir = "model"
     
 if 'model_list' not in st.session_state:
+
     set_model_dir()
     # st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k","hf:model/Llama2-Chinese-13b-Chat-4bit",\
     #     "hf:model/Llama2-Chinese-7b-Chat", "llama-cpu:model/llama-2-13b-chat-hf.Q5_K_S.gguf",\
@@ -104,7 +105,7 @@ if 'openai_base' not in st.session_state:
     st.session_state.openai_base = ""
 
 if 'select_idx' not in st.session_state:
-    st.session_state.select_idx = [0,0,0,0]
+    st.session_state.select_idx = [['mic'],0,0,0]
 
 
 ### function argument ###

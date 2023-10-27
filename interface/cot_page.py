@@ -94,7 +94,9 @@ def cot_page():
                     st.session_state.prompt_list.extend(new_prompts)
                     st.session_state.response_list.extend(ans)
                     timesp = st.session_state.akasha_obj.timestamp_list[-1]
-                    st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp] 
+                    if timesp in st.session_state.akasha_obj.logs:
+                        st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp]  
+                     
 
                 
                 
