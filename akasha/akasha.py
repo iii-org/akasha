@@ -1,9 +1,9 @@
 import pathlib
 import time
 from tqdm import tqdm
-from typing import Callable, Union
+from typing import Callable, Union, List
 from langchain.chains.question_answering import load_qa_chain, LLMChain
-from langchain import PromptTemplate
+from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 import akasha.helper as helper
 import akasha.search as search
@@ -171,7 +171,7 @@ class atman():
             _type_: _description_
         """
         if self.db is None:
-            info = "document path not exist\n"
+            info = "document path not exist or don't have any file.\n"
             print(info)
             return False
         else:
@@ -329,7 +329,7 @@ class Doc_QA(atman):
     
     
     
-    def get_response(self,doc_path:str, prompt:str, **kwargs)->str:
+    def get_response(self,doc_path:Union[List[str],str], prompt:str, **kwargs)->str:
         """input the documents directory path and question, will first store the documents
     into vectors db (chromadb), then search similar documents based on the prompt question.
     llm model will use these documents to generate the response of the question.
@@ -347,7 +347,8 @@ class Doc_QA(atman):
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
-        self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        #self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db = helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
@@ -401,7 +402,7 @@ class Doc_QA(atman):
         
         return self.response
         
-    def chain_of_thought(self, doc_path:str, prompt_list:list, **kwargs)->list:
+    def chain_of_thought(self, doc_path:Union[List[str],str], prompt_list:list, **kwargs)->list:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -426,7 +427,7 @@ class Doc_QA(atman):
 
         self.doc_path = doc_path
         table = {}
-        self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db = helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
