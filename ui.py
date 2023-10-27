@@ -111,7 +111,13 @@ if 'select_idx' not in st.session_state:
 ### function argument ###
 if 'chose_doc_path' not in st.session_state:
     if len(st.session_state.docs_list) > 0:
-        st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
+        if len(st.session_state.select_idx[0]) > 0 :
+            st.session_state.chose_doc_path = []
+            for dc in st.session_state.select_idx[0]:
+                st.session_state.chose_doc_path.append(st.session_state.docs_path + '/'  + dc)
+        else:
+            st.session_state.chose_doc_path = st.session_state.docs_path + '/'  + st.session_state.docs_list[0]
+            st.session_state.select_idx[0] = [st.session_state.docs_list[0]]
     else:
         st.info("Please upload your documents first.",icon="🚨")
 
