@@ -399,7 +399,7 @@ class Doc_QA(atman):
             table = format.handle_table(prompt, self.docs, self.response)
             aiido_upload(self.record_exp, params, metrics, table)
         
-        
+        del self.db
         return self.response
         
     def chain_of_thought(self, doc_path:Union[List[str],str], prompt_list:list, **kwargs)->list:
@@ -495,5 +495,5 @@ class Doc_QA(atman):
             metrics = format.handle_metrics(self.doc_length, end_time - start_time, self.doc_tokens)
             aiido_upload(self.record_exp, params, metrics, table)
         
-        
+        del self.db
         return self.response

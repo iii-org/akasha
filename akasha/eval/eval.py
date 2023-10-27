@@ -292,7 +292,7 @@ class Model_Eval(akasha.atman):
         self.logs[timestamp]["questionset_path"] = file_name
         
             
-        
+        del self.db
         return self.question, self.answer
     
     
@@ -435,6 +435,7 @@ class Model_Eval(akasha.atman):
                 metrics['avg_rouge'] = avg_rouge
                 metrics['avg_llm_score'] = avg_llm_score
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
+            del self.db
             return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
         
         else:
@@ -445,6 +446,7 @@ class Model_Eval(akasha.atman):
                 metrics = akasha.format.handle_metrics(self.doc_length, end_time - start_time, self.doc_tokens)
                 metrics['correct_rate'] = self.score["correct_count"]/self.question_num
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
+            del self.db
             return self.logs[timestamp]["correct_rate"] , self.doc_tokens
         
         
