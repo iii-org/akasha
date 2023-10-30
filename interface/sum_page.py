@@ -69,7 +69,8 @@ def summary_page():
                         st.session_state.response_list.append(ans)
                         timesp = st.session_state.akasha_obj.timestamp_list[-1]
                         if timesp in st.session_state.akasha_obj.logs:
-                            st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp]    
+                            st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp]  
+                       
                         Path(file_date+file_name).unlink()
                     else:
                         st.error("Please upload a file.")

@@ -58,7 +58,7 @@ def response_page():
                     timesp = st.session_state.akasha_obj.timestamp_list[-1]
                     if timesp in st.session_state.akasha_obj.logs:
                         st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp]  
-    
+                    
     if not run_flag:
         st.error("Please input your openAI api key.")
     with response_board:

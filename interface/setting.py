@@ -23,17 +23,25 @@ def setting_page():
     #     </style>
     #     """
     # st.markdown(custom_css, unsafe_allow_html=True)
-    
-    set_model_dir()
+    if 'model_list' not in st.session_state:
+        set_model_dir()
+        
     dp, em, md = st.columns([1,2,2])
     with dp:
-        doc_path = st.selectbox("Document Path", st.session_state.docs_list, index=st.session_state.select_idx[0], help="The path of the document folder.")
-        if doc_path != None:
-            st.session_state.select_idx[0] = st.session_state.docs_list.index(doc_path)   
-        try:
-            st.session_state.chose_doc_path = st.session_state.docs_path + '/' + doc_path
-        except:
-            pass
+        
+        #doc_path = st.selectbox("Document Path", st.session_state.docs_list, index=st.session_state.select_idx[0], help="The path of the document folder.")
+        doc_path = st.multiselect("Document Path", st.session_state.docs_list, default=st.session_state.select_idx[0],\
+            help="The path of the document folder.")
+        
+        if doc_path != None and doc_path != st.session_state.select_idx[0]:
+            #st.session_state.select_idx[0] = st.session_state.docs_list.index(doc_path) 
+            st.session_state.select_idx[0] = doc_path
+            try:
+                st.session_state.chose_doc_path = [st.session_state.docs_path + '/' + doc_p for doc_p in st.session_state.select_idx[0]]
+            except:
+                pass
+            st.experimental_rerun()
+        print(st.session_state.chose_doc_path)
     with em:
         embed = st.selectbox("Embedding Model", st.session_state.embed_list, index=st.session_state.select_idx[1],\
             help="The embedding model used to embed documents.")
@@ -41,6 +49,7 @@ def setting_page():
         if embed != st.session_state.embed:
             st.session_state.embed = embed
             st.session_state.select_idx[1] = st.session_state.embed_list.index(st.session_state.embed)
+            
             st.experimental_rerun()
     with md:
         md = st.selectbox("Language Model", st.session_state.model_list, index=st.session_state.select_idx[2], \
@@ -99,15 +108,18 @@ def setting_page():
 def set_model_dir():
     """parse all model files(gguf) and directory in the model folder 
     """
+    
     st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"]
-    modes_dir = Path(st.session_state.mdl_dir)
-    for dir_path in modes_dir.iterdir():
-        if dir_path.is_dir():
-            st.session_state.model_list.append("hf:" + st.session_state.mdl_dir + '/' + dir_path.name)    
-        elif dir_path.suffix == ".gguf":
-            st.session_state.model_list.append("llama-gpu:" + st.session_state.mdl_dir + '/' + dir_path.name)
+    try:
+        modes_dir = Path(st.session_state.mdl_dir)
+        for dir_path in modes_dir.iterdir():
+            if dir_path.is_dir():
+                st.session_state.model_list.append("hf:" + st.session_state.mdl_dir + '/' + dir_path.name)    
+            elif dir_path.suffix == ".gguf":
+                st.session_state.model_list.append("llama-gpu:" + st.session_state.mdl_dir + '/' + dir_path.name)
+    except:
+        print("can not find model folder!\n\n")
             
-
 def handle_api_key():
     """The function try to setup OPENAI_API_KEY and OPENAI_API_BASE to environment variable. If user input both api key and base url, will use azure openai api;
     on the orther hand, if user only input api key, will use openai api. At first it check if the user input the api key and base url, 
