@@ -1,0 +1,12 @@
+cookie:
+  expiry_days: 30
+  key: random_signature_key
+  name: random_cookie_name
+credentials:
+  usernames:
+    ccchang:
+      email: ccchang@iii.org.tw
+      name: ccchang
+      password: $2b$12$TYbzkptTsD.sJcClBQ3S0ex7BSd2Odbi.1SZMgiC66p8tnkMR2RLO
+preauthorized:
+  emails: []
