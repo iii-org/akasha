@@ -3,6 +3,7 @@ import time
 from tqdm import tqdm
 import akasha
 import akasha.eval as eval
+import akasha.db
 import os
 import numpy as np
 import torch,gc
@@ -164,7 +165,7 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         
-        self.db = akasha.helper.processMultiDB(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
+        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         
@@ -292,7 +293,8 @@ class Model_Eval(akasha.atman):
         self.logs[timestamp]["questionset_path"] = file_name
         
             
-        
+        del self.db
+        akasha.helper.del_path('./chromadb')
         return self.question, self.answer
     
     
@@ -324,7 +326,7 @@ class Model_Eval(akasha.atman):
             self.system_prompt =  self.system_prompt + " 用中文回答 "
             
         ## check db ##
-        self.db = akasha.helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         
@@ -435,6 +437,8 @@ class Model_Eval(akasha.atman):
                 metrics['avg_rouge'] = avg_rouge
                 metrics['avg_llm_score'] = avg_llm_score
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
+            del self.db
+            akasha.helper.del_path('./chromadb')
             return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
         
         else:
@@ -445,6 +449,8 @@ class Model_Eval(akasha.atman):
                 metrics = akasha.format.handle_metrics(self.doc_length, end_time - start_time, self.doc_tokens)
                 metrics['correct_rate'] = self.score["correct_count"]/self.question_num
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
+            del self.db
+            akasha.helper.del_path('./chromadb')
             return self.logs[timestamp]["correct_rate"] , self.doc_tokens
         
         

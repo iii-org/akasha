@@ -9,6 +9,7 @@ import akasha.helper as helper
 import akasha.search as search
 import akasha.format as format
 import akasha.prompts as prompts
+import akasha.db
 import datetime
 from dotenv import load_dotenv
 
@@ -348,7 +349,7 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         self.doc_path = doc_path
         #self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
-        self.db = helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
@@ -399,7 +400,8 @@ class Doc_QA(atman):
             table = format.handle_table(prompt, self.docs, self.response)
             aiido_upload(self.record_exp, params, metrics, table)
         
-        
+        del self.db
+        helper.del_path('./chromadb')
         return self.response
         
     def chain_of_thought(self, doc_path:Union[List[str],str], prompt_list:list, **kwargs)->list:
@@ -427,7 +429,7 @@ class Doc_QA(atman):
 
         self.doc_path = doc_path
         table = {}
-        self.db = helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
@@ -495,5 +497,6 @@ class Doc_QA(atman):
             metrics = format.handle_metrics(self.doc_length, end_time - start_time, self.doc_tokens)
             aiido_upload(self.record_exp, params, metrics, table)
         
-        
+        del self.db
+        helper.del_path('./chromadb')
         return self.response
