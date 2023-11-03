@@ -12,8 +12,8 @@ import shutil
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
-def del_path(path):
-    tag = "temp_c&r@md&"
+def del_path(path, tag = "temp_c&r@md&"):
+    
     p = Path(path)
     for file in p.glob("*"):
         if tag in file.name:

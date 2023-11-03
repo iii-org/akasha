@@ -304,7 +304,7 @@ class Doc_QA(atman):
     def __init__(self, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
         language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
-        system_prompt:str = "", max_token:int=3000, temperature:float=0.0, compression:bool=False):
+        system_prompt:str = "", max_token:int=3000, temperature:float=0.0, compression:bool=False, use_chroma:bool=False):
         
         super().__init__(chunk_size, model, verbose, topK, threshold,\
         language , search_type, record_exp, system_prompt, max_token, temperature)
@@ -312,7 +312,7 @@ class Doc_QA(atman):
         self.doc_path = ""
         self.embeddings = embeddings
         self.compression = compression
-        
+        self.use_chroma = use_chroma
 
         ### set variables ###
         self.logs = {}
@@ -349,7 +349,11 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         self.doc_path = doc_path
         #self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
-        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        if self.use_chroma:
+            self.db, db_path_names = akasha.db.get_db_from_chromadb(self.doc_path, self.embeddings)
+        else:
+            self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
@@ -401,7 +405,6 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
         
         del self.db
-        helper.del_path('./chromadb')
         return self.response
         
     def chain_of_thought(self, doc_path:Union[List[str],str], prompt_list:list, **kwargs)->list:
@@ -429,12 +432,16 @@ class Doc_QA(atman):
 
         self.doc_path = doc_path
         table = {}
-        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        if self.use_chroma:
+            self.db, db_path_names = akasha.db.get_db_from_chromadb(self.doc_path, self.embeddings)
+        else:
+            self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
         if not self._check_db():
-            return ""
+            return []
         
         
         self._add_basic_log(timestamp, "chain_of_thought")
@@ -498,5 +505,4 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
         
         del self.db
-        helper.del_path('./chromadb')
         return self.response
