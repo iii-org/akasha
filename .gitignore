@@ -49,9 +49,12 @@ model/llama-2-13b-chat-hf.Q5_K_S.gguf
 
 docs/plant/风车菊.pdf
 docs/plant/石珀.pdf
-
+config/
 summarization/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.txt
 eva.json
 model/chinese-alpaca-2-7b.Q5_K_S.gguf
 model/chinese-alpaca-2-13b.Q5_K_M.gguf
 .coverage
+test_st.py
+dataset.json
+expert.json
