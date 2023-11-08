@@ -365,8 +365,12 @@ def get_db_from_chromadb(db_path_list:list, embedding_name:str):
 def create_single_file_db(file_path:str, embeddings_name:str, chunk_size:int, sleep_time:int = 60):
     
     try:
-        doc_path = '/'.join(file_path.split('/')[:-1])
-        file_name = file_path.split('/')[-1]
+        if isinstance(file_path,Path):
+            doc_path = str(file_path.parent).replace('\\','/')
+            file_name = file_path.name
+        else:    
+            doc_path = '/'.join(file_path.split('/')[:-1])
+            file_name = file_path.split('/')[-1]
     except:
         return False, "file path error.\n\n"
     

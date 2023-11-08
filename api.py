@@ -9,10 +9,18 @@ import os
 import json
 import streamlit_utils as stu
 app = FastAPI()
+
 DATASET_CONFIG_PATH = "./config/dataset/"
 DOCS_PATH = './docs'
-
-
+EXPERT_CONFIG_PATH = './config/expert'
+DEFAULT_CONFIG = {'language_model':"openai:gpt-3.5-turbo",
+            'search_type': "svm",
+            'top_k': 5,
+            'threshold': 0.1,
+            'max_token': 3000,
+            'temperature':0.0,
+            'use_compression':0, # 0 for False, 1 for True
+            'compression_language_model':"openai:gpt-3.5-turbo"}
 ### data class ###
 
 class ConsultModel(BaseModel):
@@ -39,7 +47,17 @@ class UserID(BaseModel):
     owner: str
 class DatasetID(UserID):
     dataset_name: str
-    
+class ExpertID(UserID):
+    expert_name: str
+
+
+class DatasetShare(DatasetID):
+    shared_users: List[str]
+
+class DatasetShareDelete(DatasetID):
+    delete_users: List[str]
+
+
 class DatasetInfo(DatasetID):
     dataset_description: Optional[str] = ""
 
@@ -50,6 +68,31 @@ class EditDatasetInfo(DatasetInfo):
     upload_files: Optional[List[str]] = []
     delete_files: Optional[List[str]] = []
 
+
+
+class ExpertInfo(ExpertID):
+    embedding_model: Optional[str] = "openai:text-embedding-ada-002"
+    chunk_size: Optional[int] = 1000
+    datasets: Optional[List[Dict]] = []
+    
+
+class ExpertEditInfo(ExpertInfo):
+    new_expert_name: str
+    new_embedding_model: Optional[str] = "openai:text-embedding-ada-002"
+    new_chunk_size: Optional[int] = 1000
+    add_datasets: Optional[List[Dict]]
+    delete_datasets: Optional[List[Dict]]
+
+
+class ExpertConsult(ExpertID):
+    language_model : Optional[str] = "openai:gpt-3.5-turbo",
+    search_type: Optional[str] = "svm",
+    top_k: Optional[int] = 5,
+    threshold: Optional[float] = 0.1,
+    max_token: Optional[int] = 3000,
+    temperature: Optional[float] = 0.0,
+    use_compression: Optional[int] = 0, # 0 for False, 1 for True
+    compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
 
 
 @app.post("/regular_consult")
@@ -238,7 +281,79 @@ async def delete_dataset(user_input:DatasetID):
     ## delete Path(DATASET_CONFIG_PATH) / (uid+'.json') file
     os.remove(data_path)
 
+    ##stu.check_and_delete_dataset(dataset_name, owner)
     return {'status': 'success', 'response': f'delete dataset {dataset_name} successfully.\n\n'}
+
+
+
+
+@app.post("/dataset/share")
+async def share_dataset(user_input:DatasetShare):
+    owner = user_input.owner
+    dataset_name = user_input.dataset_name
+    shared_users = user_input.shared_users
+    
+    if not stu.check_config(DATASET_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    uid = akasha.helper.get_text_md5(dataset_name + '-' + owner)
+    data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
+    
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        
+    if 'shared_users' not in data.keys():
+        data['shared_users'] = []
+    
+    ### add shared users into data['shared_users']
+    vis = set(data['shared_users'])
+    for user in shared_users:
+        vis.add(user)
+        
+    data['shared_users'] = list(vis)
+    
+    with open(data_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    
+    return {'status': 'success', 'response': f'share dataset {dataset_name} successfully.\n\n'}
+
+
+
+@app.post("/dataset/delete_share")
+async def delete_share_dataset(user_input:DatasetShare):
+    owner = user_input.owner
+    dataset_name = user_input.dataset_name
+    delete_users = user_input.delete_users
+    
+    if not stu.check_config(DATASET_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    uid = akasha.helper.get_text_md5(dataset_name + '-' + owner)
+    data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
+    
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        
+    if 'shared_users' not in data.keys() or len(data['shared_users']) == 0:
+        data['shared_users'] = []
+        return {'status': 'fail', 'response': 'dataset not shared to any user.\n\n'}
+    
+    ### add shared users into data['shared_users']
+    vis = set(data['shared_users'])
+    for user in delete_users:
+        if user in vis:
+            vis.remove(user)
+        
+    data['shared_users'] = list(vis)
+    
+    with open(data_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    
+    return {'status': 'success', 'response': f'edit shared users {dataset_name} successfully.\n\n'}
 
 
 
@@ -309,7 +424,7 @@ async def get_MD5_list_from_dataset(user_input:DatasetID):
 
 
 @app.get("/dataset/get_filename")
-async def get_MD5_list_from_dataset(user_input:DatasetID):
+async def get_filename_list_from_dataset(user_input:DatasetID):
     """input the current user id and dataset name, return the dataset's all file's file name(list)
 
     Args:
@@ -422,4 +537,352 @@ async def get_use_dataset_list(user_input:UserID):
         elif 'shared_users' in dataset.keys() and owner in dataset['shared_users']:
             dataset_names.append({'dataset_name':dataset['name'], 'owner':dataset['owner']})
     return {'status': 'success', 'response': dataset_names}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@app.get("/expert/show")
+async def get_info_of_expert(user_input:ExpertID):
+    """input the current user id and dataset name, return the expert info(dict)
+
+    Args:
+        user_input (ExpertID): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    owner = user_input.owner
+    expert_name = user_input.expert_name
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    
+    uid = akasha.helper.get_text_md5(expert_name + '-' + owner)
+    data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': 'dataset not found.\n\n'}
+    
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    return {'status': 'success', 'response': data}   
+
+
+
+
+
+@app.get("/expert/get_owner")
+async def get_owner_expert_list(user_input:UserID):
+    """input current user id, return all expert name and its owner name that current user has(list of dict)
+
+    Args:
+        user_input (UserID): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    owner = user_input.owner
+    expert_names = []
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    ## get all dataset name
+    p = Path(EXPERT_CONFIG_PATH)
+    for file in p.glob("*"):
+        with open(file, 'r', encoding='utf-8') as file:
+            expert = json.load(file)
+        if expert['owner'] == owner:
+            expert_names.append({'dataset_name':expert['name'], 'owner':expert['owner']})
+       
+    return {'status': 'success', 'response': expert_names}
+
+
+
+
+@app.get("/expert/get")
+async def get_use_expert_list(user_input:UserID):
+    """input current user id, return all expert name and its owner name that current user can use(list of dict)
+
+    Args:
+        user_input (UserID): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    owner = user_input.owner
+    expert_names = []
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    ## get all dataset name
+    p = Path(EXPERT_CONFIG_PATH)
+    for file in p.glob("*"):
+        with open(file, 'r', encoding='utf-8') as file:
+            expert = json.load(file)
+        if expert['owner'] == owner:
+            expert_names.append({'dataset_name':expert['name'], 'owner':expert['owner']})
+        elif 'shared_users' in expert.keys() and owner in expert['shared_users']:
+            expert_names.append({'dataset_name':expert['name'], 'owner':expert['owner']})
+    return {'status': 'success', 'response': expert_names}
+
+
+
+@app.get("/expert/get_consult")
+async def get_consult_from_expert(user_input:ExpertID):
+    
+    owner = user_input.owner
+    expert_name = user_input.expert_name
+    
+    
+    
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    
+    uid = akasha.helper.get_text_md5(expert_name + '-' + owner)
+    data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
+    
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    if 'consultation' not in data.keys():
+        data['consultation'] = {}
+        
+    for key in DEFAULT_CONFIG.keys():
+        if key not in data['consultation'] or data['consultation'][key] == "":
+            data['consultation'][key] = DEFAULT_CONFIG[key]
+    
+    return {'status': 'success', 'response': data['consultation']}   
+
+
+
+
+
+
+
+@app.post("/expert/save_consult")
+async def save_consult_to_expert(user_input:ExpertConsult):
+    
+    owner = user_input.owner
+    expert_name = user_input.expert_name
+    
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    
+    uid = akasha.helper.get_text_md5(expert_name + '-' + owner)
+    data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
+    
+    
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        
+        
+    consult_info = user_input.dict()
+    consult_info.pop('owner')
+    consult_info.pop('expert_name')
+    data['consultation'] = consult_info
+    
+    with open(data_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+    return {'status': 'success', 'response': 'save consultation successfully.\n\n'}
+
+
+
+
+
+
+
+
+@app.post("/expert/create")
+async def create_expert(user_input:ExpertInfo):
+    
+    expert_name = user_input.expert_name
+    embedding_model = user_input.embedding_model
+    chunk_size = user_input.chunk_size
+    datasets = user_input.datasets
+    owner = user_input.owner
+    
+    uid = akasha.helper.get_text_md5(expert_name + '-' + owner)
+    warning = []
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+
+    save_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
+    
+    ## create chromadb for each file
+    for dataset in datasets:
+        doc_path = DOCS_PATH + '/' + dataset['name']
+        for file in dataset['files']:
+            file_path = doc_path  + '/' + file
+            
+            suc, text = akasha.db.create_single_file_db(file_path , embedding_model, chunk_size,)            
+            if not suc:
+                
+                warning.append(f'create chromadb for {file_path} failed, {text}.\n\n')
+    
+    ## create dict and save to json file
+    data = {
+        "uid": uid,
+        "name": expert_name,
+        "embedding_model": embedding_model,
+        "chunk_size": chunk_size,
+        "owner": owner,
+        "datasets": datasets,   
+        "consultation": DEFAULT_CONFIG 
+    }
+    
+    ## write json file
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    
+    
+    return {'status': 'success', 'response': f'create expert {expert_name} successfully.\n\n', 'warning': warning}
+
+
+
+
+
+@app.post("/expert/update")
+async def update_expert(user_input:ExpertEditInfo):
+    
+    owner = user_input.owner
+    expert_name = user_input.expert_name
+    new_expert_name = user_input.new_expert_name
+    embedding_model = user_input.embedding_model
+    chunk_size = user_input.chunk_size
+    delete_datasets = user_input.delete_datasets
+    new_embedding_model = user_input.new_embedding_model
+    new_chunk_size = user_input.new_chunk_size
+    add_datasets = user_input.add_datasets
+    
+    warning = []
+    uid = akasha.helper.get_text_md5(expert_name + '-' + owner)
+    
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
+
+    
+    with open(data_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    ## delete Path(DATASET_CONFIG_PATH) / (uid+'.json') file
+    os.remove(data_path)    
+    
+    if expert_name != new_expert_name:
+        ### edit config name
+        uid = akasha.helper.get_text_md5(new_expert_name + '-' + owner)
+        if (Path(EXPERT_CONFIG_PATH) / (uid+'.json')) .exists():
+            return {'status': 'fail', 'response': 'new expert name already exists.\n\n'}
+        data['name'] = new_expert_name
+        data['uid'] = uid
+        expert_name = new_expert_name
+        
+    
+    if new_embedding_model == data['embedding_model'] and new_chunk_size == data['chunk_size']:
+        
+        ### check chromadb that need to delete
+        for dataset in delete_datasets:
+            oner = dataset['owner']
+            dataset_name = dataset['name']
+            id = akasha.helper.get_text_md5(dataset_name + '-' + oner)
+            for file in dataset['files']:
+                stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+        
+        
+        ## create chromadb for each new file
+        for dataset in add_datasets:
+            doc_path = DOCS_PATH + '/' + dataset['name']
+            for file in dataset['files']:
+                file_path = doc_path  + '/' + file
+                
+                suc, text = akasha.db.create_single_file_db(file_path , data['embedding_model'], data['chunk_size'],)            
+                if not suc:
+                    warning.append(f'create chromadb for {file_path} failed, {text}.\n\n')
+    
+    
+                  
+    else:
+        ### check all delete all chromadb
+        for dataset in data['datasets']:
+            oner = dataset['owner']
+            dataset_name = dataset['name']
+            id = akasha.helper.get_text_md5(dataset_name + '-' + oner)
+            for file in dataset['files']:
+                stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+    
+    
+    if len(delete_datasets) > 0 :
+        data['datasets'] = stu.delete_datasets_from_expert(data['datasets'], delete_datasets)
+    if len(add_datasets) > 0 :
+        data['datasets'] = stu.add_datasets_to_expert(data['datasets'], add_datasets)
+    
+    
+    if new_embedding_model != data['embedding_model'] or new_chunk_size != data['chunk_size']:
+        
+        data['embedding_model'] = new_embedding_model
+        data['chunk_size'] = new_chunk_size
+        
+        ## create chromadb for each new file
+        for dataset in data['datasets']:
+            doc_path = DOCS_PATH + '/' + dataset['name']
+            for file in dataset['files']:
+                file_path = doc_path  + '/' + file
+                
+                suc, text = akasha.db.create_single_file_db(file_path , data['embedding_model'], data['chunk_size'],)            
+                if not suc:
+                    warning.append(f'create chromadb for {file_path} failed, {text}.\n\n')
+        
+        
+    save_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
+    
+    ## write json file
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+    return {'status': 'success', 'response': f'update expert {expert_name} successfully.\n\n', 'warning': warning}
+
+
+
+
+@app.post("/expert/delete")
+async def delete_expert(user_input:ExpertID):
+    owner = user_input.owner
+    expert_name = user_input.expert_name
+    
+    if not stu.check_config(EXPERT_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+    
+    uid = akasha.helper.get_text_md5(expert_name + '-' + owner)
+    data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
+    if not data_path.exists():
+        return {'status': 'fail', 'response': f'expert config file {expert_name} not found.\n\n'}
+    ## delete Path(DATASET_CONFIG_PATH) / (uid+'.json') file
+    os.remove(data_path)
+
+    return {'status': 'success', 'response': f'delete expert {expert_name} successfully.\n\n'}
+
+
 

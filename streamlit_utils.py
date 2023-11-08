@@ -3,6 +3,7 @@ from pathlib import Path
 import streamlit as st
 import requests
 import os
+import shutil
 import time
 import json
 
@@ -15,6 +16,31 @@ api_url = {
 }
 DOCS_PATH = './docs'
 CONFIG_PATH = './config'
+EXPERT_CONFIG_PATH = './config/expert'
+DATASET_CONFIG_PATH = "./config/dataset/"
+
+def _separate_name(name:str):
+    """ separate type:name by ':'
+
+    Args:
+        **name (str)**: string with format "type:name" \n 
+
+    Returns:
+        (str, str): res_type , res_name
+    """
+    sep = name.split(':')
+    if len(sep) != 2:
+        ### if the format type not equal to type:name ###
+        res_type = sep[0].lower()
+        res_name = ''
+    else:
+        res_type = sep[0].lower()
+        res_name = sep[1]
+
+    return res_type, res_name
+
+
+
 
 
 
@@ -216,3 +242,104 @@ def get_lastupdate_of_dataset(dataset_name):
 
 
 
+def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str, dataset_name:str, owner:str, id:str):
+    """check if any of other expert use the same file with same chunk size and embedding model, if not, delete the chromadb file
+
+    Args:
+        chunk_size (int): _description_
+        embedding_model (str): _description_
+        filename (str): _description_
+        dataset_name (str): _description_
+        owner (str): _description_
+        id (str): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    embed_type, embed_name = _separate_name(embedding_model)
+    
+    p = Path(EXPERT_CONFIG_PATH)
+    if not p.exists():
+        return False
+    
+    for file in p.glob("*"):
+        with open(file, 'r', encoding='utf-8') as ff:
+            expert = json.load(ff)
+            
+        if expert['chunk_size'] == chunk_size and expert['embedding_model'] == embedding_model:
+            for dataset in expert['datasets']:
+                if dataset['name'] == dataset_name and dataset['owner'] == owner:
+                    if filename in dataset['files']:     
+                        return True
+    
+    ## not find, delete
+    
+    # get MD5 of file
+    md5 = id
+    target_path = Path(DATASET_CONFIG_PATH) / (id+'.json')
+    if target_path.exists():
+        with open(target_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        for file in data['files']:
+            if file['filename'] == filename:
+                md5 = file['MD5']
+                break
+    
+    db_storage_path = './chromadb/' + dataset_name + '_' + md5 + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
+    print(db_storage_path)
+    if Path(db_storage_path).exists():
+        shutil.rmtree(Path(db_storage_path))
+
+    return False
+
+
+
+
+def delete_datasets_from_expert(ori_datasets:list, delete_datasets:list):
+    """from ori_datasets remove files in delete_datasets
+
+    Args:
+        ori_datasets (dict): _description_
+        delete_datasets (dict): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    delete_hash = {(dataset['owner'], dataset['name']):dataset['files'] for dataset in delete_datasets}
+    
+    
+    for dataset in ori_datasets:
+        if (dataset['owner'], dataset['name']) in delete_hash:
+            for file in delete_hash[(dataset['owner'], dataset['name'])]:
+                if file in dataset['files']:
+                    dataset['files'].remove(file)
+                    
+    
+    return ori_datasets
+
+
+def add_datasets_to_expert(ori_datasets:list, add_datasets:list):
+    
+    append_hash = {(dataset['owner'], dataset['name']):dataset['files'] for dataset in ori_datasets}
+    
+    
+    for dataset in add_datasets:
+        if (dataset['owner'], dataset['name']) in append_hash:
+            for file in dataset['files']:
+                if file not in append_hash[(dataset['owner'], dataset['name'])]:
+                    append_hash[(dataset['owner'], dataset['name'])].append(file)
+        else:
+            append_hash[(dataset['owner'], dataset['name'])] = dataset['files']
+            
+    ori_datasets = []
+    
+    ## rebuild ori_datasets
+    for key in append_hash:
+        ori_datasets.append({
+            'owner':key[0],
+            'name':key[1],
+            'files':append_hash[key]
+        })
+                    
+    return ori_datasets
