@@ -13,6 +13,7 @@ app = FastAPI()
 DATASET_CONFIG_PATH = "./config/dataset/"
 DOCS_PATH = './docs'
 EXPERT_CONFIG_PATH = './config/expert'
+OPENAI_CONFIG_PATH = "./config/openai.json"
 DEFAULT_CONFIG = {'language_model':"openai:gpt-3.5-turbo",
             'search_type': "svm",
             'top_k': 5,
@@ -35,7 +36,7 @@ class ConsultModel(BaseModel):
     max_token:Optional[int]=3000
     temperature:Optional[float]=0.0
     use_chroma:Optional[bool]=True
-
+    openai_config:Optional[Dict[str, Any]] = {}
 
 class ConsultModelReturn(BaseModel):
     response: Union[str, List[str]]
@@ -95,10 +96,20 @@ class ExpertConsult(ExpertID):
     compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
 
 
+class OpenAIKey(BaseModel):
+    openai_key: Optional[str] = ""
+    azure_key: Optional[str] = ""
+    azure_base: Optional[str] = ""
+    
+
+
+
 @app.post("/regular_consult")
 async def regular_consult(user_input: ConsultModel):
     
-    print(DATASET_CONFIG_PATH)  
+    if not stu.load_openai(openai_config=user_input.openai_config):
+        return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
+     
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
         , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
@@ -124,7 +135,10 @@ async def regular_consult(user_input: ConsultModel):
 @app.post("/deep_consult")
 async def deep_consult(user_input: ConsultModel):
     
-    print(user_input)
+    if not stu.load_openai(openai_config=user_input.openai_config):
+        return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
+    
+    
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
         , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
@@ -160,13 +174,16 @@ async def create_dataset(user_input:DatasetInfo):
     
 
     save_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
-    doc_path = Path(DOCS_PATH) / dataset_name
+    own_path = Path(DOCS_PATH) / owner
+    if not stu.check_dir(own_path):
+        return {'status': 'fail', 'response': 'create document path failed.\n\n'}
+    doc_path = (own_path / dataset_name)
     
     ## list all files path in doc_path and get their md5 hash
     file_paths = list(doc_path.glob('*'))
     md5_list = []
     for file_path in file_paths:
-        file_doc = akasha.db._load_file(file_path, file_path.name.split('.')[-1])
+        file_doc = akasha.db._load_file(file_path.__str__(), file_path.name.split('.')[-1])
         if file_doc == ""  or len(file_doc) == 0:
             md5_hash = ""
         else:
@@ -182,7 +199,7 @@ async def create_dataset(user_input:DatasetInfo):
         "description": dataset_description,
         "owner": owner,
         "files": [{"filename":file_paths[i].name,"MD5":md5_list[i] } for i in range(len(file_paths))],   
-        "last_update": stu.get_lastupdate_of_dataset(dataset_name) 
+        "last_update": stu.get_lastupdate_of_dataset(dataset_name, owner) 
     }
     
     ## write json file
@@ -226,7 +243,10 @@ async def update_dataset(user_input:EditDatasetInfo):
         
         
     save_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
-    doc_path = Path(DOCS_PATH) / dataset_name
+    own_path = Path(DOCS_PATH) / owner
+    if not stu.check_dir(own_path):
+        return {'status': 'fail', 'response': 'create document path failed.\n\n'}
+    doc_path = own_path / dataset_name
     new_files = []
     ### remove delete_files config from data['files']
     
@@ -250,7 +270,7 @@ async def update_dataset(user_input:EditDatasetInfo):
     ## update dict and save to json file
     data['files'] = new_files
     data['description'] = dataset_description
-    data['last_update'] = stu.get_lastupdate_of_dataset(dataset_name)
+    data['last_update'] = stu.get_lastupdate_of_dataset(dataset_name, owner)
     
     
     ## write json file
@@ -280,8 +300,9 @@ async def delete_dataset(user_input:DatasetID):
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
     ## delete Path(DATASET_CONFIG_PATH) / (uid+'.json') file
     os.remove(data_path)
-
-    ##stu.check_and_delete_dataset(dataset_name, owner)
+    
+    ## delete this dataset in every expert's dataset list
+    stu.check_and_delete_dataset(dataset_name, owner)
     return {'status': 'success', 'response': f'delete dataset {dataset_name} successfully.\n\n'}
 
 
@@ -730,7 +751,7 @@ async def create_expert(user_input:ExpertInfo):
     
     ## create chromadb for each file
     for dataset in datasets:
-        doc_path = DOCS_PATH + '/' + dataset['name']
+        doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset['name']
         for file in dataset['files']:
             file_path = doc_path  + '/' + file
             
@@ -814,7 +835,7 @@ async def update_expert(user_input:ExpertEditInfo):
         
         ## create chromadb for each new file
         for dataset in add_datasets:
-            doc_path = DOCS_PATH + '/' + dataset['name']
+            doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset['name']
             for file in dataset['files']:
                 file_path = doc_path  + '/' + file
                 
@@ -847,7 +868,7 @@ async def update_expert(user_input:ExpertEditInfo):
         
         ## create chromadb for each new file
         for dataset in data['datasets']:
-            doc_path = DOCS_PATH + '/' + dataset['name']
+            doc_path = DOCS_PATH + '/' + owner + '/' + dataset['name']
             for file in dataset['files']:
                 file_path = doc_path  + '/' + file
                 
@@ -886,3 +907,81 @@ async def delete_expert(user_input:ExpertID):
 
 
 
+
+
+@app.post("/openai/save")
+async def save_openai_key(user_input:OpenAIKey):
+    """save openai key into config file
+
+    Args:
+        user_input (_type_, optional): _description_.
+    """
+    
+    if not stu.check_config(""):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+
+    save_path = Path(OPENAI_CONFIG_PATH)
+    if save_path.exists():
+        with open(save_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+    else :
+        data = {}
+        
+    flag = False
+    if user_input.openai_key.replace(' ','') != "":
+        data['openai_key'] = user_input.openai_key.replace(' ','')
+        flag = True
+    if user_input.azure_base.replace(' ','') != "" and user_input.azure_key.replace(' ','') != "":
+        flag = True        
+        data['azure_key'] = user_input.azure_key.replace(' ','')
+        data['azure_base'] = user_input.azure_base.replace(' ','')
+    
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    
+    if not flag:
+        return {'status': 'fail', 'response': 'can not save any openai configuration.\n\n'}
+    return {'status': 'success', 'response': 'save openai key successfully.\n\n'}
+    
+
+
+
+@app.get("/openai/test_openai")
+async def test_openai_key(user_input:OpenAIKey):
+    import openai
+    openai_key = user_input.openai_key.replace(' ','')
+    if openai_key != "":
+        openai.api_type = "open_ai"
+        openai.api_key = openai_key
+        try:
+            openai.Model.list()
+        except openai.error.AuthenticationError as e:
+            return {'status': 'fail', 'response': 'openai key is invalid.\n\n'}
+        else:
+            return {'status': 'success', 'response': 'openai key is valid.\n\n'}
+        
+    return {'status': 'fail', 'response': 'openai key empty.\n\n'}
+
+
+
+
+@app.get("/openai/test_azure")
+async def test_azure_key(user_input:OpenAIKey):
+    import openai
+    azure_key = user_input.azure_key.replace(' ','')
+    azure_base = user_input.azure_base.replace(' ','')
+    if azure_key != "" and azure_base != "":
+        openai.api_type = "azure"
+        openai.api_base = azure_base
+        openai.api_version = "2023-05-15"
+        openai.api_key = azure_key
+
+        try:
+            openai.Model.list()
+        except openai.error.AuthenticationError as e:
+            return {'status': 'fail', 'response': 'azure openai key is invalid.\n\n'}
+        else:
+            return {'status': 'success', 'response': 'azure openai key is valid.\n\n'}
+        
+    return {'status': 'fail', 'response': 'azure openai key or base url is empty.\n\n'}
