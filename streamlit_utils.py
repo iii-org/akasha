@@ -48,7 +48,22 @@ def _separate_name(name:str):
 
 
 
-def create_dataset(dataset_name, dataset_description, uploaded_files, owner:str):
+def create_dataset(dataset_name:str, dataset_description:str, uploaded_files:vars, owner:str):
+    """create doc files in DOC_PATH/{owner}/{dataset_name} , and call api to create dataset config.
+
+    Args:
+        dataset_name (str): dataset name
+        dataset_description (str): dataset description
+        uploaded_files (vars): bytes uploaded files
+        owner (str): owner name
+
+    Raises:
+        Exception: _description_
+        Exception: _description_
+        Exception: _description_
+        Exception: _description_
+        Exception: _description_
+    """
     # validate inputs
     suc_count = 0
     
@@ -109,16 +124,38 @@ def create_dataset(dataset_name, dataset_description, uploaded_files, owner:str)
 
 
 
-def edit_dataset(dataset_name, new_dataset_name, new_description, uploaded_files, delete_file_set, owner:str):
+def edit_dataset(dataset_name:str, new_dataset_name:str, new_description:str, uploaded_files:vars, delete_file_set:set, owner:str):
+    """doing files and directory edition for update dataset.
+     1. check if DOCS_PATH exist or create it
+     2. check if owner directory exist or create it
+     3. check if new dataset name is already exist
+     4. check if old dataset name is exist
+     5. rename old dataset name if we use new dataset name
+     6. delete files in delete_file_set from local path={new_dataset_name}
+     7. check files and save uploaded files to local path={new_dataset_name}
+     8. collect params and call api to update dataset config, related chromadbs. 
+     
+
+    Args:
+        dataset_name (str): old dataset name
+        new_dataset_name (str): new dataset name
+        new_description (str): new dataset description
+        uploaded_files (vars): byte uploaded files
+        delete_file_set (set): filename that need to be deleted
+        owner (str): owner name
+
+    Raises:
+        Exception: can not create DOCS_PATH directory
+        Exception: can not create owner directory in DOCS_PATH
+        Exception: new dataset name is already exist or old dataset name is not exist
+        Exception: Dataset={dataset_name} is not exist
+        Exception: api response status is not success
+    """
     # validate inputs
         
     # save uploaded files to local path={new_dataset_name}
     # delete files in delete_file_set from local path={new_dataset_name}
     
-    # update vector db
-    ## remove vector db with name is in [delete_file_set]
-    ## add vector db with name is in [uploaded_file_list]
-    ### NOT_FINISHED ###
 
     try:
         if not check_dir(DOCS_PATH):
@@ -189,8 +226,21 @@ def edit_dataset(dataset_name, new_dataset_name, new_description, uploaded_files
     
     return 
 
-def delete_dataset(dataset_name, owner:str):
-    # validate inputs
+
+
+def delete_dataset(dataset_name:str, owner:str):
+    """delete doc files in DOC_PATH/{owner}/{dataset_name} , and call api to delete dataset config, related chromadbs.
+
+    Args:
+        dataset_name (str): dataset name
+        owner (str): owner name
+
+    Raises:
+        Exception: can not create DOCS_PATH directory
+        Exception: can not create owner directory in DOCS_PATH
+        Exception: Dataset={dataset_name} is not exist
+        Exception: api response status is not success
+    """
     try:
         if not check_dir(DOCS_PATH):
             raise Exception(f'can not create {DOCS_PATH} directory')
@@ -239,10 +289,10 @@ def check_config(path:str)-> bool:
     also check sub directory exist(path), if not, create it.
 
     Args:
-        path (str): _description_
+        path (str): sub directory path
 
     Returns:
-        _type_: _description_
+        bool: check and create success or not
     """
     try:
         config_p = Path(CONFIG_PATH)
@@ -259,14 +309,14 @@ def check_config(path:str)-> bool:
     return True
 
 
-def get_file_list_of_dataset(docs_path:str):
+def get_file_list_of_dataset(docs_path:str)->list:
     """get all file names in a dataset
 
     Args:
         docs_path (str): _description_
 
     Returns:
-        _type_: _description_
+        list[str]: list of file names
     """
     if not Path(docs_path).exists():
         return []
@@ -276,22 +326,22 @@ def get_file_list_of_dataset(docs_path:str):
 
 
 
-def get_lastupdate_of_file_in_dataset(docs_path, file_name)->float:
+def get_lastupdate_of_file_in_dataset(docs_path:str, file_name:str)->float:
     """get the last update time of a file in dataset
 
     Args:
-        docs_path (_type_): docs directory path
-        file_name (_type_): file path
+        docs_path (str): docs directory path
+        file_name (str): file path
 
     Returns:
-        _type_: _description_
+        (float): float number of last update time
     """
     file_path = os.path.join(docs_path, file_name)
     last_update = os.path.getmtime(file_path)
     return last_update
 
 
-def get_lastupdate_of_dataset(dataset_name:str, owner:str):
+def get_lastupdate_of_dataset(dataset_name:str, owner:str)->str:
     """get the last update time of each file in dataset, and find out the lastest one
 
     Args:
@@ -299,16 +349,16 @@ def get_lastupdate_of_dataset(dataset_name:str, owner:str):
         owner (str): owner name
 
     Raises:
-        Exception: _description_
-        Exception: _description_
+        Exception: cano find DOCS_PATH directory and can not create it.
+        Exception: can not create owner directory in DOCS_PATH
 
     Returns:
-        _type_: _description_
+        (str): return "" if no file in dataset, else return the last update time of the latest file in str format
     """
     last_updates = []
     
     if not check_dir(DOCS_PATH):
-            raise Exception(f'can not create {DOCS_PATH} directory')
+        raise Exception(f'can not create {DOCS_PATH} directory')
         
     owner_path = Path(DOCS_PATH) / owner
         
@@ -320,19 +370,91 @@ def get_lastupdate_of_dataset(dataset_name:str, owner:str):
     for file in dataset_files:
         last_updates.append(get_lastupdate_of_file_in_dataset(docs_path, file))
         
-    if len(last_updates) == 0:
-        return 0
+    if len(last_updates) == 0 or Exception:
+        return ""
     
     return time.ctime(max(last_updates))
 
 
+
+
+
+def update_dataset_name_from_chromadb(old_dataset_name:str, dataset_name:str, md5_list:list):
+    """change dataset name in chromadb file, in chromadn directory, change directory name of {old_dataset_name}_md5 to {dataset_name}_md5
+
+    Args:
+        old_dataset_name (str): _description_
+        dataset_name (str): _description_
+        md5_list (list):
+    """
+    
+    for md5 in md5_list:
+        p = Path("./chromadb/")
+        tag = old_dataset_name + '_' + md5
+        for file in p.glob("*"):
+            if tag in file.name:
+                new_name = dataset_name + '_' + md5 + '_' + '_'.join(file.name.split('_')[2:])
+                file.rename(Path('./chromadb/') / new_name)
+    return
+
+
+
+
+def check_and_delete_files_from_expert(dataset_name:str, owner:str, delete_files:list, old_dataset_name:str)->bool:
+    """check every expert if they use this dataset, if yes, delete files that are in delete_files from expert's dataset list.
+    change dataset name to new dataset name if dataset_name != old_dataset_name.
+        if the expert has no dataset after deletion, delete the expert file.
+
+    Args:
+        dataset_name (str): dataset name
+        owner (str): owner name
+        delete_files (list): list of file names that delete from dataset
+
+    Returns:
+        bool: delete any file from expert or not
+    """
+    p = Path(EXPERT_CONFIG_PATH)
+    if not p.exists():
+        return False
+    flag = False
+    delete_set = set(delete_files)
+    for file in p.glob("*"):
+        with open(file, 'r', encoding='utf-8') as ff:
+            expert = json.load(ff)
+        for dataset in expert['datasets']:
+            if dataset['name'] == old_dataset_name and dataset['owner'] == owner:
+                dataset['name'] = dataset_name
+                for file in dataset['files']:
+                    if file in delete_set:
+                        dataset['files'].remove(file)
+                        flag = True
+                if len(dataset['files']) == 0:
+                    ## delete dataset if no file in dataset
+                    expert['datasets'].remove(dataset)
+                break
+        if len(expert['datasets']) == 0:
+            ## delete file if no dataset in expert
+            res = requests.post(api_url['delete_expert'], json = {'owner':expert['owner'], 'expert_name':expert['name']}).json()
+        else:        
+            with open(file, 'w', encoding='utf-8') as f:
+                json.dump(expert, f, ensure_ascii=False, indent=4)
+
+    if flag:
+        return True
+                    
+    return False
+    
+    
+    
+    
+    
 def check_and_delete_dataset(dataset_name:str, owner:str)->bool:
     """check every expert if they use this dataset, if yes, delete this dataset from expert's dataset list.
         if the expert has no dataset after deletion, delete the expert file.
 
     Args:
-        dataset_name (str): _description_
-        owner (str): _description_
+        dataset_name (str): dataset name
+        owner (str): owner of dataset
     """
     p = Path(EXPERT_CONFIG_PATH)
     if not p.exists():
@@ -344,16 +466,15 @@ def check_and_delete_dataset(dataset_name:str, owner:str)->bool:
         for dataset in expert['datasets']:
             if dataset['name'] == dataset_name and dataset['owner'] == owner:
                 expert['datasets'].remove(dataset)
-                if len(expert['datasets']) == 0:
-                    ## delete file if no dataset in expert
-                    res = requests.post(api_url['delete_expert'], json = {'owner':expert['owner'], 'expert_name':expert['name']}).json()
-                else:
-                    with open(file, 'w', encoding='utf-8') as f:
-                        json.dump(expert, f, ensure_ascii=False, indent=4)
                 flag = True
-                
-                    
                 break
+        if len(expert['datasets']) == 0:
+            ## delete file if no dataset in expert
+            res = requests.post(api_url['delete_expert'], json = {'owner':expert['owner'], 'expert_name':expert['name']}).json()
+        else:
+            with open(file, 'w', encoding='utf-8') as f:
+                json.dump(expert, f, ensure_ascii=False, indent=4)
+                
     if flag:
         return True
                     

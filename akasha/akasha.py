@@ -456,42 +456,47 @@ class Doc_QA(atman):
         self.response = []
         self.docs = []
         self.prompt = []
-        for i in range(len(prompt_list)):
+        def recursive_get_response(prompt_list):
+            pre_result = []
+            for prompt in prompt_list:
+                if isinstance(prompt,list):
+                    response = recursive_get_response(prompt)
+                    pre_result.append(Document(page_content=''.join(response)))
+                else:
+                    question = prompts.format_sys_prompt(self.system_prompt, prompt)
+                    self.prompt.append(question)
+                    docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt, self.topK, self.threshold, self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compression = self.compression)
+                    self.docs.extend(docs)
+                    self.doc_length += helper.get_docs_length(self.language, docs)
+                    self.doc_tokens += tokens
+                    if self.verbose:
+                        print(docs)
+                        
+                    try:
+                        response = chain.run(input_documents=docs + pre_result, question = question)
+                        response = helper.sim_to_trad(response)
+                        
+                    except Exception as e:
+                        
+                        print(e)
+                        print("\n\nllm error\n\n")
+                    
+                        response = ""
+                        
+                    if self.verbose:
+                        print(response)
+                    self.response.append(response)
+                    pre_result.append(Document(page_content=''.join(response)))
+                    
+                    new_table = format.handle_table(prompt, docs, response)
+                    for key in new_table:
+                        if key not in table:
+                            table[key] = []
+                        table[key].append(new_table[key])
+            pre_result = []
+            return response
             
-            question = prompts.format_sys_prompt(self.system_prompt, prompt_list[i])
-            self.prompt.append(question)
-            docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt_list[i], self.topK, self.threshold, \
-                self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compression = self.compression)
-            
-            self.docs.extend(docs)
-            self.doc_length += helper.get_docs_length(self.language, docs)
-            self.doc_tokens += tokens
-            if self.verbose:
-                print(docs)
-                
-            try:
-                response = chain.run(input_documents=docs + pre_result, question = question)
-                response = helper.sim_to_trad(response)
-                
-            except Exception as e:
-                
-                print(e)
-                print("\n\nllm error\n\n")
-            
-                response = ""
-                
-            if self.verbose:
-                print(response)
-            self.response.append(response)
-            pre_result.append(Document(page_content=''.join(response)))
-            
-            new_table = format.handle_table(prompt_list[i], docs, response)
-            for key in new_table:
-                if key not in table:
-                    table[key] = []
-                table[key].append(new_table[key])
-            
-            
+        recursive_get_response(prompt_list)            
         end_time = time.time()
         
         self._add_result_log(timestamp, end_time-start_time)
