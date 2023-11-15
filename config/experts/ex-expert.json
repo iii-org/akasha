@@ -1,0 +1,33 @@
+[
+    {
+        "uid":"{owner}-{name}",
+        "name":"E1",
+        "embedding_model": "openai:text-embedding-ada-002",
+        "chunk_size":1,
+        "datasets": [
+            {
+                "owner":"ccchang",
+                "name":"D1",
+                "files":["F1","F2","F3"]
+            },
+            {
+                "owner":"user1",
+                "name":"D3",
+                "files":["F7"]
+            }
+        ],
+
+        "shared_users": ["user1"],
+        "owner":"ccchang",
+
+        "consultation": {
+            "language_model": "openai:gpt-2", 
+            "top_k": 10,
+            "threshold":0.5,
+            "max_token":10,
+            "temperature":0.7,
+            "compression_language_model":"openai:gpt2"
+        }
+        
+    }
+]
