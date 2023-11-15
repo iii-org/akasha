@@ -10,7 +10,7 @@ setup(name='akasha',
                    'sentence-transformers==2.2.2', 'torch==2.0.1', 'transformers==4.31.0',\
                         'llama-cpp-python==0.2.6','auto-gptq==0.3.1','tqdm==4.65.0', "docx2txt==0.8", "rouge==1.0.1",\
                               "rouge-chinese==1.0.3","bert-score==0.3.13", "opencc==1.1.6","click","tokenizers==0.13.3"],
-      packages=['akasha', 'akasha.models','cli','akasha.eval','akasha.summary'],
+      packages=['akasha', 'akasha.models','cli','akasha.eval','akasha.summary','routers'],
       entry_points={
             'console_scripts': [
                   'akasha = cli.glue:akasha'
