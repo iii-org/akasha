@@ -73,8 +73,8 @@ if url_params == {}:
     elif authentication_status:
         
         # load configurations
-        EXPERTS = list_experts(username) # may filtered by logged-in user
-        DATASETS = list_datasets(username) # may filtered by logged-in user
+        EXPERTS = list_experts(username, name_only=True, include_shared=True) # may filtered by logged-in user
+        DATASETS = list_datasets(username, name_only=True, include_shared=True) # may filtered by logged-in user
         EMBEDDING_MODELS = ['embedding_model_A', 'embedding_model_B', 'embedding_model_C']
         SEARCH_TYPES = ['merge', 'svm', 'tfidf', 'mmr']
         LANGUAGE_MODELS = ['gpt2', 'gpt3']
@@ -97,15 +97,16 @@ if url_params == {}:
             authenticator.logout('Logout', location='main', key='logout_key')
             st.caption('©️2023 Institute for Information Industry')
             st.caption(f'version {VERSION}')
-            
+        
+        user_accounts = config['credentials']['usernames']    
         if selected == 'Consult':
-            consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS)
+            consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
             
         elif selected == 'Experts':
-            experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS)
+            experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS, username, user_accounts)
             
         elif selected == 'Datasets':
-            dataset_page(DATASETS)
+            dataset_page(DATASETS, username, user_accounts)
             
         elif selected == 'Settings':
             settings_page(authenticator, username, config, ACCOUNTS_PATH) 

@@ -4,7 +4,7 @@ from utils import save_api_configs
 
 def settings_page(authenticator, username, config, ACCOUNTS_PATH):
     st.title('Settings')
-    settings_option = st.radio('Option', ['API Settings', 'History', 'Reset Password'], horizontal=True, label_visibility='collapsed')
+    settings_option = st.radio('Option', ['API Settings', 'History', 'Account'], horizontal=True, label_visibility='collapsed')
     st.markdown('')
     
     if settings_option == 'API Settings':
@@ -12,10 +12,11 @@ def settings_page(authenticator, username, config, ACCOUNTS_PATH):
     elif settings_option == 'History':
         _history()
         
-    elif settings_option == 'Reset Password':
-        _reset_password(authenticator, username, config, ACCOUNTS_PATH)
+    elif settings_option == 'Account':
+        _account_settings(authenticator, username, config, ACCOUNTS_PATH)
             
 def _api_settings():
+    st.header('API Settings', divider='rainbow')
     st.subheader('* Open AI', divider='grey')
     openai_on = st.toggle('Use Open AI', value=False, key='openai') 
     openai_api_key = st.text_input('OpenAI Key', help='OpenAI Key', type='password', disabled=not openai_on)
@@ -37,15 +38,25 @@ def _api_settings():
                                           azure_openai_base_url if azure_openai_on else None))
     
 def _history():
-    st.subheader('History', divider='rainbow')
+    st.header('History', divider='rainbow')
     st.button('Download History', f'btn-download-history', type='secondary')
     
-def _reset_password(authenticator, username, config, ACCOUNTS_PATH):
+def _account_settings(authenticator, username, config, ACCOUNTS_PATH):
+    st.header('Account', divider='rainbow')
     # reset password  
+    st.subheader('* Reset Password', divider='grey')  
     try:
-        if authenticator.reset_password(username, 'Reset Password', 'main'):
+        if authenticator.reset_password(username, '', 'main'):
             st.success('Password modified successfully')
             with open(ACCOUNTS_PATH, 'w') as file:
                 yaml.dump(config, file, default_flow_style=False)
     except Exception as e:
         st.sidebar.error(e)
+    # delete account
+    st.subheader('* Delete Account', divider='grey')
+    col_password, col_delete = st.columns([4, 1])
+    col_password.text_input('Password', help='Password', type='password',
+                            placeholder='Type your password to verify',
+                            key='delete-account-password',
+                            label_visibility='collapsed')
+    col_delete.button('Delete Account', f'btn-delete-account', type='primary')
