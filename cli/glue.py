@@ -507,6 +507,16 @@ def ui():
     import site
     import streamlit.web.bootstrap
     
+    if not os.path.exists('docs'):
+        os.makedirs('docs')
+    else:
+       pass
+
+    if not os.path.exists('model'):
+        os.makedirs('model')
+    else:
+       pass
+    
     site_packages_dirs = site.getsitepackages()
     for dir in site_packages_dirs:
         if dir.endswith("site-packages"):
