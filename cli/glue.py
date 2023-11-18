@@ -203,7 +203,7 @@ def keep_responsing(
     del db, model, embeddings
 
 
-@click.command('chain-of-thought', short_help='chain of thought')
+@click.command("chain-of-thought", short_help="chain of thought")
 @click.option(
     "--doc_path",
     "-d",
@@ -501,34 +501,41 @@ def auto_evaluation(
         print("total tokens: ", tokens)
 
 
-@click.command('ui', short_help='simple ui for akasha')
+@click.command("ui", short_help="simple ui for akasha")
 def ui():
     import os
     import site
     import streamlit.web.bootstrap
-    
-    if not os.path.exists('docs'):
-        os.makedirs('docs')
-    else:
-       pass
+    import shutil
 
-    if not os.path.exists('model'):
-        os.makedirs('model')
+    if not os.path.exists("docs") or not os.path.exists(
+        os.path.join("docs", "Default")
+    ):
+        os.makedirs(os.path.join(".", "docs", "Default"))
     else:
-       pass
-    
+        pass
+
+    if not os.path.exists("docs"):
+        os.makedirs(os.path.join(".", "docs", "Default"))
+    else:
+        pass
+
+    if not os.path.exists("model"):
+        os.makedirs("model")
+    else:
+        pass
+
     site_packages_dirs = site.getsitepackages()
     for dir in site_packages_dirs:
         if dir.endswith("site-packages"):
             target_dir = dir
             break
         else:
-            target_dir='.'
-    
-    ui_py_file = os.path.join(target_dir, 'akasha', 'ui.py')
-    streamlit.web.bootstrap.run(ui_py_file, '', [], [])
-    
-    
+            target_dir = "."
+
+    ui_py_file = os.path.join(target_dir, "akasha", "ui.py")
+    streamlit.web.bootstrap.run(ui_py_file, "", [], [])
+
 
 akasha.add_command(keep_responsing)
 akasha.add_command(get_response)
