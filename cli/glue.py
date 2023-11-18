@@ -507,33 +507,36 @@ def ui():
     import site
     import streamlit.web.bootstrap
     import shutil
-
+    
+    # make a folder `docs/Default`
     if not os.path.exists("docs") or not os.path.exists(
         os.path.join("docs", "Default")
     ):
         os.makedirs(os.path.join(".", "docs", "Default"))
     else:
         pass
-    print(os.getcwd())
 
     if not os.path.exists("docs"):
         os.makedirs(os.path.join(".", "docs", "Default"))
     else:
         pass
 
+    # make a folder `model`
     if not os.path.exists("model"):
         os.makedirs("model")
     else:
         pass
 
+    # find the location of ui.py 
     site_packages_dirs = site.getsitepackages()
     for dir in site_packages_dirs:
         if dir.endswith("site-packages"):
             target_dir = dir
             break
         else:
-            target_dir = "."
+            target_dir = '.'
     
+    # run streamlit web service by ui.py
     ui_py_file = os.path.join(target_dir, "akasha", "ui.py")
     streamlit.web.bootstrap.run(ui_py_file, "", [], [])
 
