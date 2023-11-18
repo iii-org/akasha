@@ -514,7 +514,7 @@ def ui():
         os.makedirs(os.path.join(".", "docs", "Default"))
     else:
         pass
-    print(os.getcwd('.'))
+    print(os.getcwd())
 
     if not os.path.exists("docs"):
         os.makedirs(os.path.join(".", "docs", "Default"))
