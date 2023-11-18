@@ -523,8 +523,8 @@ def ui():
             target_dir = dir
             break
         else:
-            target_dir=None
-            
+            target_dir='.'
+    
     ui_py_file = os.path.join(target_dir, 'akasha', 'ui.py')
     streamlit.web.bootstrap.run(ui_py_file, '', [], [])
     
