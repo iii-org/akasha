@@ -22,8 +22,8 @@ install_requires = [
     "bert-score==0.3.13",
     "click",
     "tokenizers==0.13.3",
-    "streamlit",
-    "streamlit_option_menu",
+    "streamlit=1.28.2",
+    "streamlit_option_menu=0.3.6",
 ]
 if platform.system() == "Windows":
     install_requires.append("opencc==1.1.1")
