@@ -105,7 +105,7 @@ if 'openai_base' not in st.session_state:
     st.session_state.openai_base = ""
 
 if 'select_idx' not in st.session_state:
-    st.session_state.select_idx = [['智慧製造'],0,0,0]
+    st.session_state.select_idx = [['mic'],0,0,0]
 
 
 ### function argument ###
