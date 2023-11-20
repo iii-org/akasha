@@ -17,7 +17,7 @@ setup(name='akasha',
       author = 'chih chuan chang',
       author_email = 'ccchang@iii.org.tw',
       install_requires = install_requires,
-      packages=['akasha', 'akasha.models','cli','akasha.eval','akasha.summary','routers'],
+      packages=['akasha', 'akasha.models','cli','akasha.eval','akasha.summary'],
       entry_points={
             'console_scripts': [
                   'akasha = cli.glue:akasha'
