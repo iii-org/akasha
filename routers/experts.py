@@ -11,8 +11,8 @@ import streamlit_utils as stu
 
 
 DOCS_PATH = './docs'
-EXPERT_CONFIG_PATH = './config/expert'
-DATASET_CONFIG_PATH = "./config/dataset/"
+EXPERT_CONFIG_PATH = './config/experts'
+DATASET_CONFIG_PATH = "./config/datasets/"
 DEFAULT_CONFIG = {'language_model':"openai:gpt-3.5-turbo",
             'search_type': "svm",
             'top_k': 5,

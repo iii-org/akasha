@@ -7,20 +7,22 @@ import shutil
 import time
 import json
 
+HOST = "http://127.0.0.1"
+PORT = "8000"
 api_url = {
-    'regular_consult':'http://127.0.0.1:8002/regular_consult',
-    'deep_consult': 'http://127.0.0.1:8002/deep_consult',
-    'create_dataset': 'http://127.0.0.1:8002/dataset/create',
-    'update_dataset': 'http://127.0.0.1:8002/dataset/update',
-    'delete_dataset': 'http://127.0.0.1:8002/dataset/delete',
-    'delete_expert':  'http://127.0.0.1:8002/expert/delete',
-    'test_openai': 'http://127.0.0.1:8002/openai/test_openai',
-    'test_azure': 'http://127.0.0.1:8002/openai/test_azure'
+    'regular_consult':f'{HOST}:{PORT}/regular_consult',
+    'deep_consult': f'{HOST}:{PORT}/deep_consult',
+    'create_dataset': f'{HOST}:{PORT}/dataset/create',
+    'update_dataset': f'{HOST}:{PORT}/dataset/update',
+    'delete_dataset': f'{HOST}:{PORT}/dataset/delete',
+    'delete_expert':  f'{HOST}:{PORT}/expert/delete',
+    'test_openai': f'{HOST}:{PORT}/openai/test_openai',
+    'test_azure': f'{HOST}:{PORT}/openai/test_azure'
 }
 DOCS_PATH = './docs'
 CONFIG_PATH = './config'
-EXPERT_CONFIG_PATH = './config/expert'
-DATASET_CONFIG_PATH = "./config/dataset"
+EXPERT_CONFIG_PATH = './config/experts'
+DATASET_CONFIG_PATH = "./config/datasets"
 
 def _separate_name(name:str):
     """ separate type:name by ':'

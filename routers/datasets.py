@@ -11,7 +11,7 @@ import streamlit_utils as stu
 
 
 
-DATASET_CONFIG_PATH = "./config/dataset/"
+DATASET_CONFIG_PATH = "./config/datasets/"
 DOCS_PATH = './docs'
 
 
