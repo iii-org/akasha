@@ -33,7 +33,7 @@ def signup_page(url_params, authenticator, config, ACCOUNTS_PATH):
                     if valid:
                         # update config
                         with open(ACCOUNTS_PATH, 'w') as file:
-                            config['credentials']['usernames'][new_user_id] = {}
+                            # config['credentials']['usernames'][new_user_id] = {'email': new_user_email, 'name': , 'password': st.session_state['password']}
                             yaml.dump(config, file, default_flow_style=False)
                         st.success('User registered successfully, close this window for login')   
         except Exception as e:

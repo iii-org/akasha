@@ -1,6 +1,6 @@
 import streamlit as st
 import yaml
-from utils import save_api_configs
+from utils import save_api_configs, save_openai_to_file
 
 def settings_page(authenticator, username, config, ACCOUNTS_PATH):
     st.title('Settings')
@@ -8,35 +8,46 @@ def settings_page(authenticator, username, config, ACCOUNTS_PATH):
     st.markdown('')
     
     if settings_option == 'API Settings':
-        _api_settings()
+        _api_settings(username)
     elif settings_option == 'History':
         _history()
         
     elif settings_option == 'Account':
         _account_settings(authenticator, username, config, ACCOUNTS_PATH)
             
-def _api_settings():
+def _api_settings(username:str):
     st.header('API Settings', divider='rainbow')
     st.subheader('* Open AI', divider='grey')
-    openai_on = st.toggle('Use Open AI', value=False, key='openai') 
-    openai_api_key = st.text_input('OpenAI Key', help='OpenAI Key', type='password', disabled=not openai_on)
+    st.session_state.openai_on = st.toggle('Use Open AI', value=st.session_state.openai_on, key='openai') 
+    openai_api_key = st.text_input('OpenAI Key', help='OpenAI Key', type='password', disabled=not st.session_state.openai_on)
     
     st.subheader('* Azure Open AI', divider='grey')
-    azure_openai_on = st.toggle('Use Azure OpenAI', value=False, key='azure_openai')
+    st.session_state.azure_openai_on = st.toggle('Use Azure OpenAI', value=st.session_state.azure_openai_on, key='azure_openai')
     col_azure_key, col_azure_url = st.columns([1, 1])
-    azure_openai_api_key = col_azure_key.text_input('Azure OpenAI Key', help='Azure OpenAI Key', type='password', disabled=not azure_openai_on)
-    azure_openai_base_url = col_azure_url.text_input('Azure OpenAI Base URL', help='Azure OpenAI Base URL', type='password', disabled=not azure_openai_on)
+    azure_openai_api_key = col_azure_key.text_input('Azure OpenAI Key', help='Azure OpenAI Key', type='password', disabled=not st.session_state.azure_openai_on)
+    azure_openai_base_url = col_azure_url.text_input('Azure OpenAI Base URL', help='Azure OpenAI Base URL', type='password', disabled=not st.session_state.azure_openai_on)
     
     st.markdown('')
     st.markdown('')
     st.markdown('')
-    save_api_config_button = st.button('Save', f'btn-save-api-configs', use_container_width=True, type='primary',
-                                    on_click=save_api_configs, 
-                                    args=(openai_on, azure_openai_on, 
-                                          openai_api_key if openai_on else None, 
-                                          azure_openai_api_key if azure_openai_on else None, 
-                                          azure_openai_base_url if azure_openai_on else None))
-    
+    save_config, save_file = st.columns([1, 1])
+    res = False
+    with save_config:
+        if st.button('Save', f'btn-save-api-configs', use_container_width=True, type='primary'):
+            
+            res = save_api_configs(st.session_state.openai_on, st.session_state.azure_openai_on,
+                                openai_api_key if st.session_state.openai_on else None, 
+                                azure_openai_api_key if st.session_state.azure_openai_on else None, 
+                                azure_openai_base_url if st.session_state.azure_openai_on else None)
+            
+    with save_file:
+        if st.button('Save to File', f'btn-save-api-configs-to-file', use_container_width=True, type='primary',disabled= not res):
+            save_openai_to_file(username, st.session_state.openai_on, st.session_state.azure_openai_on,
+                                openai_api_key if st.session_state.openai_on else None, 
+                        azure_openai_api_key if st.session_state.azure_openai_on else None, 
+                        azure_openai_base_url if st.session_state.azure_openai_on else None)
+            
+    print(st.session_state.openai_on, st.session_state.azure_openai_on, openai_api_key, azure_openai_api_key, azure_openai_base_url)
 def _history():
     st.header('History', divider='rainbow')
     st.button('Download History', f'btn-download-history', type='secondary')

@@ -20,7 +20,7 @@ class dataset(object):
         for f in json_files:
             with open(os.path.join(PATH_DATASET, f), 'r') as file:
                 content = json.load(file)
-            if (content['owner'] == owner) or (owner is None):
+            if (owner is None) or (content['owner'] == owner):
                 dataset_list.append(content)
         return dataset_list
     
@@ -183,7 +183,7 @@ class expert(object):
         for f in json_files:
             with open(os.path.join(PATH_EXPERT, f), 'r') as f:
                 content = json.load(f)
-            if (content['owner'] == owner) or (owner is None):
+            if (owner is None) or (content['owner'] == owner) :
                 expert_list.append(content)
         return expert_list
     
@@ -218,7 +218,8 @@ class expert(object):
         expert_jsons = os.listdir(path)
         uid = cls.generate_hash(owner, name)
         for expert_json in expert_jsons:
-            if expert_json == f'{uid}.json':
+            #if expert_json == f'{uid}.json':
+            if expert_json == 'ex-expert.json':
                 with open(os.path.join(path, expert_json)) as file:
                     cls.base = json.load(file)
                 return cls

@@ -21,6 +21,20 @@ VERSION = '0.8'
 HOST = os.getenv('HOST', 'localhost') 
 PORT = os.getenv('PORT', '8501')
 
+
+# session state parameters
+if 'openai_on' not in st.session_state:
+    st.session_state.openai_on = False
+if 'azure_openai_on' not in st.session_state:
+    st.session_state.azure_openai_on = False
+if 'openai_key' not in st.session_state:
+    st.session_state.openai_key = ''
+if 'azure_key' not in st.session_state:
+    st.session_state.azure_key = ''
+if 'azure_base' not in st.session_state:
+    st.session_state.azure_base = ''
+
+
 # page config
 st.set_page_config(
     page_title="Akasha",
@@ -57,7 +71,7 @@ with placeholder_version:
 if url_params == {}:
 
     name, authentication_status, username = authenticator.login('Login', 'main')
-    
+
     # signup/forgot password
     _, col_signup, col_forgetpwd = st.columns([7, 1, 1])
     placeholder_signup = col_signup.empty()
@@ -75,9 +89,9 @@ if url_params == {}:
         # load configurations
         EXPERTS = list_experts(username, name_only=True, include_shared=True) # may filtered by logged-in user
         DATASETS = list_datasets(username, name_only=True, include_shared=True) # may filtered by logged-in user
-        EMBEDDING_MODELS = ['embedding_model_A', 'embedding_model_B', 'embedding_model_C']
+        EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', 'hf:shibing624/text2vec-base-multilingual']
         SEARCH_TYPES = ['merge', 'svm', 'tfidf', 'mmr']
-        LANGUAGE_MODELS = ['gpt2', 'gpt3']
+        LANGUAGE_MODELS = ['openai:gpt-3.5-turbo', 'openai:gpt-3.5-turbo-16k', 'openai:gpt-2']
         
         # layout after successfully login
         placeholder_title.empty()

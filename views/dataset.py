@@ -1,9 +1,10 @@
 import streamlit as st
 import config
+import time
 from utils import create_dataset, delete_dataset, edit_dataset
 from utils import get_lastupdate_of_file_in_dataset
 from utils import check_dataset_is_shared
-
+from utils import get_dataset_info, add_shared_users_to_dataset
 def dataset_page(DATASETS, username, USERS):
     st.title('Dataset Management')
     dataset_option = st.radio('Option', ['My Datasets', 'New Dataset', 'Update Dataset'], horizontal=True, label_visibility='collapsed')
@@ -42,16 +43,14 @@ def _my_datasets(DATASETS, username, all_users):
         else:
             dataset_owner = username
             disable_delete = False
-        dataset_obj = config.dataset.from_json(dataset_owner, dataset_name)
-        dataset_filelist = dataset_obj.filenames()
-        dataset_description = dataset_obj.description() # change the value by config
-        dataset_lastupdate = dataset_obj.last_update() # change the value by config
+        dataset_filelist, dataset_description, dataset_lastupdate = get_dataset_info(dataset_owner, dataset_name)
+        
         col_description.markdown(dataset_description) 
         col_filelist.text('\n'.join(dataset_filelist)) 
         col_lastupdate.markdown(dataset_lastupdate)
         # col_share_option.toggle('', key=f'share-dataset-{dataset}', 
         #                         disabled=len(other_users) == 0, value=False)
-        col_delete.button('Delete', f'btn-delete-{dataset_name}',
+        col_delete.button('Delete', f'btn-delete{dataset_owner}-{dataset_name}',
                           type='primary', 
                           on_click=delete_dataset, 
                           args=(username, dataset_name, True),
@@ -68,7 +67,7 @@ def _new_dataset(username, all_users):
     new_dataset_description = col_description.text_input('Description', placeholder='description', help='Description of dataset')
     
     st.subheader('2. File List', divider='grey')    
-    uploaded_files = st.file_uploader('Upload Data', type=['txt', 'pdf', 'docx', 'doc'], accept_multiple_files=True, key='upload-data-create')
+    uploaded_files = st.file_uploader('Upload Data', type=['txt', 'pdf', 'docx'], accept_multiple_files=True, key='upload-data-create')
     
     st.subheader('3. Share Option', divider='grey')
     col_share, col_share_users = st.columns([1, 3])
@@ -84,7 +83,8 @@ def _new_dataset(username, all_users):
     _, col_create, _ = st.columns([1, 2, 1])
     create_dataset_button = col_create.button('Create Dataset', help='Create Dataset', type='primary', use_container_width=True, key='btn-create-dataset')
     if create_dataset_button:
-        res = create_dataset(username, new_dataset_name, new_dataset_description, uploaded_files, share_boolean, shared_users)
+        res = create_dataset(new_dataset_name, new_dataset_description, uploaded_files, username) and add_shared_users_to_dataset(username, new_dataset_name, share_boolean, shared_users)
+
         if res:
             st.success(f'Dataset={new_dataset_name} has been created successfully')
 
@@ -98,13 +98,13 @@ def _update_dataset(DATASETS, username, all_users):
         if editing_dataset_name:
             # show dataset name, description, file list, last update
             # st.divider()
-            dataset_obj = config.dataset.from_json(username, editing_dataset_name)
+            dataset_filelist, previous_dataset_description, dataset_lastupdate = get_dataset_info(username, editing_dataset_name)
+            
             st.subheader('1. Dataset Info', divider='grey')
             col_name, col_description = st.columns([1, 3])
             
             # dataset info
-            update_dataset_name = col_name.text_input('Name', value=dataset_obj.name(), placeholder='new name', help='Name of dataset')
-            previous_dataset_description = dataset_obj.description()
+            update_dataset_name = col_name.text_input('Name', value = editing_dataset_name, placeholder='new name', help='Name of dataset')
             update_dataset_description = col_description.text_input('Description', 
                                                                     value=previous_dataset_description, 
                                                                     placeholder='new description', help='Description of dataset')
@@ -113,7 +113,7 @@ def _update_dataset(DATASETS, username, all_users):
             st.subheader('2. File List', divider='grey')
             
             # upload new file(s)
-            uploaded_files = st.file_uploader('Upload Data', type=['txt', 'pdf', 'doc', 'docx'], accept_multiple_files=True, key='upload-data-edit')
+            uploaded_files = st.file_uploader('Upload Data', type=['txt', 'pdf', 'docx'], accept_multiple_files=True, key='upload-data-edit')
             
             # Existed Files
             ## remove file list
@@ -125,12 +125,13 @@ def _update_dataset(DATASETS, username, all_users):
                 col_file.subheader('File Name')
                 col_last_update.subheader('Last Update')
                 col_action.subheader('Delete')
-                dataset_files = dataset_obj.filenames()
+                dataset_files = dataset_filelist
                 for file in dataset_files:
                     st.divider()
                     col_file, col_last_update, col_action = st.columns([2, 2, 1])
                     col_file.text(file)
-                    file_lastupdate = get_lastupdate_of_file_in_dataset(editing_dataset_name, file)
+                    file_lastupdate = get_lastupdate_of_file_in_dataset(editing_dataset_name, file, username)
+                    file_lastupdate = time.ctime(file_lastupdate)
                     col_last_update.text(file_lastupdate)
                     # col_action.button('Delete', f'btn-delete-{file}-for-{editing_dataset}',
                     #                   on_click=delete_file_of_dataset, args=(editing_dataset, file))
@@ -145,10 +146,11 @@ def _update_dataset(DATASETS, username, all_users):
             st.subheader('3. Share Option', divider='grey')
             col_share, col_share_users = st.columns([1, 3])
             other_users = [u for u in all_users if u != username]
-            share_boolean = col_share.toggle('Share with other users', key=f'share-dataset-{editing_dataset_name}', disabled=len(other_users)==0, value=len(dataset_obj.shared_users()) > 0)
+            old_shared_users = ['tea9296']
+            share_boolean = col_share.toggle('Share with other users', key=f'share-dataset-{editing_dataset_name}', disabled=len(other_users)==0, value=len(old_shared_users) > 0)
             shared_users = col_share_users.multiselect('User List', 
                                                     options=other_users, 
-                                                    default=dataset_obj.shared_users(),
+                                                    default=old_shared_users,
                                                     placeholder='Select user(s) to share',
                                                     key=f'share-dataset-users-{editing_dataset_name}', 
                                                     disabled=not share_boolean, 
@@ -159,14 +161,13 @@ def _update_dataset(DATASETS, username, all_users):
             _, col_update, _ = st.columns([1, 2, 1])
             update_dataset_button = col_update.button(f'Update Dataset', f'btn-update-{editing_dataset_name}', use_container_width=True, type='primary')
             if update_dataset_button:
-                edit_dataset(username,
-                            editing_dataset_name,
+                res1 = edit_dataset(editing_dataset_name,
                             update_dataset_name,
                             update_dataset_description, 
                             uploaded_files, 
                             st.session_state.get(f'delete-files-for-{editing_dataset_name}', set()),
-                            dataset_obj.filenames(),
-                            share_boolean, 
-                            shared_users)
+                            username)
         
-        
+                res2  = add_shared_users_to_dataset(username, update_dataset_name, share_boolean, shared_users)
+                if res1 and res2:
+                    st.success(f'Dataset={update_dataset_name} has been updated successfully')
