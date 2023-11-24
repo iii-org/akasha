@@ -1,7 +1,7 @@
 import streamlit as st
 import yaml
 from utils import save_api_configs, save_openai_to_file
-
+from utils import download_txt, download_json
 def settings_page(authenticator, username, config, ACCOUNTS_PATH):
     st.title('Settings')
     settings_option = st.radio('Option', ['API Settings', 'History', 'Account'], horizontal=True, label_visibility='collapsed')
@@ -47,11 +47,19 @@ def _api_settings(username:str):
                         azure_openai_api_key if st.session_state.azure_openai_on else None, 
                         azure_openai_base_url if st.session_state.azure_openai_on else None)
             
-    print(st.session_state.openai_on, st.session_state.azure_openai_on, openai_api_key, azure_openai_api_key, azure_openai_base_url)
+    
 def _history():
     st.header('History', divider='rainbow')
-    st.button('Download History', f'btn-download-history', type='secondary')
-    
+    #dl_history = st.button('Download History', f'btn-download-history', type='secondary')
+    #if dl_history:
+    tx, js = st.columns([1,1])
+    with tx:
+        download_txt('')
+    with js:
+        download_json('')
+        
+        
+        
 def _account_settings(authenticator, username, config, ACCOUNTS_PATH):
     st.header('Account', divider='rainbow')
     # reset password  

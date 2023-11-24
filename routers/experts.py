@@ -11,6 +11,7 @@ import streamlit_utils as stu
 
 
 DOCS_PATH = './docs'
+CHROMADB_PATH = './chromadb'
 EXPERT_CONFIG_PATH = './config/experts'
 DATASET_CONFIG_PATH = "./config/datasets/"
 DEFAULT_CONFIG = {'language_model':"openai:gpt-3.5-turbo",
@@ -67,6 +68,36 @@ router = APIRouter()
 
 
 
+@router.get("/expert/get_default_consult")
+async def get_default_consult():
+    """get the default consultation parameter of the expert
+
+    Returns:
+        dict: status, response(expert consultation parameter dictionary)
+    """
+    return {'status': 'success', 'response': DEFAULT_CONFIG}
+
+
+
+@router.get("/expert/get_chromadb_path")
+async def get_default_chromadb_path():
+    """get the default chromadb path
+
+    Returns:
+        dict: status, response(chromadb path)
+    """
+    return {'status': 'success', 'response': CHROMADB_PATH}
+
+
+
+@router.get("/expert/get_expert_path")
+async def get_default_expert_path():
+    """get the default expert config path
+
+    Returns:
+        dict: status, response(expert consultation parameter dictionary)
+    """
+    return {'status': 'success', 'response': EXPERT_CONFIG_PATH}
 
 
 @router.get("/expert/show")
@@ -348,6 +379,12 @@ async def update_expert(user_input:ExpertEditInfo):
     add_datasets = user_input.add_datasets
     
     warning = []
+    delete_chromdb = []
+    if new_embedding_model.split(':')[0] == 'openai':
+        if not stu.load_openai(config=user_input.openai_config):
+            return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
+        
+        
     uid = stu.generate_hash(owner, expert_name)
     
     if not stu.check_config(EXPERT_CONFIG_PATH):
@@ -382,8 +419,9 @@ async def update_expert(user_input:ExpertEditInfo):
             dataset_name = dataset['name']
             id = stu.generate_hash(oner, dataset_name)
             for file in dataset['files']:
-                stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
-        
+                cmd = stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+                if cmd != "":
+                    delete_chromdb.append(cmd)
         
         ## create chromadb for each new file
         for dataset in add_datasets:
@@ -404,7 +442,9 @@ async def update_expert(user_input:ExpertEditInfo):
             dataset_name = dataset['name']
             id = stu.generate_hash(oner, dataset_name)
             for file in dataset['files']:
-                stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+                cmd = stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+                if cmd != "":
+                    delete_chromdb.append(cmd)
     
     
     if len(delete_datasets) > 0 :
@@ -435,7 +475,7 @@ async def update_expert(user_input:ExpertEditInfo):
     with open(save_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
         
-    return {'status': 'success', 'response': f'update expert {expert_name} successfully.\n\n', 'warning': warning}
+    return {'status': 'success', 'response': f'update expert {expert_name} successfully.\n\n', 'warning': warning, 'delete_chromadb' : delete_chromdb}
 
 
 
@@ -453,6 +493,7 @@ async def delete_expert(user_input:ExpertID):
     """
     owner = user_input.owner
     expert_name = user_input.expert_name
+    delete_chromdb = []
     
     if not stu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
@@ -474,12 +515,14 @@ async def delete_expert(user_input:ExpertID):
         
         for file in dataset['files']:
             print(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
-            stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+            cmd = stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+            if cmd != "":
+                    delete_chromdb.append(cmd)
     
     ## delete Path(DATASET_CONFIG_PATH) / (uid+'.json') file
     
 
-    return {'status': 'success', 'response': f'delete expert {expert_name} successfully.\n\n'}
+    return {'status': 'success', 'response': f'delete expert {expert_name} successfully.\n\n','delete_chromadb' : delete_chromdb}
 
 
 

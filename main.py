@@ -34,6 +34,14 @@ if 'azure_key' not in st.session_state:
 if 'azure_base' not in st.session_state:
     st.session_state.azure_base = ''
 
+if 'logs' not in st.session_state:
+    st.session_state['logs'] = {}
+if 'que' not in st.session_state:
+    st.session_state['que'] = ''
+    
+if 'ans' not in st.session_state:
+    st.session_state['ans'] = ''
+
 
 # page config
 st.set_page_config(

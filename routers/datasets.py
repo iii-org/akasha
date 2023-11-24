@@ -433,10 +433,10 @@ async def get_MD5_list_from_dataset(user_input:DatasetID):
     
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    response = []
+    response = {}
     for file in data['files']:
         if file['MD5'] != "":
-            response.append(file['MD5'])
+            response[file['filename']] = file['MD5']
     return {'status': 'success', 'response': response}
 
 

@@ -498,7 +498,7 @@ def check_and_delete_dataset(dataset_name:str, owner:str)->bool:
 
 
 
-def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str, dataset_name:str, owner:str, id:str)->bool:
+def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str, dataset_name:str, owner:str, id:str)->str:
     """check if any of other expert use the same file with same chunk size and embedding model, if not, delete the chromadb file
 
     Args:
@@ -517,7 +517,7 @@ def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str,
     
     p = Path(EXPERT_CONFIG_PATH)
     if not p.exists():
-        return False
+        return ""
     
     for file in p.glob("*"):
         with open(file, 'r', encoding='utf-8') as ff:
@@ -527,7 +527,7 @@ def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str,
             for dataset in expert['datasets']:
                 if dataset['name'] == dataset_name and dataset['owner'] == owner:
                     if filename in dataset['files']:     
-                        return True
+                        return ""
     
     ## not find, delete
     
@@ -543,10 +543,11 @@ def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str,
                 break
     
     db_storage_path = './chromadb/' + dataset_name + '_' + md5 + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
+   
     if Path(db_storage_path).exists():
-        shutil.rmtree(Path(db_storage_path))
-
-    return False
+        return db_storage_path
+    
+    return ""
 
 
 

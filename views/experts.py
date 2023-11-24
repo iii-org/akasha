@@ -1,9 +1,8 @@
 import streamlit as st
-import config
 import time
-from utils import get_datasets_of_expert, get_expert_refer_dataset_files, create_expert, delete_expert, edit_expert
+from utils import get_datasets_of_expert,  create_expert, delete_expert, edit_expert
 from utils import get_file_list_of_dataset, get_lastupdate_of_file_in_dataset, list_datasets
-from utils import get_datasets_shared_with_me, check_expert_use_shared_dataset, get_expert_info
+from utils import check_expert_use_shared_dataset, get_expert_info
 from utils import check_dataset_is_shared, check_expert_is_shared, add_shared_users_to_expert, check_file_selected_by_expert
 def experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS, username, USERS):
     st.title('Expert Management', help='Manage experts and their knowledge bases')
@@ -241,18 +240,21 @@ def _update_expert(EXPERTS, EMBEDDING_MODELS, DATASETS, username, all_users):
                 res_update = edit_expert(username, editing_expert_name, update_expert_name, 
                                         default_expert_embedding, update_expert_embedding, 
                                         default_expert_chunksize, update_expert_chunksize, 
-                                        default_expert_datasets, expert_dataset_names,
+                                        dataset_files,
                                         st.session_state[f'expert-add-files-{editing_expert_name}'],
                                         share_boolean, shared_users)
                 if res_update:
                     rename_msg = f' and renamed as {editing_expert_name} ' if editing_expert_name != update_expert_name else ''
-                    st.success(f'Expert={editing_expert_name} has been updated{rename_msg}successfully') 
+                    st.success(f'Expert={editing_expert_name} has been updated{rename_msg} successfully') 
             
             create_expert_button = col_new.button('Save as New Expert', f'btn-copy-{editing_expert_name}', use_container_width=True, type='primary',
                                                 help='Save the configuration as new expert')
             if create_expert_button:
-                res_create = create_expert(username, update_expert_name, update_expert_embedding, update_expert_chunksize, 
-                                        expert_dataset_names, st.session_state[f'expert-add-files-{editing_expert_name}'],
-                                        share_boolean, shared_users)
-                if res_create:
-                    st.success(f'Expert="{update_expert_name}" has been created successfully')
+                                
+                res1 = create_expert(username, update_expert_name, update_expert_embedding, update_expert_chunksize, \
+                    st.session_state[f'expert-add-files-{editing_expert_name}'])
+                if res1:
+                    res2 = add_shared_users_to_expert(username, update_expert_name, share_boolean, shared_users)
+                    if res2:
+                        st.success(f'Expert={update_expert_name} has been created successfully')
+                

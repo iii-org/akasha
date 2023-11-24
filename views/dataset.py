@@ -1,5 +1,4 @@
 import streamlit as st
-import config
 import time
 from utils import create_dataset, delete_dataset, edit_dataset
 from utils import get_lastupdate_of_file_in_dataset

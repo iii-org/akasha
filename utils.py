@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
-import config
 import os
 from typing import List
 import requests
 from pathlib import Path
 import streamlit_utils as stu
 
-DATSEST_PATH = os.path.join('.', 'datasets')
-CHUNKSIZE = 500
+
+CHUNKSIZE = 3000
 
 
 HOST = "http://127.0.0.1"
@@ -34,7 +33,14 @@ api_urls = {
     'test_openai': f'{HOST}:{PORT}/openai/test_openai',
     'test_azure': f'{HOST}:{PORT}/openai/test_azure',
     'save_openai': f'{HOST}:{PORT}/openai/save',
-    'choose_openai': f'{HOST}:{PORT}/openai/choose'
+    'choose_openai': f'{HOST}:{PORT}/openai/choose',
+    'get_consult': f'{HOST}:{PORT}/expert/get_consult',
+    'save_consult': f'{HOST}:{PORT}/expert/save_consult',
+    'get_default_consult': f'{HOST}:{PORT}/expert/get_default_consult',
+    'get_chromadb_path': f'{HOST}:{PORT}/expert/get_chromadb_path',
+    'get_md5_name': f'{HOST}:{PORT}/dataset/get_md5',
+    'regular_consult': f'{HOST}:{PORT}/regular_consult',
+    'deep_consult': f'{HOST}:{PORT}/deep_consult',
 }
 
 
@@ -42,9 +48,6 @@ def check_dataset_is_shared(dataset_name):
     return '@' in dataset_name
 def check_expert_is_shared(expert_name):
     return '@' in expert_name
-
-def getMD5(filename, path:str=os.getcwd()):
-    return ''
 
 def add_question_layer(add_button):
     
@@ -72,54 +75,164 @@ def add_question_layer(add_button):
 
     return layers
 
-def ask_question(col, username, sys_prompt, prompt, expert_owner, expert_name, advanced_params:dict, auto_clean=False):
-    if not prompt:
-        col.error('❌ Please input question')
+def ask_question( username, sys_prompt, prompt, expert_owner, expert_name, advanced_params:dict, auto_clean:bool=False):
+    
+    
+    if not prompt or prompt=='':
+        st.error('❌ Please input question')
         return False
-    with col.chat_message("user"):
-        st.markdown(prompt)
-    with col.chat_message("assistant"):
-        # akasha: get response from expert
-        success = True
-        if success:
-            st.write('my random answer')
-            # save last consult config for expert if is the owner of expert
-            if username == expert_owner:
-                expert = config.expert.from_json(expert_owner, expert_name)
-                expert.add_consultations(advanced_params)
-                expert.save()
-    if auto_clean:
-        st.session_state['question'] = ''
+    
+    if advanced_params['embedding_model'].split(':')[0] == "openai" or advanced_params['model'].split(':')[0] == "openai":
+        openai_config = get_openai_config(username)
+    else:
+        openai_config = {}
+    
+    data_path = get_data_path(username, advanced_params['datasets'], advanced_params['embedding_model'], advanced_params['chunk_size'])
+    
         
+    data = {
+        'data_path': data_path,
+        'prompt': prompt,
+        'system_prompt': sys_prompt,
+        'embedding_model': advanced_params['embedding_model'],
+        'chunk_size': advanced_params['chunk_size'],
+        'model': advanced_params['model'],
+        'temperature': advanced_params['temperature'],
+        'topK': advanced_params['topK'],
+        'threshold': advanced_params['threshold'],
+        'search_type': advanced_params['search_type'],
+        'max_token': advanced_params['max_token'],
+        'openai_config': openai_config,
+    }
+    
+    response = requests.post(api_urls['regular_consult'], json = data).json()
+    print(response)
+    if response['status'] != 'success':
+        api_fail(response['response'])    
+        return False
+    # akasha: get response from expert
+    
+    
+    if auto_clean:
+        st.session_state['question'] = ''   
+    st.session_state['que'] = prompt
+    st.session_state['ans'] = response['response']
+    st.session_state.logs[response['timestamp']] = response['logs'] 
+    
+    
+    
+    # save last consult config for expert if is the owner of expert
+    if username == expert_owner:
+        data = {
+            "language_model": advanced_params['model'],
+            "search_type": advanced_params['search_type'],
+            "top_k": advanced_params['topK'],
+            "threshold": advanced_params['threshold'],
+            "max_token": advanced_params['max_token'],
+            "temperature":advanced_params['temperature'],
+            "use_compression":advanced_params['use_compression'],
+            "compression_language_model": advanced_params['compression_language_model']
+        }
+        data['owner'] = expert_owner
+        data['expert_name'] = expert_name
+        response = requests.post(api_urls['save_consult'], json = data).json()
+        if response['status'] != 'success':
+            st.warning('cannot save last consult config for expert')    
+        
+        
+    
+    
+    return True
+
+
+
+
+
 def ask_question_deep(col, layers_list:List[dict], username, sys_prompt, prompt, expert_owner, expert_name, advanced_params:dict, auto_clean=False):
-    if not prompt:
+    
+    
+    if not prompt and prompt=='':
         col.error('❌ Please input question')
         return False
-    with col.chat_message("user"):
-        st.markdown(prompt)
-    with col.chat_message("assistant"):
-        success = True
-        if success:
-            # get response from expert with chain of thought
-            st.write('my random answer from layers of questions')
-            # save last consult config for expert if is the owner of expert
-            if username == expert_owner:
-                expert = config.expert.from_json(expert_owner, expert_name)
-                expert.add_consultations(advanced_params)
-                expert.save()
+            
+    
+    ## generate layers into list of prompts
+    prompt_list = []
+    for layer in layers_list:
+        group_list = []
+        ## layer[1]'s a dataframe contains prompt, use list(layer[1].columns)[0] to get the column name "Sub-Questions" ###
+        for prom in layer[1][list(layer[1].columns)[0]]:
+            if prom != '':
+                group_list.append(prom)   
+        if len(group_list) == 1:
+            prompt_list.append(group_list[0])
+        elif len(group_list) > 1:
+            prompt_list.append(group_list)
+    prompt_list.append(prompt)
+    print(prompt_list)
+            
+        
+       
+        
+        
+        
+    if advanced_params['embedding_model'].split(':')[0] == "openai" or advanced_params['model'].split(':')[0] == "openai":
+        openai_config = get_openai_config(username)
+    else:
+        openai_config = {}
+    
+    data_path = get_data_path(username, advanced_params['datasets'], advanced_params['embedding_model'], advanced_params['chunk_size'])
+    
+        
+    data = {
+        'data_path': data_path,
+        'prompt': prompt_list,
+        'system_prompt': sys_prompt,
+        'embedding_model': advanced_params['embedding_model'],
+        'chunk_size': advanced_params['chunk_size'],
+        'model': advanced_params['model'],
+        'temperature': advanced_params['temperature'],
+        'topK': advanced_params['topK'],
+        'threshold': advanced_params['threshold'],
+        'search_type': advanced_params['search_type'],
+        'max_token': advanced_params['max_token'],
+        'openai_config': openai_config,
+    }
+    
+    response = requests.post(api_urls['deep_consult'], json = data).json()
+    print(response)
+    if response['status'] != 'success':
+        api_fail(response['response'])    
+        return False
+    # akasha: get response from expert
+    st.session_state.logs.append(response['logs'])
     if auto_clean:
-        st.session_state['final-question'] = ''
+        st.session_state['final-question'] = ''   
+    st.session_state['que'] = prompt
+    st.session_state['ans'] = response['response'][-1]
+    st.session_state.logs[response['timestamp']] = response['logs'] 
+    
+    
+    
+    # save last consult config for expert if is the owner of expert
+    if username == expert_owner:
+        data = {
+            "language_model": advanced_params['model'],
+            "search_type": advanced_params['search_type'],
+            "top_k": advanced_params['topK'],
+            "threshold": advanced_params['threshold'],
+            "max_token": advanced_params['max_token'],
+            "temperature":advanced_params['temperature'],
+            "use_compression":advanced_params['use_compression'],
+            "compression_language_model": advanced_params['compression_language_model']
+        }
+        data['owner'] = expert_owner
+        data['expert_name'] = expert_name
+        response = requests.post(api_urls['save_consult'], json = data).json()
+        if response['status'] != 'success':
+            st.warning('cannot save last consult config for expert')    
+    
 
-def get_last_consult_for_expert(expert_name):
-    # get last consult config for expert
-    return {'language_model':'gpt2',
-            'search_type':'merge',
-            'top_k':3,
-            'threshold':0.5,
-            'max_token':50,
-            'temperature':0.55,
-            'use_compression':0, # 0 for False, 1 for True
-            'compression_language_model':'gpt3'}
 
 def save_last_consult_for_expert(expert_name):
     # save last consult config for expert
@@ -144,16 +257,16 @@ def list_experts(owner:str=None, name_only:bool=False, include_shared=True):
 
 def create_expert(owner:str, expert_name:str, expert_embedding:str, expert_chunksize:int,
                 expert_add_files:dict):
-    # # validate inputs
-    # ## check chunksize is valid: not extremely large
-    # if expert_chunksize > CHUNKSIZE:
-    #     st.warning(f'❌ Chunksize should be less than {CHUNKSIZE}')
-    #     return False
-    # ## check expert name is valid: not used already
-    # user_experts = list_experts(owner, name_only=True)
-    # if expert_name in user_experts:
-    #     st.error(f'❌ Expert={expert_name} already exists')
-    #     return False
+    # validate inputs
+    ## check chunksize is valid: not extremely large
+    if expert_chunksize > CHUNKSIZE:
+        st.warning(f'❌ Chunksize should be less than {CHUNKSIZE}')
+        return False
+    ## check expert name is valid: not used already
+    user_experts = list_experts(owner, name_only=True)
+    if expert_name in user_experts:
+        st.error(f'❌ Expert={expert_name} already exists')
+        return False
     # # save configurations
     # expert_datasets = [{'owner':owner if not check_dataset_is_shared(ds) else ds.split('@')[-1], 
     #                     'name':ds if not check_dataset_is_shared(ds) else ds.split('@')[0], 
@@ -202,7 +315,7 @@ def create_expert(owner:str, expert_name:str, expert_embedding:str, expert_chunk
 def edit_expert(owner:str, expert_name:str, new_expert_name:str, 
                 default_expert_embedding, new_expert_embedding, 
                 default_expert_chunksize, new_expert_chunksize, 
-                default_expert_datasets, new_expert_datasets,
+                default_expert_datasets,
                 expert_used_dataset_files_dict,#:Dict[set],
                 share_or_not:bool, shared_user_accounts:list=[]):
     # validate inputs
@@ -210,54 +323,138 @@ def edit_expert(owner:str, expert_name:str, new_expert_name:str,
     user_experts = list_experts(owner, name_only=True)
     if (new_expert_name != expert_name) and (new_expert_name in user_experts):
         st.error(f'❌ Expert={expert_name} already exists')
-        return
+        return False
     ## update_chunksize is valid: not extremely large
     if new_expert_chunksize > CHUNKSIZE:
         st.warning(f'❌ Chunksize should be less than {CHUNKSIZE}')
-        return
+        return False
     ## new_expert_datasets is valid: not empty
-    if new_expert_datasets == []:
+    if len(expert_used_dataset_files_dict) == []:
         st.error(f'❌ Expert should use at least one dataset')
-        return
+        return False
     ## at least one file is selected among all datasets
     for _,fileset in expert_used_dataset_files_dict.items():
         if len(fileset) > 0:
             break
         st.error(f'❌ Expert should select at least 1 file among all datasets')
-        return
+        return False
     ## must select at least one user to share expert when share_or_not=True
     if share_or_not:
         if len(shared_user_accounts) == 0:
             st.error(f'❌ Please select user(s) to share expert, or disable user-sharing.')
-            return
-    # rename expert name to new_expert_name
-    expert = config.expert.from_json(owner, expert_name)
-    if (expert_name != new_expert_name):
-        expert.delete()
-        expert.set_name(new_expert_name)
-    expert.set_embedding_model(new_expert_embedding)
-    expert.set_chunk_size(new_expert_chunksize)
-    expert.set_uid()
-    expert.clean_datasets()
-    for dataset_name in new_expert_datasets:
-        dataset_files = list(expert_used_dataset_files_dict.get(dataset_name, set()))
-        if check_dataset_is_shared(dataset_name):
-            dataset_name, dataset_owner = dataset_name.split('@')
-        else:
-            dataset_owner = owner
-        expert.add_dataset(dataset_owner, dataset_name, dataset_files)
+            return False
+        
+    # # rename expert name to new_expert_name
+    # expert = config.expert.from_json(owner, expert_name)
+    # if (expert_name != new_expert_name):
+    #     expert.delete()
+    #     expert.set_name(new_expert_name)
+    # expert.set_embedding_model(new_expert_embedding)
+    # expert.set_chunk_size(new_expert_chunksize)
+    # expert.set_uid()
+    # expert.clean_datasets()
+    # for dataset_name in new_expert_datasets:
+    #     dataset_files = list(expert_used_dataset_files_dict.get(dataset_name, set()))
+    #     if check_dataset_is_shared(dataset_name):
+    #         dataset_name, dataset_owner = dataset_name.split('@')
+    #     else:
+    #         dataset_owner = owner
+    #     expert.add_dataset(dataset_owner, dataset_name, dataset_files)
     
-    expert.clean_shared_users()
-    if share_or_not:
-        expert.add_share_users(shared_user_accounts)
+    # expert.clean_shared_users()
+    # if share_or_not:
+    #     expert.add_share_users(shared_user_accounts)
     
-    expert.save()
+    # expert.save()
     
     # akasha sdk...
     # if change embedding model or chunksize, construct new vector db 
     # update configuration of expert's vector db(s) 
     
-    return True
+        
+    
+    # get delete_datasets and add_datasets
+    try:
+        if new_expert_embedding.split(':')[0] == "openai":
+            openai_config = get_openai_config(owner)
+        else:
+            openai_config = {}
+        delete_datasets = []
+        default_expert_datasets_dict = {}
+        for ds in default_expert_datasets:
+            
+            cur_dataset_name = ds['name'] if ds['owner']==owner else f"{ds['name']}@{ds['owner']}"
+            del_list = []
+            default_expert_datasets_dict[cur_dataset_name] = ds['files']
+            
+            if cur_dataset_name not in expert_used_dataset_files_dict:
+                delete_datasets.append({'owner':ds['owner'], 'name':ds['name'], 'files':ds['files']})
+            else:
+                for f in ds['files']:
+                    if f not in expert_used_dataset_files_dict[cur_dataset_name]:
+                        del_list.append(f)
+                if len(del_list) > 0:
+                    delete_datasets.append({'owner':ds['owner'], 'name':ds['name'], 'files':del_list})    
+        
+        
+        add_datasets = []
+        
+        for k,v in expert_used_dataset_files_dict.items():
+            add_list = []
+            if k not in default_expert_datasets_dict:
+                add_datasets.append({'owner':owner if not check_dataset_is_shared(k) else k.split('@')[-1], 
+                                    'name':k if not check_dataset_is_shared(k) else k.split('@')[0], 
+                                    'files':list(v)})
+            else:
+                for f in v:
+                    if f not in default_expert_datasets_dict[k]:
+                        add_list.append(f)
+                if len(add_list) > 0:
+                    add_datasets.append({'owner':owner if not check_dataset_is_shared(k) else k.split('@')[-1], 
+                                    'name':k if not check_dataset_is_shared(k) else k.split('@')[0], 
+                                    'files':add_list})
+        
+        data = {
+            'owner':owner, 'expert_name':expert_name, 'new_expert_name':new_expert_name,
+            'embedding_model':default_expert_embedding, 'chunk_size':default_expert_chunksize,
+            'new_embedding_model':new_expert_embedding, 'new_chunk_size':new_expert_chunksize,
+            'delete_datasets':delete_datasets, 'add_datasets':add_datasets, 'openai_config':openai_config 
+        }
+
+    
+    except Exception as e:
+        
+        st.error('❌ Expert edition failed during process datasets, '+ e.__str__())
+        return False
+    
+    
+    
+    response = requests.post(api_urls['update_expert'], json = data).json()
+    if response['status'] != 'success':
+        api_fail(response['response'])    
+        return False
+    
+    if len(response['delete_chromadb']) > 0:
+        delete_chromadb(response['delete_chromadb'])
+    
+    if add_shared_users_to_expert(owner, new_expert_name, share_or_not, shared_user_accounts):
+        return True
+
+    return False
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def delete_expert(username, expert_name):
     # delete expert from all experts in config
@@ -266,6 +463,10 @@ def delete_expert(username, expert_name):
     if response['status'] != 'success':
         api_fail(response['response'])    
         return False
+    
+    if len(response['delete_chromadb']) > 0:
+        delete_chromadb(response['delete_chromadb'])
+        
     st.success(f'Expert={expert_name} has been deleted successfully')
     return True
 
@@ -302,7 +503,7 @@ def add_shared_users_to_expert(owner:str, expert_name:str, share_boolean:bool, s
             raise Exception(response['response'])
         
     except Exception as e:
-            api_fail('Dataset sharing failed, '+ e.__str__() )
+            api_fail('Expert sharing failed, '+ e.__str__() )
             return False
     return True
 
@@ -733,31 +934,13 @@ def check_expert_use_shared_dataset(expert_datasets:list, username:str=None):
             return True
     return False
 
-def get_expert_refer_dataset_files(username, expert_name):
-    # expert_dataset_files = {}
-    # expert_dataset_files = {'dataset_name_1':[{"owner":"ccchang","name":"D1","files":["F1","F2","F3"]}],
-    #                         'dataset_name_2':[{"owner":"ccchang","name":"D1","files":["F1","F2","F3"]}],
-    #                         'dataset_name_3':[{"owner":"ccchang","name":"D1","files":["F1","F2","F3"]}]}
-    # all_dataset = list_datasets
-    # for dataset in ALL_DATASET:
-    #     expert_dataset_files[dataset] = get_file_list_of_dataset(username, dataset)
-    expert = config.expert.from_json(username, expert_name)
-    # st.write(expert, expert.datasets())
-    expert_datasets = expert.datasets()
-    return expert_datasets
+
 
 def get_expert_shared_users(expert):
     shared_users = []
     expert.get('shared_users')
     return shared_users
 
-def get_experts_shared_with_me(username):
-    experts = config.expert.list()
-    shared_expert_name = []
-    for exp in experts:
-        if username in exp['shared_users']:
-            shared_expert_name.append(f"{exp['name']}@{exp['owner']}") 
-    return shared_expert_name
 
 # embedding model
 def get_embedding_model_of_expert(expert_name):
@@ -850,7 +1033,60 @@ def check_file_selected_by_expert(datasets:list, dataset_name:str, dataset_owner
 
 
 
+def delete_chromadb(dir_name_list:list):
+    import shutil,time
+    
+    for db_storage_path in dir_name_list:
+        suc,try_num = False, 0
+        while (not suc) and try_num<=3:
+            try:
+                shutil.rmtree(Path(db_storage_path))
+                suc = True
+                
+            except Exception as e:
+                time.sleep(1)
+                err_msg = e.__str__()
+                try_num += 1
+                continue 
+        if not suc:
+            st.warning("cannot delete "+ err_msg)
 
+    return
+
+
+
+
+def get_last_consult_for_expert(expert_owner:str, expert_name:str)->dict:
+    
+
+    response = requests.get(api_urls['get_consult'], json = {'owner':expert_owner, 'expert_name':expert_name}).json()
+    
+    ### if can not get last consult, get default consult ###
+    if response['status'] != 'success':
+        
+        response = requests.get(api_urls['get_default_consult']).json()
+        if response['satatus'] != 'success':
+            api_fail(response['response'])
+            return {}
+        return response['response']
+    
+    return response['response']
+
+
+def check_consultable(datasets:list, embed:str, chunk_size:int) -> bool:
+        if len(datasets) == 0:
+            msg = 'no dataset used.'
+            return False, msg
+        if all([not d.get('files') for d in datasets]):
+            msg = 'no files exist in used datasets.'
+            return False, msg
+        if embed=='' or embed == None:
+            msg = 'no embedding model used.'
+            return False, msg
+        if chunk_size == 0 or isinstance(chunk_size, str):
+            msg = 'no chunksize set.'
+            return False, msg
+        return True, ''
 
 def get_dataset_info(owner:str, dataset_name:str)->(list,str,str):
     # get dataset info from config
@@ -896,4 +1132,101 @@ def get_openai_config(owner:str)->dict:
         return {}
     
     return response['response']
+
+
+
+
+
+
+
+def get_data_path(owner:str, datasets:list, embedding_model:str, chunk_size:int):
+    """get the chromadb path of all files in datasets.
+
+    Args:
+        owner (str): _description_
+        datasets (list): _description_
+        embedding_model (str): _description_
+        chunk_size (int): _description_
+    """
+    try:
+        chromadb_path = requests.get(api_urls['get_chromadb_path']).json()['response']
+        
+    except Exception as e:
+        chromadb_path = './chromadb'
+        
+    try:
+        embed_type, embed_name = embedding_model.split(':')[0].lower(), embedding_model.split(':')[1] 
+    except:
+        embed_type, embed_name = embedding_model.split(':')[0].lower(), ''
+        
+        
+    res_list = []
+    for dataset in datasets:
+        dataset_name = dataset['name']
+        dataset_owner = dataset['owner']
+        dataset_files = dataset['files']
+        
+        response = requests.get(api_urls['get_md5_name'], json = {'owner':dataset_owner, 'dataset_name':dataset_name}).json()
+        
+        
+        if response['status'] != 'success':
+            continue
+        for file in dataset_files:
+            if file in response['response']:
+                cur_path = Path(chromadb_path) / (dataset_name + '_' + response['response'][file] + '_' + embed_type + '_' +\
+                embed_name.replace('/','-') + '_' + str(chunk_size))  
+                res_list.append(cur_path.__str__())
+    return res_list
+
+
+
+
+
+
+
+
+def get_log_data():
     
+    plain_txt = ""
+    for key in st.session_state.logs:
+        plain_txt += key + ":\n"
+        for k in st.session_state.logs[key]:
+            if type(st.session_state.logs[key][k]) == list:
+                text = k + ": " + '\n'.join([str(w) for w in st.session_state.logs[key][k]]) + "\n\n"             
+            else:
+                text = k + ": " + str(st.session_state.logs[key][k]) + "\n\n"
+            
+            plain_txt += text
+        plain_txt += "\n\n\n\n"
+        
+    return plain_txt
+
+
+
+    
+def download_txt(file_name:str):
+    file_name = "log_" + file_name + ".txt"
+    txt_data = get_log_data()
+    txt_filename = file_name
+    st.download_button(
+        "Download Text Log",
+        txt_data.encode('utf-8'),
+        key='txt',
+        file_name=txt_filename,
+        mime='text/plain'
+    )
+    #Path(f"./logs/{file_name}").unlink()
+
+# Create a button to download a JSON file
+def download_json(file_name:str):
+    import json
+    file_name =  "log_" + file_name + ".json"
+    json_data = st.session_state.logs
+    json_filename = file_name
+    st.download_button(
+        "Download JSON Log",
+        json.dumps(json_data,indent=4,ensure_ascii=False).encode('utf-8'),
+        key='json',
+        file_name=json_filename,
+        mime='application/json'
+    )

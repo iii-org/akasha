@@ -21,9 +21,10 @@ OPENAI_CONFIG_PATH = "./config/openai/"
 
 class ConsultModel(BaseModel):
     data_path: Union[str, List[str]]
-    prompt: Union[str, List[str]]
+    prompt: Union[str, List[Any]]
     chunk_size:Optional[int]=1000
     model:Optional[str] = "openai:gpt-3.5-turbo"
+    embedding_model:Optional[str] = "openai:text-embedding-ada-002"
     topK:Optional[int] = 3 
     threshold:Optional[float] = 0.2
     search_type:Optional[str] = 'svm'
@@ -37,7 +38,7 @@ class ConsultModelReturn(BaseModel):
     response: Union[str, List[str]]
     status: str
     logs: Dict[str, Any]
-
+    timestamp: str
 
 
 class OpenAIKey(BaseModel):
@@ -72,25 +73,28 @@ async def regular_consult(user_input: ConsultModel):
     Returns:
         dict: status, response, logs
     """
-    if not stu.load_openai(openai_config=user_input.openai_config):
+    if not stu.load_openai(config=user_input.openai_config):
         return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
      
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
-        , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token\
+        , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
     response = qa.get_response(doc_path=user_input.data_path, prompt = user_input.prompt)
     
     ## get logs
+    timesp = ''
     if len(qa.timestamp_list) == 0:
         logs = {}
     else:
-        logs =  qa.logs[qa.timestamp_list[-1]]
-    
-    
+        timesp = qa.timestamp_list[-1]
+        if timesp in qa.logs:
+            logs =  qa.logs[timesp]
+            
+            
     if response == None or response == "":
-        user_output = ConsultModelReturn(response="Can not get response from get_resposne.\n", status="fail", logs=logs)
+        user_output = ConsultModelReturn(response="Can not get response from get_resposne.\n", status="fail", logs=logs, timestamp=timesp)
     else:
-        user_output = ConsultModelReturn(response=response, status="success", logs=logs)
+        user_output = ConsultModelReturn(response=response, status="success", logs=logs, timestamp = timesp)
     
     del qa    
     return user_output
@@ -120,25 +124,28 @@ async def deep_consult(user_input: ConsultModel):
     Returns:
         dict: status, response, logs
     """
-    if not stu.load_openai(openai_config=user_input.openai_config):
+    if not stu.load_openai(config=user_input.openai_config):
         return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
     
     
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
-        , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token\
+        , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
     response = qa.chain_of_thought(doc_path=user_input.data_path, prompt_list = user_input.prompt)
     ## get logs
+    timesp = ''
+    
     if len(qa.timestamp_list) == 0:
         logs = {}
     else:
-        logs =  qa.logs[qa.timestamp_list[-1]]
-    
+        timesp = qa.timestamp_list[-1]
+        if timesp in qa.logs:
+            logs =  qa.logs[timesp]
     
     if response == None or response == [] or response == "":
-        user_output = ConsultModelReturn(response="Can not get response from chain_of_thought.\n", status="fail", logs=logs)
+        user_output = ConsultModelReturn(response="Can not get response from chain_of_thought.\n", status="fail", logs=logs, timestamp=timesp)
     else:
-        user_output = ConsultModelReturn(response=response, status="success", logs=logs)
+        user_output = ConsultModelReturn(response=response, status="success", logs=logs, timestamp=timesp)
     
     del qa    
     return user_output
