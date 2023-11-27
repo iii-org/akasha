@@ -39,7 +39,6 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, usernam
         else:
             last_consult_config_for_expert = get_last_consult_for_expert(expert_owner, expert_name)
             prompt = col_question.text_area('Question', help='Prompt', placeholder='Ask something' if consultable else '', height=150, key='question')
-            print(st.session_state['question'])
             auto_clean = col_question.toggle('Auto Clean', value=False, key='auto-clean-on-submit', help='Clean Question upon submit')
             with col_question.expander('Advanced'):
                 # search type + top k + threshold + max token + embedding model(must same as vector db) + (language model, if compression)

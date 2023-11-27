@@ -107,7 +107,6 @@ def ask_question( username, sys_prompt, prompt, expert_owner, expert_name, advan
     }
     
     response = requests.post(api_urls['regular_consult'], json = data).json()
-    print(response)
     if response['status'] != 'success':
         api_fail(response['response'])    
         return False
@@ -170,7 +169,6 @@ def ask_question_deep(col, layers_list:List[dict], username, sys_prompt, prompt,
         elif len(group_list) > 1:
             prompt_list.append(group_list)
     prompt_list.append(prompt)
-    print(prompt_list)
             
         
        
@@ -201,7 +199,6 @@ def ask_question_deep(col, layers_list:List[dict], username, sys_prompt, prompt,
     }
     
     response = requests.post(api_urls['deep_consult'], json = data).json()
-    print(response)
     if response['status'] != 'success':
         api_fail(response['response'])    
         return False
