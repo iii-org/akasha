@@ -14,7 +14,7 @@ from views.userguide import user_guide_page
 from views.signup import signup_page
 from views.forgetpwd import forgetpwd_page
 
-from utils import list_experts, list_datasets
+from utils import list_experts, list_datasets, list_models
 
 # info
 VERSION = '0.8'
@@ -99,7 +99,7 @@ if url_params == {}:
         DATASETS = list_datasets(username, name_only=True, include_shared=True) # may filtered by logged-in user
         EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', 'hf:shibing624/text2vec-base-multilingual']
         SEARCH_TYPES = ['merge', 'svm', 'tfidf', 'mmr']
-        LANGUAGE_MODELS = ['openai:gpt-3.5-turbo', 'openai:gpt-3.5-turbo-16k', 'openai:gpt-2']
+        LANGUAGE_MODELS = list_models()
         
         # layout after successfully login
         placeholder_title.empty()

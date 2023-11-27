@@ -4,7 +4,7 @@ import os
 from typing import List
 import requests
 from pathlib import Path
-import streamlit_utils as stu
+import api_utils as apu
 
 
 CHUNKSIZE = 3000
@@ -15,6 +15,7 @@ PORT = "8000"
 api_urls = {
     'get_docs_path': f'{HOST}:{PORT}/get_docs_path',
     'get_dataset':f'{HOST}:{PORT}/dataset/get',
+    'get_model_path':f'{HOST}:{PORT}/get_model_path',
     'get_filename_list':f'{HOST}:{PORT}/dataset/get_filename',
     'show_dataset': f'{HOST}:{PORT}/dataset/show',
     'get_owner_dataset': f'{HOST}:{PORT}/dataset/get_owner',
@@ -234,9 +235,8 @@ def ask_question_deep(col, layers_list:List[dict], username, sys_prompt, prompt,
     
 
 
-def save_last_consult_for_expert(expert_name):
-    # save last consult config for expert
-    return True
+
+
 
 def list_experts(owner:str=None, name_only:bool=False, include_shared=True):
     # list all experts (of specific owner)
@@ -254,6 +254,27 @@ def list_experts(owner:str=None, name_only:bool=False, include_shared=True):
     # if name_only:
     #     return [e['name'] if e['owner'] == owner else f"{e['name']}@{e['owner']}" for e in experts]
     return experts
+
+
+
+
+
+
+
+def list_models():
+    
+    base =  ['openai:gpt-3.5-turbo', 'openai:gpt-3.5-turbo-16k']
+    try:
+        modes_dir = requests.get(api_urls['get_model_path']).json()['response']
+        
+        for dir_path in Path(modes_dir).iterdir():
+            if dir_path.is_dir():
+                base.append("hf:" + (Path(modes_dir) /  dir_path.name).__str__())    
+            elif dir_path.suffix == ".gguf":
+                base.append("llama-gpu:" + (Path(modes_dir) /  dir_path.name).__str__())
+    except:
+        print("can not find model folder!\n\n")
+    return base
 
 def create_expert(owner:str, expert_name:str, expert_embedding:str, expert_chunksize:int,
                 expert_add_files:dict):
@@ -592,12 +613,12 @@ def create_dataset(dataset_name:str, dataset_description:str, uploaded_files:var
         
         DOCS_PATH = requests.get(api_urls['get_docs_path']).json()['response']
         
-        if not stu.check_dir(DOCS_PATH):
+        if not apu.check_dir(DOCS_PATH):
             raise Exception(f'can not create {DOCS_PATH} directory')
         
         owner_path = Path(DOCS_PATH) / owner
         
-        if not stu.check_dir(owner_path):
+        if not apu.check_dir(owner_path):
             raise Exception(f'can not create {owner} directory in {DOCS_PATH}')
         
         save_path = owner_path / dataset_name
@@ -685,12 +706,12 @@ def edit_dataset(dataset_name:str, new_dataset_name:str, new_description:str, up
 
     try:
         DOCS_PATH = requests.get(api_urls['get_docs_path']).json()['response']
-        if not stu.check_dir(DOCS_PATH):
+        if not apu.check_dir(DOCS_PATH):
             raise Exception(f'can not create {DOCS_PATH} directory')
         
         owner_path = Path(DOCS_PATH) / owner
         
-        if not stu.check_dir(owner_path):
+        if not apu.check_dir(owner_path):
             raise Exception(f'can not create {owner} directory in {DOCS_PATH}')
         
         save_path = owner_path / dataset_name
@@ -857,12 +878,12 @@ def delete_dataset(dataset_name:str, owner:str):
         DOCS_PATH = requests.get(api_urls['get_docs_path']).json()['response']
         
         
-        if not stu.check_dir(DOCS_PATH):
+        if not apu.check_dir(DOCS_PATH):
             raise Exception(f'can not create {DOCS_PATH} directory')
         
         owner_path = Path(DOCS_PATH) / owner
         
-        if not stu.check_dir(owner_path):
+        if not apu.check_dir(owner_path):
             raise Exception(f'can not create {owner} directory in {DOCS_PATH}')
         
         

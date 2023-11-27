@@ -7,14 +7,14 @@ import akasha.helper
 import akasha.db
 import os
 import json
-import streamlit_utils as stu
+import api_utils as apu
 
 
 
 DATASET_CONFIG_PATH = "./config/datasets/"
 DOCS_PATH = './docs'
-
-
+CONFIG_PATH = './config'
+MODEL_PATH = './model'
 
 class UserID(BaseModel):
     owner: str
@@ -47,12 +47,25 @@ router = APIRouter()
 
 
 
+@router.get("/get_base_config_path")
+async def get_base_config_path():
+    return {'status':'success','response':CONFIG_PATH}
+
+
+
+@router.get("/get_dataset_config_path")
+async def get_dataset_config_path():
+    return {'status':'success','response':DATASET_CONFIG_PATH}
+
 
 @router.get("/get_docs_path")
 async def get_docs_path():
     return {'status':'success','response':DOCS_PATH}
 
 
+@router.get("/get_model_path")
+async def get_model_path():
+    return {'status':'success','response':MODEL_PATH}
 
 
 
@@ -81,14 +94,14 @@ async def create_dataset(user_input:DatasetInfo):
     dataset_description = user_input.dataset_description
     owner = user_input.owner
     
-    uid = stu.generate_hash(owner, dataset_name)
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    uid = apu.generate_hash(owner, dataset_name)
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
 
     save_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
     own_path = Path(DOCS_PATH) / owner
-    if not stu.check_dir(own_path):
+    if not apu.check_dir(own_path):
         return {'status': 'fail', 'response': 'create document path failed.\n\n'}
     doc_path = (own_path / dataset_name)
     
@@ -112,7 +125,7 @@ async def create_dataset(user_input:DatasetInfo):
         "description": dataset_description,
         "owner": owner,
         "files": [{"filename":file_paths[i].name,"MD5":md5_list[i] } for i in range(len(file_paths))],   
-        "last_update": stu.get_lastupdate_of_dataset(dataset_name, owner) 
+        "last_update": apu.get_lastupdate_of_dataset(dataset_name, owner) 
     }
     
     ## write json file
@@ -153,9 +166,9 @@ async def update_dataset(user_input:EditDatasetInfo):
     dataset_description = user_input.new_dataset_description
     upload_files = user_input.upload_files
     delete_files = user_input.delete_files
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     old_dataset_name = dataset_name
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
 
         
@@ -169,7 +182,7 @@ async def update_dataset(user_input:EditDatasetInfo):
     
     if dataset_name != new_dataset_name:
         ### edit config name
-        uid = stu.generate_hash(owner, new_dataset_name)
+        uid = apu.generate_hash(owner, new_dataset_name)
         data['name'] = new_dataset_name
         data['uid'] = uid
         dataset_name = new_dataset_name
@@ -178,7 +191,7 @@ async def update_dataset(user_input:EditDatasetInfo):
         
     save_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
     own_path = Path(DOCS_PATH) / owner
-    if not stu.check_dir(own_path):
+    if not apu.check_dir(own_path):
         return {'status': 'fail', 'response': 'create document path failed.\n\n'}
     doc_path = own_path / dataset_name
     new_files = []
@@ -217,14 +230,14 @@ async def update_dataset(user_input:EditDatasetInfo):
 
     ## update dataset name in chromadb
     if old_dataset_name != dataset_name:
-        stu.update_dataset_name_from_chromadb(old_dataset_name, dataset_name, old_md5_list)
+        apu.update_dataset_name_from_chromadb(old_dataset_name, dataset_name, old_md5_list)
 
 
         
     ## update dict and save to json file
     data['files'] = new_files
     data['description'] = dataset_description
-    data['last_update'] = stu.get_lastupdate_of_dataset(dataset_name, owner)
+    data['last_update'] = apu.get_lastupdate_of_dataset(dataset_name, owner)
     
     
     ## write json file
@@ -234,7 +247,7 @@ async def update_dataset(user_input:EditDatasetInfo):
     
     
     ### update expert which has this dataset, remove files that have been deleted, also update dataset name if dataset name changed.    
-    stu.check_and_delete_files_from_expert(dataset_name, owner, delete_files, old_dataset_name)
+    apu.check_and_delete_files_from_expert(dataset_name, owner, delete_files, old_dataset_name)
     return {'status': 'success', 'response': f'update dataset {dataset_name} successfully.\n\n'}
 
 
@@ -254,10 +267,10 @@ async def delete_dataset(user_input:DatasetID):
     owner = user_input.owner
     dataset_name = user_input.dataset_name
     
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
@@ -275,7 +288,7 @@ async def delete_dataset(user_input:DatasetID):
     os.remove(data_path)
     
     ## delete this dataset in every expert's dataset list
-    stu.check_and_delete_dataset(dataset_name, owner)
+    apu.check_and_delete_dataset(dataset_name, owner)
     return {'status': 'success', 'response': f'delete dataset {dataset_name} successfully.\n\n'}
 
 
@@ -298,10 +311,10 @@ async def share_dataset(user_input:DatasetShare):
     dataset_name = user_input.dataset_name
     shared_users = user_input.shared_users
     
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
@@ -343,11 +356,11 @@ async def delete_share_dataset(user_input:DatasetShareDelete):
     dataset_name = user_input.dataset_name
     delete_users = user_input.delete_users
     
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
 
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
@@ -389,11 +402,11 @@ async def get_description_from_dataset(user_input:DatasetID):
     """
     owner = user_input.owner
     dataset_name = user_input.dataset_name
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     data_path = Path(DATASET_CONFIG_PATH) / (uid + '.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
@@ -422,11 +435,11 @@ async def get_MD5_list_from_dataset(user_input:DatasetID):
     
     owner = user_input.owner
     dataset_name = user_input.dataset_name
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     data_path = Path(DATASET_CONFIG_PATH) / (uid + '.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
@@ -456,11 +469,11 @@ async def get_filename_list_from_dataset(user_input:DatasetID):
     
     owner = user_input.owner
     dataset_name = user_input.dataset_name
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     data_path = Path(DATASET_CONFIG_PATH) / (uid + '.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'dataset config file not found.\n\n'}
@@ -491,10 +504,10 @@ async def get_info_of_dataset(user_input:DatasetID):
     """
     owner = user_input.owner
     dataset_name = user_input.dataset_name
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
-    uid = stu.generate_hash(owner, dataset_name)
+    uid = apu.generate_hash(owner, dataset_name)
     
     data_path = Path(DATASET_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
@@ -518,7 +531,7 @@ async def get_owner_dataset_list(user_input:UserID):
     """
     owner = user_input.owner
     dataset_names = []
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     ## get all dataset name
@@ -545,7 +558,7 @@ async def get_use_dataset_list(user_input:UserID):
     """
     owner = user_input.owner
     dataset_names = []
-    if not stu.check_config(DATASET_CONFIG_PATH):
+    if not apu.check_config(DATASET_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     ## get all dataset name

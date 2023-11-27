@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json
-import streamlit_utils as stu
+import api_utils as apu
 app = FastAPI()
 app.include_router(datasets.router)
 app.include_router(experts.router)
@@ -73,8 +73,9 @@ async def regular_consult(user_input: ConsultModel):
     Returns:
         dict: status, response, logs
     """
-    if not stu.load_openai(config=user_input.openai_config):
-        return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
+    if user_input.model.split(':')[0] == "openai" or user_input.embedding_model.split(':')[0] == "openai":
+        if not apu.load_openai(config=user_input.openai_config):
+            return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
      
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
         , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token,embeddings=user_input.embedding_model\
@@ -124,8 +125,9 @@ async def deep_consult(user_input: ConsultModel):
     Returns:
         dict: status, response, logs
     """
-    if not stu.load_openai(config=user_input.openai_config):
-        return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
+    if user_input.model.split(':')[0] == "openai" or user_input.embedding_model.split(':')[0] == "openai":
+        if not apu.load_openai(config=user_input.openai_config):
+            return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
     
     
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
@@ -168,7 +170,7 @@ async def save_openai_key(user_input:OpenAIKey):
     """
     owner = user_input.owner
     save_path = Path(OPENAI_CONFIG_PATH) / (owner + "_" + "openai.json")
-    if not stu.check_config(OPENAI_CONFIG_PATH):
+    if not apu.check_config(OPENAI_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
 
     
@@ -273,7 +275,7 @@ async def choose_openai_key(user_input:OpenAIKey):
     """
     
     openai_config_file_path =  (Path(OPENAI_CONFIG_PATH) / (user_input.owner + "_" + "openai.json")).__str__()
-    config = stu.choose_openai_key( openai_config_file_path, user_input.openai_key, user_input.azure_key, user_input.azure_base)
+    config = apu.choose_openai_key( openai_config_file_path, user_input.openai_key, user_input.azure_key, user_input.azure_base)
     
     if len(config) == 0:
         return {'status': 'fail', 'response': 'can not find any valid openai key.\n\n'}

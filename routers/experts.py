@@ -7,7 +7,7 @@ import akasha.helper
 import akasha.db
 import os
 import json
-import streamlit_utils as stu
+import api_utils as apu
 
 
 DOCS_PATH = './docs'
@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {'language_model':"openai:gpt-3.5-turbo",
             'max_token': 3000,
             'temperature':0.0,
             'use_compression':0, # 0 for False, 1 for True
-            'compression_language_model':"openai:gpt-3.5-turbo"}
+            'compression_language_model':""}
 
 
 ### data class ###
@@ -113,10 +113,10 @@ async def get_info_of_expert(user_input:ExpertID):
     """
     owner = user_input.owner
     expert_name = user_input.expert_name
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'expert not found.\n\n'}
@@ -143,7 +143,7 @@ async def get_owner_expert_list(user_input:UserID):
     """
     owner = user_input.owner
     expert_names = []
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     ## get all dataset name
@@ -172,7 +172,7 @@ async def get_use_expert_list(user_input:UserID):
     """
     owner = user_input.owner
     expert_names = []
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     ## get all dataset name
@@ -204,11 +204,11 @@ async def get_consult_from_expert(user_input:ExpertID):
     
     
     
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
 
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
@@ -253,11 +253,11 @@ async def save_consult_to_expert(user_input:ExpertConsult):
     owner = user_input.owner
     expert_name = user_input.expert_name
     
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
 
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
@@ -305,13 +305,13 @@ async def create_expert(user_input:ExpertInfo):
     owner = user_input.owner
     
     if embedding_model.split(':')[0] == 'openai':
-        if not stu.load_openai(config=user_input.openai_config):
+        if not apu.load_openai(config=user_input.openai_config):
             return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
         
         
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     warning = []
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
 
@@ -381,13 +381,13 @@ async def update_expert(user_input:ExpertEditInfo):
     warning = []
     delete_chromdb = []
     if new_embedding_model.split(':')[0] == 'openai':
-        if not stu.load_openai(config=user_input.openai_config):
+        if not apu.load_openai(config=user_input.openai_config):
             return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
         
         
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
     data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
@@ -403,7 +403,7 @@ async def update_expert(user_input:ExpertEditInfo):
     
     if expert_name != new_expert_name:
         ### edit config name
-        uid = stu.generate_hash(owner, expert_name)
+        uid = apu.generate_hash(owner, expert_name)
         if (Path(EXPERT_CONFIG_PATH) / (uid+'.json')) .exists():
             return {'status': 'fail', 'response': 'new expert name already exists.\n\n'}
         data['name'] = new_expert_name
@@ -417,9 +417,9 @@ async def update_expert(user_input:ExpertEditInfo):
         for dataset in delete_datasets:
             oner = dataset['owner']
             dataset_name = dataset['name']
-            id = stu.generate_hash(oner, dataset_name)
+            id = apu.generate_hash(oner, dataset_name)
             for file in dataset['files']:
-                cmd = stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+                cmd = apu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
                 if cmd != "":
                     delete_chromdb.append(cmd)
         
@@ -440,17 +440,17 @@ async def update_expert(user_input:ExpertEditInfo):
         for dataset in data['datasets']:
             oner = dataset['owner']
             dataset_name = dataset['name']
-            id = stu.generate_hash(oner, dataset_name)
+            id = apu.generate_hash(oner, dataset_name)
             for file in dataset['files']:
-                cmd = stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+                cmd = apu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
                 if cmd != "":
                     delete_chromdb.append(cmd)
     
     
     if len(delete_datasets) > 0 :
-        data['datasets'] = stu.delete_datasets_from_expert(data['datasets'], delete_datasets)
+        data['datasets'] = apu.delete_datasets_from_expert(data['datasets'], delete_datasets)
     if len(add_datasets) > 0 :
-        data['datasets'] = stu.add_datasets_to_expert(data['datasets'], add_datasets)
+        data['datasets'] = apu.add_datasets_to_expert(data['datasets'], add_datasets)
     
     
     if new_embedding_model != data['embedding_model'] or new_chunk_size != data['chunk_size']:
@@ -495,10 +495,10 @@ async def delete_expert(user_input:ExpertID):
     expert_name = user_input.expert_name
     delete_chromdb = []
     
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': f'expert config file {expert_name} not found.\n\n'}
@@ -511,11 +511,11 @@ async def delete_expert(user_input:ExpertID):
     for dataset in data['datasets']:
         oner = dataset['owner']
         dataset_name = dataset['name']
-        id = stu.generate_hash(oner, dataset_name)
+        id = apu.generate_hash(oner, dataset_name)
         
         for file in dataset['files']:
             print(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
-            cmd = stu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
+            cmd = apu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id)
             if cmd != "":
                     delete_chromdb.append(cmd)
     
@@ -544,10 +544,10 @@ async def share_expert(user_input:ExpertShare):
     expert_name = user_input.expert_name
     shared_users = user_input.shared_users
     
-    if not stu.check_config(EXPERT_CONFIG_PATH):
+    if not apu.check_config(EXPERT_CONFIG_PATH):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
-    uid = stu.generate_hash(owner, expert_name)
+    uid = apu.generate_hash(owner, expert_name)
     data_path = Path(EXPERT_CONFIG_PATH) / (uid+'.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'expert config file not found.\n\n'}

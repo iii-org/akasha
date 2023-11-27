@@ -43,6 +43,8 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, usernam
             auto_clean = col_question.toggle('Auto Clean', value=False, key='auto-clean-on-submit', help='Clean Question upon submit')
             with col_question.expander('Advanced'):
                 # search type + top k + threshold + max token + embedding model(must same as vector db) + (language model, if compression)
+                if last_consult_config_for_expert['language_model'] not in LANGUAGE_MODELS:
+                    last_consult_config_for_expert['language_model'] = LANGUAGE_MODELS[0]
                 language_model = st.selectbox('language model', LANGUAGE_MODELS, index=LANGUAGE_MODELS.index(last_consult_config_for_expert.get('language_model', LANGUAGE_MODELS[0])))
                 search_type = st.selectbox('search type', SEARCH_TYPES, index=SEARCH_TYPES.index(last_consult_config_for_expert.get('search_type', SEARCH_TYPES[0])))
                 top_k = st.slider('Top K', min_value=1, max_value=10, value=last_consult_config_for_expert.get('top_k', 3))
@@ -106,6 +108,8 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, username):
                 auto_clean = st.toggle('Auto Clean', value=False, key='auto-clean-on-submit-layers', help='Clean Question & Layers upon submit')
                 with st.expander('Advanced'):
                     # search type + top k + threshold + max token + embedding model(must same as vector db) + (language model, if compression)
+                    if last_consult_config_for_expert['language_model'] not in LANGUAGE_MODELS:
+                        last_consult_config_for_expert['language_model'] = LANGUAGE_MODELS[0]
                     language_model = st.selectbox('language model', LANGUAGE_MODELS, index=LANGUAGE_MODELS.index(last_consult_config_for_expert.get('language_model', LANGUAGE_MODELS[0])))
                     search_type = st.selectbox('search type', SEARCH_TYPES, index=SEARCH_TYPES.index(last_consult_config_for_expert.get('search_type', SEARCH_TYPES[0])))
                     top_k = st.slider('Top K', min_value=1, max_value=10, value=last_consult_config_for_expert.get('top_k', 3))

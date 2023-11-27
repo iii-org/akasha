@@ -1,6 +1,5 @@
 
 from pathlib import Path
-import streamlit as st
 import requests
 import os
 import shutil
@@ -12,11 +11,6 @@ import hashlib
 HOST = "http://127.0.0.1"
 PORT = "8000"
 api_url = {
-    'regular_consult':f'{HOST}:{PORT}/regular_consult',
-    'deep_consult': f'{HOST}:{PORT}/deep_consult',
-    'create_dataset': f'{HOST}:{PORT}/dataset/create',
-    'update_dataset': f'{HOST}:{PORT}/dataset/update',
-    'delete_dataset': f'{HOST}:{PORT}/dataset/delete',
     'delete_expert':  f'{HOST}:{PORT}/expert/delete',
     'test_openai': f'{HOST}:{PORT}/openai/test_openai',
     'test_azure': f'{HOST}:{PORT}/openai/test_azure'
@@ -25,6 +19,8 @@ DOCS_PATH = './docs'
 CONFIG_PATH = './config'
 EXPERT_CONFIG_PATH = './config/experts'
 DATASET_CONFIG_PATH = "./config/datasets"
+
+
 
 def _separate_name(name:str):
     """ separate type:name by ':'
@@ -57,230 +53,10 @@ def generate_hash(owner, dataset_name):
     return hex_digest
 
 
-def create_dataset(dataset_name:str, dataset_description:str, uploaded_files:vars, owner:str):
-    """create doc files in DOC_PATH/{owner}/{dataset_name} , and call api to create dataset config.
 
-    Args:
-        dataset_name (str): dataset name
-        dataset_description (str): dataset description
-        uploaded_files (vars): bytes uploaded files
-        owner (str): owner name
-
-    Raises:
-        Exception: _description_
-        Exception: _description_
-        Exception: _description_
-        Exception: _description_
-        Exception: _description_
-    """
-    # validate inputs
-    suc_count = 0
-    
-    try:
-        if not check_dir(DOCS_PATH):
-            raise Exception(f'can not create {DOCS_PATH} directory')
-        
-        owner_path = Path(DOCS_PATH) / owner
-        
-        if not check_dir(owner_path):
-            raise Exception(f'can not create {owner} directory in {DOCS_PATH}')
-        
-        save_path = owner_path / dataset_name
-        
-        ## check if save_path is already exist
-        if save_path.exists():
-            raise Exception(f'Dataset={dataset_name} is already exist')
-        else:
-            save_path.mkdir()
-        ## check file size/extension is non-empty/extremely large
-        for uploaded_file in uploaded_files:
-            bytes_data = uploaded_file.read()
-            if len(bytes_data) == 0:
-                st.warning(f'File={uploaded_file.name} is empty')
-                continue
-            if len(bytes_data) > 100000000:
-                st.warning(f'File={uploaded_file.name} is too large')
-                continue
-            
-            with open(save_path.joinpath(uploaded_file.name), "wb") as f:
-                f.write(bytes_data)
-            suc_count += 1
-           #  st.write("uploaded file:", uploaded_file.name)
-        if suc_count == 0:
-            raise Exception('No file is uploaded successfully')
-        # save data file(s) to local path={new_dataset_name}
-       
-        data = {
-            'dataset_name': dataset_name,
-            'dataset_description': dataset_description,
-            'owner': owner
-        }
-        response = requests.post(api_url['create_dataset'],json = data).json()
-        
-        if response['status'] != 'success':
-            raise Exception(response['response'])
-        
-        st.success(f'Dataset\'{dataset_name}\' has been created successfully')
-    except Exception as e:
-    
-        st.error('Dataset creation failed, '+ e.__str__())
-        return
-    
-    
     
 
 
-
-
-
-def edit_dataset(dataset_name:str, new_dataset_name:str, new_description:str, uploaded_files:vars, delete_file_set:set, owner:str):
-    """doing files and directory edition for update dataset.
-     1. check if DOCS_PATH exist or create it
-     2. check if owner directory exist or create it
-     3. check if new dataset name is already exist
-     4. check if old dataset name is exist
-     5. rename old dataset name if we use new dataset name
-     6. delete files in delete_file_set from local path={new_dataset_name}
-     7. check files and save uploaded files to local path={new_dataset_name}
-     8. collect params and call api to update dataset config, related chromadbs. 
-     
-
-    Args:
-        dataset_name (str): old dataset name
-        new_dataset_name (str): new dataset name
-        new_description (str): new dataset description
-        uploaded_files (vars): byte uploaded files
-        delete_file_set (set): filename that need to be deleted
-        owner (str): owner name
-
-    Raises:
-        Exception: can not create DOCS_PATH directory
-        Exception: can not create owner directory in DOCS_PATH
-        Exception: new dataset name is already exist or old dataset name is not exist
-        Exception: Dataset={dataset_name} is not exist
-        Exception: api response status is not success
-    """
-    # validate inputs
-        
-    # save uploaded files to local path={new_dataset_name}
-    # delete files in delete_file_set from local path={new_dataset_name}
-    
-
-    try:
-        if not check_dir(DOCS_PATH):
-            raise Exception(f'can not create {DOCS_PATH} directory')
-        
-        owner_path = Path(DOCS_PATH) / owner
-        
-        if not check_dir(owner_path):
-            raise Exception(f'can not create {owner} directory in {DOCS_PATH}')
-        
-        save_path = owner_path / dataset_name
-        upload_files_list = []
-        delete_files_list = []
-        ## rename dataset name to new_dataset_name if there're any changes
-        if new_dataset_name != dataset_name:
-            if (owner_path / new_dataset_name).exists():
-                raise Exception(f'New Dataset Name={new_dataset_name} is already exist')
-            
-            ## check if save_path is already exist
-            if not save_path.exists():
-                raise Exception(f'Old Dataset={dataset_name} is not exist')
-            else:
-                save_path.rename(owner_path / new_dataset_name)
-                save_path = owner_path / new_dataset_name
-        
-        ## delete files in delete_file_set from local path={new_dataset_name}
-        for file in delete_file_set:
-            if (save_path / file).exists():
-                (save_path / file).unlink()
-                delete_files_list.append(file)
-
-        ## check file size/extension is non-empty/extremely large
-        for uploaded_file in uploaded_files:
-            bytes_data = uploaded_file.read()
-            if len(bytes_data) == 0:
-                st.warning(f'File={uploaded_file.name} is empty')
-                continue
-            if len(bytes_data) > 100000000:
-                st.warning(f'File={uploaded_file.name} is too large')
-                continue
-            
-            with open(save_path.joinpath(uploaded_file.name), "wb") as f:
-                f.write(bytes_data)
-        
-            upload_files_list.append(uploaded_file.name)
-        
-        data = {
-            'dataset_name': dataset_name,
-            'new_dataset_name': new_dataset_name,
-            'new_dataset_description': new_description,
-            'owner': owner,
-            'upload_files': upload_files_list,
-            'delete_files': delete_files_list
-        }
-        response = requests.post(api_url['update_dataset'], json = data).json()
-        
-        if response['status'] != 'success':
-            raise Exception(response['response'])
-        
-        
-        st.success(f'Dataset\'{dataset_name}\' has been updated successfully')
-        
-        
-    except Exception as e:
-    
-        st.error('Dataset edition failed, '+ e.__str__())
-        return
-    
-    return 
-
-
-
-def delete_dataset(dataset_name:str, owner:str):
-    """delete doc files in DOC_PATH/{owner}/{dataset_name} , and call api to delete dataset config, related chromadbs.
-
-    Args:
-        dataset_name (str): dataset name
-        owner (str): owner name
-
-    Raises:
-        Exception: can not create DOCS_PATH directory
-        Exception: can not create owner directory in DOCS_PATH
-        Exception: Dataset={dataset_name} is not exist
-        Exception: api response status is not success
-    """
-    try:
-        if not check_dir(DOCS_PATH):
-            raise Exception(f'can not create {DOCS_PATH} directory')
-        
-        owner_path = Path(DOCS_PATH) / owner
-        
-        if not check_dir(owner_path):
-            raise Exception(f'can not create {owner} directory in {DOCS_PATH}')
-        
-        
-        save_path = owner_path / dataset_name
-        if not save_path.exists():
-            raise Exception(f'Dataset={dataset_name} is not exist')
-        
-        save_path.rmdir()
-        data = {
-            'dataset_name': dataset_name,
-            'owner': owner
-        }
-        response = requests.post(api_url['delete_dataset'],json = data).json()
-        
-        if response['status'] != 'success':
-            raise Exception(response['response'])
-        
-        st.success(f'Dataset\'{dataset_name}\' has been deleted successfully')
-    except Exception as e:
-    
-        st.error('Dataset deletion failed, '+ e.__str__())
-        return
-    
-    return
 
 def check_dir(path:str)->bool:
     """check if directory exist, if not, create it."""
@@ -304,6 +80,7 @@ def check_config(path:str)-> bool:
         bool: check and create success or not
     """
     try:
+        
         config_p = Path(CONFIG_PATH)
     
         if not config_p.exists():
@@ -366,6 +143,7 @@ def get_lastupdate_of_dataset(dataset_name:str, owner:str)->str:
     """
     last_updates = []
     try:
+        
         if not check_dir(DOCS_PATH):
             raise Exception(f'can not create {DOCS_PATH} directory')
             
@@ -427,6 +205,8 @@ def check_and_delete_files_from_expert(dataset_name:str, owner:str, delete_files
     Returns:
         bool: delete any file from expert or not
     """
+    
+    
     p = Path(EXPERT_CONFIG_PATH)
     if not p.exists():
         return False
@@ -470,6 +250,8 @@ def check_and_delete_dataset(dataset_name:str, owner:str)->bool:
         dataset_name (str): dataset name
         owner (str): owner of dataset
     """
+    
+    
     p = Path(EXPERT_CONFIG_PATH)
     if not p.exists():
         return False
@@ -515,6 +297,9 @@ def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str,
 
     embed_type, embed_name = _separate_name(embedding_model)
     
+    
+    
+    
     p = Path(EXPERT_CONFIG_PATH)
     if not p.exists():
         return ""
@@ -533,6 +318,7 @@ def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str,
     
     # get MD5 of file
     md5 = id
+    
     target_path = Path(DATASET_CONFIG_PATH) / (id+'.json')
     if target_path.exists():
         with open(target_path, 'r', encoding='utf-8') as f:
