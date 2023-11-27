@@ -13,4 +13,9 @@
 3. create new dataset in datasets page
 4. create expert in experts page
 5. ask question in consult page
+
+
+
+<br/>
+
 (optional) if you want to use.gguf models or other models from huggingface, you can download the model and put it in './model' folder in the same directory of api.py, then you can use it in consult page.
