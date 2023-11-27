@@ -823,39 +823,16 @@ If you prefer running Akasha via a web page, we offer a Streamlit-based user int
 
 <br/>
 
-To get started, you can download the project and install it in the same directory as the setup.py script.
-
+To start the application, use the following command:
 
 ```bash
-
-$ git clone https://gitlab-devops.iii.org.tw/root/qaiii-1.git
-$ cd qaiii-1/
-$ python -m pip install .
-
+$ akasha ui
 ```
 
 <br/>
-<br/>
-
-
-
-Next, install Streamlit and Streamlit-option-menu. Then, use Streamlit to run the ui.py script.
-
 <br/>
 
 You should now be able to access the web page at http://localhost:8501/.
-
-<br/>
-<br/>
-
-
-```bash
-
-$ python -m pip install streamlit
-$ python -m pip install streamlit-option-menu
-$ streamlit run ui.py
-
-```
 
 <br/>
 <br/>
