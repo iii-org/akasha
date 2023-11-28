@@ -11,10 +11,10 @@ import api_utils as apu
 
 
 
-DATASET_CONFIG_PATH = "./config/datasets/"
-DOCS_PATH = './docs'
-CONFIG_PATH = './config'
-MODEL_PATH = './model'
+DATASET_CONFIG_PATH = apu.get_dataset_config_path()
+DOCS_PATH = apu.get_docs_path()
+CONFIG_PATH = apu.get_config_path()
+MODEL_PATH = apu.get_model_path()
 
 class UserID(BaseModel):
     owner: str

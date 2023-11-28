@@ -133,7 +133,7 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, username):
                 with col_layer_area:
                     add_layer, _ = st.columns([999, 1])
                     layers = add_question_layer(col_layer_area)
-
+                    
                 submit_layers_of_questions = st.button('Submit', type='primary', use_container_width=True, 
                                                         help='Submit layers of questions to expert', 
                                                         on_click=ask_question_deep, 

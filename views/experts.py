@@ -135,7 +135,7 @@ def _new_expert(EMBEDDING_MODELS, DATASETS, username, all_users):
             if res1:
                 res2 = add_shared_users_to_expert(username, new_expert_name, share_boolean, shared_users)
                 if res2:
-                    st.success(f'Expert={new_expert_name} has been created successfully')
+                    st.success(f'Expert \'{new_expert_name}\' has been created successfully')
         
             
 def _update_expert(EXPERTS, EMBEDDING_MODELS, DATASETS, username, all_users):
@@ -245,7 +245,7 @@ def _update_expert(EXPERTS, EMBEDDING_MODELS, DATASETS, username, all_users):
                                         share_boolean, shared_users)
                 if res_update:
                     rename_msg = f' and renamed as {editing_expert_name} ' if editing_expert_name != update_expert_name else ''
-                    st.success(f'Expert={editing_expert_name} has been updated{rename_msg} successfully') 
+                    st.success(f'Expert \'{editing_expert_name}\' has been updated{rename_msg} successfully') 
             
             create_expert_button = col_new.button('Save as New Expert', f'btn-copy-{editing_expert_name}', use_container_width=True, type='primary',
                                                 help='Save the configuration as new expert')
@@ -256,5 +256,5 @@ def _update_expert(EXPERTS, EMBEDDING_MODELS, DATASETS, username, all_users):
                 if res1:
                     res2 = add_shared_users_to_expert(username, update_expert_name, share_boolean, shared_users)
                     if res2:
-                        st.success(f'Expert={update_expert_name} has been created successfully')
+                        st.success(f'Expert \'{update_expert_name}\' has been created successfully')
                 

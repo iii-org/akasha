@@ -52,7 +52,7 @@ def _my_datasets(DATASETS, username, all_users):
         col_delete.button('Delete', f'btn-delete{dataset_owner}-{dataset_name}',
                           type='primary', 
                           on_click=delete_dataset, 
-                          args=(username, dataset_name, True),
+                          args=(dataset_name, username),
                           disabled=disable_delete)
     
         st.divider()
@@ -85,7 +85,7 @@ def _new_dataset(username, all_users):
         res = create_dataset(new_dataset_name, new_dataset_description, uploaded_files, username) and add_shared_users_to_dataset(username, new_dataset_name, share_boolean, shared_users)
 
         if res:
-            st.success(f'Dataset={new_dataset_name} has been created successfully')
+            st.success(f'Dataset \'{new_dataset_name}\' has been created successfully')
 
 def _update_dataset(DATASETS, username, all_users):
     st.header('Update Dataset', divider='rainbow')
@@ -169,4 +169,4 @@ def _update_dataset(DATASETS, username, all_users):
         
                 res2  = add_shared_users_to_dataset(username, update_dataset_name, share_boolean, shared_users)
                 if res1 and res2:
-                    st.success(f'Dataset={update_dataset_name} has been updated successfully')
+                    st.success(f'Dataset \'{update_dataset_name}\' has been updated successfully')

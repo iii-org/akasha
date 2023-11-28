@@ -18,7 +18,39 @@ api_url = {
 DOCS_PATH = './docs'
 CONFIG_PATH = './config'
 EXPERT_CONFIG_PATH = './config/experts'
-DATASET_CONFIG_PATH = "./config/datasets"
+DATASET_CONFIG_PATH = "./config/datasets/"
+DB_PATH = './chromadb/'
+DEFAULT_CONFIG = {'language_model':"openai:gpt-3.5-turbo",
+            'search_type': "svm",
+            'top_k': 5,
+            'threshold': 0.1,
+            'max_token': 3000,
+            'temperature':0.0,
+            'use_compression':0, # 0 for False, 1 for True
+            'compression_language_model':""}
+
+
+def get_docs_path():
+    return DOCS_PATH
+
+def get_db_path():
+    return DB_PATH
+
+def get_default_config():
+    
+    return DEFAULT_CONFIG
+
+def get_config_path():
+    return CONFIG_PATH
+
+def get_expert_config_path():
+    return EXPERT_CONFIG_PATH
+
+def get_dataset_config_path():
+    return DATASET_CONFIG_PATH
+
+def get_model_path():
+    return './model'
 
 
 
@@ -45,7 +77,16 @@ def _separate_name(name:str):
 
 
 
-def generate_hash(owner, dataset_name):
+def generate_hash(owner:str, dataset_name:str)->str:
+    """use hashlib sha256 to generate hash value of owner and dataset_name/expert_name {owner}-{dataset_name/expert_name}
+
+    Args:
+        owner (str): owner name
+        dataset_name (str): dataset name or expert name
+
+    Returns:
+        str: hash value
+    """
     combined_string = f"{owner}-{dataset_name}"
     sha256 = hashlib.sha256()
     sha256.update(combined_string.encode('utf-8'))
@@ -181,12 +222,12 @@ def update_dataset_name_from_chromadb(old_dataset_name:str, dataset_name:str, md
     """
     
     for md5 in md5_list:
-        p = Path("./chromadb/")
+        p = Path(DB_PATH)
         tag = old_dataset_name + '_' + md5
         for file in p.glob("*"):
             if tag in file.name:
                 new_name = dataset_name + '_' + md5 + '_' + '_'.join(file.name.split('_')[2:])
-                file.rename(Path('./chromadb/') / new_name)
+                file.rename(Path(DB_PATH) / new_name)
     return
 
 
@@ -328,7 +369,7 @@ def check_and_delete_chromadb(chunk_size:int, embedding_model:str, filename:str,
                 md5 = file['MD5']
                 break
     
-    db_storage_path = './chromadb/' + dataset_name + '_' + md5 + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
+    db_storage_path = DB_PATH + dataset_name + '_' + md5 + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
    
     if Path(db_storage_path).exists():
         return db_storage_path
