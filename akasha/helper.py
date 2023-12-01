@@ -3,9 +3,10 @@ import jieba
 import json
 from pathlib import Path
 import opencc
+from typing import Callable, Union
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-from akasha.models.hf import chatGLM, get_hf_model
+from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
 import shutil
@@ -29,10 +30,10 @@ def is_path_exist(path:str)->bool:
     try:
         des_path = Path(path)
         if not des_path.exists():
-            raise FileNotFoundError
+            raise FileNotFoundError("can not find the path")
     except FileNotFoundError as err:
         
-        print(path, err)
+        print(err, path)
         return False
     return True
 
@@ -74,6 +75,12 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
         vars: embeddings client
     """
     
+    if isinstance(embedding_name, Callable):
+        embeddings = custom_embed(func=embedding_name)
+        if verbose:
+            print("selected custom embedding.")
+        return embeddings
+    
     embedding_type, embedding_name = _separate_name(embedding_name)
 
     if embedding_type in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
@@ -114,7 +121,7 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
 
 
 
-def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
+def handle_model(model_name:Union[str,Callable], verbose:bool, temperature:float = 0.0)->vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -125,10 +132,15 @@ def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     Returns:
         vars: model client
     """
+    if isinstance(model_name, Callable):
+        model = custom_model(func=model_name, temperature=temperature)
+        if verbose:
+            print("selected custom model.")
+        return model
+    
+    
     model_type, model_name = _separate_name(model_name)
 
-    
-    
     if model_type in ["openai" , "openaiembeddings"]:
         import openai
         if "OPENAI_API_BASE" in os.environ:
@@ -163,7 +175,7 @@ def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     
     return model
 
-def handle_search_type(search_type:str, verbose:bool)->str:
+def handle_search_type(search_type:str, verbose:bool=False)->str:
     if callable(search_type):
         search_type_str = search_type.__name__
         

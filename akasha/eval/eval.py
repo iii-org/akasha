@@ -108,14 +108,15 @@ class Model_Eval(akasha.atman):
         self.doc_path = ""
         self.question_type = question_type
         self.question_num = 0
-        self.embeddings = embeddings
-
+        
         
 
         ### set variables ###
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose, self.temperature)
         self.embeddings_obj = akasha.helper.handle_embeddings(embeddings, self.verbose)
+        self.embeddings = akasha.helper.handle_search_type(embeddings)
+        self.model = akasha.helper.handle_search_type(model)
         self.search_type = search_type
         self.db = None
         self.docs = []

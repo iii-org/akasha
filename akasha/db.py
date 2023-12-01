@@ -77,7 +77,7 @@ def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
     
 
     suffix_path = doc_path.split('/')[-2]
-    embed_type,embed_name = embeddings_name.split(':')
+    embed_type,embed_name = helper._separate_name(embeddings_name)
     chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embed_type + '_' + embed_name.replace('/','-') +'_' + str(chunk_size) ) 
 
     if chroma_docs_path.exists():
@@ -91,7 +91,8 @@ def get_docs_from_doc(doc_path:str, chunk_size:int):
     documents = []
     txt_extensions = ['pdf', 'md','docx','txt','csv']
     for extension in txt_extensions:
-        documents.extend(_load_files(doc_path, extension))
+        for file in _load_files(doc_path, extension):
+            documents.extend(_load_file(doc_path+file, extension))
     if len(documents) == 0 :
         return None
     text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap = 40)
@@ -174,6 +175,8 @@ def processMultiDB(doc_path_list: Union[List[str], str], verbose:bool, embedding
         texts = []
         for doc_path in doc_path_list:
             temp = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size)
+            if isinstance(temp, tuple):
+                temp = temp[0]
             if temp is not None:
                 texts.extend(temp)
         if len(texts) == 0:
@@ -229,7 +232,7 @@ def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name
     ### check if doc path exist ###
     if not helper.is_path_exist(doc_path):
         
-        return None
+        return None, []
     
     
     ## add '/' at the end of doc_path ##

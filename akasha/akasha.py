@@ -155,7 +155,10 @@ class atman():
             
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
-            if key in self.__dict__: # check if variable exist
+            if (key == "model" or key == "embeddings") and key in self.__dict__:
+                self.__dict__[key] = helper.handle_search_type(value)
+            
+            elif key in self.__dict__: # check if variable exist
                 if getattr(self, key, None) != value: # check if variable value is different
                     
                     self.__dict__[key] = value
@@ -310,7 +313,6 @@ class Doc_QA(atman):
         language , search_type, record_exp, system_prompt, max_token, temperature)
         ### set argruments ###
         self.doc_path = ""
-        self.embeddings = embeddings
         self.compression = compression
         self.use_chroma = use_chroma
 
@@ -318,6 +320,8 @@ class Doc_QA(atman):
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose, self.temperature)
         self.embeddings_obj = helper.handle_embeddings(embeddings, self.verbose)
+        self.embeddings = helper.handle_search_type(embeddings)
+        self.model = helper.handle_search_type(model)
         self.search_type = search_type
         self.db = None
         self.docs = []

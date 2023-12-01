@@ -3,7 +3,7 @@ import akasha
 from pathlib import Path 
 import time, datetime
 import torch, gc
-
+import akasha.db
 
 
 
@@ -38,7 +38,6 @@ class Summary(akasha.atman):
         ### set argruments ###
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.model = model
         self.verbose = verbose
         self.threshold = threshold
         self.language = language
@@ -55,6 +54,7 @@ class Summary(akasha.atman):
         self.summary_len = 500
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose, self.temperature)
+        self.model = akasha.helper.handle_search_type(model)
         self.doc_tokens = 0
         self.doc_length = 0
         self.summary = ""
@@ -244,7 +244,7 @@ class Summary(akasha.atman):
         
         
         # Split the documents into sentences
-        documents = akasha.helper._load_file(self.file_name, self.file_name.split('.')[-1])
+        documents = akasha.db._load_file(self.file_name, self.file_name.split('.')[-1])
         text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=self.chunk_size, chunk_overlap = self.chunk_overlap)
         docs = text_splitter.split_documents(documents)
         self.doc_length = akasha.helper.get_docs_length(self.language, docs)
