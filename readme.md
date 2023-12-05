@@ -775,21 +775,21 @@ If you wish to devise your own method for identifying the most relevant document
 
 <br/>
 
-For instance, consider the following example where we create a function named **cust**. This function takes the following inputs: **query_embeds (numpy array)**, **docs_embeds (list of numpy arrays representing document embeddings)**, **k (integer specifying the number of most relevant documents to select)**, **relevancy_threshold (float indicating the relevancy threshold)**, and **log (dictionary for recording information)**. The function outputs a list containing the indices of the selected documents. You can directly use 'cust' as a parameter for **search_type** and execute the **'get_response'** function.
-
-<br/>
-
 In the 'cust' function, we employ the Euclidean distance metric to identify the most relevant documents. It returns a list of indices representing the top k documents with distances between the query and document embeddings smaller than the specified threshold.
 
 <br/>
 
 Here's a breakdown of the parameters:
-
-query_embeds: Embeddings of the query.
-docs_embeds: Embeddings of all documents.
-k: Number of most relevant documents to be selected.
-relevancy_threshold: Threshold for relevancy. If the distance between the query and a document is smaller than relevancy_threshold, the document is selected.
-log: A dictionary that can be used to record any additional information you desire.
+<br/>
+**query_embeds**: Embeddings of the query. (numpy array)
+<br/>
+**docs_embeds**: Embeddings of all documents. (list of numpy arrays representing document embeddings)
+<br/>
+**k**: Number of most relevant documents to be selected. (integer)
+<br/>
+**relevancy_threshold**: Threshold for relevancy. If the distance between the query and a document is smaller than relevancy_threshold, the document is selected. (float)
+<br/>
+**log**: A dictionary that can be used to record any additional information you desire. (dictionary)
 
 ```python
 
@@ -842,7 +842,8 @@ For example, In the 'test_embed' function, we use the SentenceTransformer model 
 <br/>
 
 Here's a breakdown of the parameters:
-texts: A list of texts to be embedded.
+<br/>
+**texts**: A list of texts to be embedded.
 
 ```python
 
@@ -881,7 +882,8 @@ For example, In the 'test_model' function, we use the OpenAI model to generate r
 <br/>
 
 Here's a breakdown of the parameters:
-prompt: A string representing the prompt for the language model.
+<br/>
+**prompt**: A string representing the prompt for the language model.
 
 ```python
 
