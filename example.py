@@ -16,9 +16,41 @@ def cust(query_embeds, docs_embeds, k:int, relevancy_threshold:float, log:dict):
     distance = [[euclidean(query_embeds, docs_embeds[idx]),idx] for idx in range(len(docs_embeds))]
     distance = sorted(distance, key=lambda x: x[0])
     
+    
+    ## change dist if embeddings not between 0~1
+    max_dist = 1
+    while max_dist < distance[-1][0]:
+        max_dist *= 10
+        relevancy_threshold *= 10
+        
+        
+    ## add log para
     log['dd'] = "miao"
-    return  [idx for dist,idx in distance[:k] if (1 - dist) >= relevancy_threshold]
+    
+    
+    return  [idx for dist,idx in distance[:k] if (max_dist - dist) >= relevancy_threshold]
 
+
+def test_model(prompt:str):
+    
+    import openai
+    from langchain.chat_models import ChatOpenAI
+    openai.api_type = "open_ai"
+    model = ChatOpenAI(model="gpt-3.5-turbo", temperature = 0)
+    ret = model.predict(prompt)
+    
+    return ret
+
+
+def test_embed(texts:list)->list:
+
+
+    from sentence_transformers import SentenceTransformer
+    mdl = SentenceTransformer('BAAI/bge-large-zh-v1.5')
+    embeds =  mdl.encode(texts,normalize_embeddings=True)
+
+    
+    return embeds
 
 
 
@@ -81,3 +113,13 @@ def SUM(file_name:str="./docs/mic/20230531_智慧製造需求下之邊緣運算�
 
 #summary_obj.save_logs("./summary_logs.json")
 #summary_obj.save_logs(file_type="txt")
+
+
+
+
+
+### VISION ###
+
+# ret = akasha.openai_vision(pic_path=["C:/Users/ccchang/Pictures/oruya.png"], prompt="這張圖是甚麼意思?")
+
+# print(ret)
