@@ -9,6 +9,7 @@ import akasha.helper as helper
 import akasha.search as search
 import akasha.format as format
 import akasha.prompts as prompts
+import akasha.db
 import datetime
 from dotenv import load_dotenv
 
@@ -83,6 +84,66 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
 
 
 
+def openai_vision(pic_path:Union[str,List[str]], prompt:str, model:str = "gpt-4-vision-preview", max_token:int = 3000, verbose:bool = False, record_exp:str = ""):
+
+    
+    
+    start_time = time.time()
+    
+    
+    ### process input message ###
+    base64_pic = []
+    pic_message = []
+    if isinstance(pic_path, str):
+        pic_path = [pic_path]
+        
+    for path in pic_path:
+        if not pathlib.Path(path).exists():
+            print(f"image path {path} not exist")
+        else:    
+            base64_pic.append( helper.image_to_base64(path))
+
+    
+    for pic in base64_pic:
+        pic_message.append( { "type": "image_url",
+           "image_url": {
+            "url": f"data:image/jpeg;base64,{pic}",
+            "detail": "auto",
+            },
+        })
+    content = [{"type": "text", "text": prompt}]
+    content.extend(pic_message)
+    
+    
+    
+    
+    ### call model ###
+    from langchain.chat_models import ChatOpenAI
+    from langchain.schema.messages import HumanMessage, SystemMessage
+    from langchain.callbacks import get_openai_callback
+    chat = ChatOpenAI(model="gpt-4-vision-preview", max_tokens=max_token)
+    input_message =  [HumanMessage(content=content)]
+    
+    
+    
+    with get_openai_callback() as cb:
+        ret = chat.invoke(input_message).content
+    
+        tokens, prices = cb.total_tokens, cb.total_cost
+    
+    end_time = time.time()
+    if record_exp != "":
+        params =  format.handle_params(model, "", "", "",\
+            "", "", "ch")   
+        metrics = format.handle_metrics(0, end_time - start_time, tokens)
+        table = format.handle_table(prompt, '\n'.join(pic_path), ret)
+        aiido_upload(record_exp, params, metrics, table)
+    print("\n\n\ncost:", round(prices,3))
+    
+    return ret
+    
+    
+    
 class atman():
     """basic class for akasha, implement _set_model, _change_variables, _check_db, add_log and save_logs function.
     """
@@ -154,7 +215,10 @@ class atman():
             
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
-            if key in self.__dict__: # check if variable exist
+            if (key == "model" or key == "embeddings") and key in self.__dict__:
+                self.__dict__[key] = helper.handle_search_type(value)
+            
+            elif key in self.__dict__: # check if variable exist
                 if getattr(self, key, None) != value: # check if variable value is different
                     
                     self.__dict__[key] = value
@@ -303,20 +367,21 @@ class Doc_QA(atman):
     def __init__(self, embeddings:str = "openai:text-embedding-ada-002", chunk_size:int=1000\
         , model:str = "openai:gpt-3.5-turbo", verbose:bool = False, topK:int = 2, threshold:float = 0.2,\
         language:str = 'ch' , search_type:Union[str,Callable] = 'svm', record_exp:str = "", \
-        system_prompt:str = "", max_token:int=3000, temperature:float=0.0, compression:bool=False):
+        system_prompt:str = "", max_token:int=3000, temperature:float=0.0, compression:bool=False, use_chroma:bool=False):
         
         super().__init__(chunk_size, model, verbose, topK, threshold,\
         language , search_type, record_exp, system_prompt, max_token, temperature)
         ### set argruments ###
         self.doc_path = ""
-        self.embeddings = embeddings
         self.compression = compression
-        
+        self.use_chroma = use_chroma
 
         ### set variables ###
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose, self.temperature)
         self.embeddings_obj = helper.handle_embeddings(embeddings, self.verbose)
+        self.embeddings = helper.handle_search_type(embeddings)
+        self.model = helper.handle_search_type(model)
         self.search_type = search_type
         self.db = None
         self.docs = []
@@ -348,7 +413,11 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         self.doc_path = doc_path
         #self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
-        self.db = helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        if self.use_chroma:
+            self.db, db_path_names = akasha.db.get_db_from_chromadb(self.doc_path, self.embeddings)
+        else:
+            self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
@@ -427,12 +496,16 @@ class Doc_QA(atman):
 
         self.doc_path = doc_path
         table = {}
-        self.db = helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        if self.use_chroma:
+            self.db, db_path_names = akasha.db.get_db_from_chromadb(self.doc_path, self.embeddings)
+        else:
+            self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+
         timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
         if not self._check_db():
-            return ""
+            return []
         
         
         self._add_basic_log(timestamp, "chain_of_thought")
@@ -447,42 +520,47 @@ class Doc_QA(atman):
         self.response = []
         self.docs = []
         self.prompt = []
-        for i in range(len(prompt_list)):
+        def recursive_get_response(prompt_list):
+            pre_result = []
+            for prompt in prompt_list:
+                if isinstance(prompt,list):
+                    response = recursive_get_response(prompt)
+                    pre_result.append(Document(page_content=''.join(response)))
+                else:
+                    question = prompts.format_sys_prompt(self.system_prompt, prompt)
+                    self.prompt.append(question)
+                    docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt, self.topK, self.threshold, self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compression = self.compression)
+                    self.docs.extend(docs)
+                    self.doc_length += helper.get_docs_length(self.language, docs)
+                    self.doc_tokens += tokens
+                    if self.verbose:
+                        print(docs)
+                        
+                    try:
+                        response = chain.run(input_documents=docs + pre_result, question = question)
+                        response = helper.sim_to_trad(response)
+                        
+                    except Exception as e:
+                        
+                        print(e)
+                        print("\n\nllm error\n\n")
+                    
+                        response = ""
+                        
+                    if self.verbose:
+                        print(response)
+                    self.response.append(response)
+                    pre_result.append(Document(page_content=''.join(response)))
+                    
+                    new_table = format.handle_table(prompt, docs, response)
+                    for key in new_table:
+                        if key not in table:
+                            table[key] = []
+                        table[key].append(new_table[key])
+            pre_result = []
+            return response
             
-            question = prompts.format_sys_prompt(self.system_prompt, prompt_list[i])
-            self.prompt.append(question)
-            docs, tokens = search.get_docs(self.db, self.embeddings_obj, prompt_list[i], self.topK, self.threshold, \
-                self.language, self.search_type, self.verbose, self.model_obj, self.max_token, self.logs[timestamp], compression = self.compression)
-            
-            self.docs.extend(docs)
-            self.doc_length += helper.get_docs_length(self.language, docs)
-            self.doc_tokens += tokens
-            if self.verbose:
-                print(docs)
-                
-            try:
-                response = chain.run(input_documents=docs + pre_result, question = question)
-                response = helper.sim_to_trad(response)
-                
-            except Exception as e:
-                
-                print(e)
-                print("\n\nllm error\n\n")
-            
-                response = ""
-                
-            if self.verbose:
-                print(response)
-            self.response.append(response)
-            pre_result.append(Document(page_content=''.join(response)))
-            
-            new_table = format.handle_table(prompt_list[i], docs, response)
-            for key in new_table:
-                if key not in table:
-                    table[key] = []
-                table[key].append(new_table[key])
-            
-            
+        recursive_get_response(prompt_list)            
         end_time = time.time()
         
         self._add_result_log(timestamp, end_time-start_time)

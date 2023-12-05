@@ -3,7 +3,7 @@ import platform
 
 install_requires = [
     "pypdf==3.12.2",
-    "langchain==0.0.313",
+    "langchain==0.0.345",
     "chromadb==0.4.14",
     "openai==0.27.8",
     "tiktoken==0.4.0",

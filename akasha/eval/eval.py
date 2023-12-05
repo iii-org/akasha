@@ -3,6 +3,7 @@ import time
 from tqdm import tqdm
 import akasha
 import akasha.eval as eval
+import akasha.db
 import os
 import numpy as np
 import torch,gc
@@ -107,14 +108,15 @@ class Model_Eval(akasha.atman):
         self.doc_path = ""
         self.question_type = question_type
         self.question_num = 0
-        self.embeddings = embeddings
-
+        
         
 
         ### set variables ###
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose, self.temperature)
         self.embeddings_obj = akasha.helper.handle_embeddings(embeddings, self.verbose)
+        self.embeddings = akasha.helper.handle_search_type(embeddings)
+        self.model = akasha.helper.handle_search_type(model)
         self.search_type = search_type
         self.db = None
         self.docs = []
@@ -164,7 +166,7 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         
-        self.db = akasha.helper.processMultiDB(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
+        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, "eval_get_doc", self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         
@@ -324,7 +326,7 @@ class Model_Eval(akasha.atman):
             self.system_prompt =  self.system_prompt + " 用中文回答 "
             
         ## check db ##
-        self.db = akasha.helper.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
         if not self._check_db():
             return ""
         

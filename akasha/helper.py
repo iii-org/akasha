@@ -1,116 +1,41 @@
-import time
-import datetime
 import numpy as np
 import jieba
 import json
-from typing import Union, List
-from tqdm import tqdm
 from pathlib import Path
 import opencc
-from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain.document_loaders.csv_loader import CSVLoader
-from langchain.text_splitter import CharacterTextSplitter,  RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma,chroma
+from typing import Callable, Union
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-from akasha.models.hf import chatGLM, get_hf_model
+from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
+import shutil
 jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
-
+def del_path(path, tag = "temp_c&r@md&"):
+    
+    p = Path(path)
+    for file in p.glob("*"):
+        if tag in file.name:
+            if file.is_file():
+                file.unlink()
+            elif file.is_dir():
+                shutil.rmtree(file)
+            
+    return
 
 def is_path_exist(path:str)->bool:
     
     try:
         des_path = Path(path)
         if not des_path.exists():
-            raise FileNotFoundError
+            raise FileNotFoundError("can not find the path")
     except FileNotFoundError as err:
         
-        print(path, err)
+        print(err, path)
         return False
     return True
-
-
-
-def _load_file(file_path, extension):
-    try:
-        if extension == "pdf" or  extension == "PDF":
-            docs = PyPDFLoader(file_path).load()
-        elif extension == "docx" or extension == "DOCX":
-            docs = Docx2txtLoader(file_path).load()
-            for i in range(len(docs)):
-                docs[i].metadata['page'] = i
-           
-        elif extension == "csv":
-            docs = CSVLoader(file_path).load()
-            for i in range(len(docs)):
-                docs[i].metadata['page'] = docs[i].metadata['row']
-                del docs[i].metadata['row']
-            
-        else:
-            docs = TextLoader(file_path,encoding='utf-8').load()
-            for i in range(len(docs)):
-                docs[i].metadata['page'] = i
-        return docs
-    except:
-        print("Load",file_path,"failed, ignored.\n")
-        return ""
-
-def _load_files(doc_path:str, extension:str="pdf", vis:set = set())->list:
-    """load text files of select extension into list of Documents
-
-    Args:
-        **doc_path (str)**: text files directory\n 
-        **extension (str, optional):** the extension type. Defaults to "pdf".\n 
-
-    Returns:
-        list: list of Documents
-    """
-    res = []
-    dir = Path(doc_path)
-    pdf_files = dir.glob("*."+extension)
-    loaders = [file.name for file in pdf_files]
-
-
-    for loader in loaders:
-    
-        temp = _load_file(doc_path+loader, extension)
-        if temp != "":
-            if temp[0].metadata['source'] not in vis:
-                res.extend(temp)
-                
-    return res
-       
-
-
-
-def _check_dir_exists(doc_path:str, embeddings_name:str, chunk_size:int)->bool:
-    """create 'chromadb' directory if not exist, and check if the doc db storage exist
-    or not. If exist, exit create_chromadb function. 
-
-    Args:
-        **doc_path (str)**: the path of documents directory, also used to check if it's in chromabd storage. \n 
-
-    Returns:
-        bool: return True of False if the doc db storage exist
-    """
-
-    chroma_path = Path('chromadb')
-    if not chroma_path.exists():
-        chroma_path.mkdir()
-    
-    
-
-    suffix_path = doc_path.split('/')[-2]
-    embed_type,embed_name = embeddings_name.split(':')
-    chroma_docs_path = Path('chromadb/'+ suffix_path + '_' + embed_type + '_' + embed_name.replace('/','-') +'_' + str(chunk_size) ) 
-
-    if chroma_docs_path.exists():
-        return True
-
 
 
 
@@ -136,203 +61,6 @@ def _separate_name(name:str):
 
 
 
-def processMultiDB(doc_path_list: Union[List[str], str], verbose:bool, embeddings:vars, embeddings_name:str, chunk_size:int):
-    
-    ## if doc_path_list is a str, juest call create_chromadb function ##
-    if isinstance(doc_path_list, str):
-        return create_chromadb(doc_path_list, verbose, embeddings, embeddings_name, chunk_size)
-    
-    if len(doc_path_list) == 0:
-        return None
-    
-    ## if using rerank, extend all the documents into one list ## 
-    if isinstance(embeddings, str):
-        texts = []
-        for doc_path in doc_path_list:
-            temp = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size)
-            if temp is not None:
-                texts.extend(temp)
-        if len(texts) == 0:
-            return None
-        return texts
-
-    
-    ## if not using rerank, create chromadb for each doc_path and merge them ##
-    dbs = Chroma(embedding_function=embeddings)
-    for doc_path in doc_path_list:
-    
-       
-        db2 = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size)
-
-        
-        if db2 is None:
-            continue
-        else:
-            db2_data=db2.get(include=['documents','metadatas','embeddings'])
-            dbs._collection.add(
-                embeddings=db2_data['embeddings'],
-                metadatas=db2_data['metadatas'],
-                documents=db2_data['documents'],
-                ids=db2_data['ids']
-            )
-        
-    ## check if dbs has any document ##
-    temp_docs = dbs.get(include=['documents'])['documents'] 
-    if len(temp_docs) == 0:
-
-        return None
-    
-    
-    #print("create dbs",dbs.get(include=['metadatas'])['metadatas'])
-    return dbs
-
-
-def create_chromadb(doc_path:str, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
-                    sleep_time:int = 60) -> vars:
-    """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
-        It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
-
-    Args:
-        **doc_path (str)**: the path of directory that store all .pdf documents\n 
-        **logs (list)**: list that store logs\n 
-        **verbose (bool)**: print logs or not\n 
-        **embeddings (vars)**: the embeddings used in transfer documents into vector storage, could be openai 
-        tensorflow or huggingface embeddings. \n 
-        **sleep_time (int, optional)**: sleep time to transfer documents into vector storage, this is for 
-            preventing rate limit exceed when request too much tokens at a time. Defaults to 60.\n 
-
-    Raises:
-        FileNotFoundError: if can not found the doc_path directory, will raise error and return None.
-
-    Returns:
-        vars: return the created chroma client. If documents vector storage already exist, load the vector storage
-        and return.
-    """
-    
-
-    ### check if doc path exist ###
-    if not is_path_exist(doc_path):
-        
-        return None
-    
-    
-    
-    if doc_path[-1] != '/':
-        doc_path += '/'
-    embed_type, embed_name = _separate_name(embeddings_name)
-    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
-    db_exi = _check_dir_exists(doc_path, embeddings_name, chunk_size)
-    vis = set()
-    if isinstance(embeddings, str):
-        # Split the documents into sentences
-        documents = []
-        txt_extensions = ['pdf', 'md','docx','txt','csv']
-        for extension in txt_extensions:
-            documents.extend(_load_files(doc_path, extension, vis))
-        if len(documents) == 0 :
-            return None
-        text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap = 40)
-        docs = text_splitter.split_documents(documents)
-        texts = [doc for doc in docs]
-        if len(texts) == 0:
-            return None
-        return texts
-        
-    elif db_exi:
-        info = "storage db already exist.\n"
-        db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-        mtda = db.get(include=['metadatas'])
-        
-        for source in mtda['metadatas']:
-            vis.add(source['source'])
-        del db,mtda
-      
-
-    
-        
-
-    documents = []
-    txt_extensions = ['pdf', 'md','docx','txt','csv']
-    for extension in txt_extensions:
-        documents.extend(_load_files(doc_path, extension, vis))
-    
-    
-    
-    if len(documents) == 0 and not db_exi:
-        return None
-
-
-    if len(documents) != 0 :
-        info = "\n\nload files:" +  str(len(documents)) + "\n\n" 
-        text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
-        k = 0
-        cum_ids = 0
-        interval = 3
-        progress = tqdm(total = len(documents), desc="Vec Storage")
-        while k < len(documents):
-            
-            
-            progress.update(min(interval,len(documents)-k))
-            cur_doc = documents[k:k+interval]
-            texts = text_splitter.split_documents(cur_doc)
-            formatted_date = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S_%f")
-            try :
-                if k==0 :
-                    if db_exi:
-                        docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                        if len(texts) != 0:
-                            docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
-                    else:
-                        if len(texts) != 0:
-                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory,\
-                                ids = [formatted_date +'_' + str(i) for i in range(len(texts))]) 
-                        else:
-                            docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                    
-                else:
-                    if len(texts) != 0:
-                        docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
-            except:
-                time.sleep( sleep_time )
-                if k==0:
-                    if db_exi:
-                        docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                        if len(texts) != 0:
-                            docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
-                    else:
-                        if len(texts) != 0:
-                            docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory,\
-                                ids = [formatted_date +'_' + str(i) for i in range(len(texts))]) 
-                        else:
-                            docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-                    
-                    
-                else:
-                    if len(texts) != 0:
-                        docsearch.add_documents(texts, ids = [formatted_date +'_' + str(i) for i in range(len(texts))])
-                    
-            k += interval
-            cum_ids += len(texts)
-            
-            
-        docsearch.persist()  
-        progress.close()
-    
-    db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-    temp_docs = db.get(include=['documents'])['documents'] 
-    if len(temp_docs) == 0:
-
-        return None
-    
-    if verbose:
-        print(info)
-    
-    
-    return db
-
-
-
-
 def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
@@ -346,6 +74,12 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     Returns:
         vars: embeddings client
     """
+    
+    if isinstance(embedding_name, Callable):
+        embeddings = custom_embed(func=embedding_name)
+        if verbose:
+            print("selected custom embedding.")
+        return embeddings
     
     embedding_type, embedding_name = _separate_name(embedding_name)
 
@@ -387,7 +121,7 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
 
 
 
-def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
+def handle_model(model_name:Union[str,Callable], verbose:bool, temperature:float = 0.0)->vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -398,10 +132,15 @@ def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     Returns:
         vars: model client
     """
+    if isinstance(model_name, Callable):
+        model = custom_model(func=model_name, temperature=temperature)
+        if verbose:
+            print("selected custom model.")
+        return model
+    
+    
     model_type, model_name = _separate_name(model_name)
 
-    
-    
     if model_type in ["openai" , "openaiembeddings"]:
         import openai
         if "OPENAI_API_BASE" in os.environ:
@@ -436,7 +175,7 @@ def handle_model(model_name:str, verbose:bool, temperature:float = 0.0)->vars:
     
     return model
 
-def handle_search_type(search_type:str, verbose:bool)->str:
+def handle_search_type(search_type:str, verbose:bool=False)->str:
     if callable(search_type):
         search_type_str = search_type.__name__
         
@@ -667,3 +406,27 @@ def get_non_repeat_rand_int(vis:set, num:int):
         vis.add(temp)
         return temp
     return get_non_repeat_rand_int(vis, num)
+
+
+
+def get_text_md5(text):
+    import hashlib
+    md5_hash = hashlib.md5(text.encode()).hexdigest()
+    
+    return md5_hash
+
+
+
+def image_to_base64(image_path:str)->str:
+    """convert image to base64 string
+
+    Args:
+        image_path (str): path of image
+
+    Returns:
+        str: base64 string
+    """
+    import base64
+    with open(image_path, "rb") as img_file:
+        img_str = base64.b64encode(img_file.read())
+    return img_str.decode("utf-8")
