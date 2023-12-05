@@ -84,6 +84,66 @@ def detect_exploitation(texts:str, model:str = "openai:gpt-3.5-turbo", verbose:b
 
 
 
+def openai_vision(pic_path:Union[str,List[str]], prompt:str, model:str = "gpt-4-vision-preview", max_token:int = 3000, verbose:bool = False, record_exp:str = ""):
+
+    
+    
+    start_time = time.time()
+    
+    
+    ### process input message ###
+    base64_pic = []
+    pic_message = []
+    if isinstance(pic_path, str):
+        pic_path = [pic_path]
+        
+    for path in pic_path:
+        if not pathlib.Path(path).exists():
+            print(f"image path {path} not exist")
+        else:    
+            base64_pic.append( helper.image_to_base64(path))
+
+    
+    for pic in base64_pic:
+        pic_message.append( { "type": "image_url",
+           "image_url": {
+            "url": f"data:image/jpeg;base64,{pic}",
+            "detail": "auto",
+            },
+        })
+    content = [{"type": "text", "text": prompt}]
+    content.extend(pic_message)
+    
+    
+    
+    
+    ### call model ###
+    from langchain.chat_models import ChatOpenAI
+    from langchain.schema.messages import HumanMessage, SystemMessage
+    from langchain.callbacks import get_openai_callback
+    chat = ChatOpenAI(model="gpt-4-vision-preview", max_tokens=max_token)
+    input_message =  [HumanMessage(content=content)]
+    
+    
+    
+    with get_openai_callback() as cb:
+        ret = chat.invoke(input_message).content
+    
+        tokens, prices = cb.total_tokens, cb.total_cost
+    
+    end_time = time.time()
+    if record_exp != "":
+        params =  format.handle_params(model, "", "", "",\
+            "", "", "ch")   
+        metrics = format.handle_metrics(0, end_time - start_time, tokens)
+        table = format.handle_table(prompt, '\n'.join(pic_path), ret)
+        aiido_upload(record_exp, params, metrics, table)
+    print("\n\n\ncost:", round(prices,3))
+    
+    return ret
+    
+    
+    
 class atman():
     """basic class for akasha, implement _set_model, _change_variables, _check_db, add_log and save_logs function.
     """

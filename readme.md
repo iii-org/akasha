@@ -759,6 +759,160 @@ sum.summarize_file(file_name="doc/mic/5軸工具機因應市場訴求改變的�
 <br/>
 <br/>
 
+
+
+# Custom Search Type, Embeddings and Model
+
+In case you want to use other search types, embeddings, or language models, you can provide your own functions as parameters for **search_type**, **embeddings** and **model**.
+
+
+<br/>
+<br/>
+
+## Custom Search Type
+
+If you wish to devise your own method for identifying the most relevant documents, you can utilize your custom function as a parameter for **search_type** .
+
+<br/>
+
+For instance, consider the following example where we create a function named **cust**. This function takes the following inputs: **query_embeds (numpy array)**, **docs_embeds (list of numpy arrays representing document embeddings)**, **k (integer specifying the number of most relevant documents to select)**, **relevancy_threshold (float indicating the relevancy threshold)**, and **log (dictionary for recording information)**. The function outputs a list containing the indices of the selected documents. You can directly use 'cust' as a parameter for **search_type** and execute the **'get_response'** function.
+
+<br/>
+
+In the 'cust' function, we employ the Euclidean distance metric to identify the most relevant documents. It returns a list of indices representing the top k documents with distances between the query and document embeddings smaller than the specified threshold.
+
+<br/>
+
+Here's a breakdown of the parameters:
+
+query_embeds: Embeddings of the query.
+docs_embeds: Embeddings of all documents.
+k: Number of most relevant documents to be selected.
+relevancy_threshold: Threshold for relevancy. If the distance between the query and a document is smaller than relevancy_threshold, the document is selected.
+log: A dictionary that can be used to record any additional information you desire.
+
+```python
+
+def cust(query_embeds, docs_embeds, k:int, relevancy_threshold:float, log:dict):
+    
+    from scipy.spatial.distance import euclidean
+    import numpy as np
+    distance = [[euclidean(query_embeds, docs_embeds[idx]),idx] for idx in range(len(docs_embeds))]
+    distance = sorted(distance, key=lambda x: x[0])
+    
+    
+    ## change dist if embeddings not between 0~1
+    max_dist = 1
+    while max_dist < distance[-1][0]:
+        max_dist *= 10
+        relevancy_threshold *= 10
+        
+        
+    ## add log para
+    log['dd'] = "miao"
+    
+    
+    return  [idx for dist,idx in distance[:k] if (max_dist - dist) >= relevancy_threshold]
+
+doc_path = "./mic/"
+prompt = "五軸是什麼?"
+
+qa = akasha.Doc_QA(verbose=True, search_type = cust, embeddings="hf:shibing624/text2vec-base-chinese")
+qa.get_response(doc_path= doc_path, prompt = prompt)
+
+
+
+```
+
+
+
+<br/>
+<br/>
+
+
+
+## Custom Embeddings
+
+If you want to use other embeddings, you can put your own embeddings as a function and set as the parameter of **embeddings**.
+
+<br/>
+
+For example, In the 'test_embed' function, we use the SentenceTransformer model to generate embeddings for the given texts. You can directly use 'test_embed' as a parameter for **embeddings** and execute the **'get_response'** function.
+
+<br/>
+
+Here's a breakdown of the parameters:
+texts: A list of texts to be embedded.
+
+```python
+
+
+def test_embed(texts:list)->list:
+
+    from sentence_transformers import SentenceTransformer
+    mdl = SentenceTransformer('BAAI/bge-large-zh-v1.5')
+    embeds =  mdl.encode(texts,normalize_embeddings=True)
+
+    
+    return embeds
+
+doc_path = "./mic/"
+prompt = "五軸是什麼?"
+
+qa = akasha.Doc_QA(verbose=True, search_type = "svm", embeddings = test_embed)
+qa.get_response(doc_path= doc_path, prompt = prompt)
+
+
+```
+
+
+<br/>
+<br/>
+
+
+## Custom Model
+
+If you want to use other language models, you can put your own model as a function and set as the parameter of **model**.
+
+<br/>
+
+For example, In the 'test_model' function, we use the OpenAI model to generate response for the given prompt. You can directly use 'test_model' as a parameter for **model** and execute the **'get_response'** function.
+
+<br/>
+
+Here's a breakdown of the parameters:
+prompt: A string representing the prompt for the language model.
+
+```python
+
+def test_model(prompt:str):
+    
+    import openai
+    from langchain.chat_models import ChatOpenAI
+    openai.api_type = "open_ai"
+    model = ChatOpenAI(model="gpt-3.5-turbo", temperature = 0)
+    ret = model.predict(prompt)
+    
+    return ret
+
+doc_path = "./mic/"
+prompt = "五軸是什麼?"
+
+qa = akasha.Doc_QA(verbose=True, search_type = "svm", model = test_model)
+qa.get_response(doc_path= doc_path, prompt = prompt)
+
+
+```
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+
 # Command Line Interface
 You can also use akasha in command line, for example, you can use **keep-responsing** to create a document QA model 
 and keep asking different questions and get response based on the documents in the given -d directory.

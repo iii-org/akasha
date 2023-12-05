@@ -415,3 +415,18 @@ def get_text_md5(text):
     
     return md5_hash
 
+
+
+def image_to_base64(image_path:str)->str:
+    """convert image to base64 string
+
+    Args:
+        image_path (str): path of image
+
+    Returns:
+        str: base64 string
+    """
+    import base64
+    with open(image_path, "rb") as img_file:
+        img_str = base64.b64encode(img_file.read())
+    return img_str.decode("utf-8")
