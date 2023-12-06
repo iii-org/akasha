@@ -27,31 +27,62 @@ def user_guide_page():
     st.header('📁 Datasets', divider='rainbow')
     with st.expander('Datasets', expanded=False):
         st.subheader('1. My Datasets', divider='grey')
-        st.text('Some Instructions of "My Datasets"')
+        st.text('"My Datasets" page lists all datasets created by the user.')
+        st.text('If you open "Shared Datasets", you can see all datasets shared to you. The name format is "dataset_name@dataset_owner".')
+        st.text('You can use delete button to delete your own datasets, but you cannot delete the dataset shared to you.')
+        
+        
         st.subheader('2. New Dataset', divider='grey')
-        st.text('Some Instructions of "New Dataset"')
+        st.text('"New Dataset" page allow user to create a new dataset, noted that the dataset name can not be empty or duplicated.')
+        st.text('You can upload files by clicking "Browse files" button, you can not create a dataset without any files.')
+        st.text('You can also share your dataset with other users by choosing the usernames you want to share.')
+        
+        
         st.subheader('3. Update Dataset', divider='grey')
-        st.text('Some Instructions of "Update Dataset"')
+        st.text('"Update Dataset" allow user to update their own datasets.')
+        
         
     st.header('👑 Experts', divider='rainbow')
     with st.expander('Experts', expanded=False):
         st.subheader('1. My Experts', divider='grey')
-        st.text('Some Instructions of "My Experts"')
+        st.text('"My Experts" page lists all experts created by the user.')
+        st.text('If you open "Shared Experts", you can see all experts shared to you. The name format is "expert_name@expert_owner".')
+        st.text('You can use delete button to delete your own experts, but you cannot delete the expert shared to you.')
+        
+        
+        
         st.subheader('2. New Expert', divider='grey')
-        st.text('Some Instructions of "New Expert"')
+        st.text('"New Expert" page allow user to create a new expert by choosing the expertname, embedding model, chunk size and datasets.')
+        st.text('You need to add openai config in setting page before creating an expert if you want to use openai embedding model.')
+        
+        
+        
+        
         st.subheader('3. Update Expert', divider='grey')
-        st.text('Some Instructions of "Update Expert"')
+        st.text('"Update Expert" allow user to update their own experts.')
         
     st.header('🧭 Consult', divider='rainbow')
     with st.expander('Consult', expanded=False):
         st.subheader('1. Regular Consult', divider='grey')
-        st.text('Some Instructions of "Regular Consult"')
+        st.text('You can choose the expert you want to consult and input your question.')
+        st.text('You can also expand the "Advanced" label to change more parameters.')
+        st.text('"Auto Clean" will clean the question area after you submit the question.')
+        
+        
         st.subheader('2. Deep Consult', divider='grey')
-        st.text('Some Instructions of "Deep Consult"')
+        st.text('"Deep Consult" allow user to ask multiple questions first before ask the final question.')
+        st.text('User can separate a complicated question into multiple questions and ask them one by one.')
+        st.text('Each response of previous question will be the reference of final question, so the response of final question will be more accurate.')
         
     st.header('⚙️ Settings', divider='rainbow')
     with st.expander('Settings', expanded=False):
         st.subheader('1. API Settings', divider='grey')
-        st.text('Some Instructions of "API Settings"')
+        st.text('If users want to use any openai embedding or language model, they need to add openai config in this page.')
+        st.text('For openai api, users need to add openai key; for azure api, users need to add azure key and azure base url.')
+        st.text('Click the "Save" button and it will check if the config is valid, if so, it will save the config.')
+        st.text('User can also click "Save to File" button to save the config to a json file, so next time the config will load automatically.')
+        
+        
         st.subheader('2. History', divider='grey')
-        st.text('Some Instructions of "History"')
+        st.text('After user consults an expert, the consult history will be saved in the log.')
+        st.text('User can download the log by clicking the "Download" button to download .txt file or .json file.')

@@ -24,6 +24,12 @@ class ExpertID(UserID):
     expert_name: str
 class ExpertShare(ExpertID):
     shared_users: List[str] = []
+
+class chromadbInfo(BaseModel):
+    file_path: str
+    embedding_model: str
+    chunk_size: int
+
     
 class ExpertInfo(ExpertID):
     embedding_model: Optional[str] = "openai:text-embedding-ada-002"
@@ -277,7 +283,24 @@ async def save_consult_to_expert(user_input:ExpertConsult):
 
 
 
+@router.post("/expert/create_chromadb")
+async def create_chromadb_file(user_input:chromadbInfo):
+    """given the file path, embedding model and chunk size, create chromadb file
 
+    Args:
+        user_input (chromadbInfo): _description_
+
+    Returns:
+        dict: status, response
+    """
+    
+    file_path = user_input.file_path
+    embedding_model = user_input.embedding_model
+    chunk_size = user_input.chunk_size
+    suc, text = akasha.db.create_single_file_db(file_path , embedding_model, chunk_size,)
+    if not suc:
+        return {'status': 'fail', 'response': text}
+    return {'status': 'success', 'response': text}
 
 
 
@@ -307,24 +330,20 @@ async def create_expert(user_input:ExpertInfo):
         
         
     uid = apu.generate_hash(owner, expert_name)
-    warning = []
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
     
 
     save_path = Path(expert_config_path) / (uid+'.json')
-    
+    file_paths = []
     ## create chromadb for each file
     for dataset in datasets:
         doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset['name']
         for file in dataset['files']:
-            file_path = doc_path  + '/' + file
+            file_paths.append( doc_path  + '/' + file )
             
-            suc, text = akasha.db.create_single_file_db(file_path , embedding_model, chunk_size,)            
-            if not suc:
-                
-                warning.append(f'create chromadb for {file_path} failed, {text}.\n\n')
+            
     
     ## create dict and save to json file
     data = {
@@ -342,7 +361,7 @@ async def create_expert(user_input:ExpertInfo):
         json.dump(data, f, indent=4, ensure_ascii=False)
     
     
-    return {'status': 'success', 'response': f'create expert {expert_name} successfully.\n\n', 'warning': warning}
+    return {'status': 'success', 'response': f'create expert {expert_name} successfully.\n\n', 'file_paths': file_paths}
 
 
 
@@ -376,7 +395,7 @@ async def update_expert(user_input:ExpertEditInfo):
     new_chunk_size = user_input.new_chunk_size
     add_datasets = user_input.add_datasets
     
-    warning = []
+    file_paths = []
     delete_chromdb = []
     if new_embedding_model.split(':')[0] == 'openai':
         if not apu.load_openai(config=user_input.openai_config):
@@ -421,17 +440,12 @@ async def update_expert(user_input:ExpertEditInfo):
                 if cmd != "":
                     delete_chromdb.append(cmd)
         
-        ## create chromadb for each new file
+        ## add chromadb path for each new file
         for dataset in add_datasets:
             doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset['name']
             for file in dataset['files']:
-                file_path = doc_path  + '/' + file
-                
-                suc, text = akasha.db.create_single_file_db(file_path , data['embedding_model'], data['chunk_size'],)            
-                if not suc:
-                    warning.append(f'create chromadb for {file_path} failed, {text}.\n\n')
-    
-    
+                file_paths.append( doc_path  + '/' + file )
+
                   
     else:
         ### check all delete all chromadb
@@ -456,16 +470,12 @@ async def update_expert(user_input:ExpertEditInfo):
         data['embedding_model'] = new_embedding_model
         data['chunk_size'] = new_chunk_size
         
-        ## create chromadb for each new file
+        ## add chromadb file for each new file
         for dataset in data['datasets']:
             doc_path = DOCS_PATH + '/' + owner + '/' + dataset['name']
             for file in dataset['files']:
-                file_path = doc_path  + '/' + file
-                
-                suc, text = akasha.db.create_single_file_db(file_path , data['embedding_model'], data['chunk_size'],)            
-                if not suc:
-                    warning.append(f'create chromadb for {file_path} failed, {text}.\n\n')
-        
+                file_paths.append(doc_path  + '/' + file)
+                        
         
     save_path = Path(expert_config_path) / (uid+'.json')
     
@@ -473,7 +483,7 @@ async def update_expert(user_input:ExpertEditInfo):
     with open(save_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
         
-    return {'status': 'success', 'response': f'update expert {expert_name} successfully.\n\n', 'warning': warning, 'delete_chromadb' : delete_chromdb}
+    return {'status': 'success', 'response': f'update expert {expert_name} successfully.\n\n', 'file_paths': file_paths, 'delete_chromadb' : delete_chromdb}
 
 
 

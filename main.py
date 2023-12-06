@@ -98,7 +98,7 @@ if url_params == {}:
         EXPERTS = list_experts(username, name_only=True, include_shared=True) # may filtered by logged-in user
         DATASETS = list_datasets(username, name_only=True, include_shared=True) # may filtered by logged-in user
         EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', \
-            'hf:shibing624/text2vec-base-multilingual',"hf:BAAI/bge-base-en-v1.5", "hf:BAAI/bge-base-zh-v1.5"]
+            'hf:shibing624/text2vec-base-multilingual',"hf:BAAI/bge-large-en-v1.5", "hf:BAAI/bge-large-zh-v1.5"]
         SEARCH_TYPES = ['merge', 'svm', 'tfidf', 'mmr']
         LANGUAGE_MODELS = list_models()
         

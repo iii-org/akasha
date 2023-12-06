@@ -396,8 +396,10 @@ def delete_datasets_from_expert(ori_datasets:list, delete_datasets:list):
             for file in delete_hash[(dataset['owner'], dataset['name'])]:
                 if file in dataset['files']:
                     dataset['files'].remove(file)
-                    
-    
+            ## if no file in dataset, delete dataset
+            if len(dataset['files']) == 0:
+                ori_datasets.remove(dataset)                    
+
     return ori_datasets
 
 
