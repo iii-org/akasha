@@ -140,9 +140,13 @@ def handle_api_key():
         del os.environ["OPENAI_API_VERSION"]
         
     load_dotenv(Path().cwd()/'.env') 
+    
     api_token = os.environ.get("OPENAI_API_KEY")
     
-    base_token = os.environ.get("OPENAI_API_BASE")
+    base_token = os.environ.get("AZURE_API_BASE")
+    if base_token == None:
+        base_token = os.environ.get("OPENAI_API_BASE")
+        
     if st.session_state.embed.split(":")[0] == "openai" or st.session_state.model.split(":")[0] == "openai":
         st.session_state.akasha_obj = ""
         
@@ -163,7 +167,14 @@ def handle_api_key():
             if "OPENAI_API_VERSION" in os.environ:
                 del os.environ["OPENAI_API_VERSION"]
             
-        elif api_token != None and base_token != None:
+        elif base_token != None:
+            
+            api_token = os.environ.get("AZURE_API_KEY")
+            if api_token == None:
+                api_token = os.environ.get("OPENAI_API_KEY")
+            if api_token == None:
+                return False
+            
             if "OPENAI_API_TYPE" not in os.environ:
                 os.environ["OPENAI_API_TYPE"] = "azure"
             if "OPENAI_API_VERSION" not in os.environ:

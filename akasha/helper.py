@@ -61,6 +61,36 @@ def _separate_name(name:str):
 
 
 
+def  _handle_azure_env()->(str, str, str):
+    """from environment variable get the api_base, api_key, api_version
+
+    Returns:
+        (str, str, str): api_base, api_key, api_version
+    """
+    check_env, ret, count = ["BASE", "KEY", "VERSION"], ["", "", ""], 0
+    try:
+        for check in check_env:
+            if f"AZURE_API_{check}" in os.environ:
+                ret[count] = os.environ[f"AZURE_API_{check}"]
+            elif f"OPENAI_API_{check}" in os.environ:
+                ret[count] = os.environ[f"OPENAI_API_{check}"]
+            else:
+                if check == "VERSION":
+                    ret[count] = "2023-05-15"
+                else:
+                    raise Exception(f"can not find the openai {check} in environment variable.\n\n")
+            count += 1
+    except Exception as err:
+        print(err)
+    
+    return ret[0], ret[1], ret[2]
+
+
+
+
+
+
+
 def handle_embeddings(embedding_name:str, verbose:bool)->vars :
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
@@ -85,12 +115,17 @@ def handle_embeddings(embedding_name:str, verbose:bool)->vars :
 
     if embedding_type in ["text-embedding-ada-002" , "openai" , "openaiembeddings"]:
         import openai
-        if "OPENAI_API_BASE" in os.environ:
+        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure") or \
+            ("OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"):
             embedding_name = embedding_name.replace(".","")
-            embeddings = OpenAIEmbeddings(deployment=embedding_name)
+            api_base, api_key, api_version = _handle_azure_env()
+            embeddings = OpenAIEmbeddings(deployment=embedding_name, openai_api_base=api_base,\
+                api_key=api_key, openai_api_type="azure", api_version=api_version)
         else:
             openai.api_type = "open_ai"
-            embeddings = OpenAIEmbeddings(deployment=embedding_name,model=embedding_name)
+            
+            embeddings = OpenAIEmbeddings(model=embedding_name, openai_api_base="https://api.openai.com/v1",\
+                api_key=os.environ["OPENAI_API_KEY"], openai_api_type="open_ai")
         info = "selected openai embeddings.\n"
 
     elif embedding_type in ["rerank", "re"]:
@@ -143,14 +178,30 @@ def handle_model(model_name:Union[str,Callable], verbose:bool, temperature:float
 
     if model_type in ["openai" , "openaiembeddings"]:
         import openai
-        if "OPENAI_API_BASE" in os.environ:
+        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure") or \
+            ("OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"):
             model_name = model_name.replace(".","")
-            model = AzureChatOpenAI(deployment_name=model_name, temperature=temperature)
+            api_base, api_key, api_version = _handle_azure_env()
+            model = AzureChatOpenAI(deployment_name=model_name, temperature=temperature,\
+                base_url=api_base, api_key=api_key, api_version=api_version,)
         else:
             openai.api_type = "open_ai"
-            model = ChatOpenAI(model=model_name, temperature = temperature)
+            model = ChatOpenAI(model=model_name, temperature = temperature, api_key=os.environ["OPENAI_API_KEY"])
         info = f"selected openai model {model_name}.\n"
 
+    elif model_type in ["remote", "server"]:
+        import openai
+        openai.api_type = "open_ai"
+        if "REMOTE_API_BASE" in os.environ:
+            base_url = os.environ["REMOTE_API_BASE"]
+        elif "OPENAI_API_BASE" in os.environ:
+            base_url = os.environ["OPENAI_API_BASE"]
+        else:
+            base_url = ""
+            print("can not find the openai {check} in environment variable.\n\n")
+        model = ChatOpenAI(model=model_name, temperature = temperature, api_key="EMPTY", base_url=base_url)
+        info = f"selected remote model {model_name}.\n"
+    
     elif model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"] and model_name != "":
         
         model = get_llama_cpp_model(model_type, model_name, temperature)

@@ -69,10 +69,10 @@ def QA(doc_path = "./docs/mic/"):
     # print(qa.logs[timestamp_list[-1]]['dd'])   # the variable you add to log in cust function
     
     
-    #response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list = query2)
-    #print(response_list)
+    response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list = query2)
+    print(response_list)
     return qa
-#qa_obj = QA()
+qa_obj = QA()
 
 
 
@@ -83,11 +83,11 @@ def QA(doc_path = "./docs/mic/"):
 def EVAL(doc_path:str="./docs/mic/"):
     eva = eval.Model_Eval(question_type="single_choice",record_exp="1234test",verbose=True)
     
-    #b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="single_choice",chunk_size=850)
+    b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="single_choice",chunk_size=850)
     #b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="essay")
     
     #qs_path = eva.logs[eva.timestamp_list[-1]]['questionset_path']    
-    print(eva.auto_evaluation(questionset_file="questionset/mic_15.txt", doc_path=doc_path,verbose=True,model="llama-gpu:../qaiii-1/model/llama-2-7b-chat.Q5_K_S.gguf" ))
+    print(eva.auto_evaluation(questionset_file="questionset/mic_3.txt", doc_path=doc_path,verbose=True,model="llama-gpu:../qaiii-1/model/llama-2-7b-chat.Q5_K_S.gguf" ))
     #print(eva.__dict__)
     
     # eva.optimum_combination(q_file="questionset/mic_15.txt", doc_path=doc_path, chunk_size_list=[500]\
@@ -109,7 +109,7 @@ def SUM(file_name:str="./docs/mic/20230531_智慧製造需求下之邊緣運算�
     print(sum.logs)
     return sum
 
-#summary_obj = SUM()
+summary_obj = SUM()
 
 #summary_obj.save_logs("./summary_logs.json")
 #summary_obj.save_logs(file_type="txt")
