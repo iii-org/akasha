@@ -2,6 +2,9 @@ __pycache__
 .pyc
 .pdf
 .env
+akasha.egg-info/
+build/
+dist/
 chromadb/
 logs/
 docs/
