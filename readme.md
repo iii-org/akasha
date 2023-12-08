@@ -48,6 +48,33 @@ export OPENAI_API_KEY="your api key"
 
 ```
 
+<br/>
+<br/>
+
+### AZURE OPENAI
+If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
+Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save **OPENAI_API_KEY=your azure key**,  **OPENAI_API_BASE=your Language API base url**, **OPENAI_API_TYPE=azure**, **OPENAI_API_VERSION=2023-05-15** into **.env** file to current working directory.
+
+<br/> 
+
+If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**
+
+
+```sh
+## .env file
+AZURE_API_KEY={your azure key}
+AZURE_API_BASE={your Language API base url}
+AZURE_API_TYPE=azure
+AZURE_API_VERSION=2023-05-15
+
+```
+
+
+<br/>
+<br/>
+
+And now we can run akasha in python 
+
 ```python
 #PYTHON3.8
 import akasha
@@ -161,9 +188,17 @@ To use huggingface embedding models, you can type huggingface:model_name or hf:m
 ## Select different models
 Using parameter **"model"**, you can choose different text generation models, default is **openai:gpt-3.5-turbo**.
 
-Currently support **openai**, **llama-cpp** and **huggingface**.
+Currently support **openai**, **llama-cpp**, **huggingface** and **remote**.
 
-### 1.huggingface example
+### 1. openai example
+
+``` python
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt, embeddings="openai:text-embedding-ada-002", model="openai:gpt-3.5-turbo")
+
+```
+
+### 2.huggingface example
 ``` python
 ak = akasha.Doc_QA()
 ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="hf:meta-llama/Llama-2-13b-chat-hf")
@@ -176,7 +211,7 @@ To use text generation model from **huggingface**, for example, meta llama, you 
 <br/>
 <br/>
 
-### 2.llama-cpp example
+### 3.llama-cpp example
 llama-cpp can use quantized llama model and run on cpu, after you download or transfer llama-cpp model file using [llama-cpp-python](https://github.com/abetlen/llama-cpp-python).
 
 ```python
@@ -193,6 +228,17 @@ ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", mod
 
 ```
 you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf**
+
+
+### 4. remote server api example
+If you deploy your own language model in other server using TGI (Text Generation Inference), you can use **remote:{model_name}** to call the model after you set **REMOTE_API_BASE={your LLM api url}** in ".env" file.
+
+``` python
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt,  model="remote:Taiwan-LLM-13B-v2.0-chat")
+
+```
+
 
 <br/>
 <br/>
