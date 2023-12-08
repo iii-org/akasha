@@ -48,6 +48,32 @@ export OPENAI_API_KEY="your api key"
 
 ```
 
+<br/>
+<br/>
+
+### AZURE OPENAI
+If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
+Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save **OPENAI_API_KEY=your azure key**,  **OPENAI_API_BASE=your Language API base url**, **OPENAI_API_TYPE=azure**, **OPENAI_API_VERSION=2023-05-15** into **.env** file to current working directory.
+
+<br/> 
+If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**
+
+
+```sh
+## .env file
+> OPENAI_API_KEY={your azure key}
+> OPENAI_API_BASE={your Language API base url}
+> OPENAI_API_TYPE=azure
+> OPENAI_API_VERSION=2023-05-15
+
+```
+
+
+<br/>
+<br/>
+
+And now we can run akasha in python 
+
 ```python
 #PYTHON3.8
 import akasha
