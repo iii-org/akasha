@@ -330,15 +330,17 @@ class Model_Eval(akasha.atman):
         ### for filename, count the files in the questionset directory that has doc_path in the file name, and use it as the file name.
         if not os.path.exists("questionset"):
             os.makedirs("questionset")
-        count = 1
+        #count = 1
         if isinstance(doc_path, list):
             suf_path = doc_path[0].split("/")[-2]
         else:
             suf_path = doc_path.split("/")[-2]
-        for filename in os.listdir("questionset"):
-            if suf_path in filename:
-                count += 1
-        file_name = "questionset/" + suf_path + "_" + str(count) + ".txt"
+        # for filename in os.listdir("questionset"):
+        #     if suf_path in filename:
+        #         count += 1
+        now = datetime.datetime.now()
+        date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
+        file_name = "questionset/" + suf_path + "_" + str(date_time_string) + ".txt"
         with open(file_name, "w", encoding="utf-8") as f:
             for w in range(len(self.question)):
                 if self.question_type == "essay":
