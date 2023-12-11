@@ -1,5 +1,12 @@
 # akasha
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![pypi package : 0.8.2](https://img.shields.io/badge/pypi%20package-0.8.2-blue)](https://pypi.org/project/akasha-terminal/)
+[![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
+![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
+
+<br/>
+
 Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
 
 With Akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
@@ -23,7 +30,7 @@ conda create --name py3-8 python=3.8
 activate py3-8
 
 # install akasha
-pip install git+https://gitlab-devops.iii.org.tw/root/qaiii-1.git
+pip install akasha-terminal
 
 
 ```
@@ -47,6 +54,33 @@ export OPENAI_API_KEY="your api key"
 
 
 ```
+
+<br/>
+<br/>
+
+### AZURE OPENAI
+If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
+Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save **OPENAI_API_KEY=your azure key**,  **OPENAI_API_BASE=your Language API base url**, **OPENAI_API_TYPE=azure**, **OPENAI_API_VERSION=2023-05-15** into **.env** file to current working directory.
+
+<br/> 
+
+If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**
+
+
+```sh
+## .env file
+AZURE_API_KEY={your azure key}
+AZURE_API_BASE={your Language API base url}
+AZURE_API_TYPE=azure
+AZURE_API_VERSION=2023-05-15
+
+```
+
+
+<br/>
+<br/>
+
+And now we can run akasha in python 
 
 ```python
 #PYTHON3.8
@@ -161,9 +195,17 @@ To use huggingface embedding models, you can type huggingface:model_name or hf:m
 ## Select different models
 Using parameter **"model"**, you can choose different text generation models, default is **openai:gpt-3.5-turbo**.
 
-Currently support **openai**, **llama-cpp** and **huggingface**.
+Currently support **openai**, **llama-cpp**, **huggingface** and **remote**.
 
-### 1.huggingface example
+### 1. openai example
+
+``` python
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt, embeddings="openai:text-embedding-ada-002", model="openai:gpt-3.5-turbo")
+
+```
+
+### 2.huggingface example
 ``` python
 ak = akasha.Doc_QA()
 ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", model="hf:meta-llama/Llama-2-13b-chat-hf")
@@ -176,7 +218,7 @@ To use text generation model from **huggingface**, for example, meta llama, you 
 <br/>
 <br/>
 
-### 2.llama-cpp example
+### 3.llama-cpp example
 llama-cpp can use quantized llama model and run on cpu, after you download or transfer llama-cpp model file using [llama-cpp-python](https://github.com/abetlen/llama-cpp-python).
 
 ```python
@@ -193,6 +235,17 @@ ak.get_response(dir_path, prompt, embeddings="huggingface:all-MiniLM-L6-v2", mod
 
 ```
 you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf**
+
+
+### 4. remote server api example
+If you deploy your own language model in other server using TGI (Text Generation Inference), you can use **remote:{model_name}** to call the model after you set **REMOTE_API_BASE={your LLM api url}** in ".env" file.
+
+``` python
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt,  model="remote:Taiwan-LLM-13B-v2.0-chat")
+
+```
+
 
 <br/>
 <br/>
@@ -726,7 +779,7 @@ summarizing the next segment to get a higher level of summary consistency.
 
 import akasha.summary as summary
 sum = summary.Summary( chunk_size=1000, chunk_overlap=100)
-sum.summarize_file(file_name="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
+sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
 , chunk_overlap=40)
 
 
@@ -979,39 +1032,16 @@ If you prefer running Akasha via a web page, we offer a Streamlit-based user int
 
 <br/>
 
-To get started, you can download the project and install it in the same directory as the setup.py script.
-
+To start the application, use the following command:
 
 ```bash
-
-$ git clone https://gitlab-devops.iii.org.tw/root/qaiii-1.git
-$ cd qaiii-1/
-$ python -m pip install .
-
+$ akasha ui
 ```
 
 <br/>
-<br/>
-
-
-
-Next, install Streamlit and Streamlit-option-menu. Then, use Streamlit to run the ui.py script.
-
 <br/>
 
 You should now be able to access the web page at http://localhost:8501/.
-
-<br/>
-<br/>
-
-
-```bash
-
-$ python -m pip install streamlit
-$ python -m pip install streamlit-option-menu
-$ streamlit run ui.py
-
-```
 
 <br/>
 <br/>
