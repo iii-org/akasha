@@ -1,7 +1,13 @@
-
-
-
-def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, topK:int, threshold:float, language:str, compression:bool=False)->dict:
+def handle_params(
+    model: str,
+    embeddings: str,
+    chunk_size: int,
+    search_type: str,
+    topK: int,
+    threshold: float,
+    language: str,
+    compression: bool = False,
+) -> dict:
     """save running parameters into dictionary in order to parse to aiido
 
     Args:
@@ -30,13 +36,13 @@ def handle_params(model:str, embeddings:str, chunk_size:int, search_type:str, to
         params["threshold"] = threshold
     if language != "":
         params["language"] = language
-    
-    
+
     if chunk_size != -1:
         params["chunk_size"] = chunk_size
     return params
 
-def handle_metrics(doc_length:int, time:float, tokens:int)->dict:
+
+def handle_metrics(doc_length: int, time: float, tokens: int) -> dict:
     """save running metrics into dictionary in order to parse to aiido
 
     Args:
@@ -51,10 +57,11 @@ def handle_metrics(doc_length:int, time:float, tokens:int)->dict:
 
     metrics["doc_length"] = doc_length
     metrics["time"] = time
-    metrics['tokens'] = tokens
+    metrics["tokens"] = tokens
     return metrics
 
-def handle_table(prompt:str, docs:list, response:str)->dict:
+
+def handle_table(prompt: str, docs: list, response: str) -> dict:
     """save running results into dictionary in order to parse to aiido
 
     Args:
@@ -68,26 +75,29 @@ def handle_table(prompt:str, docs:list, response:str)->dict:
     table = {}
     table["prompt"] = prompt
     table["response"] = response
-    if len(docs) != 0 :
-        
-        
+    if len(docs) != 0:
         try:
             inputs = [doc.page_content for doc in docs]
-            metadata = [doc.metadata['source'] + "    page: " + str(doc.metadata['page']) for doc in docs]
+            metadata = [
+                doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
+                for doc in docs
+            ]
         except:
             metadata = ["none" for _ in docs]
             inputs = [doc for doc in docs]
         table["inputs"] = inputs
         table["metadata"] = metadata
-        
+
     else:
         table["inputs"] = ["none"]
         table["metadata"] = ["none"]
-    
+
     return table
 
 
-def handle_score_table(table:dict, bert:float, rouge:float, llm_score:float)->dict:
+def handle_score_table(
+    table: dict, bert: float, rouge: float, llm_score: float
+) -> dict:
     """add each response's bert and rouge score into table dictionary
 
     Args:
@@ -98,9 +108,9 @@ def handle_score_table(table:dict, bert:float, rouge:float, llm_score:float)->di
     Returns:
         dict: table dictionary
     """
-    
+
     table["bert"] = bert
     table["rouge"] = rouge
     table["llm_score"] = llm_score
-    
+
     return table

@@ -1,7 +1,9 @@
 from setuptools import setup
 import platform
+
 # read the contents of your README file
 from pathlib import Path
+
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
@@ -45,7 +47,14 @@ setup(
     url="https://github.com/iii-org/akasha",
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
-    packages=["akasha", "akasha.models", "cli", "akasha.eval", "akasha.summary", "akasha.interface"],
+    packages=[
+        "akasha",
+        "akasha.models",
+        "cli",
+        "akasha.eval",
+        "akasha.summary",
+        "akasha.interface",
+    ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
-    python_requires=">=3.8"
+    python_requires=">=3.8",
 )
