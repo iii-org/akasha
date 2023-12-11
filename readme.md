@@ -30,7 +30,7 @@ conda create --name py3-8 python=3.8
 activate py3-8
 
 # install akasha
-pip install git+https://gitlab-devops.iii.org.tw/root/qaiii-1.git
+pip install akasha-terminal
 
 
 ```
