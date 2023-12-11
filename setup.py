@@ -1,5 +1,10 @@
 from setuptools import setup
 import platform
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 
 install_requires = [
     "pypdf",
@@ -31,13 +36,13 @@ else:
     install_requires.append("opencc==1.1.6")
 
 setup(
-    name="akasha",
-    version="0.8",
+    name="akasha-terminal",
+    version="0.8.1",
     description="document QA package using langchain and chromadb",
-    long_description="""Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
-With Akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.""",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="chih chuan chang",
-    url="https://gitlab-devops.iii.org.tw/root/qaiii-1",
+    url="https://github.com/iii-org/akasha",
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
     packages=["akasha", "akasha.models", "cli", "akasha.eval", "akasha.summary", "akasha.interface"],
