@@ -141,7 +141,7 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
     )
 
     sum.summarize_file(
-        file_name=file_name, summary_type="map_reduce", summary_len=100, verbose=True
+        file_path=file_name, summary_type="map_reduce", summary_len=100, verbose=True
     )
     print(sum.logs)
     return sum

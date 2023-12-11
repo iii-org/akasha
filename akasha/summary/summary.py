@@ -217,9 +217,10 @@ class Summary(akasha.atman):
 
     def summarize_file(
         self,
-        file_name: str,
+        file_path: str,
         summary_type: str = "map_reduce",
         summary_len: int = 500,
+        output_file_path: str = "",
         **kwargs
     ) -> str:
         """input a file path and return a summary of the file
@@ -228,6 +229,7 @@ class Summary(akasha.atman):
             **file_path (str)**:  the path of file you want to summarize, can be '.txt', '.docx', '.pdf' file.\n
             **summary_type (str, optional)**: summary method, "map_reduce" or "refine". Defaults to "map_reduce".\n
             **summary_len (int, optional)**: _description_. Defaults to 500.\n
+            **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
             **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
                 chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
                 system_prompt, max_token, temperature.
@@ -236,14 +238,14 @@ class Summary(akasha.atman):
         """
 
         ## set variables ##
-        self.file_name = file_name
+        self.file_name = file_path
         self.summary_type = summary_type.lower()
         self.summary_len = summary_len
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         start_time = time.time()
         table = {}
-        if not akasha.helper.is_path_exist(file_name):
+        if not akasha.helper.is_path_exist(file_path):
             print("file path not exist\n\n")
             return ""
 
@@ -291,14 +293,20 @@ class Summary(akasha.atman):
             )
 
         self.summary = akasha.helper.sim_to_trad(response)
-
+        self.summary = self.summary.replace("。", "。\n\n")
         ### write summary to file ###
-        sum_path = Path("summarization/")
-        if not sum_path.exists():
-            sum_path.mkdir()
+        if output_file_path == "":
+            sum_path = Path("summarization/")
+            if not sum_path.exists():
+                sum_path.mkdir()
 
-        file_name = "summarization/" + file_name.split("/")[-1].split(".")[-2] + ".txt"
-        with open(file_name, "w", encoding="utf-8") as f:
+            output_file_path = (
+                "summarization/" + file_path.split("/")[-1].split(".")[-2] + ".txt"
+            )
+        elif output_file_path[-4:] != ".txt":
+            output_file_path = output_file_path + ".txt"
+
+        with open(output_file_path, "w", encoding="utf-8") as f:
             f.write(self.summary)
 
         print(self.summary, "\n\n\n\n")
@@ -317,7 +325,9 @@ class Summary(akasha.atman):
                 self.doc_length, end_time - start_time, self.doc_tokens
             )
             table = akasha.format.handle_table(p, response_list, self.summary)
-            akasha.aiido_upload(self.record_exp, params, metrics, table, file_name)
-        print("summarization saved in ", file_name, "\n\n")
+            akasha.aiido_upload(
+                self.record_exp, params, metrics, table, output_file_path
+            )
+        print("summarization saved in ", output_file_path, "\n\n")
 
         return self.summary

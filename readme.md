@@ -779,7 +779,7 @@ summarizing the next segment to get a higher level of summary consistency.
 
 import akasha.summary as summary
 sum = summary.Summary( chunk_size=1000, chunk_overlap=100)
-sum.summarize_file(file_name="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
+sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
 , chunk_overlap=40)
 
 

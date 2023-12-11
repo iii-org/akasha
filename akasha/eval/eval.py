@@ -160,6 +160,7 @@ class Model_Eval(akasha.atman):
         doc_path: Union[List[str], str],
         question_num: int = 10,
         choice_num: int = 4,
+        output_file_path: str = "",
         **kwargs,
     ) -> (list, list):
         """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory,
@@ -181,6 +182,7 @@ class Model_Eval(akasha.atman):
                 **question_num (int, optional)**: number of questions you want to create. Defaults to 10.\n
                 **choice_num (int, optional)**: the number of choices for each single choice question, only use it if question_type is "single_choice".
             Defaults to 4.\n
+                **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
                 system_prompt, max_token, temperature.
@@ -327,21 +329,22 @@ class Model_Eval(akasha.atman):
             akasha.aiido_upload(self.record_exp, params, metrics, table)
 
         ### write question and answer into txt file, but first check if "questionset" directory exist or not, it not, first create it.
-        ### for filename, count the files in the questionset directory that has doc_path in the file name, and use it as the file name.
+        ### for filename, if not assign, use doc_path+datetime as the file name.
         if not os.path.exists("questionset"):
             os.makedirs("questionset")
-        #count = 1
         if isinstance(doc_path, list):
             suf_path = doc_path[0].split("/")[-2]
         else:
             suf_path = doc_path.split("/")[-2]
-        # for filename in os.listdir("questionset"):
-        #     if suf_path in filename:
-        #         count += 1
-        now = datetime.datetime.now()
-        date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
-        file_name = "questionset/" + suf_path + "_" + str(date_time_string) + ".txt"
-        with open(file_name, "w", encoding="utf-8") as f:
+        if output_file_path == "":
+            now = datetime.datetime.now()
+            date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
+            output_file_path = (
+                "questionset/" + suf_path + "_" + str(date_time_string) + ".txt"
+            )
+        elif output_file_path[-4:] != ".txt":
+            output_file_path = output_file_path + ".txt"
+        with open(output_file_path, "w", encoding="utf-8") as f:
             for w in range(len(self.question)):
                 if self.question_type == "essay":
                     f.write(self.question[w] + self.answer[w] + "\n\n")
@@ -358,12 +361,12 @@ class Model_Eval(akasha.atman):
                             + "\n"
                         )
 
-        print("question set saved in ", file_name, "\n\n")
+        print("question set saved in ", output_file_path, "\n\n")
 
         self._add_result_log(timestamp, end_time - start_time)
         self.logs[timestamp]["question"] = self.question
         self.logs[timestamp]["answer"] = self.answer
-        self.logs[timestamp]["questionset_path"] = file_name
+        self.logs[timestamp]["questionset_path"] = output_file_path
 
         del self.db
         return self.question, self.answer

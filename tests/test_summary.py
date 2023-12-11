@@ -26,13 +26,16 @@ def test_Summary(base_line):
     assert sum.temperature == 0.15
 
     text = sum.summarize_file(
-        file_name=file_path, summary_type="map_reduce", summary_len=100
+        file_path=file_path, summary_type="map_reduce", summary_len=100
     )
 
     assert type(text) == str
 
     text = sum.summarize_file(
-        file_name=file_path, summary_type="refine", summary_len=100
+        file_path=file_path,
+        summary_type="refine",
+        summary_len=100,
+        output_file_path="./summarization/summary.txt",
     )
     assert type(text) == str
 

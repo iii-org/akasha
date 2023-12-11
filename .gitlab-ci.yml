@@ -9,3 +9,5 @@ before_script:
 test:
   script:
     - pytest
+  only:
+    - master

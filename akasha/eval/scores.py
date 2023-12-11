@@ -77,7 +77,7 @@ def get_llm_score(
     candidate_str: str, reference_str: str, model: str, round_digit: int = 3
 ):
     prompt = prompts.format_llm_score(candidate_str, reference_str)
-    model = akasha.helper.handle_model(model, [], False)
+    model = akasha.helper.handle_model(model, False, 0.0)
     try:
         response = model.predict(prompt)
 
