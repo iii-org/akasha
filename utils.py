@@ -9,10 +9,11 @@ import akasha.db
 
 CHUNKSIZE = 3000
 SPINNER_MESSAGE = "Wait for api response..."
+HOST = os.getenv("API_HOST", "http://127.0.0.1")
+PORT = os.getenv("API_PORT", "8000")
 
-HOST = "http://127.0.0.1"
-PORT = "8000"
 api_urls = {
+    "load_openai": f"{HOST}:{PORT}/openai/load_openai",
     "get_docs_path": f"{HOST}:{PORT}/get_docs_path",
     "get_dataset": f"{HOST}:{PORT}/dataset/get",
     "get_model_path": f"{HOST}:{PORT}/get_model_path",
@@ -27,7 +28,9 @@ api_urls = {
     "get_owner_expert": f"{HOST}:{PORT}/expert/get_owner",
     "create_chromadb": f"{HOST}:{PORT}/expert/create_chromadb",
     "create_expert": f"{HOST}:{PORT}/expert/create",
+    "create_expert2": f"{HOST}:{PORT}/expert/create2",
     "update_expert": f"{HOST}:{PORT}/expert/update",
+    "update_expert2": f"{HOST}:{PORT}/expert/update2",
     "delete_expert": f"{HOST}:{PORT}/expert/delete",
     "share_expert": f"{HOST}:{PORT}/expert/share",
     "show_expert": f"{HOST}:{PORT}/expert/show",
@@ -474,6 +477,10 @@ def create_expert(
             if not suc:
                 st.warning(f"❌ Create chromadb for file {file_name} failed, {text}")
 
+        response = requests.post(api_urls["create_expert2"], json=data).json()
+        if response["status"] != "success":
+            raise Exception(response["response"])
+        
         loading_bar.empty()
 
     except Exception as e:
@@ -653,9 +660,15 @@ def edit_expert(
 
         loading_bar.empty()
 
+    
+    response2 = requests.post(api_urls["update_expert2"], json={'data':response['new_json_data'], 'old_uid':response['old_uid']}).json()
+    if response2["status"] != "success":
+        return False
+    
     if add_shared_users_to_expert(
         owner, new_expert_name, share_or_not, shared_user_accounts
-    ):
+    ):  
+        
         return True
 
     return False
@@ -684,6 +697,8 @@ def delete_expert(username: str, expert_name: str) -> bool:
     if len(response["delete_chromadb"]) > 0:
         delete_chromadb(response["delete_chromadb"])
 
+    os.remove(response["delete_json_data"])
+    
     st.success(f"Expert '{expert_name}' has been deleted successfully")
     return True
 
@@ -1585,3 +1600,13 @@ def download_json(file_name: str):
         file_name=json_filename,
         mime="application/json",
     )
+
+
+
+
+def get_openai_from_file(username:str):
+    
+    response = requests.get(api_urls["load_openai"],json = {"user_name": username}).json()
+    
+    return response["response"]["openai_key"], response["response"]["azure_key"], response["response"]["azure_base"]
+

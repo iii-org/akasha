@@ -19,20 +19,28 @@ def _api_settings(username:str):
     st.header('API Settings', divider='rainbow')
     st.subheader('* Open AI', divider='grey')
     st.session_state.openai_on = st.toggle('Use Open AI', value=st.session_state.openai_on, key='openai') 
-    openai_api_key = st.text_input('OpenAI Key', help='OpenAI Key', type='password', disabled=not st.session_state.openai_on)
+    openai_api_key = st.text_input('OpenAI Key', help='OpenAI Key', type='password', disabled=not st.session_state.openai_on,\
+        value=st.session_state.openai_key)
     
     st.subheader('* Azure Open AI', divider='grey')
     st.session_state.azure_openai_on = st.toggle('Use Azure OpenAI', value=st.session_state.azure_openai_on, key='azure_openai')
     col_azure_key, col_azure_url = st.columns([1, 1])
-    azure_openai_api_key = col_azure_key.text_input('Azure OpenAI Key', help='Azure OpenAI Key', type='password', disabled=not st.session_state.azure_openai_on)
-    azure_openai_base_url = col_azure_url.text_input('Azure OpenAI Base URL', help='Azure OpenAI Base URL', type='password', disabled=not st.session_state.azure_openai_on)
+    azure_openai_api_key = col_azure_key.text_input('Azure OpenAI Key', help='Azure OpenAI Key', type='password', disabled=not st.session_state.azure_openai_on,\
+        value=st.session_state.azure_key)
+    azure_openai_base_url = col_azure_url.text_input('Azure OpenAI Base URL', help='Azure OpenAI Base URL', type='password',\
+        disabled=not st.session_state.azure_openai_on, value= st.session_state.azure_base)
     
     st.markdown('')
     st.markdown('')
     st.markdown('')
-    save_config, save_file = st.columns([1, 1])
+    save_config, save_file, sp___ce = st.columns([1, 3, 1])
     res = False
     with save_config:
+        st.session_state.save_openai = st.toggle('Save Permanently', value=st.session_state.save_openai, key='openai_save_file') 
+        
+    with save_file:
+        
+        ### if submit, first check if the api keys are valid, if not, show error; if yes, check if need to save to file
         if st.button('Save', f'btn-save-api-configs', use_container_width=True, type='primary'):
             
             res = save_api_configs(st.session_state.openai_on, st.session_state.azure_openai_on,
@@ -40,12 +48,12 @@ def _api_settings(username:str):
                                 azure_openai_api_key if st.session_state.azure_openai_on else None, 
                                 azure_openai_base_url if st.session_state.azure_openai_on else None)
             
-    with save_file:
-        if st.button('Save to File', f'btn-save-api-configs-to-file', use_container_width=True, type='primary',disabled= not res):
-            save_openai_to_file(username, st.session_state.openai_on, st.session_state.azure_openai_on,
-                                openai_api_key if st.session_state.openai_on else None, 
-                        azure_openai_api_key if st.session_state.azure_openai_on else None, 
-                        azure_openai_base_url if st.session_state.azure_openai_on else None)
+            if res and st.session_state.save_openai:
+                #if st.button('Save to File', f'btn-save-api-configs-to-file', use_container_width=True, type='primary',disabled= not res):
+                save_openai_to_file(username, st.session_state.openai_on, st.session_state.azure_openai_on,
+                                    openai_api_key if st.session_state.openai_on else None, 
+                            azure_openai_api_key if st.session_state.azure_openai_on else None, 
+                            azure_openai_base_url if st.session_state.azure_openai_on else None)
             
     
 def _history():

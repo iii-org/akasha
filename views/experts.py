@@ -244,7 +244,7 @@ def _update_expert(EXPERTS, EMBEDDING_MODELS, DATASETS, username, all_users):
                                         st.session_state[f'expert-add-files-{editing_expert_name}'],
                                         share_boolean, shared_users)
                 if res_update:
-                    rename_msg = f' and renamed as {editing_expert_name} ' if editing_expert_name != update_expert_name else ''
+                    rename_msg = f' and renamed as {update_expert_name} ' if editing_expert_name != update_expert_name else ''
                     st.success(f'Expert \'{editing_expert_name}\' has been updated{rename_msg} successfully') 
             
             create_expert_button = col_new.button('Save as New Expert', f'btn-copy-{editing_expert_name}', use_container_width=True, type='primary',

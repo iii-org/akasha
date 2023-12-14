@@ -18,7 +18,8 @@ app.include_router(experts.router)
 OPENAI_CONFIG_PATH = "./config/openai/"
 
 ### data class ###
-
+class UserBase(BaseModel):
+    user_name:str
 class ConsultModel(BaseModel):
     data_path: Union[str, List[str]]
     prompt: Union[str, List[Any]]
@@ -260,8 +261,38 @@ async def test_azure_key(user_input:OpenAIKey):
     return {'status': 'fail', 'response': 'azure openai key or base url is empty.\n\n'}
 
 
+@app.get("/openai/load_openai")
+async def load_openai_from_file(user_input:UserBase):
+    """load openai key from config file
 
+    Args:
+        user_name (str): user name
+    Returns:
+        dict: status, response
+    """
+    user_name = user_input.user_name
+    openai_config_file_path =  (Path(OPENAI_CONFIG_PATH) / (user_name + "_" + "openai.json")).__str__()
+    ret = {"azure_key":"", "azure_base":"", "openai_key":""}
+    try:
+        if Path(openai_config_file_path).exists():
+            file_path = Path(openai_config_file_path)
+            if file_path.exists():
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
 
+                if "azure_key" in data and "azure_base" in data:
+                    
+                    ret["azure_key"] = data["azure_key"]
+                    ret["azure_base"] = data["azure_base"]
+                
+                if "openai_key" in data:
+                    
+                    ret["openai_key"] = data["openai_key"]
+    except Exception as e:
+        return {'status': 'fail', 'response': ret}
+
+    return {'status': 'success', 'response': ret}
+    
 @app.get("/openai/choose")
 async def choose_openai_key(user_input:OpenAIKey):
     """choose valid openai key from session_state and config file

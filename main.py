@@ -14,7 +14,7 @@ from views.userguide import user_guide_page
 from views.signup import signup_page
 from views.forgetpwd import forgetpwd_page
 
-from utils import list_experts, list_datasets, list_models
+from utils import list_experts, list_datasets, list_models, get_openai_from_file
 
 # info
 VERSION = '0.8'
@@ -27,12 +27,6 @@ if 'openai_on' not in st.session_state:
     st.session_state.openai_on = False
 if 'azure_openai_on' not in st.session_state:
     st.session_state.azure_openai_on = False
-if 'openai_key' not in st.session_state:
-    st.session_state.openai_key = ''
-if 'azure_key' not in st.session_state:
-    st.session_state.azure_key = ''
-if 'azure_base' not in st.session_state:
-    st.session_state.azure_base = ''
 
 if 'logs' not in st.session_state:
     st.session_state['logs'] = {}
@@ -95,6 +89,12 @@ if url_params == {}:
     elif authentication_status:
         
         # load configurations
+        if ('openai_key' not in st.session_state) or ('azure_key' not in st.session_state) or ('azure_base' not in st.session_state):
+            st.session_state.save_openai = True
+            st.session_state.openai_key, st.session_state.azure_key, st.session_state.azure_base = get_openai_from_file(username)
+            if st.session_state.openai_key != ""  or (st.session_state.azure_key != "" and st.session_state.azure_base != ""):
+                st.session_state.save_openai = False
+
         EXPERTS = list_experts(username, name_only=True, include_shared=True) # may filtered by logged-in user
         DATASETS = list_datasets(username, name_only=True, include_shared=True) # may filtered by logged-in user
         EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', \
