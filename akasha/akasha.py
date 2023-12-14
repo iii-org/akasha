@@ -131,15 +131,38 @@ def openai_vision(
     content.extend(pic_message)
 
     ### call model ###
-    from langchain.chat_models import ChatOpenAI
+    import os
+    from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
     from langchain.schema.messages import HumanMessage, SystemMessage
     from langchain.callbacks import get_openai_callback
 
-    chat = ChatOpenAI(model="gpt-4-vision-preview", max_tokens=max_token)
+    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure") or (
+        "OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"
+    ):
+        modeln = model.replace(".", "")
+        api_base, api_key, api_version = helper._handle_azure_env()
+        chat = AzureChatOpenAI(
+            deployment_name=modeln,
+            temperature=0.0,
+            base_url=api_base,
+            api_key=api_key,
+            api_version=api_version,
+            max_tokens=max_token,
+        )
+    else:
+        chat = ChatOpenAI(
+            model=model, max_tokens=max_token, temperature=0.0, verbose=verbose
+        )
     input_message = [HumanMessage(content=content)]
 
     with get_openai_callback() as cb:
-        ret = chat.invoke(input_message).content
+        try:
+            ret = chat.invoke(input_message).content
+        except Exception as e:
+            chat = ChatOpenAI(
+                model="gpt-4-vision-preview", max_tokens=max_token, temperature=0.0
+            )
+            ret = chat.invoke(input_message).content
 
         tokens, prices = cb.total_tokens, cb.total_cost
 

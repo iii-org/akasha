@@ -243,7 +243,12 @@ def format_refine_summary_prompt(
 def format_compression_prompt(query: str, doc: str):
     return f"""Given the following question and context, extract any part of the context *AS IS* that is relevant to answer the question. If none of the context is relevant return an empty string. 
 
-Remember, *DO NOT* edit the extracted parts of the context.
-\nQuestion: {query}
-\nContext:
-{doc}"""
+    Remember, *DO NOT* edit the extracted parts of the context.
+    \nQuestion: {query}
+    \nContext:
+    {doc}"""
+
+
+def format_pic_summary_prompt(chunk_size: int):
+    # f"please use traditional chinese to describe this picture in {chunk_size} words.\n\n"
+    return f"please use traditional chinese to describe this picture in details.\n\n"
