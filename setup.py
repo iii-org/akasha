@@ -5,7 +5,7 @@ import platform
 from pathlib import Path
 
 this_directory = Path(__file__).parent
-long_description = (this_directory / "read.md").read_text(encoding="utf-8")
+long_description = "n" #(this_directory / "read.md").read_text(encoding="utf-8")
 
 
 install_requires = [
