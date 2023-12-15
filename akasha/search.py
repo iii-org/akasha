@@ -20,9 +20,10 @@ import akasha.prompts as prompts
 def _get_all_docs(db_list: list):
     res = {"embeddings": [], "documents": [], "metadatas": []}
     times = 1
+    
     for db in db_list:
         db_data = db.get(include=["embeddings", "documents", "metadatas"])
-        if max(db_data["embeddings"]) > times:
+        if np.max(db_data["embeddings"]) > times:
             times *= 10
         res["embeddings"].extend(db_data["embeddings"])
         res["documents"].extend(db_data["documents"])

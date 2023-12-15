@@ -94,6 +94,8 @@ class Model_Eval(akasha.atman):
         max_token: int = 3000,
         temperature: float = 0.0,
         question_type: str = "essay",
+        use_chroma: bool = False,
+        use_whole_dir: bool = False,
     ):
         """initials of Model_Eval class
 
@@ -136,7 +138,7 @@ class Model_Eval(akasha.atman):
         self.doc_path = ""
         self.question_type = question_type
         self.question_num = 0
-
+        
         ### set variables ###
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(
@@ -154,7 +156,8 @@ class Model_Eval(akasha.atman):
         self.answer = []
         self.response = []
         self.score = {}
-
+        self.use_chroma = use_chroma
+        self.use_whole_dir = use_whole_dir
     def auto_create_questionset(
         self,
         doc_path: Union[List[str], str],
@@ -199,14 +202,19 @@ class Model_Eval(akasha.atman):
         self.question_num = question_num
 
         ## check db ##
-
-        self.db, db_path_names = akasha.db.processMultiDB(
-            self.doc_path,
-            self.verbose,
-            "eval_get_doc",
-            self.embeddings,
-            self.chunk_size,
-        )
+        if self.use_chroma:
+            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+                self.doc_path, "use rerank to get docs"
+            )
+        else:
+            self.db, db_path_names = akasha.db.processMultiDB(
+                self.doc_path,
+                self.verbose,
+                "eval_get_doc",
+                self.embeddings,
+                self.chunk_size,
+                self.use_whole_dir
+            )
         if not self._check_db():
             return ""
 
@@ -405,13 +413,19 @@ class Model_Eval(akasha.atman):
             self.system_prompt = self.system_prompt + " 用中文回答 "
 
         ## check db ##
-        self.db, db_path_names = akasha.db.processMultiDB(
-            self.doc_path,
-            self.verbose,
-            self.embeddings_obj,
-            self.embeddings,
-            self.chunk_size,
-        )
+        if self.use_chroma:
+            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+                self.doc_path, self.embeddings
+            )
+        else:
+            self.db, db_path_names = akasha.db.processMultiDB(
+                self.doc_path,
+                self.verbose,
+                self.embeddings_obj,
+                self.embeddings,
+                self.chunk_size,
+                self.use_whole_dir
+            )
         if not self._check_db():
             return ""
 

@@ -419,6 +419,7 @@ class Doc_QA(atman):
         temperature: float = 0.0,
         compression: bool = False,
         use_chroma: bool = False,
+        use_whole_dir: bool = False,
     ):
         super().__init__(
             chunk_size,
@@ -437,7 +438,7 @@ class Doc_QA(atman):
         self.doc_path = ""
         self.compression = compression
         self.use_chroma = use_chroma
-
+        self.use_whole_dir = use_whole_dir
         ### set variables ###
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose, self.temperature)
@@ -484,6 +485,7 @@ class Doc_QA(atman):
                 self.embeddings_obj,
                 self.embeddings,
                 self.chunk_size,
+                self.use_whole_dir
             )
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
@@ -597,6 +599,7 @@ class Doc_QA(atman):
                 self.embeddings_obj,
                 self.embeddings,
                 self.chunk_size,
+                self.use_whole_dir
             )
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")

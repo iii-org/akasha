@@ -58,3 +58,4 @@ model/chinese-alpaca-2-13b.Q5_K_M.gguf
 test_st.py
 dataset.json
 expert.json
+question_set2.txt
