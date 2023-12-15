@@ -53,7 +53,7 @@ setup(
         "cli",
         "akasha.eval",
         "akasha.summary",
-        "akasha.interface",
+    #    "akasha.interface",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
     python_requires=">=3.8",
