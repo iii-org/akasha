@@ -28,7 +28,7 @@ install_requires = [
     "rouge-chinese==1.0.3",
     "bert-score==0.3.13",
     "click",
-    "tokenizers==0.13.3",
+    "tokenizers>=0.13.3",
     "streamlit==1.28.2",
     "streamlit_option_menu==0.3.6",
 ]
