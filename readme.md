@@ -286,6 +286,7 @@ openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_K
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
 quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
+mistral = "hf:Mistral-7B-Instruct-v0.2" 
 ### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 
 ### from https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF  and the name behind "llama-gpu:" or "llama-cpu:"
 ### from https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
@@ -295,7 +296,6 @@ llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.Q5_K_S.gguf"
 llama_cpp_chinese_alpaca = "llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf"
 llama_cpp_chinese_alpaca = "llama-cpu:model/chinese-alpaca-2-13b.Q5_K_M.gguf"
 chatglm_model = "chatglm:THUDM/chatglm2-6b"
-
 
 ```
 

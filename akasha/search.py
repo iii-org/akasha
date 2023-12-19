@@ -32,13 +32,13 @@ def _get_all_docs(db_list: list):
     return res, times
 
 
-def _create_doc_list(db_list: list):
-    all_docs, times = _get_all_docs(db_list)
+def _create_doc_list(dbss: dict):
+    
     docs_list = []
-    for i in range(len(all_docs["documents"])):
+    for i in range(len(dbss["documents"])):
         docs_list.append(
             Document(
-                page_content=all_docs["documents"][i], metadata=all_docs["metadatas"][i]
+                page_content=dbss["documents"][i], metadata=dbss["metadatas"][i]
             )
         )
 
@@ -352,7 +352,7 @@ def get_docs(
         dbss, times = _get_all_docs(db)
         threshold *= times
         if search_type == "merge" or "tfidf":
-            docs_list = _create_doc_list(db)
+            docs_list = _create_doc_list(dbss)
 
         if search_type == "merge":
             docs_mmr = _get_relevant_doc_mmr(

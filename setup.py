@@ -19,7 +19,7 @@ install_requires = [
     "jieba==0.42.1",
     "sentence-transformers==2.2.2",
     "torch==2.0.1",
-    "transformers==4.31.0",
+    "transformers>=4.33.4", #==4.31.0
     "llama-cpp-python==0.2.6",
     "auto-gptq==0.3.1",
     "tqdm==4.65.0",
@@ -28,7 +28,7 @@ install_requires = [
     "rouge-chinese==1.0.3",
     "bert-score==0.3.13",
     "click",
-    "tokenizers==0.13.3",
+    "tokenizers>=0.13.3",
     "streamlit==1.28.2",
     "streamlit_option_menu==0.3.6",
 ]
