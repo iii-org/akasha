@@ -19,7 +19,7 @@ def base_line():
 def test_Model_Eval(base_line):
     eva, doc_path = base_line
 
-    assert eva.verbose == False
+    assert eva.verbose == True
     assert eva.search_type == "tfidf"
     assert eva.chunk_size == 500
     assert eva.max_token == 3010
