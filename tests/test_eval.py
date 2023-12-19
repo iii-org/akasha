@@ -5,7 +5,7 @@ import akasha.eval as eval
 @pytest.fixture
 def base_line():
     eva = eval.Model_Eval(
-        verbose=False,
+        verbose=True,
         search_type="tfidf",
         chunk_size=500,
         max_token=3010,
