@@ -19,22 +19,26 @@ import akasha.prompts as prompts
 
 def _get_all_docs(db_list: list):
     res = {"embeddings": [], "documents": [], "metadatas": []}
+    times = 1
+    
     for db in db_list:
         db_data = db.get(include=["embeddings", "documents", "metadatas"])
+        if np.max(db_data["embeddings"]) > times:
+            times *= 10
         res["embeddings"].extend(db_data["embeddings"])
         res["documents"].extend(db_data["documents"])
         res["metadatas"].extend(db_data["metadatas"])
 
-    return res
+    return res, times
 
 
-def _create_doc_list(db_list: list):
-    all_docs = _get_all_docs(db_list)
+def _create_doc_list(dbss: dict):
+    
     docs_list = []
-    for i in range(len(all_docs["documents"])):
+    for i in range(len(dbss["documents"])):
         docs_list.append(
             Document(
-                page_content=all_docs["documents"][i], metadata=all_docs["metadatas"][i]
+                page_content=dbss["documents"][i], metadata=dbss["metadatas"][i]
             )
         )
 
@@ -321,7 +325,8 @@ def get_docs(
     """
 
     if callable(search_type):
-        dbss = _get_all_docs(db)
+        dbss, times = _get_all_docs(db)
+        threshold *= times
         docs_cust = _get_relevant_doc_custom(
             dbss,
             embeddings,
@@ -344,9 +349,10 @@ def get_docs(
 
     else:
         search_type = search_type.lower()
-        dbss = _get_all_docs(db)
+        dbss, times = _get_all_docs(db)
+        threshold *= times
         if search_type == "merge" or "tfidf":
-            docs_list = _create_doc_list(db)
+            docs_list = _create_doc_list(dbss)
 
         if search_type == "merge":
             docs_mmr = _get_relevant_doc_mmr(

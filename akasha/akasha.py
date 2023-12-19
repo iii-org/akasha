@@ -95,14 +95,13 @@ def detect_exploitation(
     return response
 
 
-def openai_vision(
-    pic_path: Union[str, List[str]],
-    prompt: str,
-    model: str = "gpt-4-vision-preview",
-    max_token: int = 3000,
-    verbose: bool = False,
-    record_exp: str = "",
-):
+
+
+
+def openai_vision(pic_path:Union[str,List[str]], prompt:str, model:str = "gpt-4-vision-preview", max_token:int = 3000, verbose:bool = False, record_exp:str = ""):
+
+    
+    
     start_time = time.time()
 
     ### process input message ###
@@ -135,30 +134,14 @@ def openai_vision(
     from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
     from langchain.schema.messages import HumanMessage, SystemMessage
     from langchain.callbacks import get_openai_callback
-
-    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure") or (
-        "OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"
-    ):
-        model = model.replace(".", "")
-        api_base, api_key, api_version = helper._handle_azure_env()
-        chat = AzureChatOpenAI(
-            deployment_name=model,
-            temperature=0.0,
-            base_url=api_base,
-            api_key=api_key,
-            api_version=api_version,
-            max_tokens=max_token,
-        )
-
-    input_message = [HumanMessage(content=content)]
-
+    chat = ChatOpenAI(model="gpt-4-vision-preview", max_tokens=max_token)
+    input_message =  [HumanMessage(content=content)]
+    
+    
+    
     with get_openai_callback() as cb:
-        try:
-            ret = chat.invoke(input_message).content
-        except Exception as e:
-            # chat = ChatOpenAI(model="gpt-4-vision-preview", max_tokens=max_token, temperature=0.0)
-            ret = chat.invoke(input_message).content
-
+        ret = chat.invoke(input_message).content
+    
         tokens, prices = cb.total_tokens, cb.total_cost
 
     end_time = time.time()
@@ -414,6 +397,7 @@ class Doc_QA(atman):
         temperature: float = 0.0,
         compression: bool = False,
         use_chroma: bool = False,
+        use_whole_dir: bool = False,
     ):
         super().__init__(
             chunk_size,
@@ -432,7 +416,7 @@ class Doc_QA(atman):
         self.doc_path = ""
         self.compression = compression
         self.use_chroma = use_chroma
-
+        self.use_whole_dir = use_whole_dir
         ### set variables ###
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose, self.temperature)
@@ -473,15 +457,9 @@ class Doc_QA(atman):
                 self.doc_path, self.embeddings
             )
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
-                self.doc_path,
-                self.verbose,
-                self.embeddings_obj,
-                self.embeddings,
-                self.chunk_size,
-            )
-
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+            self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        
+        timestamp = datetime.datetime.now().strftime( "%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
         if not self._check_db():
@@ -586,13 +564,7 @@ class Doc_QA(atman):
                 self.doc_path, self.embeddings
             )
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
-                self.doc_path,
-                self.verbose,
-                self.embeddings_obj,
-                self.embeddings,
-                self.chunk_size,
-            )
+            self.db, db_path_names = akasha.db.processMultiDB(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)

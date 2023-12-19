@@ -102,7 +102,7 @@ If you want to use original meta-llama model, you need to both register to [hugg
 **Remember, the account on Hugging Face and the email you use to request access to Meta-Llama must be the same, so that you can download models from Hugging Face once your account is approved.**
 
 You should see the **Gated model You have been granted access to this model** once your account is approved
-![image](pic/granted.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/granted.png)
 
 
 
@@ -286,6 +286,7 @@ openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_K
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
 quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
+mistral = "hf:Mistral-7B-Instruct-v0.2" 
 ### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 
 ### from https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF  and the name behind "llama-gpu:" or "llama-cpu:"
 ### from https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
@@ -295,7 +296,6 @@ llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.Q5_K_S.gguf"
 llama_cpp_chinese_alpaca = "llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf"
 llama_cpp_chinese_alpaca = "llama-cpu:model/chinese-alpaca-2-13b.Q5_K_M.gguf"
 chatglm_model = "chatglm:THUDM/chatglm2-6b"
-
 
 ```
 
@@ -495,7 +495,7 @@ qa.save_logs(file_name="logs.json",file_type="json")
 ```
 
 
-![image](pic/logs.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/logs.png)
 
 
 
@@ -560,7 +560,7 @@ response = ak.get_response(dir_path, prompt)
 
 ### In an experiment you assign, the run name is the combinations of the usage of embedding, search type and model name
 
-![image](pic/upload_experiments.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/upload_experiments.png)
 
 
 <br/>
@@ -571,7 +571,7 @@ response = ak.get_response(dir_path, prompt)
 ### You can also compare the responses from different models, search type and embeddings
 
 
-![image](pic/response_comparison.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/response_comparison.png)
 
 
 <br/>
@@ -1057,8 +1057,8 @@ The first option, **Document Path** , specifies the directory where you want the
 You can either add document files and name the directory from the **Upload Files** page or place the directory containing documents in the ./docs/ directory.
 
 
-![image](pic/ui_setting.png)
-![image](pic/ui_upload.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/ui_setting.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/ui_upload.png)
 
 
 <br/>
@@ -1066,14 +1066,14 @@ You can either add document files and name the directory from the **Upload Files
 
 You can download the models you want into model/ directory, and they will be added to **Langauage Model** option in the Setting page.
 
-![image](pic/ui_model.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/ui_model.png)
 
 <br/>
 <br/>
 
 The default setting is to use the OpenAI model and embeddings, so please remember to add your OpenAI API key on the left side.
 
-![image](pic/ui_openai.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/ui_openai.png)
 
 
 <br/>
@@ -1094,4 +1094,4 @@ It's important to note that the difference between a prompt and a system prompt 
 <br/>
 
 
-![image](pic/ui_5.png)
+![image](https://github.com/iii-org/akasha/blob/master/pic/ui_5.png)

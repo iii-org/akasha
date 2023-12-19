@@ -19,7 +19,7 @@ install_requires = [
     "jieba==0.42.1",
     "sentence-transformers==2.2.2",
     "torch==2.0.1",
-    "transformers==4.31.0",
+    "transformers>=4.33.4",
     "llama-cpp-python==0.2.6",
     "auto-gptq==0.3.1",
     "tqdm==4.65.0",
@@ -35,11 +35,11 @@ install_requires = [
 if platform.system() == "Windows":
     install_requires.append("opencc==1.1.1")
 else:
-    install_requires.append("opencc==1.1.6")
-
+      install_requires.append('opencc==1.1.6')
+      
 setup(
     name="akasha-terminal",
-    version="0.8.2",
+    version="0.8.3",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
