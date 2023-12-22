@@ -95,7 +95,7 @@ class Model_Eval(akasha.atman):
         temperature: float = 0.0,
         question_type: str = "essay",
         use_chroma: bool = False,
-        use_whole_dir: bool = False,
+        ignore_check: bool = False,
     ):
         """initials of Model_Eval class
 
@@ -157,7 +157,7 @@ class Model_Eval(akasha.atman):
         self.response = []
         self.score = {}
         self.use_chroma = use_chroma
-        self.use_whole_dir = use_whole_dir
+        self.ignore_check = ignore_check
     def auto_create_questionset(
         self,
         doc_path: Union[List[str], str],
@@ -213,7 +213,7 @@ class Model_Eval(akasha.atman):
                 "eval_get_doc",
                 self.embeddings,
                 self.chunk_size,
-                self.use_whole_dir
+                self.ignore_check
             )
         if not self._check_db():
             return ""
@@ -424,7 +424,7 @@ class Model_Eval(akasha.atman):
                 self.embeddings_obj,
                 self.embeddings,
                 self.chunk_size,
-                self.use_whole_dir
+                self.ignore_check
             )
         if not self._check_db():
             return ""
@@ -490,8 +490,8 @@ class Model_Eval(akasha.atman):
                 response = akasha.helper.sim_to_trad(response)
                 self.docs.extend(docs)
                 self.response.append(response)
-            except:
-                print("running model error\n")
+            except Exception as e:
+                print("running model error\n", e)
                 response = ["running model error"]
                 torch.cuda.empty_cache()
 
