@@ -15,38 +15,22 @@ from typing import Any, List, Optional, Callable, Union
 import numpy as np
 import akasha.helper as helper
 import akasha.prompts as prompts
+from akasha.db import dbs
 
-
-def _get_all_docs(db_list: list):
-    res = {"embeddings": [], "documents": [], "metadatas": []}
+def _get_threshold_times(db: dbs):
     times = 1
-    
-    for db in db_list:
-        db_data = db.get(include=["embeddings", "documents", "metadatas"])
-        if np.max(db_data["embeddings"]) > times:
+    for embeds in db.get_embeds():
+        
+        if np.max(embeds) > times:
             times *= 10
-        res["embeddings"].extend(db_data["embeddings"])
-        res["documents"].extend(db_data["documents"])
-        res["metadatas"].extend(db_data["metadatas"])
 
-    return res, times
+    return times
 
 
-def _create_doc_list(dbss: dict):
-    
-    docs_list = []
-    for i in range(len(dbss["documents"])):
-        docs_list.append(
-            Document(
-                page_content=dbss["documents"][i], metadata=dbss["metadatas"][i]
-            )
-        )
-
-    return docs_list
 
 
 def _get_relevant_doc_custom(
-    dbss,
+    db:dbs,
     embeddings,
     func: Callable,
     query: str,
@@ -58,7 +42,7 @@ def _get_relevant_doc_custom(
     verbose: bool = False,
 ):
     customR = customRetriever.from_db(
-        dbss, embeddings, func, k, relevancy_threshold, log
+        db, embeddings, func, k, relevancy_threshold, log
     )
     if compression:
         # compressor = LLMChainExtractor.from_llm(model)
@@ -78,11 +62,14 @@ def _get_relevant_doc_custom(
     else:
         docs = customR.get_relevant_documents(query)
 
+    if k >= 100:
+        docs = rerank_reduce(query, docs, k)
+    
     return docs
 
 
 def __get_relevant_doc_knn(
-    dbss,
+    db:dbs,
     embeddings,
     query: str,
     k: int,
@@ -104,7 +91,7 @@ def __get_relevant_doc_knn(
         list: list of Documents
     """
 
-    knnR = myKNNRetriever.from_db(dbss, embeddings, k, relevancy_threshold)
+    knnR = myKNNRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
         compressor = LLMChainExtractor.from_llm(
             model, llm_chain_kwargs={"verbose": verbose}
@@ -116,6 +103,10 @@ def __get_relevant_doc_knn(
     else:
         docs = knnR.get_relevant_documents(query)
 
+    if k >= 100:
+        docs = rerank_reduce(query, docs, k)
+    
+    
     return docs
 
 
@@ -150,11 +141,14 @@ def _get_relevant_doc_tfidf(
     else:
         docs = retriever.get_relevant_documents(query)
 
+    if k >= 100:
+        docs = rerank_reduce(query, docs[:k], k)
+    
     return docs[:k]
 
 
 def _get_relevant_doc_svm(
-    dbss,
+    db:dbs,
     embeddings,
     query: str,
     k: int,
@@ -176,7 +170,7 @@ def _get_relevant_doc_svm(
         list: list of Documents
     """
 
-    svmR = mySVMRetriever.from_db(dbss, embeddings, k, relevancy_threshold)
+    svmR = mySVMRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
         compressor = LLMChainExtractor.from_llm(
             model, llm_chain_kwargs={"verbose": verbose}
@@ -187,11 +181,14 @@ def _get_relevant_doc_svm(
         docs = svmc.get_relevant_documents(query)
     else:
         docs = svmR.get_relevant_documents(query)
+        
+    if k >= 100:
+        docs = rerank_reduce(query, docs, k)
     return docs
 
 
 def _get_relevant_doc_mmr(
-    dbss: dict,
+    db: dbs,
     embeddings,
     query: str,
     k: int,
@@ -215,12 +212,13 @@ def _get_relevant_doc_mmr(
     # retriever = Chroma(embedding_function=embeddings).as_retriever(search_type="mmr",\
     #     search_kwargs={"k": k,'score_threshold': relevancy_threshold})
     # retriever.add_documents(docs_list)
-    import uuid
+    #import uuid
 
-    embedding_list = dbss["embeddings"]
-    text_list = dbss["documents"]
-    metadata_list = dbss["metadatas"]
-    id_list = [str(uuid.uuid1()) for _ in range(len(embedding_list))]
+    embedding_list = db.get_embeds()
+    text_list = db.get_docs()
+    metadata_list = db.get_metadatas()
+    id_list = db.get_ids()
+    #id_list = [str(uuid.uuid1()) for _ in range(len(embedding_list))]
     retriever = Chroma(embedding_function=embeddings)
     retriever._collection.upsert(
         embeddings=embedding_list,
@@ -245,6 +243,11 @@ def _get_relevant_doc_mmr(
         docs = retriever.get_relevant_documents(query)
 
     del retriever
+    
+    if k >= 100:
+        docs = rerank_reduce(query, docs, k)
+    
+    
     return docs
 
 
@@ -267,12 +270,13 @@ def _merge_docs(
     """
     res = []
     cur_count = 0
+    page_contents = set()
     for i in range(topK):
         for docs in docs_list:
             if i >= len(docs):
                 continue
 
-            if docs[i] in res:
+            if docs[i].page_content in page_contents:
                 continue
 
             words_len = model.get_num_tokens(docs[i].page_content)
@@ -283,6 +287,7 @@ def _merge_docs(
 
             cur_count += words_len
             res.append(docs[i])
+            page_contents.add(docs[i].page_content)
 
     if verbose:
         print("words length: ", cur_count)
@@ -291,7 +296,7 @@ def _merge_docs(
 
 
 def get_docs(
-    db: list,
+    db: Union[dbs,list],
     embeddings,
     query: str,
     topK: int,
@@ -325,10 +330,11 @@ def get_docs(
     """
 
     if callable(search_type):
-        dbss, times = _get_all_docs(db)
+
+        times = _get_threshold_times(db)
         threshold *= times
         docs_cust = _get_relevant_doc_custom(
-            dbss,
+            db,
             embeddings,
             search_type,
             query,
@@ -349,17 +355,17 @@ def get_docs(
 
     else:
         search_type = search_type.lower()
-        dbss, times = _get_all_docs(db)
+        times = _get_threshold_times(db)
         threshold *= times
         if search_type == "merge" or "tfidf":
-            docs_list = _create_doc_list(dbss)
+            docs_list = db.get_Documents()
 
         if search_type == "merge":
             docs_mmr = _get_relevant_doc_mmr(
-                dbss, embeddings, query, topK, threshold, model, compression, verbose
+                db, embeddings, query, topK, threshold, model, compression, verbose
             )
             docs_svm = _get_relevant_doc_svm(
-                dbss, embeddings, query, topK, threshold, model, compression, verbose
+                db, embeddings, query, topK, threshold, model, compression, verbose
             )
             docs_tfidf = _get_relevant_doc_tfidf(
                 docs_list, query, topK, model, compression, verbose
@@ -376,7 +382,7 @@ def get_docs(
 
         elif search_type == "mmr":
             docs_mmr = _get_relevant_doc_mmr(
-                dbss, embeddings, query, topK, threshold, model, compression, verbose
+                db, embeddings, query, topK, threshold, model, compression, verbose
             )
             docs, tokens = _merge_docs(
                 [docs_mmr], topK, language, verbose, max_token, model
@@ -384,7 +390,7 @@ def get_docs(
 
         elif search_type == "svm":
             docs_svm = _get_relevant_doc_svm(
-                dbss, embeddings, query, topK, threshold, model, compression, verbose
+                db, embeddings, query, topK, threshold, model, compression, verbose
             )
             docs, tokens = _merge_docs(
                 [docs_svm], topK, language, verbose, max_token, model
@@ -400,7 +406,7 @@ def get_docs(
 
         elif search_type == "knn":
             docs_knn = __get_relevant_doc_knn(
-                dbss, embeddings, query, topK, threshold, model, compression, verbose
+                db, embeddings, query, topK, threshold, model, compression, verbose
             )
             docs, tokens = _merge_docs(
                 [docs_knn], topK, language, verbose, max_token, model
@@ -432,7 +438,7 @@ class customRetriever(BaseRetriever):
     @classmethod
     def from_db(
         cls,
-        dbss,
+        db:dbs,
         embeddings: Embeddings,
         func: Callable,
         k: int = 3,
@@ -440,9 +446,9 @@ class customRetriever(BaseRetriever):
         log: dict = None,
     ):
         # db_data = _get_all_docs(db)
-        index = np.array(dbss["embeddings"])
-        texts = dbss["documents"]
-        metadata = dbss["metadatas"]
+        index = np.array(db.get_embeds())
+        texts = db.get_docs()
+        metadata = db.get_metadatas()
         return cls(
             embeddings=embeddings,
             index=index,
@@ -517,16 +523,16 @@ class myKNNRetriever(BaseRetriever):
     @classmethod
     def from_db(
         cls,
-        dbss,
+        db:dbs,
         embeddings: Embeddings,
         k: int = 3,
         relevancy_threshold: float = 0.2,
         **kwargs: Any,
     ) -> KNNRetriever:
         # db_data = _get_all_docs(db)
-        index = np.array(dbss["embeddings"])
-        texts = dbss["documents"]
-        metadata = dbss["metadatas"]
+        index = np.array(db.get_embeds())
+        texts = db.get_docs()
+        metadata = db.get_metadatas()
         return cls(
             embeddings=embeddings,
             index=index,
@@ -624,7 +630,7 @@ class mySVMRetriever(BaseRetriever):
     @classmethod
     def from_db(
         cls,
-        dbss,
+        db:dbs,
         embeddings: Embeddings,
         k: int = 3,
         relevancy_threshold: float = 0.2,
@@ -632,9 +638,9 @@ class mySVMRetriever(BaseRetriever):
     ) -> SVMRetriever:
         # db_data = _get_all_docs(db)
 
-        index = dbss["embeddings"]
-        texts = dbss["documents"]
-        metadata = dbss["metadatas"]
+        index = np.array(db.get_embeds())
+        texts = db.get_docs()
+        metadata = db.get_metadatas()
         return cls(
             embeddings=embeddings,
             index=index,
@@ -760,6 +766,61 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
     documents = []
     for i in sorted_indices_list:
         if score_list[i] < threshold:
+            break
+        documents.append(docs[i])
+
+    del model, inputs, tokenizer
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    return documents
+
+
+
+def rerank_reduce(query, docs, topK):
+    import torch, gc
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    model_name = "BAAI/bge-reranker-large"   # BAAI/bge-reranker-base
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
+    model.eval()
+    topK //= 5
+    k, score_list = 0, []
+    while k < len(docs):
+        pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
+        with torch.no_grad():
+            inputs = tokenizer(
+                pairs,
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+                max_length=512,
+            ).to(device)
+            scores = (
+                model(**inputs, return_dict=True)
+                .logits.view(
+                    -1,
+                )
+                .float()
+            )
+        if k == 0:
+            score_list = scores
+        else:
+            score_list = torch.cat([score_list, scores], dim=0)
+        k += 10
+
+    # Get the sorted indices in descending order
+    sorted_indices = torch.argsort(score_list, descending=True)
+
+    # Convert the indices to a Python list
+    sorted_indices_list = sorted_indices.tolist()
+
+    # Get the documents in the order of their scores, if lower than threshold, break
+    documents = []
+    for i in sorted_indices_list:
+        if i > topK:
             break
         documents.append(docs[i])
 

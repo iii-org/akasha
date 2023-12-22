@@ -1,6 +1,6 @@
 from typing import Union, List
 from tqdm import tqdm
-import time
+import time, os, shutil
 import datetime
 from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain.document_loaders.csv_loader import CSVLoader
@@ -11,11 +11,81 @@ from langchain.text_splitter import (
 from langchain.vectorstores import Chroma, chroma
 from langchain.docstore.document import Document
 from pathlib import Path
-import json
+import uuid
 import akasha.helper as helper
 import akasha.akasha
 
 
+
+class dbs:
+    
+    
+    def __init__(self, chrdb=[]):
+        
+        self.ids = []
+        self.embeds = []
+        self.metadatas = []
+        self.docs = []
+        
+        if isinstance(chrdb, list):
+            pass 
+        
+        else:
+            data = chrdb.get(include=["embeddings", "metadatas", "documents"])
+            if "ids" in data:
+                self.ids = data["ids"]
+            
+            if "embeddings" in data:
+                self.embeds = data["embeddings"]
+            else:
+                self.embeds = [[] for _ in range(len(data["ids"]))]
+            if "metadatas" in data:
+                self.metadatas = data["metadatas"]
+            else:
+                self.metadatas = [{} for _ in range(len(data["ids"]))]
+            if "documents" in data:
+                self.docs = data["documents"]
+            else:
+                self.docs = ["" for _ in range(len(data["ids"]))]
+    
+    
+    def merge(self, db):
+        self.ids.extend(db.ids)
+        self.embeds.extend(db.embeds)
+        self.metadatas.extend(db.metadatas)
+        self.docs.extend(db.docs)
+    
+    def add_chromadb(self, chrdb):
+        data = chrdb.get(include=["embeddings", "metadatas", "documents"])
+        if "ids" in data:
+            self.ids.extend(data["ids"])
+        
+        if "embeddings" in data:
+            self.embeds.extend(data["embeddings"])
+        else:
+            self.embeds.extend([[] for _ in range(len(data["ids"]))])
+        if "metadatas" in data:
+            self.metadatas.extend(data["metadatas"])
+        else:
+            self.metadatas.extend([{} for _ in range(len(data["ids"]))])
+        if "documents" in data:
+            self.docs.extend(data["documents"])
+        else:
+            self.docs.extend(["" for _ in range(len(data["ids"]))])
+    
+    def get_Documents(self):
+        return [Document(page_content=self.docs[i], metadata=self.metadatas[i]) for i in range(len(self.docs))]
+
+    def get_docs(self):
+        return self.docs
+    
+    def get_ids(self):
+        return self.ids
+    def get_metadatas(self):
+        return self.metadatas
+    def get_embeds(self):
+        return self.embeds
+    
 def _load_file(file_path: str, extension: str):
     """get the content and metadata of a text file (.pdf, .docx, .txt, .csv) and return a Document object
 
@@ -95,7 +165,7 @@ def get_docs_from_doc(doc_path: str, chunk_size: int):
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n", " ", ",", ".", "。", "!"],
         chunk_size=chunk_size,
-        chunk_overlap=40,
+        chunk_overlap=100,
     )
     docs = text_splitter.split_documents(documents)
     texts = [doc for doc in docs]
@@ -112,6 +182,7 @@ def get_chromadb_from_file(
     file_name: str,
     sleep_time: int = 60,
     add_pic: bool = False,
+    embed_type: str = ""
 ):
     """load the existing chromadb of documents from storage_directory and return it, if not exist, create it.
 
@@ -130,75 +201,54 @@ def get_chromadb_from_file(
     text_splitter = RecursiveCharacterTextSplitter(
         separators=["\n", " ", ",", ".", "。", "!"],
         chunk_size=chunk_size,
-        chunk_overlap=40,
+        chunk_overlap=100,
     )
     k = 0
     cum_ids = 0
     interval = 3
+    
     if Path(storage_directory).exists():
-        pass
+        docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+        db = dbs(docsearch)
+        del docsearch
 
     else:
+        docsearch = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
+        if embed_type == "openai":
+            open_model = helper.handle_model("openai:gpt-3.5-turbo", False, 0.0)
+        else:
+            open_model = None
+        
+        
         while k < len(documents):
             cur_doc = documents[k : k + interval]
             texts = text_splitter.split_documents(cur_doc)
             formatted_date = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S_%f")
-            try:
-                if k == 0:
-                    if len(texts) != 0:
-                        docsearch = Chroma.from_documents(
-                            texts,
-                            embeddings,
-                            persist_directory=storage_directory,
-                            ids=[
-                                formatted_date + "_" + str(cum_ids + i)
-                                for i in range(len(texts))
-                            ],
-                        )
-                    else:
-                        docsearch = Chroma(
-                            persist_directory=storage_directory,
-                            embedding_function=embeddings,
-                        )
-
-                else:
-                    if len(texts) != 0:
-                        docsearch.add_documents(
-                            texts,
-                            ids=[
-                                formatted_date + "_" + str(cum_ids + i)
-                                for i in range(len(texts))
-                            ],
-                        )
+            
+            ### if page_content is too long, use llm to summarize ###
+            page_contents = [text.page_content for text in texts]
+            if open_model != None:
+                for ix,text in enumerate(texts):
+                    if open_model.get_num_tokens(text.page_content) > 1024:
+                        try :
+                            page_contents[ix] = helper.call_model(open_model,"use traditional chinese to list details of below article:\n\n"\
+                                + text.page_content + "\n\n")
+                            print("content too long, using llm to summarize for embedding...")
+                        except:
+                            pass
+            
+            
+            try: 
+                vectors = embeddings.embed_documents(page_contents)
             except:
                 time.sleep(sleep_time)
-                if k == 0:
-                    if len(texts) != 0:
-                        docsearch = Chroma.from_documents(
-                            texts,
-                            embeddings,
-                            persist_directory=storage_directory,
-                            ids=[
-                                formatted_date + "_" + str(cum_ids + i)
-                                for i in range(len(texts))
-                            ],
-                        )
-                    else:
-                        docsearch = Chroma(
-                            persist_directory=storage_directory,
-                            embedding_function=embeddings,
-                        )
-
-                else:
-                    if len(texts) != 0:
-                        docsearch.add_documents(
-                            texts,
-                            ids=[
-                                formatted_date + "_" + str(cum_ids + i)
-                                for i in range(len(texts))
-                            ],
-                        )
-
+                vectors = embeddings.embed_documents(page_contents)
+            
+            
+            docsearch._collection.add(
+                embeddings=vectors, metadatas=[text.metadata for text in texts], documents=[text.page_content for text in texts]\
+                    , ids=[formatted_date + "_" + str(cum_ids + i) for i in range(len(texts))]
+            )
             k += interval
             cum_ids += len(texts)
 
@@ -206,13 +256,11 @@ def get_chromadb_from_file(
         # if add_pic and file_name.split(".")[-1] == "pdf":
         #     docsearch, add_pic = add_pic_summary_to_db(docsearch, file_name, chunk_size)
         docsearch.persist()
+        db = dbs(docsearch)
         del docsearch
 
-    db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-    temp_docs = db.get(include=["metadatas"])["metadatas"]
-    # print(db.get(include=["documents"])["documents"])
 
-    if len(temp_docs) == 0:
+    if len(db.get_ids()) == 0:
         print("Can not load file:", file_name)
         return None, add_pic
     return db, add_pic
@@ -224,7 +272,7 @@ def processMultiDB(
     embeddings: vars,
     embeddings_name: str,
     chunk_size: int,
-    use_whole_dir: bool = False,
+    ignore_check: bool = False,
 ):
     """get all db and combine to list of db from doc_path_list if embeddings is embedding models, else return list of documents.
 
@@ -260,26 +308,22 @@ def processMultiDB(
         return texts, []
 
     ## if not using rerank, create chromadb for each doc_path and merge them ##
-
     # dbs = Chroma(embedding_function=embeddings)
-    dbs = []  # list of dbs
+    dby = dbs()  # list of dbs
     db_path_names = []
     for doc_path in doc_path_list:
-        if use_whole_dir:
-            db2 = [create_chromadb_use_dir(doc_path, verbose, embeddings, embeddings_name, chunk_size)]
-        else:
-            db2, db_names = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size)
+        
+        db2, db_names = create_chromadb(doc_path, verbose, embeddings, embeddings_name, chunk_size, ignore_check=ignore_check)
 
         if db2 is not None:
-            dbs.extend(db2)
-            if not use_whole_dir:
-                db_path_names.extend(db_names)
+            dby.merge(db2)
+            db_path_names.extend(db_names)
     ## check if dbs has any document ##
 
-    if len(dbs) == 0:
+    if len(dby.get_ids()) == 0:
         return None, []
 
-    return dbs, db_path_names
+    return dby, db_path_names
 
 
 def create_chromadb(
@@ -289,6 +333,7 @@ def create_chromadb(
     embeddings_name: str,
     chunk_size: int,
     sleep_time: int = 60,
+    ignore_check: bool = False
 ) -> vars:
     """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
         It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
@@ -330,7 +375,7 @@ def create_chromadb(
         add_pic = False
     db_path_names = []
 
-    dby = []  # list of dbs
+    dby = dbs()  # list of dbs
     files = []
     txt_extensions = ["pdf", "md", "docx", "txt", "csv"]
     for extension in txt_extensions:
@@ -339,6 +384,19 @@ def create_chromadb(
 
     for file in files:
         progress.update(1)
+        exist = False
+        if ignore_check:    ## if ignore_check is True, don't load file text and check md5 if the db is existed, to increase loading speed ##
+            storage_directory, exist = check_db_name(file, db_dir, embed_type, embed_name, chunk_size)
+        if exist:
+            temp_chroma = Chroma(persist_directory=storage_directory)
+            if temp_chroma is not None:
+                dby.add_chromadb(temp_chroma)
+                db_path_names.append(storage_directory)
+                del temp_chroma
+            continue     
+        
+        
+           
         file_doc = _load_file(doc_path + file, file.split(".")[-1])
         if file_doc == "" or len(file_doc) == 0:
             continue
@@ -347,6 +405,8 @@ def create_chromadb(
         storage_directory = (
             "chromadb/"
             + db_dir
+            + "_"
+            + file.split(".")[0].replace(" ", "").replace("_", "")
             + "_"
             + md5_hash
             + "_"
@@ -365,10 +425,11 @@ def create_chromadb(
             doc_path + file,
             sleep_time,
             add_pic,
+            embed_type
         )
 
         if db is not None:
-            dby.append(db)
+            dby.merge(db)
             db_path_names.append(storage_directory)
         # if db is not None:
         #     db_data = db.get(include=['documents','metadatas','embeddings'])
@@ -382,7 +443,7 @@ def create_chromadb(
         #     del db
     progress.close()
 
-    if len(dby) == 0:
+    if len(dby.get_ids()) == 0:
         return None, []
 
     info = "\n\nload files:" + str(len(files)) + "\n\n"
@@ -403,9 +464,13 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
         (List[Union[Document,chromadb]], List[str]): return list of documents or list of chromadb, and list of chromadb path names
     """
     ### CHROMADB_PATH = "chromadb/"
+    
+    progress = tqdm(total=len(db_path_list), desc="Vec Storage")
+    
     if "rerank" in embedding_name:
         texts = []
         for doc_path in db_path_list:
+            progress.update(1)
             temp = Chroma(persist_directory=doc_path).get(
                 include=["documents", "metadatas"]
             )
@@ -419,138 +484,23 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
                 texts.extend(db)
         if len(texts) == 0:
             return None, []
+        progress.close()
         return texts, []
 
-    dby = []
+    dby = dbs()
     for db_path in db_path_list:
-        db = Chroma(persist_directory=db_path)
+        progress.update(1)
+        doc_search = Chroma(persist_directory=db_path)
+        db = dbs(doc_search)
         if db is not None:
-            dby.append(db)
-        
-    if len(dby) == 0:
+            dby.merge(db)
+        del db, doc_search
+    progress.close()
+    
+    if len(dby.get_ids()) == 0:
         return None, []
 
     return dby, db_path_list
-
-
-
-
-def create_chromadb_use_dir(doc_path:str, verbose:bool, embeddings:vars, embeddings_name:str,chunk_size:int,\
-                    sleep_time:int = 60) -> vars:
-    """If the documents vector storage not exist, create chromadb based on all .pdf files in doc_path.
-        It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
-
-    Args:
-        **doc_path (str)**: the path of directory that store all .pdf documents\n 
-        **logs (list)**: list that store logs\n 
-        **verbose (bool)**: print logs or not\n 
-        **embeddings (vars)**: the embeddings used in transfer documents into vector storage, could be openai 
-        tensorflow or huggingface embeddings. \n 
-        **sleep_time (int, optional)**: sleep time to transfer documents into vector storage, this is for 
-            preventing rate limit exceed when request too much tokens at a time. Defaults to 60.\n 
-
-    Raises:
-        FileNotFoundError: if can not found the doc_path directory, will raise error and return None.
-
-    Returns:
-        vars: return the created chroma client. If documents vector storage already exist, load the vector storage
-        and return.
-    """
-    
-
-    ### check if doc path exist ###
-    if not helper.is_path_exist(doc_path):
-        
-        return None
-    
-    if doc_path[-1] != '/':
-        doc_path += '/'
-    
-    
-    ## if embeddings is a str, use rerank, so return docuemnts, not vectors ##
-    if isinstance(embeddings, str):
-        return get_docs_from_doc(doc_path, chunk_size)
-    
-    
-    embed_type, embed_name = embeddings_name.split(':')
-    storage_directory = 'chromadb/' + doc_path.split('/')[-2] + '_' + embed_type + '_' + embed_name.replace('/','-') + '_' + str(chunk_size)
-
-
-    if Path(storage_directory).exists():
-        info = "storage db already exist.\n"
-        
-
-
-    else:
-        
-
-        documents = []
-        txt_extensions = ['pdf', 'md','docx','txt','csv']
-        for extension in txt_extensions:
-            file_names = _load_files(doc_path, extension)
-            progress_ext = tqdm(total=len(file_names), desc="Load Files")
-            for loader in file_names:
-                progress_ext.update(1)
-                temp = _load_file(doc_path + loader, extension)
-                if temp != "" :
-                    documents.extend(temp)
-            
-        progress_ext.close()
-        info = "\n\nload files:" +  str(len(documents)) + "\n\n" 
-        
-        if len(documents) == 0 :
-            return None
-
-
-        
-        
-        text_splitter = RecursiveCharacterTextSplitter(separators=['\n'," ", ",",".","。","!" ], chunk_size=chunk_size, chunk_overlap=40)
-        k = 0
-        cum_ids = 0
-        interval = 5
-        progress = tqdm(total = len(documents), desc="Vec Storage")
-        while k < len(documents):
-            
-            
-            progress.update(min(interval,len(documents)-k))
-            cur_doc = documents[k:k+interval]
-            texts = text_splitter.split_documents(cur_doc)
-            try :
-                if k==0:
-                    docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
-                    
-                else:
-                    docsearch.add_documents(texts)
-            except:
-                time.sleep( sleep_time )
-                if k==0:
-                    docsearch = Chroma.from_documents(texts, embeddings, persist_directory = storage_directory) 
-                    
-                else:
-                    docsearch.add_documents(texts)
-                    
-            k += interval
-            cum_ids += len(texts)
-            
-            
-        docsearch.persist()  
-        progress.close()
-    
-    db = Chroma(persist_directory=storage_directory, embedding_function=embeddings)
-    if verbose:
-        print(info)
-    
-    
-    return db
-
-
-
-
-
-
-
-
-
 
 
 
@@ -587,6 +537,8 @@ def create_single_file_db(
         "chromadb/"
         + db_dir
         + "_"
+        + file_name.split(".")[0].replace(" ", "").replace("_", "")
+        + "_"
         + md5_hash
         + "_"
         + embed_type
@@ -604,6 +556,7 @@ def create_single_file_db(
         doc_path + file_name,
         sleep_time,
         add_pic,
+        embed_type
     )
 
     if db is None:
@@ -675,3 +628,44 @@ def add_pic_summary_to_db(db, file_path, chunk_size):
     shutil.rmtree("temp_pic")
 
     return db, add_pic
+
+
+
+
+
+
+def check_db_name(file, db_dir, embed_type, embed_name, chunk_size):
+            
+            
+    storage_directory = (
+        "chromadb/"
+        + db_dir
+        + "_"
+        + file.split(".")[0].replace(" ", "").replace("_", "")
+        + "_*_"
+        + embed_type
+        + "_"
+        + embed_name.replace("/", "-")
+        + "_"
+        + str(chunk_size)
+    )
+    # Use the glob method to find directories that match the pattern
+    matching_dirs = list(Path().glob(storage_directory))
+    
+    if matching_dirs:
+            # Sort the directories by modification time
+        matching_dirs.sort(key=os.path.getmtime)
+
+        # Keep the last directory (the one with the latest modification time)
+        latest_dir = matching_dirs[-1]
+        try:
+            # Remove all other directories
+            for dir in matching_dirs[:-1]:
+                shutil.rmtree(dir)
+        except:
+            pass
+
+        return str(latest_dir), True
+
+    else:
+        return storage_directory, False
