@@ -375,6 +375,8 @@ def check_and_delete_chromadb(
         DB_PATH
         + dataset_name
         + "_"
+        + filename.split(".")[0].replace(" ", "").replace("_", "")
+        + "_"
         + md5
         + "_"
         + embed_type

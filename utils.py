@@ -1524,6 +1524,8 @@ def get_data_path(owner: str, datasets: list, embedding_model: str, chunk_size: 
                 cur_path = Path(chromadb_path) / (
                     dataset_name
                     + "_"
+                    + file.split(".")[0].replace(" ", "").replace("_", "")
+                    + "_"
                     + response["response"][file]
                     + "_"
                     + embed_type
