@@ -148,3 +148,19 @@ def test_cot(base_line):
         )) == list)
 
     return
+
+
+@pytest.mark.akasha
+def test_ask_whole_file(base_line):
+    ak = base_line
+
+    response = ak.ask_whole_file(
+        doc_path="./docs/mic/20230726_工業4_0發展重點與案例分析，以西門子、鴻海為例.pdf",
+        search_type="knn",
+        prompt="西門子自有工廠如何朝工業4.0 發展",
+        model="gpt-4",
+        max_doc_len=15000)
+
+    assert type(response) == str
+
+    return

@@ -8,7 +8,7 @@ def base_line():
         verbose=False,
         chunk_overlap=41,
         chunk_size=501,
-        max_doc_len=3010,
+        max_doc_len=1510,
         temperature=0.15,
     )
     file_path = "./docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"
