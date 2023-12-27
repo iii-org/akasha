@@ -46,9 +46,9 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, usernam
                     last_consult_config_for_expert['language_model'] = LANGUAGE_MODELS[0]
                 language_model = st.selectbox('language model', LANGUAGE_MODELS, index=LANGUAGE_MODELS.index(last_consult_config_for_expert.get('language_model', LANGUAGE_MODELS[0])))
                 search_type = st.selectbox('search type', SEARCH_TYPES, index=SEARCH_TYPES.index(last_consult_config_for_expert.get('search_type', SEARCH_TYPES[0])))
-                top_k = st.slider('Top K', min_value=1, max_value=10, value=last_consult_config_for_expert.get('top_k', 3))
+                top_k = st.slider('Top K', min_value=1, max_value=20, value=last_consult_config_for_expert.get('top_k', 3))
                 threshold = st.slider('Threshold', min_value=0.0, max_value=1.0, value=last_consult_config_for_expert.get('threshold', 0.1))
-                max_token = st.slider('Max Token', min_value=1, max_value=200, value=last_consult_config_for_expert.get('max_token', 3000))
+                max_doc_len = st.slider('Max Doc Length', min_value=100, max_value=15000, value=last_consult_config_for_expert.get('max_doc_len', 1500))
                 temperature = st.slider('Temperature', min_value=0.0, max_value=1.0, value=last_consult_config_for_expert.get('temperature', 0.0))
                 use_compression = st.toggle('Compression', value=last_consult_config_for_expert.get('use_compression', False), key='use-compression-layers', help='Use language model to compress question')
                 if use_compression:
@@ -58,7 +58,7 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, usernam
                                    'search_type':search_type,
                                    'topK':top_k,
                                    'threshold':threshold,
-                                   'max_token':max_token,
+                                   'max_doc_len':max_doc_len,
                                    'temperature':temperature,
                                    'use_compression':use_compression,
                                    'chunk_size':chunk_size,
@@ -106,14 +106,14 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, username):
                 prompt = st.text_area('Question', help='Final Prompt based on response from previous layer(s) of question(s)', placeholder='Ask something', height=150, key='final-question')
                 auto_clean = st.toggle('Auto Clean', value=False, key='auto-clean-on-submit-layers', help='Clean Question & Layers upon submit')
                 with st.expander('Advanced'):
-                    # search type + top k + threshold + max token + embedding model(must same as vector db) + (language model, if compression)
+                    # search type + top k + threshold + max_doc_len + embedding model(must same as vector db) + (language model, if compression)
                     if last_consult_config_for_expert['language_model'] not in LANGUAGE_MODELS:
                         last_consult_config_for_expert['language_model'] = LANGUAGE_MODELS[0]
                     language_model = st.selectbox('language model', LANGUAGE_MODELS, index=LANGUAGE_MODELS.index(last_consult_config_for_expert.get('language_model', LANGUAGE_MODELS[0])))
                     search_type = st.selectbox('search type', SEARCH_TYPES, index=SEARCH_TYPES.index(last_consult_config_for_expert.get('search_type', SEARCH_TYPES[0])))
-                    top_k = st.slider('Top K', min_value=1, max_value=10, value=last_consult_config_for_expert.get('top_k', 3))
+                    top_k = st.slider('Top K', min_value=1, max_value=20, value=last_consult_config_for_expert.get('top_k', 3))
                     threshold = st.slider('Threshold', min_value=0.0, max_value=1.0, value=last_consult_config_for_expert.get('threshold', 0.1))
-                    max_token = st.slider('Max Token', min_value=1, max_value=200, value=last_consult_config_for_expert.get('max_token', 3000))
+                    max_doc_len = st.slider('Max Doc Length', min_value=1, max_value=15000, value=last_consult_config_for_expert.get('max_doc_len', 1500))
                     temperature = st.slider('Temperature', min_value=0.0, max_value=1.0, value=last_consult_config_for_expert.get('temperature', 0.0))
                     use_compression = st.toggle('Compression', value=last_consult_config_for_expert.get('use_compression', False), key='use-compression-layers', help='Use language model to compress question')
                     if use_compression:
@@ -123,7 +123,7 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, sys_prompt, username):
                                    'search_type':search_type,
                                    'topK':top_k,
                                    'threshold':threshold,
-                                   'max_token':max_token,
+                                   'max_doc_len':max_doc_len,
                                    'temperature':temperature,
                                    'use_compression':use_compression,
                                    'chunk_size':chunk_size,

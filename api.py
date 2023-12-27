@@ -30,7 +30,7 @@ class ConsultModel(BaseModel):
     threshold:Optional[float] = 0.2
     search_type:Optional[str] = 'svm'
     system_prompt:Optional[str] = ""
-    max_token:Optional[int]=3000
+    max_doc_len:Optional[int]=1500
     temperature:Optional[float]=0.0
     use_chroma:Optional[bool]=True
     openai_config:Optional[Dict[str, Any]] = {}
@@ -65,7 +65,7 @@ async def regular_consult(user_input: ConsultModel):
         threshold:Optional[float] = 0.2
         search_type:Optional[str] = 'svm'
         system_prompt:Optional[str] = ""
-        max_token:Optional[int]=3000
+        max_doc_len:Optional[int]=1500
         temperature:Optional[float]=0.0
         use_chroma:Optional[bool]=True
         openai_config:Optional[Dict[str, Any]] = {}
@@ -79,7 +79,7 @@ async def regular_consult(user_input: ConsultModel):
             return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
      
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
-        , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token,embeddings=user_input.embedding_model\
+        , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
     response = qa.get_response(doc_path=user_input.data_path, prompt = user_input.prompt)
     
@@ -117,7 +117,7 @@ async def deep_consult(user_input: ConsultModel):
         threshold:Optional[float] = 0.2
         search_type:Optional[str] = 'svm'
         system_prompt:Optional[str] = ""
-        max_token:Optional[int]=3000
+        max_doc_len:Optional[int]=1500
         temperature:Optional[float]=0.0
         use_chroma:Optional[bool]=True
         openai_config:Optional[Dict[str, Any]] = {}
@@ -132,7 +132,7 @@ async def deep_consult(user_input: ConsultModel):
     
     
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
-        , model=user_input.model, temperature=user_input.temperature, max_token=user_input.max_token,embeddings=user_input.embedding_model\
+        , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
     response = qa.chain_of_thought(doc_path=user_input.data_path, prompt_list = user_input.prompt)
     ## get logs

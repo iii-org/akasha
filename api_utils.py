@@ -24,7 +24,7 @@ DEFAULT_CONFIG = {
     "search_type": "svm",
     "top_k": 5,
     "threshold": 0.1,
-    "max_token": 3000,
+    "max_doc_len": 1500,
     "temperature": 0.0,
     "use_compression": 0,  # 0 for False, 1 for True
     "compression_language_model": "",

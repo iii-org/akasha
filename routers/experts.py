@@ -52,7 +52,7 @@ class ExpertConsult(ExpertID):
     search_type: Optional[str] = "svm",
     top_k: Optional[int] = 5,
     threshold: Optional[float] = 0.1,
-    max_token: Optional[int] = 3000,
+    max_doc_len: Optional[int] = 1500,
     temperature: Optional[float] = 0.0,
     use_compression: Optional[int] = 0, # 0 for False, 1 for True
     compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
@@ -249,7 +249,7 @@ async def save_consult_to_expert(user_input:ExpertConsult):
         search_type: Optional[str] = "svm",
         top_k: Optional[int] = 5,
         threshold: Optional[float] = 0.1,
-        max_token: Optional[int] = 3000,
+        max_doc_len: Optional[int] = 1500,
         temperature: Optional[float] = 0.0,
         use_compression: Optional[int] = 0, # 0 for False, 1 for True
         compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
