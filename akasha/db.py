@@ -308,7 +308,7 @@ def processMultiDB(
         return texts, []
 
     ## if not using rerank, create chromadb for each doc_path and merge them ##
-    # dbs = Chroma(embedding_function=embeddings)
+
     dby = dbs()  # list of dbs
     db_path_names = []
     for doc_path in doc_path_list:
@@ -431,16 +431,7 @@ def create_chromadb(
         if db is not None:
             dby.merge(db)
             db_path_names.append(storage_directory)
-        # if db is not None:
-        #     db_data = db.get(include=['documents','metadatas','embeddings'])
-        #     dby._collection.add(
-        #         embeddings=db_data['embeddings'],
-        #         metadatas=db_data['metadatas'],
-        #         documents=db_data['documents'],
-        #         ids=db_data['ids']
-        #     )
-        #     db_path_names.append(storage_directory)
-        #     del db
+        
     progress.close()
 
     if len(dby.get_ids()) == 0:

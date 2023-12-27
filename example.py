@@ -66,7 +66,7 @@ def QA(doc_path="./docs/mic/"):
         chunk_size=500,
         record_exp="",
         search_type=cust,
-        max_token=3000,
+        max_doc_len=1500,
         system_prompt="請你在回答前面加上喵",
     )
 
@@ -110,7 +110,6 @@ def EVAL(doc_path: str = "./docs/mic/"):
             questionset_file="questionset/mic_3.txt",
             doc_path=doc_path,
             verbose=True,
-            model="llama-gpu:../qaiii-1/model/llama-2-7b-chat.Q5_K_S.gguf",
         )
     )
     # print(eva.__dict__)
@@ -121,7 +120,7 @@ def EVAL(doc_path: str = "./docs/mic/"):
 
 
 eval_obj = EVAL()
-eval_obj.save_logs("./eva.json")
+#eval_obj.save_logs("./eva.json")
 
 
 ### SUMMARY ###
@@ -136,7 +135,7 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
         record_exp="1234test",
         format_prompt="請你在回答前面加上喵",
         system_prompt="用中文回答",
-        max_token=3000,
+        max_doc_len=1500,
         temperature=0.0,
     )
 

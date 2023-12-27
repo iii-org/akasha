@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.4](https://img.shields.io/badge/pypi%20package-0.8.4-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.5](https://img.shields.io/badge/pypi%20package-0.8.5-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -455,7 +455,7 @@ Args:
             **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
 
 """
@@ -478,7 +478,7 @@ Each time you run any function from akasha, it will save logs that record the pa
 You can also save logs into .txt file or .json file
 
 ```python
-qa = akasha.Doc_QA(verbose=False, search_type="merge", max_token=2500,model="llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf")
+qa = akasha.Doc_QA(verbose=False, search_type="merge", max_doc_len=1500,model="llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf")
 query1 = "五軸是什麼"
 qa.get_response(doc_path="./doc/mic/", prompt = query1)
 qa.get_response(doc_path="./doc/mic/", prompt = query1)
@@ -488,7 +488,7 @@ print(tp)
 ## ["2023/09/26, 10:52:36", "2023/09/26, 10:59:49", "2023/09/26, 11:09:23"]
 
 print(qa.logs[tp[-1]])
-## {"fn_type":"get_response","search_type":"merge", "max_token":2500,....."response":....}
+## {"fn_type":"get_response","search_type":"merge", "max_doc_len":1500,....."response":....}
 
 
 qa.save_logs(file_name="logs.json",file_type="json")
@@ -751,7 +751,7 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
             **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set record_exp as experiment name.  default "".
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".
-            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.
+            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.
             **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".
 """
@@ -802,7 +802,7 @@ sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的�
             **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and setrecord_exp as experiment name.  default "".
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".
-            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.
+            **max_doc_len(int, optional)**: max docuemnt length of llm input. Defaults to 3000.
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.
 """
 ```
@@ -1015,7 +1015,7 @@ Options:
   -s, --search_type TEXT      search type for the documents, include merge,
                               svm, mmr, tfidf
   -sys, --system_prompt TEXT  system prompt for the llm model
-  -mt, --max_token INTEGER    max token for the llm model input
+  -md, --max_doc_len INTEGER    max document length for the llm model input
   --help                      Show this message and exit.
 
 ```

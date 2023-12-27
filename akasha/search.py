@@ -252,7 +252,7 @@ def _get_relevant_doc_mmr(
 
 
 def _merge_docs(
-    docs_list: list, topK: int, language: str, verbose: bool, max_token: int, model
+    docs_list: list, topK: int, language: str, verbose: bool, max_doc_len: int, model
 ) -> (list, int):
     """merge different search types documents, if total len of documents too large,
         will not select all documents.
@@ -269,7 +269,7 @@ def _merge_docs(
         list: merged list of Documents
     """
     res = []
-    cur_count = 0
+    cur_count,cur_token = 0, 0
     page_contents = set()
     for i in range(topK):
         for docs in docs_list:
@@ -279,20 +279,22 @@ def _merge_docs(
             if docs[i].page_content in page_contents:
                 continue
 
-            words_len = model.get_num_tokens(docs[i].page_content)
-            if cur_count + words_len > max_token:
+            words_len = helper.get_doc_length(language, docs[i].page_content)
+            token_len = model.get_num_tokens(docs[i].page_content)
+            if cur_count + words_len > max_doc_len:
                 if verbose:
-                    print("\nwords length: ", cur_count)
+                    print("\nwords length: ", cur_count, "tokens: ", cur_token)
                 return res, cur_count
 
             cur_count += words_len
+            cur_token += token_len
             res.append(docs[i])
             page_contents.add(docs[i].page_content)
 
     if verbose:
-        print("words length: ", cur_count)
+        print("words length: ", cur_count, "tokens: ", cur_token)
 
-    return res, cur_count
+    return res, cur_count, cur_token
 
 
 def get_docs(
@@ -345,13 +347,13 @@ def get_docs(
             compression,
             verbose,
         )
-        docs, tokens = _merge_docs(
+        docs, docs_len, tokens = _merge_docs(
             [docs_cust], topK, language, verbose, max_token, model
         )
 
     elif isinstance(embeddings, str):
         docs = rerank(query, db, threshold, embeddings)
-        docs, tokens = _merge_docs([docs], topK, language, verbose, max_token, model)
+        docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose, max_token, model)
 
     else:
         search_type = search_type.lower()
@@ -371,7 +373,7 @@ def get_docs(
                 docs_list, query, topK, model, compression, verbose
             )
 
-            docs, tokens = _merge_docs(
+            docs, docs_len, tokens = _merge_docs(
                 [docs_tfidf, docs_svm, docs_mmr],
                 topK,
                 language,
@@ -384,7 +386,7 @@ def get_docs(
             docs_mmr = _get_relevant_doc_mmr(
                 db, embeddings, query, topK, threshold, model, compression, verbose
             )
-            docs, tokens = _merge_docs(
+            docs, docs_len, tokens = _merge_docs(
                 [docs_mmr], topK, language, verbose, max_token, model
             )
 
@@ -392,7 +394,7 @@ def get_docs(
             docs_svm = _get_relevant_doc_svm(
                 db, embeddings, query, topK, threshold, model, compression, verbose
             )
-            docs, tokens = _merge_docs(
+            docs, docs_len, tokens = _merge_docs(
                 [docs_svm], topK, language, verbose, max_token, model
             )
 
@@ -400,7 +402,7 @@ def get_docs(
             docs_tfidf = _get_relevant_doc_tfidf(
                 docs_list, query, topK, model, compression, verbose
             )
-            docs, tokens = _merge_docs(
+            docs, docs_len, tokens = _merge_docs(
                 [docs_tfidf], topK, language, verbose, max_token, model
             )
 
@@ -408,7 +410,7 @@ def get_docs(
             docs_knn = __get_relevant_doc_knn(
                 db, embeddings, query, topK, threshold, model, compression, verbose
             )
-            docs, tokens = _merge_docs(
+            docs, docs_len, tokens = _merge_docs(
                 [docs_knn], topK, language, verbose, max_token, model
             )
 
@@ -418,7 +420,7 @@ def get_docs(
 
             return None, None
 
-    return docs, tokens
+    return docs, docs_len, tokens
 
 
 class customRetriever(BaseRetriever):

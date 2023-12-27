@@ -61,7 +61,7 @@ def akasha():
     "--system_prompt", "-sys", default="", help="system prompt for the llm model"
 )
 @click.option(
-    "--max_token", "-mt", default=3000, help="max token for the llm model input"
+    "--max_doc_len", "-md", default=1500, help="max doc len for the llm model input"
 )
 def get_response(
     doc_path: str,
@@ -75,7 +75,7 @@ def get_response(
     search_type: str,
     record_exp: str,
     system_prompt: str,
-    max_token: int,
+    max_doc_len: int,
 ):
     gr = ak.Doc_QA(
         verbose=False,
@@ -88,7 +88,7 @@ def get_response(
         search_type=search_type,
         record_exp=record_exp,
         system_prompt=system_prompt,
-        max_token=max_token,
+        max_doc_len=max_doc_len,
     )
     res = gr.get_response(doc_path, prompt)
 
@@ -142,7 +142,7 @@ def get_response(
     "--system_prompt", "-sys", default="", help="system prompt for the llm model"
 )
 @click.option(
-    "--max_token", "-mt", default=3000, help="max token for the llm model input"
+    "--max_doc_len", "-md", default=3000, help="max token for the llm model input"
 )
 def keep_responsing(
     doc_path: str,
@@ -154,7 +154,7 @@ def keep_responsing(
     language: str,
     search_type: str,
     system_prompt: str,
-    max_token: int,
+    max_doc_len: int,
 ):
     import akasha.helper as helper
     import akasha.search as search
@@ -175,7 +175,7 @@ def keep_responsing(
 
     user_input = click.prompt('Please input your question(type "exit()" to quit) ')
     while user_input != "exit()":
-        docs, tokens = search.get_docs(
+        docs, docs_len, tokens = search.get_docs(
             db,
             embeddings,
             user_input,
@@ -185,7 +185,7 @@ def keep_responsing(
             search_type,
             False,
             model,
-            max_token,
+            max_doc_len,
             {},
         )
         if docs is None:
@@ -261,7 +261,7 @@ def keep_responsing(
     "--system_prompt", "-sys", default="", help="system prompt for the llm model"
 )
 @click.option(
-    "--max_token", "-mt", default=3000, help="max token for the llm model input"
+    "--max_doc_len", "-md", default=1500, help="max token for the llm model input"
 )
 def chain_of_thought(
     doc_path: str,
@@ -275,7 +275,7 @@ def chain_of_thought(
     search_type: str,
     record_exp: str,
     system_prompt: str,
-    max_token: int,
+    max_doc_len: int,
 ):
     gr = ak.Doc_QA(
         verbose=False,
@@ -288,7 +288,7 @@ def chain_of_thought(
         search_type=search_type,
         record_exp=record_exp,
         system_prompt=system_prompt,
-        max_token=max_token,
+        max_doc_len=max_doc_len,
     )
 
     res = gr.chain_of_thought(doc_path, prompt)
@@ -440,7 +440,7 @@ def auto_create_questionset(
     help="input the experiment name if you want to record the experiment using aiido",
 )
 @click.option(
-    "--max_token", "-mt", default=3000, help="max token for the llm model input"
+    "--max_doc_len", "-md", default=1500, help="max token for the llm model input"
 )
 def auto_evaluation(
     question_path: str,
@@ -454,7 +454,7 @@ def auto_evaluation(
     language: str,
     search_type: str,
     record_exp: str,
-    max_token: int,
+    max_doc_len: int,
 ):
     eva = eval.Model_Eval()
 
@@ -472,7 +472,7 @@ def auto_evaluation(
             language=language,
             search_type=search_type,
             record_exp=record_exp,
-            max_token=max_token,
+            max_doc_len=max_doc_len,
         )
 
         print("correct rate: ", cor_rate)
@@ -492,7 +492,7 @@ def auto_evaluation(
             language=language,
             search_type=search_type,
             record_exp=record_exp,
-            max_token=max_token,
+            max_doc_len=max_doc_len,
         )
 
         print("avg bert score: ", avg_bert)
