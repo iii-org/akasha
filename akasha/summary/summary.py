@@ -20,7 +20,7 @@ class Summary(akasha.atman):
         record_exp: str = "",
         format_prompt: str = "",
         system_prompt: str = "",
-        max_token: int = 3000,
+        max_doc_len: int = 1500,
         temperature: float = 0.0,
     ):
         """initials of Summary class
@@ -37,7 +37,7 @@ class Summary(akasha.atman):
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_token (int, optional)**: max token size of llm document input. Defaults to 3000.\n
+            **max_doc_len (int, optional)**: max doc size of llm document input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
         """
 
@@ -50,7 +50,7 @@ class Summary(akasha.atman):
         self.record_exp = record_exp
         self.format_prompt = format_prompt
         self.system_prompt = system_prompt
-        self.max_token = max_token
+        self.max_doc_len = max_doc_len
         self.temperature = temperature
 
         ### set variables ###
@@ -85,7 +85,7 @@ class Summary(akasha.atman):
         self.logs[timestamp]["threshold"] = self.threshold
         self.logs[timestamp]["language"] = self.language
         self.logs[timestamp]["temperature"] = self.temperature
-        self.logs[timestamp]["max_token"] = self.max_token
+        self.logs[timestamp]["max_doc_len"] = self.max_doc_len
         self.logs[timestamp]["file_name"] = self.file_name
 
         self.logs[timestamp]["time"] = time
@@ -129,7 +129,7 @@ class Summary(akasha.atman):
         i = 0
         while i < len(texts):
             token, cur_text, newi = akasha.helper._get_text(
-                texts, "", i, self.max_token, self.model_obj
+                texts, "", i, self.max_doc_len, self.language
             )
             tokens += token
 
@@ -188,7 +188,7 @@ class Summary(akasha.atman):
 
         while i < len(texts):
             token, cur_text, i = akasha.helper._get_text(
-                texts, previous_summary, i, self.max_token, self.model_obj
+                texts, previous_summary, i, self.max_doc_len, self.language
             )
 
             tokens += token
@@ -232,7 +232,7 @@ class Summary(akasha.atman):
             **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
             **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
                 chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
-                system_prompt, max_token, temperature.
+                system_prompt, max_doc_len, temperature.
         Returns:
             str: the summary of the file
         """

@@ -169,7 +169,7 @@ class atman:
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
-        max_token: int = 3000,
+        max_doc_len: int = 1500,
         temperature: float = 0.0,
     ):
         """initials of atman class
@@ -190,7 +190,7 @@ class atman:
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 1500.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
         """
 
@@ -203,7 +203,7 @@ class atman:
         self.search_type_str = helper.handle_search_type(search_type, self.verbose)
         self.record_exp = record_exp
         self.system_prompt = system_prompt
-        self.max_token = max_token
+        self.max_doc_len = max_doc_len
         self.temperature = temperature
 
         self.timestamp_list = []
@@ -278,7 +278,7 @@ class atman:
         self.logs[timestamp]["threshold"] = self.threshold
         self.logs[timestamp]["language"] = self.language
         self.logs[timestamp]["temperature"] = self.temperature
-        self.logs[timestamp]["max_token"] = self.max_token
+        self.logs[timestamp]["max_doc_len"] = self.max_doc_len
         self.logs[timestamp]["doc_path"] = self.doc_path
 
         return
@@ -393,7 +393,7 @@ class Doc_QA(atman):
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
-        max_token: int = 3000,
+        max_doc_len: int = 1500,
         temperature: float = 0.0,
         compression: bool = False,
         use_chroma: bool = False,
@@ -409,7 +409,7 @@ class Doc_QA(atman):
             search_type,
             record_exp,
             system_prompt,
-            max_token,
+            max_doc_len,
             temperature,
         )
         ### set argruments ###
@@ -443,7 +443,7 @@ class Doc_QA(atman):
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_token, temperature.
+                system_prompt, max_doc_len, temperature.
 
             Returns:
                 response (str): the response from llm model.
@@ -478,7 +478,7 @@ class Doc_QA(atman):
         self.logs[timestamp]["compression"] = self.compression
 
         ### start to get response ###
-        self.docs, self.doc_tokens = search.get_docs(
+        self.docs, self.doc_length, self.doc_tokens = search.get_docs(
             self.db,
             self.embeddings_obj,
             prompt,
@@ -488,7 +488,7 @@ class Doc_QA(atman):
             self.search_type,
             self.verbose,
             self.model_obj,
-            self.max_token,
+            self.max_doc_len,
             self.logs[timestamp],
             compression=self.compression,
         )
@@ -496,7 +496,7 @@ class Doc_QA(atman):
         if self.docs is None:
             print("\n\nNo Relevant Documents.\n\n")
             return ""
-        self.doc_length = helper.get_docs_length(self.language, self.docs)
+        
         chain = load_qa_chain(
             llm=self.model_obj, chain_type="stuff", verbose=self.verbose
         )
@@ -555,7 +555,7 @@ class Doc_QA(atman):
             **prompt (list)**:questions you want to ask.\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
             embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-            system_prompt, max_token, temperature.
+            system_prompt, max_doc_len, temperature.
 
         Returns:
             response (list): the responses from llm model.
@@ -610,7 +610,7 @@ class Doc_QA(atman):
                 else:
                     question = prompts.format_sys_prompt(self.system_prompt, prompt)
                     self.prompt.append(question)
-                    docs, tokens = search.get_docs(
+                    docs, docs_len, tokens = search.get_docs(
                         self.db,
                         self.embeddings_obj,
                         prompt,
@@ -620,12 +620,12 @@ class Doc_QA(atman):
                         self.search_type,
                         self.verbose,
                         self.model_obj,
-                        self.max_token,
+                        self.max_doc_len,
                         self.logs[timestamp],
                         compression=self.compression,
                     )
                     self.docs.extend(docs)
-                    self.doc_length += helper.get_docs_length(self.language, docs)
+                    self.doc_length += docs_len
                     self.doc_tokens += tokens
                     if self.verbose:
                         print(docs)
@@ -678,4 +678,87 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
 
         del self.db
+        return self.response
+
+    
+    
+    def ask_whole_file(
+        self, file_path: str, prompt: str, **kwargs
+    ) -> str:
+        """input the documents directory path and question, will first store the documents
+        into vectors db (chromadb), then search similar documents based on the prompt question.
+        llm model will use these documents to generate the response of the question.
+
+            Args:
+                **file_path (str)**: document file path\n
+                **prompt (str)**:question you want to ask.\n
+                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                system_prompt, max_doc_len, temperature.
+
+            Returns:
+                response (str): the response from llm model.
+        """
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.file_path = file_path
+        self.docs = akasha.db._load_file(file_path, file_path.split('.')[-1])
+        
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self.timestamp_list.append(timestamp)
+        start_time = time.time()
+        
+
+        self._add_basic_log(timestamp, "ask_whole_file")
+        self.logs[timestamp]["embeddings"] = "ask_whole_file"
+        
+
+        ### start to get response ###
+        cur_documents = '\n'.join([db_doc.page_content for db_doc in self.docs])
+        self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
+        
+
+        if self.docs is None:
+            print("\n\nNo Relevant Documents.\n\n")
+            return ""
+        self.doc_length = helper.get_docs_length(self.language, self.docs)
+        chain = load_qa_chain(
+            llm=self.model_obj, chain_type="stuff", verbose=self.verbose
+        )
+
+        ## format prompt ##
+        self.prompt = prompts.format_sys_prompt(self.system_prompt, prompt)
+
+        try:
+            self.response = chain.run(input_documents=self.docs, question=self.prompt)
+            self.response = helper.sim_to_trad(self.response)
+            # response = res.split("Finished chain.")
+        except Exception as e:
+            print(e)
+            print("\n\nllm error\n\n")
+
+            self.response = ""
+        if self.verbose:
+            print(self.response)
+
+        end_time = time.time()
+        self._add_result_log(timestamp, end_time - start_time)
+        self.logs[timestamp]["prompt"] = self.prompt
+        self.logs[timestamp]["response"] = self.response
+        if self.record_exp != "":
+            params = format.handle_params(
+                self.model,
+                self.embeddings,
+                self.chunk_size,
+                self.search_type_str,
+                self.topK,
+                self.threshold,
+                self.language,
+            )
+            metrics = format.handle_metrics(
+                self.doc_length, end_time - start_time, self.doc_tokens
+            )
+            table = format.handle_table(prompt, self.docs, self.response)
+            aiido_upload(self.record_exp, params, metrics, table)
+
         return self.response

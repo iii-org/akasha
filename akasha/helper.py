@@ -290,7 +290,7 @@ def handle_search_type(search_type: str, verbose: bool = False) -> str:
     return search_type_str
 
 
-def get_doc_length(language: str, doc) -> int:
+def get_doc_length(language: str, text:str) -> int:
     """calculate the length of terms in a giving Document
 
     Args:
@@ -301,9 +301,9 @@ def get_doc_length(language: str, doc) -> int:
         doc_length: int Docuemtn length
     """
     if language == "ch":
-        doc_length = len(list(jieba.cut(doc.page_content)))
+        doc_length = len(list(jieba.cut(text)))
     else:
-        doc_length = len(doc.page_content.split())
+        doc_length = len(text.split())
     return doc_length
 
 
@@ -319,7 +319,7 @@ def get_docs_length(language: str, docs: list) -> int:
     """
     docs_length = 0
     for doc in docs:
-        docs_length += get_doc_length(language, doc)
+        docs_length += get_doc_length(language, doc.page_content)
     return docs_length
 
 
@@ -460,7 +460,7 @@ def sim_to_trad(text: str) -> str:
 
 
 def _get_text(
-    texts: list, previous_summary: str, i: int, max_token: int, model
+    texts: list, previous_summary: str, i: int, max_doc_len: int, language:str="ch"
 ) -> (int, str, int):
     """used in summary, combine chunks of texts into one chunk that can fit into llm model
 
@@ -468,21 +468,21 @@ def _get_text(
         texts (list): chunks of texts
         previous_summary (str): _description_
         i (int): start from i-th chunk
-        max_token (int): the max token we want to fit into llm model at one time
-        model (var): llm model
+        max_doc_len (int): the max doc length we want to fit into llm model at one time
+        language (str): 'ch' for chinese and 'en' for others, default 'ch'\n
 
     Returns:
         (int, str, int): return the total tokens of combined chunks, combined chunks of texts, and the index of next chunk
     """
-    cur_count = model.get_num_tokens(previous_summary)
-    words_len = model.get_num_tokens(texts[i])
+    cur_count = get_doc_length(language, previous_summary)
+    words_len = get_doc_length(language, texts[i])
     cur_text = ""
-    while cur_count + words_len < max_token and i < len(texts):
+    while cur_count + words_len < max_doc_len and i < len(texts):
         cur_count += words_len
         cur_text += texts[i] + "\n"
         i += 1
         if i < len(texts):
-            words_len = model.get_num_tokens(texts[i])
+            words_len = get_doc_length(language,texts[i])
 
     return cur_count, cur_text, i
 

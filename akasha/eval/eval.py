@@ -91,7 +91,7 @@ class Model_Eval(akasha.atman):
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
-        max_token: int = 3000,
+        max_doc_len: int = 1500,
         temperature: float = 0.0,
         question_type: str = "essay",
         use_chroma: bool = False,
@@ -116,7 +116,7 @@ class Model_Eval(akasha.atman):
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_token (int, optional)**: max token size of llm input. Defaults to 3000.\n
+            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
         """
@@ -131,7 +131,7 @@ class Model_Eval(akasha.atman):
             search_type,
             record_exp,
             system_prompt,
-            max_token,
+            max_doc_len,
             temperature,
         )
         ### set argruments ###
@@ -188,7 +188,7 @@ class Model_Eval(akasha.atman):
                 **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_token, temperature.
+                system_prompt, max_doc_len, temperature.
             Raises:
                 Exception: _description_
 
@@ -398,7 +398,7 @@ class Model_Eval(akasha.atman):
             **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_token, temperature.\n
+                system_prompt, max_doc_len, temperature.\n
         """
 
         ## set class variables ##
@@ -466,7 +466,7 @@ class Model_Eval(akasha.atman):
                 query, ans = akasha.prompts.format_question_query(question[i])
                 query_with_prompt = akasha.prompts.format_llama_json(query)
 
-            docs, docs_token = akasha.search.get_docs(
+            docs, docs_len, docs_token = akasha.search.get_docs(
                 self.db,
                 self.embeddings_obj,
                 query,
@@ -476,10 +476,10 @@ class Model_Eval(akasha.atman):
                 self.search_type,
                 self.verbose,
                 self.model_obj,
-                self.max_token,
+                self.max_doc_len,
                 self.logs[timestamp],
             )
-            self.doc_length += akasha.helper.get_docs_length(self.language, docs)
+            self.doc_length += docs_len
             self.doc_tokens += docs_token
 
             try:
