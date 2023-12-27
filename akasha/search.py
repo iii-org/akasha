@@ -17,20 +17,19 @@ import akasha.helper as helper
 import akasha.prompts as prompts
 from akasha.db import dbs
 
+
 def _get_threshold_times(db: dbs):
     times = 1
     for embeds in db.get_embeds():
-        
+
         if np.max(embeds) > times:
             times *= 10
 
     return times
 
 
-
-
 def _get_relevant_doc_custom(
-    db:dbs,
+    db: dbs,
     embeddings,
     func: Callable,
     query: str,
@@ -41,9 +40,8 @@ def _get_relevant_doc_custom(
     compression: bool = False,
     verbose: bool = False,
 ):
-    customR = customRetriever.from_db(
-        db, embeddings, func, k, relevancy_threshold, log
-    )
+    customR = customRetriever.from_db(db, embeddings, func, k,
+                                      relevancy_threshold, log)
     if compression:
         # compressor = LLMChainExtractor.from_llm(model)
         # customc = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=customR)
@@ -52,8 +50,8 @@ def _get_relevant_doc_custom(
         pre_docs = customR.get_relevant_documents(query)
         for pre_doc in pre_docs:
             pre_doc.page_content = helper.call_model(
-                model, prompts.format_compression_prompt(query, pre_doc.page_content)
-            )
+                model,
+                prompts.format_compression_prompt(query, pre_doc.page_content))
             if pre_doc.page_content.replace(" ", "") != "":
                 if verbose:
                     print(pre_doc.page_content)
@@ -64,12 +62,12 @@ def _get_relevant_doc_custom(
 
     if k >= 100:
         docs = rerank_reduce(query, docs, k)
-    
+
     return docs
 
 
 def __get_relevant_doc_knn(
-    db:dbs,
+    db: dbs,
     embeddings,
     query: str,
     k: int,
@@ -94,19 +92,16 @@ def __get_relevant_doc_knn(
     knnR = myKNNRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
         compressor = LLMChainExtractor.from_llm(
-            model, llm_chain_kwargs={"verbose": verbose}
-        )
-        knnc = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=knnR
-        )
+            model, llm_chain_kwargs={"verbose": verbose})
+        knnc = ContextualCompressionRetriever(base_compressor=compressor,
+                                              base_retriever=knnR)
         docs = knnc.get_relevant_documents(query)
     else:
         docs = knnR.get_relevant_documents(query)
 
     if k >= 100:
         docs = rerank_reduce(query, docs, k)
-    
-    
+
     return docs
 
 
@@ -132,23 +127,21 @@ def _get_relevant_doc_tfidf(
     retriever = TFIDFRetriever.from_documents(docs_list, k=k)
     if compression:
         compressor = LLMChainExtractor.from_llm(
-            model, llm_chain_kwargs={"verbose": verbose}
-        )
-        tfidfc = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=retriever
-        )
+            model, llm_chain_kwargs={"verbose": verbose})
+        tfidfc = ContextualCompressionRetriever(base_compressor=compressor,
+                                                base_retriever=retriever)
         docs = tfidfc.get_relevant_documents(query)
     else:
         docs = retriever.get_relevant_documents(query)
 
     if k >= 100:
         docs = rerank_reduce(query, docs[:k], k)
-    
+
     return docs[:k]
 
 
 def _get_relevant_doc_svm(
-    db:dbs,
+    db: dbs,
     embeddings,
     query: str,
     k: int,
@@ -173,15 +166,13 @@ def _get_relevant_doc_svm(
     svmR = mySVMRetriever.from_db(db, embeddings, k, relevancy_threshold)
     if compression:
         compressor = LLMChainExtractor.from_llm(
-            model, llm_chain_kwargs={"verbose": verbose}
-        )
-        svmc = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=svmR
-        )
+            model, llm_chain_kwargs={"verbose": verbose})
+        svmc = ContextualCompressionRetriever(base_compressor=compressor,
+                                              base_retriever=svmR)
         docs = svmc.get_relevant_documents(query)
     else:
         docs = svmR.get_relevant_documents(query)
-        
+
     if k >= 100:
         docs = rerank_reduce(query, docs, k)
     return docs
@@ -228,32 +219,31 @@ def _get_relevant_doc_mmr(
     )
     retriever = retriever.as_retriever(
         search_type="mmr",
-        search_kwargs={"k": k, "score_threshold": relevancy_threshold},
+        search_kwargs={
+            "k": k,
+            "score_threshold": relevancy_threshold
+        },
     )
 
     if compression:
         compressor = LLMChainExtractor.from_llm(
-            model, llm_chain_kwargs={"verbose": verbose}
-        )
-        mmrc = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=retriever
-        )
+            model, llm_chain_kwargs={"verbose": verbose})
+        mmrc = ContextualCompressionRetriever(base_compressor=compressor,
+                                              base_retriever=retriever)
         docs = mmrc.get_relevant_documents(query)
     else:
         docs = retriever.get_relevant_documents(query)
 
     del retriever
-    
+
     if k >= 100:
         docs = rerank_reduce(query, docs, k)
-    
-    
+
     return docs
 
 
-def _merge_docs(
-    docs_list: list, topK: int, language: str, verbose: bool, max_doc_len: int, model
-) -> (list, int):
+def _merge_docs(docs_list: list, topK: int, language: str, verbose: bool,
+                max_doc_len: int, model) -> (list, int):
     """merge different search types documents, if total len of documents too large,
         will not select all documents.
         use jieba to count length of chinese words, use split space otherwise.
@@ -269,7 +259,7 @@ def _merge_docs(
         list: merged list of Documents
     """
     res = []
-    cur_count,cur_token = 0, 0
+    cur_count, cur_token = 0, 0
     page_contents = set()
     for i in range(topK):
         for docs in docs_list:
@@ -284,7 +274,7 @@ def _merge_docs(
             if cur_count + words_len > max_doc_len:
                 if verbose:
                     print("\nwords length: ", cur_count, "tokens: ", cur_token)
-                return res, cur_count
+                return res, cur_count, cur_token
 
             cur_count += words_len
             cur_token += token_len
@@ -298,7 +288,7 @@ def _merge_docs(
 
 
 def get_docs(
-    db: Union[dbs,list],
+    db: Union[dbs, list],
     embeddings,
     query: str,
     topK: int,
@@ -347,13 +337,13 @@ def get_docs(
             compression,
             verbose,
         )
-        docs, docs_len, tokens = _merge_docs(
-            [docs_cust], topK, language, verbose, max_token, model
-        )
+        docs, docs_len, tokens = _merge_docs([docs_cust], topK, language,
+                                             verbose, max_token, model)
 
     elif isinstance(embeddings, str):
         docs = rerank(query, db, threshold, embeddings)
-        docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose, max_token, model)
+        docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose,
+                                             max_token, model)
 
     else:
         search_type = search_type.lower()
@@ -363,15 +353,14 @@ def get_docs(
             docs_list = db.get_Documents()
 
         if search_type == "merge":
-            docs_mmr = _get_relevant_doc_mmr(
-                db, embeddings, query, topK, threshold, model, compression, verbose
-            )
-            docs_svm = _get_relevant_doc_svm(
-                db, embeddings, query, topK, threshold, model, compression, verbose
-            )
-            docs_tfidf = _get_relevant_doc_tfidf(
-                docs_list, query, topK, model, compression, verbose
-            )
+            docs_mmr = _get_relevant_doc_mmr(db, embeddings, query, topK,
+                                             threshold, model, compression,
+                                             verbose)
+            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK,
+                                             threshold, model, compression,
+                                             verbose)
+            docs_tfidf = _get_relevant_doc_tfidf(docs_list, query, topK, model,
+                                                 compression, verbose)
 
             docs, docs_len, tokens = _merge_docs(
                 [docs_tfidf, docs_svm, docs_mmr],
@@ -383,36 +372,31 @@ def get_docs(
             )
 
         elif search_type == "mmr":
-            docs_mmr = _get_relevant_doc_mmr(
-                db, embeddings, query, topK, threshold, model, compression, verbose
-            )
-            docs, docs_len, tokens = _merge_docs(
-                [docs_mmr], topK, language, verbose, max_token, model
-            )
+            docs_mmr = _get_relevant_doc_mmr(db, embeddings, query, topK,
+                                             threshold, model, compression,
+                                             verbose)
+            docs, docs_len, tokens = _merge_docs([docs_mmr], topK, language,
+                                                 verbose, max_token, model)
 
         elif search_type == "svm":
-            docs_svm = _get_relevant_doc_svm(
-                db, embeddings, query, topK, threshold, model, compression, verbose
-            )
-            docs, docs_len, tokens = _merge_docs(
-                [docs_svm], topK, language, verbose, max_token, model
-            )
+            docs_svm = _get_relevant_doc_svm(db, embeddings, query, topK,
+                                             threshold, model, compression,
+                                             verbose)
+            docs, docs_len, tokens = _merge_docs([docs_svm], topK, language,
+                                                 verbose, max_token, model)
 
         elif search_type == "tfidf":
-            docs_tfidf = _get_relevant_doc_tfidf(
-                docs_list, query, topK, model, compression, verbose
-            )
-            docs, docs_len, tokens = _merge_docs(
-                [docs_tfidf], topK, language, verbose, max_token, model
-            )
+            docs_tfidf = _get_relevant_doc_tfidf(docs_list, query, topK, model,
+                                                 compression, verbose)
+            docs, docs_len, tokens = _merge_docs([docs_tfidf], topK, language,
+                                                 verbose, max_token, model)
 
         elif search_type == "knn":
-            docs_knn = __get_relevant_doc_knn(
-                db, embeddings, query, topK, threshold, model, compression, verbose
-            )
-            docs, docs_len, tokens = _merge_docs(
-                [docs_knn], topK, language, verbose, max_token, model
-            )
+            docs_knn = __get_relevant_doc_knn(db, embeddings, query, topK,
+                                              threshold, model, compression,
+                                              verbose)
+            docs, docs_len, tokens = _merge_docs([docs_knn], topK, language,
+                                                 verbose, max_token, model)
 
         else:
             info = f"cannot find search type {search_type}, end process\n"
@@ -440,7 +424,7 @@ class customRetriever(BaseRetriever):
     @classmethod
     def from_db(
         cls,
-        db:dbs,
+        db: dbs,
         embeddings: Embeddings,
         func: Callable,
         k: int = 3,
@@ -494,15 +478,14 @@ class customRetriever(BaseRetriever):
         query_embeds = np.array(self.embeddings.embed_query(query))
         docs_embeds = self.index
 
-        relevant_docs_idx = self.func(
-            query_embeds, docs_embeds, self.k, self.relevancy_threshold, self.log
-        )
+        relevant_docs_idx = self.func(query_embeds, docs_embeds, self.k,
+                                      self.relevancy_threshold, self.log)
 
         ### from index rebuild the documents ###
-        for idx in relevant_docs_idx[: self.k]:
+        for idx in relevant_docs_idx[:self.k]:
             top_k_results.append(
-                Document(page_content=self.texts[idx], metadata=self.metadata[idx])
-            )
+                Document(page_content=self.texts[idx],
+                         metadata=self.metadata[idx]))
 
         return top_k_results
 
@@ -525,7 +508,7 @@ class myKNNRetriever(BaseRetriever):
     @classmethod
     def from_db(
         cls,
-        db:dbs,
+        db: dbs,
         embeddings: Embeddings,
         k: int = 3,
         relevancy_threshold: float = 0.2,
@@ -567,22 +550,22 @@ class myKNNRetriever(BaseRetriever):
         """
         query_embeds = np.array(self.embeddings.embed_query(query))
         # calc L2 norm
-        index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
+        index_embeds = self.index / np.sqrt(
+            (self.index**2).sum(1, keepdims=True))
         query_embeds = query_embeds / np.sqrt((query_embeds**2).sum())
 
         similarities = index_embeds.dot(query_embeds)
         sorted_ix = np.argsort(-similarities)
 
         denominator = np.max(similarities) - np.min(similarities) + 1e-6
-        normalized_similarities = (similarities - np.min(similarities)) / denominator
+        normalized_similarities = (similarities -
+                                   np.min(similarities)) / denominator
 
         top_k_results = [
             Document(page_content=self.texts[row], metadata=self.metadata[row])
-            for row in sorted_ix[0 : self.k]
-            if (
-                self.relevancy_threshold is None
-                or normalized_similarities[row] >= self.relevancy_threshold
-            )
+            for row in sorted_ix[0:self.k]
+            if (self.relevancy_threshold is None
+                or normalized_similarities[row] >= self.relevancy_threshold)
         ]
         return top_k_results
 
@@ -597,22 +580,22 @@ class myKNNRetriever(BaseRetriever):
         """
         query_embeds = np.array(self.embeddings.embed_query(query))
         # calc L2 norm
-        index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
+        index_embeds = self.index / np.sqrt(
+            (self.index**2).sum(1, keepdims=True))
         query_embeds = query_embeds / np.sqrt((query_embeds**2).sum())
 
         similarities = index_embeds.dot(query_embeds)
         sorted_ix = np.argsort(-similarities)
 
         denominator = np.max(similarities) - np.min(similarities) + 1e-6
-        normalized_similarities = (similarities - np.min(similarities)) / denominator
+        normalized_similarities = (similarities -
+                                   np.min(similarities)) / denominator
 
         top_k_results = [
             Document(page_content=self.texts[row], metadata=self.metadata[row])
-            for row in sorted_ix[0 : self.k]
-            if (
-                self.relevancy_threshold is None
-                or normalized_similarities[row] >= self.relevancy_threshold
-            )
+            for row in sorted_ix[0:self.k]
+            if (self.relevancy_threshold is None
+                or normalized_similarities[row] >= self.relevancy_threshold)
         ]
         return top_k_results
 
@@ -632,7 +615,7 @@ class mySVMRetriever(BaseRetriever):
     @classmethod
     def from_db(
         cls,
-        db:dbs,
+        db: dbs,
         embeddings: Embeddings,
         k: int = 3,
         relevancy_threshold: float = 0.2,
@@ -678,17 +661,18 @@ class mySVMRetriever(BaseRetriever):
         except ImportError:
             raise ImportError(
                 "Could not import scikit-learn, please install with `pip install "
-                "scikit-learn`."
-            )
+                "scikit-learn`.")
 
         query_embeds = np.array(self.embeddings.embed_query(query))
         x = np.concatenate([query_embeds[None, ...], self.index])
         y = np.zeros(x.shape[0])
         y[0] = 1
 
-        clf = svm.LinearSVC(
-            class_weight="balanced", verbose=False, max_iter=10000, tol=1e-6, C=0.1
-        )
+        clf = svm.LinearSVC(class_weight="balanced",
+                            verbose=False,
+                            max_iter=10000,
+                            tol=1e-6,
+                            C=0.1)
         clf.fit(x, y)
 
         similarities = clf.decision_function(x)
@@ -701,23 +685,22 @@ class mySVMRetriever(BaseRetriever):
         # left of the 0 should be equivalent.
         zero_index = np.where(sorted_ix == 0)[0][0]
         if zero_index != 0:
-            sorted_ix[0], sorted_ix[zero_index] = sorted_ix[zero_index], sorted_ix[0]
+            sorted_ix[0], sorted_ix[zero_index] = sorted_ix[
+                zero_index], sorted_ix[0]
 
         denominator = np.max(similarities) - np.min(similarities) + 1e-6
-        normalized_similarities = (similarities - np.min(similarities)) / denominator
+        normalized_similarities = (similarities -
+                                   np.min(similarities)) / denominator
 
         top_k_results = []
-        for row in sorted_ix[1 : self.k + 1]:
-            if (
-                self.relevancy_threshold is None
-                or normalized_similarities[row] >= self.relevancy_threshold
-            ):
+        for row in sorted_ix[1:self.k + 1]:
+            if (self.relevancy_threshold is None or
+                    normalized_similarities[row] >= self.relevancy_threshold):
                 top_k_results.append(
                     Document(
                         page_content=self.texts[row - 1],
                         metadata=self.metadata[row - 1],
-                    )
-                )
+                    ))
         return top_k_results
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
@@ -731,12 +714,13 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
     model_name = embed_name.split(":")[1]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(
+        device)
     model.eval()
 
     k, score_list = 0, []
     while k < len(docs):
-        pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
+        pairs = [[query, doc.page_content] for doc in docs[k:k + 10]]
         with torch.no_grad():
             inputs = tokenizer(
                 pairs,
@@ -745,13 +729,8 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
                 return_tensors="pt",
                 max_length=512,
             ).to(device)
-            scores = (
-                model(**inputs, return_dict=True)
-                .logits.view(
-                    -1,
-                )
-                .float()
-            )
+            scores = (model(**inputs,
+                            return_dict=True).logits.view(-1, ).float())
         if k == 0:
             score_list = scores
         else:
@@ -778,20 +757,20 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
     return documents
 
 
-
 def rerank_reduce(query, docs, topK):
     import torch, gc
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-    model_name = "BAAI/bge-reranker-large"   # BAAI/bge-reranker-base
+    model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(
+        device)
     model.eval()
     topK //= 5
     k, score_list = 0, []
     while k < len(docs):
-        pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
+        pairs = [[query, doc.page_content] for doc in docs[k:k + 10]]
         with torch.no_grad():
             inputs = tokenizer(
                 pairs,
@@ -800,13 +779,8 @@ def rerank_reduce(query, docs, topK):
                 return_tensors="pt",
                 max_length=512,
             ).to(device)
-            scores = (
-                model(**inputs, return_dict=True)
-                .logits.view(
-                    -1,
-                )
-                .float()
-            )
+            scores = (model(**inputs,
+                            return_dict=True).logits.view(-1, ).float())
         if k == 0:
             score_list = scores
         else:
