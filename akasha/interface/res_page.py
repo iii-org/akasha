@@ -24,17 +24,17 @@ def response_page():
             st.session_state.sys_prompt,
             help="The special instruction you want to give to the model.",
         )
-        prompt = st.text_area(
-            "Prompt", "", help="The prompt you want to ask the model."
-        )
+        prompt = st.text_area("Prompt",
+                              "",
+                              help="The prompt you want to ask the model.")
 
         sb1, sb2 = st.columns([1, 1])
         with sb1:
             if st.button(
-                "Clear",
-                type="primary",
-                use_container_width=True,
-                help="Clear the prompt and response history.",
+                    "Clear",
+                    type="primary",
+                    use_container_width=True,
+                    help="Clear the prompt and response history.",
             ):
                 st.session_state.prompt_list = []
                 st.session_state.response_list = []
@@ -46,7 +46,8 @@ def response_page():
 
                 if run_flag:
                     ## check if the object is created correctly ##
-                    if not isinstance(st.session_state.akasha_obj, akasha.Doc_QA):
+                    if not isinstance(st.session_state.akasha_obj,
+                                      akasha.Doc_QA):
                         st.session_state.akasha_obj = akasha.Doc_QA(
                             embeddings=st.session_state.embed,
                             chunk_size=st.session_state.chunksize,
@@ -57,7 +58,7 @@ def response_page():
                             language="ch",
                             verbose=True,
                             record_exp="",
-                            max_token=st.session_state.max_token,
+                            max_doc_len=st.session_state.max_doc_len,
                             temperature=st.session_state.temperature,
                         )
 
@@ -71,7 +72,7 @@ def response_page():
                         threshold=st.session_state.threshold,
                         search_type=st.session_state.search_type,
                         system_prompt=st.session_state.sys_prompt,
-                        max_token=st.session_state.max_token,
+                        max_doc_len=st.session_state.max_doc_len,
                         temperature=st.session_state.temperature,
                     )
                     st.session_state.prompt_list.append(prompt)
@@ -79,8 +80,7 @@ def response_page():
                     timesp = st.session_state.akasha_obj.timestamp_list[-1]
                     if timesp in st.session_state.akasha_obj.logs:
                         st.session_state.logs[
-                            timesp
-                        ] = st.session_state.akasha_obj.logs[timesp]
+                            timesp] = st.session_state.akasha_obj.logs[timesp]
 
     if not run_flag:
         st.error("Please input your openAI api key.")

@@ -55,8 +55,7 @@ def setting_page():
         if embed != st.session_state.embed:
             st.session_state.embed = embed
             st.session_state.select_idx[1] = st.session_state.embed_list.index(
-                st.session_state.embed
-            )
+                st.session_state.embed)
 
             st.experimental_rerun()
     with md:
@@ -69,8 +68,7 @@ def setting_page():
         if md != st.session_state.model:
             st.session_state.model = md
             st.session_state.select_idx[2] = st.session_state.model_list.index(
-                st.session_state.model
-            )
+                st.session_state.model)
             st.experimental_rerun()
 
     cks, tpk, seat = st.columns([1, 1, 1])
@@ -94,7 +92,8 @@ def setting_page():
             min_value=1,
             max_value=100,
             step=1,
-            help="The number of top relevant chunks to be selected from documents.",
+            help=
+            "The number of top relevant chunks to be selected from documents.",
         )
         if topk != st.session_state.topK:
             st.session_state.topK = topk
@@ -108,9 +107,9 @@ def setting_page():
         )
         if stp != st.session_state.search_type:
             st.session_state.search_type = stp
-            st.session_state.select_idx[3] = st.session_state.search_list.index(
-                st.session_state.search_type
-            )
+            st.session_state.select_idx[
+                3] = st.session_state.search_list.index(
+                    st.session_state.search_type)
             st.experimental_rerun()
 
     thre, tem, mxt = st.columns([1, 1, 1])
@@ -140,33 +139,36 @@ def setting_page():
             st.experimental_rerun()
     with mxt:
         mt = st.number_input(
-            "Max Token",
-            value=st.session_state.max_token,
-            min_value=500,
+            "Max Doc Length",
+            value=st.session_state.max_doc_len,
+            min_value=100,
             step=10,
-            help="The maximum number of tokens in the reference documents that will be used as input for the LLM model.",
+            help=
+            "The maximum number of tokens in the reference documents that will be used as input for the LLM model.",
         )
 
-        if mt != st.session_state.max_token:
-            st.session_state.max_token = mt
+        if mt != st.session_state.max_doc_len:
+            st.session_state.max_doc_len = mt
             st.experimental_rerun()
 
 
 def set_model_dir():
     """parse all model files(gguf) and directory in the model folder"""
 
-    st.session_state.model_list = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"]
+    st.session_state.model_list = [
+        "openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"
+    ]
     try:
         modes_dir = Path(st.session_state.mdl_dir)
         for dir_path in modes_dir.iterdir():
             if dir_path.is_dir():
-                st.session_state.model_list.append(
-                    "hf:" + st.session_state.mdl_dir + "/" + dir_path.name
-                )
+                st.session_state.model_list.append("hf:" +
+                                                   st.session_state.mdl_dir +
+                                                   "/" + dir_path.name)
             elif dir_path.suffix == ".gguf":
-                st.session_state.model_list.append(
-                    "llama-gpu:" + st.session_state.mdl_dir + "/" + dir_path.name
-                )
+                st.session_state.model_list.append("llama-gpu:" +
+                                                   st.session_state.mdl_dir +
+                                                   "/" + dir_path.name)
     except:
         print("can not find model folder!\n\n")
 
@@ -198,16 +200,12 @@ def handle_api_key():
     if base_token == None:
         base_token = os.environ.get("OPENAI_API_BASE")
 
-    if (
-        st.session_state.embed.split(":")[0] == "openai"
-        or st.session_state.model.split(":")[0] == "openai"
-    ):
+    if (st.session_state.embed.split(":")[0] == "openai"
+            or st.session_state.model.split(":")[0] == "openai"):
         st.session_state.akasha_obj = ""
 
-        if (
-            st.session_state.openai_base.replace(" ", "") != ""
-            and st.session_state.openai_key.replace(" ", "") != ""
-        ):
+        if (st.session_state.openai_base.replace(" ", "") != ""
+                and st.session_state.openai_key.replace(" ", "") != ""):
             os.environ["OPENAI_API_BASE"] = st.session_state.openai_base
             os.environ["OPENAI_API_KEY"] = st.session_state.openai_key
             if "OPENAI_API_TYPE" not in os.environ:

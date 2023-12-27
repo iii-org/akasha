@@ -33,12 +33,8 @@ def get_log_data():
         plain_txt += key + ":\n"
         for k in st.session_state.logs[key]:
             if type(st.session_state.logs[key][k]) == list:
-                text = (
-                    k
-                    + ": "
-                    + "\n".join([str(w) for w in st.session_state.logs[key][k]])
-                    + "\n\n"
-                )
+                text = (k + ": " + "\n".join(
+                    [str(w) for w in st.session_state.logs[key][k]]) + "\n\n")
             else:
                 text = k + ": " + str(st.session_state.logs[key][k]) + "\n\n"
 
@@ -103,7 +99,6 @@ if "model_list" not in st.session_state:
 if "search_list" not in st.session_state:
     st.session_state.search_list = ["merge", "svm", "tfidf", "mmr"]
 
-
 if "docs_path" not in st.session_state:
     st.session_state.docs_path = "./docs"
 if "response_list" not in st.session_state:
@@ -131,7 +126,6 @@ if "openai_base" not in st.session_state:
 if "select_idx" not in st.session_state:
     st.session_state.select_idx = [["Default"], 0, 0, 0]
 
-
 ### function argument ###
 if "chose_doc_path" not in st.session_state:
     if len(st.session_state.docs_list) > 0:
@@ -139,12 +133,11 @@ if "chose_doc_path" not in st.session_state:
             st.session_state.chose_doc_path = []
             for dc in st.session_state.select_idx[0]:
                 st.session_state.chose_doc_path.append(
-                    st.session_state.docs_path + "/" + dc
-                )
+                    st.session_state.docs_path + "/" + dc)
         else:
-            st.session_state.chose_doc_path = (
-                st.session_state.docs_path + "/" + st.session_state.docs_list[0]
-            )
+            st.session_state.chose_doc_path = (st.session_state.docs_path +
+                                               "/" +
+                                               st.session_state.docs_list[0])
             st.session_state.select_idx[0] = [st.session_state.docs_list[0]]
     else:
         st.info("Please upload your documents first.", icon="🚨")
@@ -168,8 +161,8 @@ if "threshold" not in st.session_state:
 if "temperature" not in st.session_state:
     st.session_state.temperature = 0.0
 
-if "max_token" not in st.session_state:
-    st.session_state.max_token = 2500
+if "max_doc_len" not in st.session_state:
+    st.session_state.max_doc_len = 1500
 if "sys_prompt" not in st.session_state:
     st.session_state.sys_prompt = ""
 if "logs" not in st.session_state:
@@ -179,7 +172,6 @@ if "akasha_obj" not in st.session_state:
     st.session_state.akasha_obj = ""
 
 ################
-
 
 with st.sidebar:
     user_menu = option_menu(
@@ -191,7 +183,10 @@ with st.sidebar:
             "container": {
                 "padding": "5!important",
             },
-            "icon": {"color": "orange", "font-size": "25px"},
+            "icon": {
+                "color": "orange",
+                "font-size": "25px"
+            },
             "nav-link": {
                 "font-size": "16px",
                 "text-align": "left",
@@ -201,7 +196,8 @@ with st.sidebar:
     )
 
     st.session_state.openai_key = st.text_input("OpenAI Key", type="password")
-    st.session_state.openai_base = st.text_input("OpenAI Base URL", type="password")
+    st.session_state.openai_base = st.text_input("OpenAI Base URL",
+                                                 type="password")
 
     st.markdown("##")
     st.markdown("##")

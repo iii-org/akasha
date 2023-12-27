@@ -17,7 +17,9 @@ def get_prompts(add_b):
         _type_: list of text_inputs
     """
     with add_b:
-        add = st.button(label="Add Prompt", type="primary", use_container_width=True)
+        add = st.button(label="Add Prompt",
+                        type="primary",
+                        use_container_width=True)
 
     if add:
         st.session_state.n_text += 1
@@ -62,10 +64,10 @@ def cot_page():
             prompts = get_prompts(sb1)
         with sb2:
             if st.button(
-                "Clear",
-                type="primary",
-                use_container_width=True,
-                help="Clear the prompt and response.",
+                    "Clear",
+                    type="primary",
+                    use_container_width=True,
+                    help="Clear the prompt and response.",
             ):
                 st.session_state.prompt_list = []
                 st.session_state.response_list = []
@@ -84,7 +86,8 @@ def cot_page():
                         if p.replace(" ", "") != "":
                             new_prompts.append(p)
 
-                    if not isinstance(st.session_state.akasha_obj, akasha.Doc_QA):
+                    if not isinstance(st.session_state.akasha_obj,
+                                      akasha.Doc_QA):
                         st.session_state.akasha_obj = akasha.Doc_QA(
                             embeddings=st.session_state.embed,
                             chunk_size=st.session_state.chunksize,
@@ -95,7 +98,7 @@ def cot_page():
                             language="ch",
                             verbose=True,
                             record_exp="",
-                            max_token=st.session_state.max_token,
+                            max_doc_len=st.session_state.max_doc_len,
                             temperature=st.session_state.temperature,
                         )
 
@@ -109,7 +112,7 @@ def cot_page():
                         threshold=st.session_state.threshold,
                         search_type=st.session_state.search_type,
                         system_prompt=st.session_state.sys_prompt,
-                        max_token=st.session_state.max_token,
+                        max_doc_len=st.session_state.max_doc_len,
                         temperature=st.session_state.temperature,
                     )
 
@@ -118,8 +121,7 @@ def cot_page():
                     timesp = st.session_state.akasha_obj.timestamp_list[-1]
                     if timesp in st.session_state.akasha_obj.logs:
                         st.session_state.logs[
-                            timesp
-                        ] = st.session_state.akasha_obj.logs[timesp]
+                            timesp] = st.session_state.akasha_obj.logs[timesp]
 
     if not run_flag:
         st.error("Please input your openAI api key.")
