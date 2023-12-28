@@ -39,13 +39,11 @@ def _generate_single_choice_question(
     res = ""
     count = 0
     random_index = np.random.randint(choice_num)
-    q_prompt = akasha.prompts.format_wrong_answer(
-        choice_num - 1, doc_text, question, cor_ans
-    )
+    q_prompt = akasha.prompts.format_wrong_answer(choice_num - 1, doc_text,
+                                                  question, cor_ans)
     response = akasha.helper.call_model(model, system_prompt + q_prompt)
     response = akasha.helper.sim_to_trad(
-        response
-    )  # transform simplified chinese to traditional chinese
+        response)  # transform simplified chinese to traditional chinese
 
     ### separate the response into wrong answers ###
     try:
@@ -138,13 +136,13 @@ class Model_Eval(akasha.atman):
         self.doc_path = ""
         self.question_type = question_type
         self.question_num = 0
-        
+
         ### set variables ###
         self.logs = {}
-        self.model_obj = akasha.helper.handle_model(
-            model, self.verbose, self.temperature
-        )
-        self.embeddings_obj = akasha.helper.handle_embeddings(embeddings, self.verbose)
+        self.model_obj = akasha.helper.handle_model(model, self.verbose,
+                                                    self.temperature)
+        self.embeddings_obj = akasha.helper.handle_embeddings(
+            embeddings, self.verbose)
         self.embeddings = akasha.helper.handle_search_type(embeddings)
         self.model = akasha.helper.handle_search_type(model)
         self.search_type = search_type
@@ -158,6 +156,7 @@ class Model_Eval(akasha.atman):
         self.score = {}
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
+
     def auto_create_questionset(
         self,
         doc_path: Union[List[str], str],
@@ -204,17 +203,11 @@ class Model_Eval(akasha.atman):
         ## check db ##
         if self.use_chroma:
             self.db, db_path_names = akasha.db.get_db_from_chromadb(
-                self.doc_path, "use rerank to get docs"
-            )
+                self.doc_path, "use rerank to get docs")
         else:
             self.db, db_path_names = akasha.db.processMultiDB(
-                self.doc_path,
-                self.verbose,
-                "eval_get_doc",
-                self.embeddings,
-                self.chunk_size,
-                self.ignore_check
-            )
+                self.doc_path, self.verbose, "eval_get_doc", self.embeddings,
+                self.chunk_size, self.ignore_check)
         if not self._check_db():
             return ""
 
@@ -243,28 +236,29 @@ class Model_Eval(akasha.atman):
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
 
-        progress = tqdm(total=question_num, desc=f"Create Q({self.question_type})")
+        progress = tqdm(total=question_num,
+                        desc=f"Create Q({self.question_type})")
         regenerate_limit = question_num
         ### random select a range of documents from the documents , and use llm model to generate a question and answer pair ###
         for i in range(question_num):
             progress.update(1)
 
             random_index = akasha.helper.get_non_repeat_rand_int(
-                vis_doc_range, len(texts) - doc_range
-            )
+                vis_doc_range,
+                len(texts) - doc_range)
 
-            doc_text = "\n".join(texts[random_index : random_index + doc_range])
+            doc_text = "\n".join(texts[random_index:random_index + doc_range])
             docs = [
                 Document(page_content=texts[k], metadata=metadata[k])
                 for k in range(random_index, random_index + doc_range)
             ]
-            self.doc_length += akasha.helper.get_docs_length(self.language, docs)
+            self.doc_length += akasha.helper.get_docs_length(
+                self.language, docs)
             self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
             self.docs.extend(docs)
             try:
                 q_prompt = akasha.prompts.format_create_question_prompt(
-                    doc_text, self.question_type
-                )
+                    doc_text, self.question_type)
 
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
                 response = akasha.helper.sim_to_trad(
@@ -284,7 +278,9 @@ class Model_Eval(akasha.atman):
                     )
                     continue
                 else:
-                    print("Question Format Error while generating questions. Stop\n")
+                    print(
+                        "Question Format Error while generating questions. Stop\n"
+                    )
                     break
 
             self.question.append("問題：" + process[0])
@@ -307,9 +303,8 @@ class Model_Eval(akasha.atman):
             if self.verbose:
                 print(response)
 
-            new_table = akasha.format.handle_table(
-                self.question[-1], docs, self.answer[-1]
-            )
+            new_table = akasha.format.handle_table(self.question[-1], docs,
+                                                   self.answer[-1])
             for key in new_table:
                 if key not in table:
                     table[key] = []
@@ -330,9 +325,9 @@ class Model_Eval(akasha.atman):
                 self.threshold,
                 self.language,
             )
-            metrics = akasha.format.handle_metrics(
-                self.doc_length, end_time - start_time, self.doc_tokens
-            )
+            metrics = akasha.format.handle_metrics(self.doc_length,
+                                                   end_time - start_time,
+                                                   self.doc_tokens)
             params["doc_range"] = doc_range
             akasha.aiido_upload(self.record_exp, params, metrics, table)
 
@@ -347,9 +342,8 @@ class Model_Eval(akasha.atman):
         if output_file_path == "":
             now = datetime.datetime.now()
             date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
-            output_file_path = (
-                "questionset/" + suf_path + "_" + str(date_time_string) + ".txt"
-            )
+            output_file_path = ("questionset/" + suf_path + "_" +
+                                str(date_time_string) + ".txt")
         elif output_file_path[-4:] != ".txt":
             output_file_path = output_file_path + ".txt"
         with open(output_file_path, "w", encoding="utf-8") as f:
@@ -358,16 +352,11 @@ class Model_Eval(akasha.atman):
                     f.write(self.question[w] + self.answer[w] + "\n\n")
                 else:
                     if w == len(self.question) - 1:
-                        f.write(
-                            self.question[w].replace("\n", "")
-                            + self.answer[w].replace("\n", "")
-                        )
+                        f.write(self.question[w].replace("\n", "") +
+                                self.answer[w].replace("\n", ""))
                     else:
-                        f.write(
-                            self.question[w].replace("\n", "")
-                            + self.answer[w].replace("\n", "")
-                            + "\n"
-                        )
+                        f.write(self.question[w].replace("\n", "") +
+                                self.answer[w].replace("\n", "") + "\n")
 
         print("question set saved in ", output_file_path, "\n\n")
 
@@ -405,27 +394,18 @@ class Model_Eval(akasha.atman):
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
-        if (
-            self.question_type == "essay"
-            and self.language == "ch"
-            and "用中文回答" not in self.system_prompt
-        ):
+        if (self.question_type == "essay" and self.language == "ch"
+                and "用中文回答" not in self.system_prompt):
             self.system_prompt = self.system_prompt + " 用中文回答 "
 
         ## check db ##
         if self.use_chroma:
             self.db, db_path_names = akasha.db.get_db_from_chromadb(
-                self.doc_path, self.embeddings
-            )
+                self.doc_path, self.embeddings)
         else:
             self.db, db_path_names = akasha.db.processMultiDB(
-                self.doc_path,
-                self.verbose,
-                self.embeddings_obj,
-                self.embeddings,
-                self.chunk_size,
-                self.ignore_check
-            )
+                self.doc_path, self.verbose, self.embeddings_obj,
+                self.embeddings, self.chunk_size, self.ignore_check)
         if not self._check_db():
             return ""
 
@@ -441,10 +421,10 @@ class Model_Eval(akasha.atman):
             self.score = {"correct_count": 0}
         table = {}
         question, answer = akasha.helper.get_question_from_file(
-            questionset_file, self.question_type
-        )
+            questionset_file, self.question_type)
         self.question_num = len(question)
-        progress = tqdm(total=self.question, desc=f"Run Eval({self.question_type})")
+        progress = tqdm(total=self.question,
+                        desc=f"Run Eval({self.question_type})")
         ## add logs ##
 
         self._add_basic_log(timestamp, "auto_evaluation")
@@ -458,10 +438,9 @@ class Model_Eval(akasha.atman):
             progress.update(1)
             if self.question_type.lower() == "essay":
                 query = question[i]
-                query_with_prompt = akasha.prompts.format_sys_prompt(
-                    self.system_prompt, question[i]
-                )
-
+                prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
+                    self.system_prompt, question[i])
+                query_with_prompt = prod_sys + query_with_prompt
             else:
                 query, ans = akasha.prompts.format_question_query(question[i])
                 query_with_prompt = akasha.prompts.format_llama_json(query)
@@ -483,10 +462,11 @@ class Model_Eval(akasha.atman):
             self.doc_tokens += docs_token
 
             try:
-                chain = load_qa_chain(
-                    llm=self.model_obj, chain_type="stuff", verbose=self.verbose
-                )
-                response = chain.run(input_documents=docs, question=query_with_prompt)
+                chain = load_qa_chain(llm=self.model_obj,
+                                      chain_type="stuff",
+                                      verbose=self.verbose)
+                response = chain.run(input_documents=docs,
+                                     question=query_with_prompt)
                 response = akasha.helper.sim_to_trad(response)
                 self.docs.extend(docs)
                 self.response.append(response)
@@ -507,18 +487,16 @@ class Model_Eval(akasha.atman):
 
             if self.question_type.lower() == "essay":
                 self.score["bert"].append(
-                    eval.scores.get_bert_score(response, answer[i], self.language)
-                )
+                    eval.scores.get_bert_score(response, answer[i],
+                                               self.language))
                 self.score["rouge"].append(
-                    eval.scores.get_rouge_score(response, answer[i], self.language)
-                )
+                    eval.scores.get_rouge_score(response, answer[i],
+                                                self.language))
                 self.score["llm_score"].append(
-                    eval.scores.get_llm_score(response, answer[i], eval_model)
-                )
+                    eval.scores.get_llm_score(response, answer[i], eval_model))
 
                 new_table = akasha.format.handle_table(
-                    question[i] + "\nAnswer:  " + answer[i], docs, response
-                )
+                    question[i] + "\nAnswer:  " + answer[i], docs, response)
                 new_table = akasha.format.handle_score_table(
                     new_table,
                     self.score["bert"][-1],
@@ -527,8 +505,7 @@ class Model_Eval(akasha.atman):
                 )
             else:
                 new_table = akasha.format.handle_table(
-                    query + "\nAnswer:  " + ans, docs, response
-                )
+                    query + "\nAnswer:  " + ans, docs, response)
                 result = akasha.helper.extract_result(response)
                 if str(result) == str(ans):
                     self.score["correct_count"] += 1
@@ -546,11 +523,12 @@ class Model_Eval(akasha.atman):
         self.logs[timestamp]["response"] = self.response
 
         if self.question_type.lower() == "essay":
-            avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
-            avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
+            avg_bert = round(
+                sum(self.score["bert"]) / len(self.score["bert"]), 3)
+            avg_rouge = round(
+                sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(
-                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
-            )
+                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3)
             self.logs[timestamp]["bert"] = self.score["bert"]
             self.logs[timestamp]["rouge"] = self.score["rouge"]
             self.logs[timestamp]["llm_score"] = self.score["llm_score"]
@@ -564,9 +542,9 @@ class Model_Eval(akasha.atman):
                     self.threshold,
                     self.language,
                 )
-                metrics = akasha.format.handle_metrics(
-                    self.doc_length, end_time - start_time, self.doc_tokens
-                )
+                metrics = akasha.format.handle_metrics(self.doc_length,
+                                                       end_time - start_time,
+                                                       self.doc_tokens)
                 metrics["avg_bert"] = avg_bert
                 metrics["avg_rouge"] = avg_rouge
                 metrics["avg_llm_score"] = avg_llm_score
@@ -576,8 +554,7 @@ class Model_Eval(akasha.atman):
 
         else:
             self.logs[timestamp]["correct_rate"] = (
-                self.score["correct_count"] / self.question_num
-            )
+                self.score["correct_count"] / self.question_num)
             if self.record_exp != "":
                 params = akasha.format.handle_params(
                     self.model,
@@ -588,12 +565,11 @@ class Model_Eval(akasha.atman):
                     self.threshold,
                     self.language,
                 )
-                metrics = akasha.format.handle_metrics(
-                    self.doc_length, end_time - start_time, self.doc_tokens
-                )
-                metrics["correct_rate"] = (
-                    self.score["correct_count"] / self.question_num
-                )
+                metrics = akasha.format.handle_metrics(self.doc_length,
+                                                       end_time - start_time,
+                                                       self.doc_tokens)
+                metrics["correct_rate"] = (self.score["correct_count"] /
+                                           self.question_num)
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
             del self.db
             return self.logs[timestamp]["correct_rate"], self.doc_tokens
@@ -627,12 +603,13 @@ class Model_Eval(akasha.atman):
 
         self._change_variables(**kwargs)
         start_time = time.time()
-        combinations = akasha.helper.get_all_combine(
-            embeddings_list, chunk_size_list, model_list, topK_list, search_type_list
-        )
-        progress = tqdm(
-            len(combinations), total=len(combinations), desc="RUN LLM COMBINATION"
-        )
+        combinations = akasha.helper.get_all_combine(embeddings_list,
+                                                     chunk_size_list,
+                                                     model_list, topK_list,
+                                                     search_type_list)
+        progress = tqdm(len(combinations),
+                        total=len(combinations),
+                        desc="RUN LLM COMBINATION")
         print("\n\ntotal combinations: ", len(combinations))
         result_list = []
         if self.question_type.lower() == "essay":

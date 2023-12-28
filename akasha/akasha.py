@@ -40,7 +40,8 @@ def aiido_upload(
         mod = params["model"].split(":")
         emb = params["embeddings"].split(":")[0]
         sea = params["search_type"]
-        aiido.init(experiment=exp_name, run=emb + "-" + sea + "-" + "-".join(mod))
+        aiido.init(experiment=exp_name,
+                   run=emb + "-" + sea + "-" + "-".join(mod))
 
     aiido.log_params_and_metrics(params=params, metrics=metrics)
 
@@ -73,22 +74,16 @@ def detect_exploitation(
     model = helper.handle_model(model, logs, verbose)
     sys_b, sys_e = "<<SYS>>\n", "\n<</SYS>>\n\n"
     system_prompt = (
-        "[INST]"
-        + sys_b
-        + "check if below texts have any of Ethical Concerns, discrimination, hate speech, "
-        + "illegal information, harmful content, Offensive Language, or encourages users to share or access copyrighted materials"
-        + " And return true or false. Texts are: "
-        + sys_e
-        + "[/INST]"
-    )
+        "[INST]" + sys_b +
+        "check if below texts have any of Ethical Concerns, discrimination, hate speech, "
+        +
+        "illegal information, harmful content, Offensive Language, or encourages users to share or access copyrighted materials"
+        + " And return true or false. Texts are: " + sys_e + "[/INST]")
 
-    template = (
-        system_prompt
-        + """ 
+    template = (system_prompt + """ 
     
     Texts: {texts}
-    Answer: """
-    )
+    Answer: """)
     prompt = PromptTemplate(template=template, input_variables={"texts"})
     response = LLMChain(prompt=prompt, llm=model).run(texts)
     print(response)
@@ -118,15 +113,13 @@ def openai_vision(
             base64_pic.append(helper.image_to_base64(path))
 
     for pic in base64_pic:
-        pic_message.append(
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{pic}",
-                    "detail": "auto",
-                },
-            }
-        )
+        pic_message.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{pic}",
+                "detail": "auto",
+            },
+        })
     content = [{"type": "text", "text": prompt}]
     content.extend(pic_message)
 
@@ -136,9 +129,9 @@ def openai_vision(
     from langchain.schema.messages import HumanMessage, SystemMessage
     from langchain.callbacks import get_openai_callback
 
-    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure") or (
-        "OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"
-    ):
+    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
+            == "azure") or ("OPENAI_API_TYPE" in os.environ
+                            and os.environ["OPENAI_API_TYPE"] == "azure"):
         modeln = model.replace(".", "")
         api_base, api_key, api_version = helper._handle_azure_env()
         chat = AzureChatOpenAI(
@@ -150,18 +143,19 @@ def openai_vision(
             max_tokens=max_token,
         )
     else:
-        chat = ChatOpenAI(
-            model=model, max_tokens=max_token, temperature=0.0, verbose=verbose
-        )
+        chat = ChatOpenAI(model=model,
+                          max_tokens=max_token,
+                          temperature=0.0,
+                          verbose=verbose)
     input_message = [HumanMessage(content=content)]
 
     with get_openai_callback() as cb:
         try:
             ret = chat.invoke(input_message).content
         except Exception as e:
-            chat = ChatOpenAI(
-                model="gpt-4-vision-preview", max_tokens=max_token, temperature=0.0
-            )
+            chat = ChatOpenAI(model="gpt-4-vision-preview",
+                              max_tokens=max_token,
+                              temperature=0.0)
             ret = chat.invoke(input_message).content
 
         tokens, prices = cb.total_tokens, cb.total_cost
@@ -222,7 +216,8 @@ class atman:
         self.topK = topK
         self.threshold = threshold
         self.language = language
-        self.search_type_str = helper.handle_search_type(search_type, self.verbose)
+        self.search_type_str = helper.handle_search_type(
+            search_type, self.verbose)
         self.record_exp = record_exp
         self.system_prompt = system_prompt
         self.max_doc_len = max_doc_len
@@ -235,13 +230,11 @@ class atman:
         ## check if we need to change db, model_obj or embeddings_obj ##
         if "search_type" in kwargs:
             self.search_type_str = helper.handle_search_type(
-                kwargs["search_type"], self.verbose
-            )
+                kwargs["search_type"], self.verbose)
 
         if "embeddings" in kwargs:
             self.embeddings_obj = helper.handle_embeddings(
-                kwargs["embeddings"], self.verbose
-            )
+                kwargs["embeddings"], self.verbose)
 
         if "model" in kwargs or "temperature" in kwargs:
             new_temp = self.temperature
@@ -251,20 +244,21 @@ class atman:
             if "model" in kwargs:
                 new_model = kwargs["model"]
             if new_model != self.model or new_temp != self.temperature:
-                self.model_obj = helper.handle_model(new_model, self.verbose, new_temp)
+                self.model_obj = helper.handle_model(new_model, self.verbose,
+                                                     new_temp)
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
 
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
-            if (key == "model" or key == "embeddings") and key in self.__dict__:
+            if (key == "model"
+                    or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = helper.handle_search_type(value)
 
             elif key in self.__dict__:  # check if variable exist
-                if (
-                    getattr(self, key, None) != value
-                ):  # check if variable value is different
+                if (getattr(self, key, None)
+                        != value):  # check if variable value is different
                     self.__dict__[key] = value
             else:
                 print(f"argument {key} not exist")
@@ -317,17 +311,15 @@ class atman:
         self.logs[timestamp]["doc_tokens"] = self.doc_tokens
         try:
             self.logs[timestamp]["docs"] = "\n\n".join(
-                [doc.page_content for doc in self.docs]
-            )
-            self.logs[timestamp]["doc_metadata"] = "\n\n".join(
-                [
-                    doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
-                    for doc in self.docs
-                ]
-            )
+                [doc.page_content for doc in self.docs])
+            self.logs[timestamp]["doc_metadata"] = "\n\n".join([
+                doc.metadata["source"] + "    page: " +
+                str(doc.metadata["page"]) for doc in self.docs
+            ])
         except:
             self.logs[timestamp]["doc_metadata"] = "none"
-            self.logs[timestamp]["docs"] = "\n\n".join([doc for doc in self.docs])
+            self.logs[timestamp]["docs"] = "\n\n".join(
+                [doc for doc in self.docs])
 
         self.logs[timestamp]["system_prompt"] = self.system_prompt
 
@@ -382,12 +374,8 @@ class atman:
                     fp.write(text)
                     for k in self.logs[key]:
                         if type(self.logs[key][k]) == list:
-                            text = (
-                                k
-                                + ": "
-                                + "\n".join([str(w) for w in self.logs[key][k]])
-                                + "\n\n"
-                            )
+                            text = (k + ": " + "\n".join(
+                                [str(w) for w in self.logs[key][k]]) + "\n\n")
 
                         else:
                             text = k + ": " + str(self.logs[key][k]) + "\n\n"
@@ -441,8 +429,10 @@ class Doc_QA(atman):
         self.ignore_check = ignore_check
         ### set variables ###
         self.logs = {}
-        self.model_obj = helper.handle_model(model, self.verbose, self.temperature)
-        self.embeddings_obj = helper.handle_embeddings(embeddings, self.verbose)
+        self.model_obj = helper.handle_model(model, self.verbose,
+                                             self.temperature)
+        self.embeddings_obj = helper.handle_embeddings(embeddings,
+                                                       self.verbose)
         self.embeddings = helper.handle_search_type(embeddings)
         self.model = helper.handle_search_type(model)
         self.search_type = search_type
@@ -453,9 +443,41 @@ class Doc_QA(atman):
         self.response = ""
         self.prompt = ""
 
-    def get_response(
-        self, doc_path: Union[List[str], str], prompt: str, **kwargs
-    ) -> str:
+    def _ask_model(self, system_prompt: str, prompt: str) -> str:
+
+        splitter = '\n----------------\n'
+
+        try:
+            text_input = system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
+                splitter + prompt
+
+            if self.verbose:
+                print("Prompt after formatting:", "\n\n" + text_input)
+        except Exception as e:
+            print(e)
+            print(
+                "\n\nText generation encountered an error before querying the language model (LLM).\
+                Please check your input data or configuration settings.\n\n")
+            response = ""
+            return response
+        try:
+            response = helper.call_model(self.model_obj, text_input)
+            response = helper.sim_to_trad(response)
+
+            if response[:8] == "System: ":
+                response = response[8:]
+        except Exception as e:
+            print(e)
+            print("\n\nllm error\n\n")
+
+            response = ""
+        if self.verbose:
+            print("llm response:", "\n\n" + response)
+
+        return response
+
+    def get_response(self, doc_path: Union[List[str], str], prompt: str,
+                     **kwargs) -> str:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -473,20 +495,15 @@ class Doc_QA(atman):
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
-        # self.db = helper.create_chromadb(self.doc_path, self.verbose, self.embeddings_obj, self.embeddings, self.chunk_size)
+        self.prompt = prompt
+
         if self.use_chroma:
             self.db, db_path_names = akasha.db.get_db_from_chromadb(
-                self.doc_path, self.embeddings
-            )
+                self.doc_path, self.embeddings)
         else:
             self.db, db_path_names = akasha.db.processMultiDB(
-                self.doc_path,
-                self.verbose,
-                self.embeddings_obj,
-                self.embeddings,
-                self.chunk_size,
-                self.ignore_check
-            )
+                self.doc_path, self.verbose, self.embeddings_obj,
+                self.embeddings, self.chunk_size, self.ignore_check)
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
@@ -503,7 +520,7 @@ class Doc_QA(atman):
         self.docs, self.doc_length, self.doc_tokens = search.get_docs(
             self.db,
             self.embeddings_obj,
-            prompt,
+            self.prompt,
             self.topK,
             self.threshold,
             self.language,
@@ -518,25 +535,14 @@ class Doc_QA(atman):
         if self.docs is None:
             print("\n\nNo Relevant Documents.\n\n")
             return ""
-        
-        chain = load_qa_chain(
-            llm=self.model_obj, chain_type="stuff", verbose=self.verbose
-        )
 
         ## format prompt ##
-        self.prompt = prompts.format_sys_prompt(self.system_prompt, prompt)
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = prompts.default_doc_ask_prompt()
+        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+            self.system_prompt, self.prompt)
 
-        try:
-            self.response = chain.run(input_documents=self.docs, question=self.prompt)
-            self.response = helper.sim_to_trad(self.response)
-            # response = res.split("Finished chain.")
-        except Exception as e:
-            print(e)
-            print("\n\nllm error\n\n")
-
-            self.response = ""
-        if self.verbose:
-            print(self.response)
+        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
@@ -552,18 +558,17 @@ class Doc_QA(atman):
                 self.threshold,
                 self.language,
             )
-            metrics = format.handle_metrics(
-                self.doc_length, end_time - start_time, self.doc_tokens
-            )
+            metrics = format.handle_metrics(self.doc_length,
+                                            end_time - start_time,
+                                            self.doc_tokens)
             table = format.handle_table(prompt, self.docs, self.response)
             aiido_upload(self.record_exp, params, metrics, table)
 
         del self.db
         return self.response
 
-    def chain_of_thought(
-        self, doc_path: Union[List[str], str], prompt_list: list, **kwargs
-    ) -> list:
+    def chain_of_thought(self, doc_path: Union[List[str], str],
+                         prompt_list: list, **kwargs) -> list:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -585,22 +590,17 @@ class Doc_QA(atman):
 
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
-
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = prompts.default_doc_ask_prompt()
         self.doc_path = doc_path
         table = {}
         if self.use_chroma:
             self.db, db_path_names = akasha.db.get_db_from_chromadb(
-                self.doc_path, self.embeddings
-            )
+                self.doc_path, self.embeddings)
         else:
             self.db, db_path_names = akasha.db.processMultiDB(
-                self.doc_path,
-                self.verbose,
-                self.embeddings_obj,
-                self.embeddings,
-                self.chunk_size,
-                self.ignore_check
-            )
+                self.doc_path, self.verbose, self.embeddings_obj,
+                self.embeddings, self.chunk_size, self.ignore_check)
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
@@ -612,16 +612,13 @@ class Doc_QA(atman):
         self.logs[timestamp]["search_type"] = self.search_type_str
         self.logs[timestamp]["embeddings"] = self.embeddings
         self.logs[timestamp]["compression"] = self.compression
-        chain = load_qa_chain(
-            llm=self.model_obj, chain_type="stuff", verbose=self.verbose
-        )
 
         self.doc_tokens = 0
         self.doc_length = 0
-        pre_result = []
         self.response = []
         self.docs = []
         self.prompt = []
+        total_docs = []
 
         def recursive_get_response(prompt_list):
             pre_result = []
@@ -630,8 +627,7 @@ class Doc_QA(atman):
                     response = recursive_get_response(prompt)
                     pre_result.append(Document(page_content="".join(response)))
                 else:
-                    question = prompts.format_sys_prompt(self.system_prompt, prompt)
-                    self.prompt.append(question)
+                    self.prompt.append(prompt)
                     docs, docs_len, tokens = search.get_docs(
                         self.db,
                         self.embeddings_obj,
@@ -646,26 +642,16 @@ class Doc_QA(atman):
                         self.logs[timestamp],
                         compression=self.compression,
                     )
-                    self.docs.extend(docs)
+                    total_docs.extend(docs)
                     self.doc_length += docs_len
                     self.doc_tokens += tokens
-                    if self.verbose:
-                        print(docs)
+                    self.docs = docs + pre_result
+                    ## format prompt ##
+                    prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+                        self.system_prompt, prompt)
 
-                    try:
-                        response = chain.run(
-                            input_documents=docs + pre_result, question=question
-                        )
-                        response = helper.sim_to_trad(response)
+                    response = self._ask_model(prod_sys_prompt, prod_prompt)
 
-                    except Exception as e:
-                        print(e)
-                        print("\n\nllm error\n\n")
-
-                        response = ""
-
-                    if self.verbose:
-                        print(response)
                     self.response.append(response)
                     pre_result.append(Document(page_content="".join(response)))
 
@@ -679,7 +665,7 @@ class Doc_QA(atman):
 
         recursive_get_response(prompt_list)
         end_time = time.time()
-
+        self.docs = total_docs
         self._add_result_log(timestamp, end_time - start_time)
         self.logs[timestamp]["prompt"] = self.prompt
         self.logs[timestamp]["response"] = self.response
@@ -694,19 +680,15 @@ class Doc_QA(atman):
                 self.threshold,
                 self.language,
             )
-            metrics = format.handle_metrics(
-                self.doc_length, end_time - start_time, self.doc_tokens
-            )
+            metrics = format.handle_metrics(self.doc_length,
+                                            end_time - start_time,
+                                            self.doc_tokens)
             aiido_upload(self.record_exp, params, metrics, table)
 
         del self.db
         return self.response
 
-    
-    
-    def ask_whole_file(
-        self, file_path: str, prompt: str, **kwargs
-    ) -> str:
+    def ask_whole_file(self, file_path: str, prompt: str, **kwargs) -> str:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -723,45 +705,34 @@ class Doc_QA(atman):
         """
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
+        self.prompt = prompt
         self.file_path = file_path
         self.docs = akasha.db._load_file(file_path, file_path.split('.')[-1])
-        
+
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
         start_time = time.time()
-        
 
         self._add_basic_log(timestamp, "ask_whole_file")
         self.logs[timestamp]["embeddings"] = "ask_whole_file"
-        
 
         ### start to get response ###
-        cur_documents = '\n'.join([db_doc.page_content for db_doc in self.docs])
+        cur_documents = '\n'.join(
+            [db_doc.page_content for db_doc in self.docs])
         self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
-        
 
         if self.docs is None:
             print("\n\nNo Relevant Documents.\n\n")
             return ""
         self.doc_length = helper.get_docs_length(self.language, self.docs)
-        chain = load_qa_chain(
-            llm=self.model_obj, chain_type="stuff", verbose=self.verbose
-        )
 
         ## format prompt ##
-        self.prompt = prompts.format_sys_prompt(self.system_prompt, prompt)
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = prompts.default_doc_ask_prompt()
+        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+            self.system_prompt, self.prompt)
 
-        try:
-            self.response = chain.run(input_documents=self.docs, question=self.prompt)
-            self.response = helper.sim_to_trad(self.response)
-            # response = res.split("Finished chain.")
-        except Exception as e:
-            print(e)
-            print("\n\nllm error\n\n")
-
-            self.response = ""
-        if self.verbose:
-            print(self.response)
+        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
@@ -777,9 +748,9 @@ class Doc_QA(atman):
                 self.threshold,
                 self.language,
             )
-            metrics = format.handle_metrics(
-                self.doc_length, end_time - start_time, self.doc_tokens
-            )
+            metrics = format.handle_metrics(self.doc_length,
+                                            end_time - start_time,
+                                            self.doc_tokens)
             table = format.handle_table(prompt, self.docs, self.response)
             aiido_upload(self.record_exp, params, metrics, table)
 
