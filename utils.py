@@ -108,7 +108,8 @@ def add_question_layer(add_button: st.columns) -> list:
             use_container_width=True,
             hide_index=True,
         )
-        layers[i] = (layer_name, layer_content)  # (col_layer_data, col_layer_id)
+        layers[i] = (layer_name, layer_content
+                     )  # (col_layer_data, col_layer_id)
         # layers[i] = st.data_editor(df, key=f'question-layer-{i}', num_rows='dynamic', use_container_width=True)
 
     return layers
@@ -116,7 +117,6 @@ def add_question_layer(add_button: st.columns) -> list:
 
 def ask_question(
     username: str,
-    sys_prompt: str,
     prompt: str,
     expert_owner: str,
     expert_name: str,
@@ -146,10 +146,8 @@ def ask_question(
         st.error("❌ Please input question")
         return False
 
-    if (
-        advanced_params["embedding_model"].split(":")[0] == "openai"
-        or advanced_params["model"].split(":")[0] == "openai"
-    ):
+    if (advanced_params["embedding_model"].split(":")[0] == "openai"
+            or advanced_params["model"].split(":")[0] == "openai"):
         openai_config = get_openai_config(username)
     else:
         openai_config = {}
@@ -165,7 +163,7 @@ def ask_question(
     data = {
         "data_path": data_path,
         "prompt": prompt,
-        "system_prompt": sys_prompt,
+        "system_prompt": advanced_params["system_prompt"],
         "embedding_model": advanced_params["embedding_model"],
         "chunk_size": advanced_params["chunk_size"],
         "model": advanced_params["model"],
@@ -192,19 +190,30 @@ def ask_question(
     # save last consult config for expert if is the owner of expert
     if username == expert_owner:
         data = {
-            "language_model": advanced_params["model"],
-            "search_type": advanced_params["search_type"],
-            "top_k": advanced_params["topK"],
-            "threshold": advanced_params["threshold"],
-            "max_doc_len": advanced_params["max_doc_len"],
-            "temperature": advanced_params["temperature"],
-            "use_compression": advanced_params["use_compression"],
-            "compression_language_model": advanced_params["compression_language_model"],
+            "system_prompt":
+            advanced_params["system_prompt"],
+            "language_model":
+            advanced_params["model"],
+            "search_type":
+            advanced_params["search_type"],
+            "top_k":
+            advanced_params["topK"],
+            "threshold":
+            advanced_params["threshold"],
+            "max_doc_len":
+            advanced_params["max_doc_len"],
+            "temperature":
+            advanced_params["temperature"],
+            "use_compression":
+            advanced_params["use_compression"],
+            "compression_language_model":
+            advanced_params["compression_language_model"],
         }
         data["owner"] = expert_owner
         data["expert_name"] = expert_name
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["save_consult"], json=data).json()
+            response = requests.post(api_urls["save_consult"],
+                                     json=data).json()
         if response["status"] != "success":
             st.warning("cannot save last consult config for expert")
 
@@ -215,7 +224,6 @@ def ask_question_deep(
     col: st.columns,
     layers_list: List[dict],
     username: str,
-    sys_prompt: str,
     prompt: str,
     expert_owner: str,
     expert_name: str,
@@ -263,10 +271,8 @@ def ask_question_deep(
             prompt_list.append(group_list)
     prompt_list.append(prompt)
 
-    if (
-        advanced_params["embedding_model"].split(":")[0] == "openai"
-        or advanced_params["model"].split(":")[0] == "openai"
-    ):
+    if (advanced_params["embedding_model"].split(":")[0] == "openai"
+            or advanced_params["model"].split(":")[0] == "openai"):
         openai_config = get_openai_config(username)
     else:
         openai_config = {}
@@ -281,7 +287,7 @@ def ask_question_deep(
     data = {
         "data_path": data_path,
         "prompt": prompt_list,
-        "system_prompt": sys_prompt,
+        "system_prompt": advanced_params["system_prompt"],
         "embedding_model": advanced_params["embedding_model"],
         "chunk_size": advanced_params["chunk_size"],
         "model": advanced_params["model"],
@@ -298,7 +304,6 @@ def ask_question_deep(
         api_fail(response["response"])
         return False
     # akasha: get response from expert
-    st.session_state.logs.append(response["logs"])
     if auto_clean:
         st.session_state["final-question"] = ""
     st.session_state["que"] = prompt
@@ -308,24 +313,37 @@ def ask_question_deep(
     # save last consult config for expert if is the owner of expert
     if username == expert_owner:
         data = {
-            "language_model": advanced_params["model"],
-            "search_type": advanced_params["search_type"],
-            "top_k": advanced_params["topK"],
-            "threshold": advanced_params["threshold"],
-            "max_doc_len": advanced_params["max_doc_len"],
-            "temperature": advanced_params["temperature"],
-            "use_compression": advanced_params["use_compression"],
-            "compression_language_model": advanced_params["compression_language_model"],
+            "system_prompt":
+            advanced_params["system_prompt"],
+            "language_model":
+            advanced_params["model"],
+            "search_type":
+            advanced_params["search_type"],
+            "top_k":
+            advanced_params["topK"],
+            "threshold":
+            advanced_params["threshold"],
+            "max_doc_len":
+            advanced_params["max_doc_len"],
+            "temperature":
+            advanced_params["temperature"],
+            "use_compression":
+            advanced_params["use_compression"],
+            "compression_language_model":
+            advanced_params["compression_language_model"],
         }
         data["owner"] = expert_owner
         data["expert_name"] = expert_name
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["save_consult"], json=data).json()
+            response = requests.post(api_urls["save_consult"],
+                                     json=data).json()
         if response["status"] != "success":
             st.warning("cannot save last consult config for expert")
 
 
-def list_experts(owner: str = None, name_only: bool = False, include_shared=True):
+def list_experts(owner: str = None,
+                 name_only: bool = False,
+                 include_shared=True):
     """list all expert names that the owner can use if include_shared is True, else list all experts that the owner owned.
 
     Args:
@@ -340,15 +358,17 @@ def list_experts(owner: str = None, name_only: bool = False, include_shared=True
     # list all experts (of specific owner)
     if include_shared:
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.get(
-                api_urls["get_expert"], json={"owner": owner}
-            ).json()
+            response = requests.get(api_urls["get_expert"],
+                                    json={
+                                        "owner": owner
+                                    }).json()
 
     else:
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.get(
-                api_urls["get_owner_expert"], json={"owner": owner}
-            ).json()
+            response = requests.get(api_urls["get_owner_expert"],
+                                    json={
+                                        "owner": owner
+                                    }).json()
 
     if response["status"] != "success":
         api_fail(response["response"])
@@ -356,8 +376,7 @@ def list_experts(owner: str = None, name_only: bool = False, include_shared=True
 
     experts = [
         e["dataset_name"]
-        if e["owner"] == owner
-        else f"{e['dataset_name']}@{e['owner']}"
+        if e["owner"] == owner else f"{e['dataset_name']}@{e['owner']}"
         for e in response["response"]
     ]
     # if name_only:
@@ -375,13 +394,16 @@ def list_models() -> list:
     base = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"]
     try:
         with st.spinner(SPINNER_MESSAGE):
-            modes_dir = requests.get(api_urls["get_model_path"]).json()["response"]
+            modes_dir = requests.get(
+                api_urls["get_model_path"]).json()["response"]
 
         for dir_path in Path(modes_dir).iterdir():
             if dir_path.is_dir():
-                base.append("hf:" + (Path(modes_dir) / dir_path.name).__str__())
+                base.append("hf:" +
+                            (Path(modes_dir) / dir_path.name).__str__())
             elif dir_path.suffix == ".gguf":
-                base.append("llama-gpu:" + (Path(modes_dir) / dir_path.name).__str__())
+                base.append("llama-gpu:" +
+                            (Path(modes_dir) / dir_path.name).__str__())
     except:
         print("can not find model folder!\n\n")
     return base
@@ -426,7 +448,8 @@ def create_expert(
         ## check datasets is valid: not empty ##
         for k, v in expert_add_files.items():
             if len(v) == 0:
-                raise Exception(f" Dataset '{k}' should select at least 1 file")
+                raise Exception(
+                    f" Dataset '{k}' should select at least 1 file")
 
         ## get openai config if needed ##
         if expert_embedding.split(":")[0] == "openai":
@@ -436,14 +459,16 @@ def create_expert(
 
         datasets = []
         for k, v in expert_add_files.items():
-            dataset_owner = (
-                owner if not check_dataset_is_shared(k) else k.split("@")[-1]
-            )
-            dataset_name = k if not check_dataset_is_shared(k) else k.split("@")[0]
+            dataset_owner = (owner if not check_dataset_is_shared(k) else
+                             k.split("@")[-1])
+            dataset_name = k if not check_dataset_is_shared(k) else k.split(
+                "@")[0]
             filename_list = list(v)
-            datasets.append(
-                {"owner": dataset_owner, "name": dataset_name, "files": filename_list}
-            )
+            datasets.append({
+                "owner": dataset_owner,
+                "name": dataset_name,
+                "files": filename_list
+            })
 
         data = {
             "owner": owner,
@@ -454,7 +479,8 @@ def create_expert(
             "openai_config": openai_config,
         }
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["create_expert"], json=data).json()
+            response = requests.post(api_urls["create_expert"],
+                                     json=data).json()
         if response["status"] != "success":
             raise Exception(response["response"])
 
@@ -468,19 +494,18 @@ def create_expert(
         for file_path in response["file_paths"]:
             progress_count += progress_itv
             file_name = file_path.split("/")[-1]
-            loading_bar.progress(
-                progress_count, text=f"Creating chromadb for {file_name}..."
-            )
+            loading_bar.progress(progress_count,
+                                 text=f"Creating chromadb for {file_name}...")
             suc, text = akasha.db.create_single_file_db(
-                file_path, expert_embedding, expert_chunksize
-            )
+                file_path, expert_embedding, expert_chunksize)
             if not suc:
-                st.warning(f"❌ Create chromadb for file {file_name} failed, {text}")
+                st.warning(
+                    f"❌ Create chromadb for file {file_name} failed, {text}")
 
         response = requests.post(api_urls["create_expert2"], json=data).json()
         if response["status"] != "success":
             raise Exception(response["response"])
-        
+
         loading_bar.empty()
 
     except Exception as e:
@@ -562,57 +587,58 @@ def edit_expert(
         delete_datasets = []
         default_expert_datasets_dict = {}
         for ds in default_expert_datasets:
-            cur_dataset_name = (
-                ds["name"] if ds["owner"] == owner else f"{ds['name']}@{ds['owner']}"
-            )
+            cur_dataset_name = (ds["name"] if ds["owner"] == owner else
+                                f"{ds['name']}@{ds['owner']}")
             del_list = []
             default_expert_datasets_dict[cur_dataset_name] = ds["files"]
 
             if cur_dataset_name not in expert_used_dataset_files_dict:
-                delete_datasets.append(
-                    {"owner": ds["owner"], "name": ds["name"], "files": ds["files"]}
-                )
+                delete_datasets.append({
+                    "owner": ds["owner"],
+                    "name": ds["name"],
+                    "files": ds["files"]
+                })
             else:
                 for f in ds["files"]:
-                    if f not in expert_used_dataset_files_dict[cur_dataset_name]:
+                    if f not in expert_used_dataset_files_dict[
+                            cur_dataset_name]:
                         del_list.append(f)
                 if len(del_list) > 0:
-                    delete_datasets.append(
-                        {"owner": ds["owner"], "name": ds["name"], "files": del_list}
-                    )
+                    delete_datasets.append({
+                        "owner": ds["owner"],
+                        "name": ds["name"],
+                        "files": del_list
+                    })
 
         add_datasets = []
 
         for k, v in expert_used_dataset_files_dict.items():
             add_list = []
             if k not in default_expert_datasets_dict:
-                add_datasets.append(
-                    {
-                        "owner": owner
-                        if not check_dataset_is_shared(k)
-                        else k.split("@")[-1],
-                        "name": k
-                        if not check_dataset_is_shared(k)
-                        else k.split("@")[0],
-                        "files": list(v),
-                    }
-                )
+                add_datasets.append({
+                    "owner":
+                    owner
+                    if not check_dataset_is_shared(k) else k.split("@")[-1],
+                    "name":
+                    k if not check_dataset_is_shared(k) else k.split("@")[0],
+                    "files":
+                    list(v),
+                })
             else:
                 for f in v:
                     if f not in default_expert_datasets_dict[k]:
                         add_list.append(f)
                 if len(add_list) > 0:
-                    add_datasets.append(
-                        {
-                            "owner": owner
-                            if not check_dataset_is_shared(k)
-                            else k.split("@")[-1],
-                            "name": k
-                            if not check_dataset_is_shared(k)
-                            else k.split("@")[0],
-                            "files": add_list,
-                        }
-                    )
+                    add_datasets.append({
+                        "owner":
+                        owner if not check_dataset_is_shared(k) else
+                        k.split("@")[-1],
+                        "name":
+                        k
+                        if not check_dataset_is_shared(k) else k.split("@")[0],
+                        "files":
+                        add_list,
+                    })
 
         data = {
             "owner": owner,
@@ -628,7 +654,8 @@ def edit_expert(
         }
 
     except Exception as e:
-        st.error("❌ Expert edition failed during process datasets, " + e.__str__())
+        st.error("❌ Expert edition failed during process datasets, " +
+                 e.__str__())
         return False
 
     with st.spinner(SPINNER_MESSAGE):
@@ -649,26 +676,27 @@ def edit_expert(
         for file_path in response["file_paths"]:
             progress_count += progress_itv
             file_name = file_path.split("/")[-1]
-            loading_bar.progress(
-                progress_count, text=f"Creating chromadb for {file_name}..."
-            )
+            loading_bar.progress(progress_count,
+                                 text=f"Creating chromadb for {file_name}...")
             suc, text = akasha.db.create_single_file_db(
-                file_path, new_expert_embedding, new_expert_chunksize
-            )
+                file_path, new_expert_embedding, new_expert_chunksize)
             if not suc:
-                st.warning(f"❌ Create chromadb for file {file_name} failed, {text}")
+                st.warning(
+                    f"❌ Create chromadb for file {file_name} failed, {text}")
 
         loading_bar.empty()
 
-    
-    response2 = requests.post(api_urls["update_expert2"], json={'data':response['new_json_data'], 'old_uid':response['old_uid']}).json()
+    response2 = requests.post(api_urls["update_expert2"],
+                              json={
+                                  'data': response['new_json_data'],
+                                  'old_uid': response['old_uid']
+                              }).json()
     if response2["status"] != "success":
         return False
-    
-    if add_shared_users_to_expert(
-        owner, new_expert_name, share_or_not, shared_user_accounts
-    ):  
-        
+
+    if add_shared_users_to_expert(owner, new_expert_name, share_or_not,
+                                  shared_user_accounts):
+
         return True
 
     return False
@@ -688,7 +716,10 @@ def delete_expert(username: str, expert_name: str) -> bool:
     with st.spinner(SPINNER_MESSAGE):
         response = requests.post(
             api_urls["delete_expert"],
-            json={"owner": username, "expert_name": expert_name},
+            json={
+                "owner": username,
+                "expert_name": expert_name
+            },
         ).json()
     if response["status"] != "success":
         api_fail(response["response"])
@@ -698,14 +729,14 @@ def delete_expert(username: str, expert_name: str) -> bool:
         delete_chromadb(response["delete_chromadb"])
 
     os.remove(response["delete_json_data"])
-    
+
     st.success(f"Expert '{expert_name}' has been deleted successfully")
     return True
 
 
-def list_datasets(
-    owner: str = None, name_only: bool = False, include_shared: bool = False
-):
+def list_datasets(owner: str = None,
+                  name_only: bool = False,
+                  include_shared: bool = False):
     """list all dataset names that the owner can use if include_shared is True, else list all datasets that the owner owned.
 
     Args:
@@ -721,14 +752,16 @@ def list_datasets(
 
     if include_shared:
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.get(
-                api_urls["get_dataset"], json={"owner": owner}
-            ).json()
+            response = requests.get(api_urls["get_dataset"],
+                                    json={
+                                        "owner": owner
+                                    }).json()
     else:
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.get(
-                api_urls["get_owner_dataset"], json={"owner": owner}
-            ).json()
+            response = requests.get(api_urls["get_owner_dataset"],
+                                    json={
+                                        "owner": owner
+                                    }).json()
 
     if response["status"] != "success":
         api_fail(response["response"])
@@ -736,8 +769,7 @@ def list_datasets(
 
     datasets = [
         e["dataset_name"]
-        if e["owner"] == owner
-        else f"{e['dataset_name']}@{e['owner']}"
+        if e["owner"] == owner else f"{e['dataset_name']}@{e['owner']}"
         for e in response["response"]
     ]
     # if name_only:
@@ -746,9 +778,10 @@ def list_datasets(
     return datasets
 
 
-def add_shared_users_to_expert(
-    owner: str, expert_name: str, share_boolean: bool, shared_users: list = []
-) -> bool:
+def add_shared_users_to_expert(owner: str,
+                               expert_name: str,
+                               share_boolean: bool,
+                               shared_users: list = []) -> bool:
     """call share_expert api to add shared_users list in the expert configuration file.
 
     Args:
@@ -786,9 +819,9 @@ def add_shared_users_to_expert(
     return True
 
 
-def add_shared_users_to_dataset(
-    owner: str, dataset_name: str, share_boolean: bool, shared_users: list
-) -> bool:
+def add_shared_users_to_dataset(owner: str, dataset_name: str,
+                                share_boolean: bool,
+                                shared_users: list) -> bool:
     """call share_dataset api to add shared_users list in the dataset configuration file.
 
     Args:
@@ -826,9 +859,8 @@ def add_shared_users_to_dataset(
     return True
 
 
-def create_dataset(
-    dataset_name: str, dataset_description: str, uploaded_files: vars, owner: str
-) -> bool:
+def create_dataset(dataset_name: str, dataset_description: str,
+                   uploaded_files: vars, owner: str) -> bool:
     """create doc files in DOC_PATH/{owner}/{dataset_name} , and call api to create dataset config.
 
     Args:
@@ -849,7 +881,8 @@ def create_dataset(
 
     try:
         with st.spinner(SPINNER_MESSAGE):
-            DOCS_PATH = requests.get(api_urls["get_docs_path"]).json()["response"]
+            DOCS_PATH = requests.get(
+                api_urls["get_docs_path"]).json()["response"]
 
         if dataset_name.replace(" ", "") == "":
             raise Exception("dataset name cannot be empty")
@@ -895,7 +928,8 @@ def create_dataset(
             "owner": owner,
         }
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["create_dataset"], json=data).json()
+            response = requests.post(api_urls["create_dataset"],
+                                     json=data).json()
 
         if response["status"] != "success":
             raise Exception(response["response"])
@@ -948,7 +982,8 @@ def edit_dataset(
 
     try:
         with st.spinner(SPINNER_MESSAGE):
-            DOCS_PATH = requests.get(api_urls["get_docs_path"]).json()["response"]
+            DOCS_PATH = requests.get(
+                api_urls["get_docs_path"]).json()["response"]
         if not apu.check_dir(DOCS_PATH):
             raise Exception(f"can not create {DOCS_PATH} directory")
 
@@ -963,7 +998,8 @@ def edit_dataset(
         ## rename dataset name to new_dataset_name if there're any changes
         if new_dataset_name != dataset_name:
             if (owner_path / new_dataset_name).exists():
-                raise Exception(f"New Dataset Name={new_dataset_name} is already exist")
+                raise Exception(
+                    f"New Dataset Name={new_dataset_name} is already exist")
 
             ## check if save_path is already exist
             if not save_path.exists():
@@ -1002,7 +1038,8 @@ def edit_dataset(
             "delete_files": delete_files_list,
         }
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["update_dataset"], json=data).json()
+            response = requests.post(api_urls["update_dataset"],
+                                     json=data).json()
 
         if response["status"] != "success":
             raise Exception(response["response"])
@@ -1031,7 +1068,8 @@ def delete_dataset(dataset_name: str, owner: str):
     """
     try:
         with st.spinner(SPINNER_MESSAGE):
-            DOCS_PATH = requests.get(api_urls["get_docs_path"]).json()["response"]
+            DOCS_PATH = requests.get(
+                api_urls["get_docs_path"]).json()["response"]
 
         if not apu.check_dir(DOCS_PATH):
             raise Exception(f"can not create {DOCS_PATH} directory")
@@ -1051,7 +1089,8 @@ def delete_dataset(dataset_name: str, owner: str):
 
         data = {"dataset_name": dataset_name, "owner": owner}
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["delete_dataset"], json=data).json()
+            response = requests.post(api_urls["delete_dataset"],
+                                     json=data).json()
 
         if response["status"] != "success":
             raise Exception(response["response"])
@@ -1064,9 +1103,9 @@ def delete_dataset(dataset_name: str, owner: str):
     return
 
 
-def get_file_list_of_dataset(
-    username: str, dataset_name: str, name_only: bool = False
-) -> list:
+def get_file_list_of_dataset(username: str,
+                             dataset_name: str,
+                             name_only: bool = False) -> list:
     """call 'get_filename_list' api to get the all file names list of the dataset.
 
     Args:
@@ -1084,15 +1123,17 @@ def get_file_list_of_dataset(
     with st.spinner(SPINNER_MESSAGE):
         response = requests.get(
             api_urls["get_filename_list"],
-            json={"owner": username, "dataset_name": dataset_name},
+            json={
+                "owner": username,
+                "dataset_name": dataset_name
+            },
         ).json()
 
     return response["response"]
 
 
-def get_lastupdate_of_file_in_dataset(
-    dataset_name: str, file_name: str, owner: str
-) -> str:
+def get_lastupdate_of_file_in_dataset(dataset_name: str, file_name: str,
+                                      owner: str) -> str:
     """call the 'get_docs_path' to get the file path and get last update time of the file, change to string format.
 
     Args:
@@ -1110,9 +1151,9 @@ def get_lastupdate_of_file_in_dataset(
     return last_update
 
 
-def get_datasets_of_expert(
-    username: str, datasets: list, candidate_datasets: list = None
-) -> list:
+def get_datasets_of_expert(username: str,
+                           datasets: list,
+                           candidate_datasets: list = None) -> list:
     """get dataset names of expert, if candidate_datasets is not None, only return the dataset names that in candidate_datasets.
 
     Args:
@@ -1133,9 +1174,8 @@ def get_datasets_of_expert(
     return [d for d in dataset_names if d in candidate_datasets]
 
 
-def check_expert_use_shared_dataset(
-    expert_datasets: list, username: str = None
-) -> bool:
+def check_expert_use_shared_dataset(expert_datasets: list,
+                                    username: str = None) -> bool:
     """check if this expert use any shared dataset.
 
     Args:
@@ -1165,9 +1205,10 @@ def _save_openai_configuration(key: str) -> bool:
     # check if openai api key is valid
     # save openai api key
     with st.spinner(SPINNER_MESSAGE):
-        response = requests.get(
-            api_urls["test_openai"], json={"openai_key": key}
-        ).json()
+        response = requests.get(api_urls["test_openai"],
+                                json={
+                                    "openai_key": key
+                                }).json()
     if response["status"] != "success":
         api_fail(response["response"])
         return False
@@ -1190,9 +1231,11 @@ def _save_azure_openai_configuration(key: str, endpoint: str) -> bool:
     # check if azure openai credentials are valid
     # save azure openai credentials
     with st.spinner(SPINNER_MESSAGE):
-        response = requests.get(
-            api_urls["test_azure"], json={"azure_key": key, "azure_base": endpoint}
-        ).json()
+        response = requests.get(api_urls["test_azure"],
+                                json={
+                                    "azure_key": key,
+                                    "azure_base": endpoint
+                                }).json()
     if response["status"] != "success":
         api_fail(response["response"])
         return False
@@ -1227,9 +1270,8 @@ def save_api_configs(
             return False
         st.success("OpenAI configurations have been saved successfully")
     if use_azure_openai:
-        if not _save_azure_openai_configuration(
-            azure_openai_key, azure_openai_endpoint
-        ):
+        if not _save_azure_openai_configuration(azure_openai_key,
+                                                azure_openai_endpoint):
             return False
         st.success("Azure configurations have been saved successfully")
     return True
@@ -1293,9 +1335,8 @@ def api_fail(response: Union[str, list]):
     return
 
 
-def check_file_selected_by_expert(
-    datasets: list, dataset_name: str, dataset_owner: str, filename: str
-) -> bool:
+def check_file_selected_by_expert(datasets: list, dataset_name: str,
+                                  dataset_owner: str, filename: str) -> bool:
     """check if the filename is in the dataset of expert config file
 
     Args:
@@ -1355,7 +1396,10 @@ def get_last_consult_for_expert(expert_owner: str, expert_name: str) -> dict:
     with st.spinner(SPINNER_MESSAGE):
         response = requests.get(
             api_urls["get_consult"],
-            json={"owner": expert_owner, "expert_name": expert_name},
+            json={
+                "owner": expert_owner,
+                "expert_name": expert_name
+            },
         ).json()
 
     ### if can not get last consult, get default consult ###
@@ -1370,7 +1414,8 @@ def get_last_consult_for_expert(expert_owner: str, expert_name: str) -> dict:
     return response["response"]
 
 
-def check_consultable(datasets: list, embed: str, chunk_size: int) -> (bool, str):
+def check_consultable(datasets: list, embed: str,
+                      chunk_size: int) -> (bool, str):
     """check if the datasets, embed model, chunksize are valid.
 
     Args:
@@ -1412,7 +1457,10 @@ def get_dataset_info(owner: str, dataset_name: str) -> (list, str, str):
     with st.spinner(SPINNER_MESSAGE):
         response = requests.get(
             api_urls["show_dataset"],
-            json={"owner": owner, "dataset_name": dataset_name},
+            json={
+                "owner": owner,
+                "dataset_name": dataset_name
+            },
         ).json()
 
     if response["status"] != "success":
@@ -1439,9 +1487,11 @@ def get_expert_info(owner: str, expert_name: str) -> (list, str, str, list):
     """
     # get dataset info from config
     with st.spinner(SPINNER_MESSAGE):
-        response = requests.get(
-            api_urls["show_expert"], json={"owner": owner, "expert_name": expert_name}
-        ).json()
+        response = requests.get(api_urls["show_expert"],
+                                json={
+                                    "owner": owner,
+                                    "expert_name": expert_name
+                                }).json()
 
     if response["status"] != "success":
         api_fail(response["response"])
@@ -1461,14 +1511,15 @@ def get_expert_info(owner: str, expert_name: str) -> (list, str, str, list):
 def get_openai_config(owner: str) -> dict:
     """get openai api configs from st.seesion_state and openai config file."""
     data = {
-        "owner": owner,
-        "openai_key": st.session_state.openai_key if st.session_state.openai_on else "",
-        "azure_key": st.session_state.azure_key
-        if st.session_state.azure_openai_on
-        else "",
-        "azure_base": st.session_state.azure_base
-        if st.session_state.azure_openai_on
-        else "",
+        "owner":
+        owner,
+        "openai_key":
+        st.session_state.openai_key if st.session_state.openai_on else "",
+        "azure_key":
+        st.session_state.azure_key if st.session_state.azure_openai_on else "",
+        "azure_base":
+        st.session_state.azure_base
+        if st.session_state.azure_openai_on else "",
     }
     with st.spinner(SPINNER_MESSAGE):
         response = requests.get(api_urls["choose_openai"], json=data).json()
@@ -1480,7 +1531,8 @@ def get_openai_config(owner: str) -> dict:
     return response["response"]
 
 
-def get_data_path(owner: str, datasets: list, embedding_model: str, chunk_size: int):
+def get_data_path(owner: str, datasets: list, embedding_model: str,
+                  chunk_size: int):
     """get the chromadb path of all files in datasets.
 
     Args:
@@ -1491,9 +1543,8 @@ def get_data_path(owner: str, datasets: list, embedding_model: str, chunk_size: 
     """
     try:
         with st.spinner(SPINNER_MESSAGE):
-            chromadb_path = requests.get(api_urls["get_chromadb_path"]).json()[
-                "response"
-            ]
+            chromadb_path = requests.get(
+                api_urls["get_chromadb_path"]).json()["response"]
 
     except Exception as e:
         chromadb_path = "./chromadb"
@@ -1514,7 +1565,10 @@ def get_data_path(owner: str, datasets: list, embedding_model: str, chunk_size: 
 
         response = requests.get(
             api_urls["get_md5_name"],
-            json={"owner": dataset_owner, "dataset_name": dataset_name},
+            json={
+                "owner": dataset_owner,
+                "dataset_name": dataset_name
+            },
         ).json()
 
         if response["status"] != "success":
@@ -1522,18 +1576,10 @@ def get_data_path(owner: str, datasets: list, embedding_model: str, chunk_size: 
         for file in dataset_files:
             if file in response["response"]:
                 cur_path = Path(chromadb_path) / (
-                    dataset_name
-                    + "_"
-                    + file.split(".")[0].replace(" ", "").replace("_", "")
-                    + "_"
-                    + response["response"][file]
-                    + "_"
-                    + embed_type
-                    + "_"
-                    + embed_name.replace("/", "-")
-                    + "_"
-                    + str(chunk_size)
-                )
+                    dataset_name + "_" +
+                    file.split(".")[0].replace(" ", "").replace("_", "") +
+                    "_" + response["response"][file] + "_" + embed_type + "_" +
+                    embed_name.replace("/", "-") + "_" + str(chunk_size))
                 res_list.append(cur_path.__str__())
     return res_list
 
@@ -1549,12 +1595,8 @@ def get_log_data() -> str:
         plain_txt += key + ":\n"
         for k in st.session_state.logs[key]:
             if type(st.session_state.logs[key][k]) == list:
-                text = (
-                    k
-                    + ": "
-                    + "\n".join([str(w) for w in st.session_state.logs[key][k]])
-                    + "\n\n"
-                )
+                text = (k + ": " + "\n".join(
+                    [str(w) for w in st.session_state.logs[key][k]]) + "\n\n")
             else:
                 text = k + ": " + str(st.session_state.logs[key][k]) + "\n\n"
 
@@ -1604,11 +1646,12 @@ def download_json(file_name: str):
     )
 
 
+def get_openai_from_file(username: str):
 
+    response = requests.get(api_urls["load_openai"],
+                            json={
+                                "user_name": username
+                            }).json()
 
-def get_openai_from_file(username:str):
-    
-    response = requests.get(api_urls["load_openai"],json = {"user_name": username}).json()
-    
-    return response["response"]["openai_key"], response["response"]["azure_key"], response["response"]["azure_base"]
-
+    return response["response"]["openai_key"], response["response"][
+        "azure_key"], response["response"]["azure_base"]

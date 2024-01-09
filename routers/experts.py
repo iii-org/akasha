@@ -9,37 +9,40 @@ import os
 import json
 import api_utils as apu
 
-
 DOCS_PATH = apu.get_docs_path()
-
-
-
 
 
 ### data class ###
 class NewExpert(BaseModel):
     data: Dict[str, Any] = {}
     old_uid: str = ""
+
+
 class UserID(BaseModel):
     owner: str
 
+
 class ExpertID(UserID):
     expert_name: str
+
+
 class ExpertShare(ExpertID):
     shared_users: List[str] = []
+
 
 class chromadbInfo(BaseModel):
     file_path: str
     embedding_model: str
     chunk_size: int
 
-    
+
 class ExpertInfo(ExpertID):
     embedding_model: Optional[str] = "openai:text-embedding-ada-002"
     chunk_size: Optional[int] = 1000
     datasets: Optional[List[Dict]] = []
     openai_config: Optional[Dict[str, Any]] = {}
-    
+
+
 class ExpertEditInfo(ExpertInfo):
     new_expert_name: str
     new_embedding_model: Optional[str] = "openai:text-embedding-ada-002"
@@ -47,26 +50,22 @@ class ExpertEditInfo(ExpertInfo):
     add_datasets: Optional[List[Dict]]
     delete_datasets: Optional[List[Dict]]
 
+
 class ExpertConsult(ExpertID):
-    language_model : Optional[str] = "openai:gpt-3.5-turbo",
+    system_prompt: Optional[str] = "",
+    language_model: Optional[str] = "openai:gpt-3.5-turbo",
     search_type: Optional[str] = "svm",
     top_k: Optional[int] = 5,
     threshold: Optional[float] = 0.1,
     max_doc_len: Optional[int] = 1500,
     temperature: Optional[float] = 0.0,
-    use_compression: Optional[int] = 0, # 0 for False, 1 for True
+    use_compression: Optional[int] = 0,  # 0 for False, 1 for True
     compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
+
 
 ### data class ###
 
-
-
-
 router = APIRouter()
-
-
-
-
 
 
 @router.get("/expert/get_default_consult")
@@ -79,7 +78,6 @@ async def get_default_consult():
     return {'status': 'success', 'response': apu.get_default_config()}
 
 
-
 @router.get("/expert/get_chromadb_path")
 async def get_default_chromadb_path():
     """get the default chromadb path
@@ -88,7 +86,6 @@ async def get_default_chromadb_path():
         dict: status, response(chromadb path)
     """
     return {'status': 'success', 'response': apu.get_db_path()}
-
 
 
 @router.get("/expert/get_expert_path")
@@ -102,7 +99,7 @@ async def get_default_expert_path():
 
 
 @router.get("/expert/show")
-async def get_info_of_expert(user_input:ExpertID):
+async def get_info_of_expert(user_input: ExpertID):
     """input the current user id and expert name, return the expert info(dict)
 
     Args:
@@ -117,23 +114,20 @@ async def get_info_of_expert(user_input:ExpertID):
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
+
     uid = apu.generate_hash(owner, expert_name)
-    data_path = Path(expert_config_path) / (uid+'.json')
+    data_path = Path(expert_config_path) / (uid + '.json')
     if not data_path.exists():
         return {'status': 'fail', 'response': 'expert not found.\n\n'}
-    
+
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    return {'status': 'success', 'response': data}   
-
-
-
+    return {'status': 'success', 'response': data}
 
 
 @router.get("/expert/get_owner")
-async def get_owner_expert_list(user_input:UserID):
+async def get_owner_expert_list(user_input: UserID):
     """input current user id, return all expert name and its owner name that current user has(list of dict)
 
     Args:
@@ -148,22 +142,23 @@ async def get_owner_expert_list(user_input:UserID):
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
+
     ## get all dataset name
     p = Path(expert_config_path)
     for file in p.glob("*"):
         with open(file, 'r', encoding='utf-8') as file:
             expert = json.load(file)
         if expert['owner'] == owner:
-            expert_names.append({'dataset_name':expert['name'], 'owner':expert['owner']})
-       
+            expert_names.append({
+                'dataset_name': expert['name'],
+                'owner': expert['owner']
+            })
+
     return {'status': 'success', 'response': expert_names}
 
 
-
-
 @router.get("/expert/get")
-async def get_use_expert_list(user_input:UserID):
+async def get_use_expert_list(user_input: UserID):
     """input current user id, return all expert name and its owner name that current user can use(list of dict)
 
     Args:
@@ -178,22 +173,28 @@ async def get_use_expert_list(user_input:UserID):
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
+
     ## get all dataset name
     p = Path(expert_config_path)
     for file in p.glob("*"):
         with open(file, 'r', encoding='utf-8') as file:
             expert = json.load(file)
         if expert['owner'] == owner:
-            expert_names.append({'dataset_name':expert['name'], 'owner':expert['owner']})
-        elif 'shared_users' in expert.keys() and owner in expert['shared_users']:
-            expert_names.append({'dataset_name':expert['name'], 'owner':expert['owner']})
+            expert_names.append({
+                'dataset_name': expert['name'],
+                'owner': expert['owner']
+            })
+        elif 'shared_users' in expert.keys(
+        ) and owner in expert['shared_users']:
+            expert_names.append({
+                'dataset_name': expert['name'],
+                'owner': expert['owner']
+            })
     return {'status': 'success', 'response': expert_names}
 
 
-
 @router.get("/expert/get_consult")
-async def get_consult_from_expert(user_input:ExpertID):
+async def get_consult_from_expert(user_input: ExpertID):
     """get the last consultation parameter of the expert
 
     Args:
@@ -205,18 +206,19 @@ async def get_consult_from_expert(user_input:ExpertID):
     """
     owner = user_input.owner
     expert_name = user_input.expert_name
-    
-    
+
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
 
     uid = apu.generate_hash(owner, expert_name)
-    data_path = Path(expert_config_path) / (uid+'.json')
+    data_path = Path(expert_config_path) / (uid + '.json')
     if not data_path.exists():
-        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
-    
+        return {
+            'status': 'fail',
+            'response': 'expert config file not found.\n\n'
+        }
+
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -224,21 +226,16 @@ async def get_consult_from_expert(user_input:ExpertID):
         data['consultation'] = {}
 
     default_config = apu.get_default_config()
-    
+
     for key in default_config.keys():
         if key not in data['consultation'] or data['consultation'][key] == "":
             data['consultation'][key] = default_config[key]
-    
-    return {'status': 'success', 'response': data['consultation']}   
 
-
-
-
-
+    return {'status': 'success', 'response': data['consultation']}
 
 
 @router.post("/expert/save_consult")
-async def save_consult_to_expert(user_input:ExpertConsult):
+async def save_consult_to_expert(user_input: ExpertConsult):
     """save the consultation parameter to expert config file
 
     Args:
@@ -261,33 +258,34 @@ async def save_consult_to_expert(user_input:ExpertConsult):
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
 
     uid = apu.generate_hash(owner, expert_name)
-    data_path = Path(expert_config_path) / (uid+'.json')
+    data_path = Path(expert_config_path) / (uid + '.json')
     if not data_path.exists():
-        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
-    
-    
+        return {
+            'status': 'fail',
+            'response': 'expert config file not found.\n\n'
+        }
+
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-        
-        
+
     consult_info = user_input.dict()
     consult_info.pop('owner')
     consult_info.pop('expert_name')
     data['consultation'] = consult_info
-    
+
     with open(data_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
-        
-    return {'status': 'success', 'response': 'save consultation successfully.\n\n'}
 
-
+    return {
+        'status': 'success',
+        'response': 'save consultation successfully.\n\n'
+    }
 
 
 @router.post("/expert/create_chromadb")
-async def create_chromadb_file(user_input:chromadbInfo):
+async def create_chromadb_file(user_input: chromadbInfo):
     """given the file path, embedding model and chunk size, create chromadb file
 
     Args:
@@ -296,19 +294,22 @@ async def create_chromadb_file(user_input:chromadbInfo):
     Returns:
         dict: status, response
     """
-    
+
     file_path = user_input.file_path
     embedding_model = user_input.embedding_model
     chunk_size = user_input.chunk_size
-    suc, text = akasha.db.create_single_file_db(file_path , embedding_model, chunk_size,)
+    suc, text = akasha.db.create_single_file_db(
+        file_path,
+        embedding_model,
+        chunk_size,
+    )
     if not suc:
         return {'status': 'fail', 'response': text}
     return {'status': 'success', 'response': text}
 
 
-
 @router.post("/expert/create")
-async def create_expert(user_input:ExpertInfo):
+async def create_expert(user_input: ExpertInfo):
     """create expert config file and create chromadb for each file
 
     Args:
@@ -326,32 +327,37 @@ async def create_expert(user_input:ExpertInfo):
     chunk_size = user_input.chunk_size
     datasets = user_input.datasets
     owner = user_input.owner
-    
+
     if embedding_model.split(':')[0] == 'openai':
         if not apu.load_openai(config=user_input.openai_config):
-            return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
-    
+            return {
+                'status': 'fail',
+                'response': 'load openai config failed.\n\n'
+            }
 
-    
     file_paths = []
     ## create chromadb for each file
     for dataset in datasets:
         doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset['name']
         for file in dataset['files']:
-            file_paths.append( doc_path  + '/' + file )
-    return {'status': 'success', 'response': f'create expert {expert_name} successfully.\n\n', 'file_paths': file_paths}
- 
-            
+            file_paths.append(doc_path + '/' + file)
+    return {
+        'status': 'success',
+        'response': f'create expert {expert_name} successfully.\n\n',
+        'file_paths': file_paths
+    }
+
+
 @router.post("/expert/create2")
-async def create_expert2(user_input:ExpertInfo):            
-    
+async def create_expert2(user_input: ExpertInfo):
+
     expert_name = user_input.expert_name
     embedding_model = user_input.embedding_model
     chunk_size = user_input.chunk_size
     datasets = user_input.datasets
     owner = user_input.owner
     uid = apu.generate_hash(owner, expert_name)
-    
+
     ## create dict and save to json file
     data = {
         "uid": uid,
@@ -359,29 +365,27 @@ async def create_expert2(user_input:ExpertInfo):
         "embedding_model": embedding_model,
         "chunk_size": chunk_size,
         "owner": owner,
-        "datasets": datasets,   
+        "datasets": datasets,
         "consultation": apu.get_default_config()
     }
-    
+
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
-    
+
     ## write json file
-    save_path = Path(expert_config_path) / (uid+'.json')
+    save_path = Path(expert_config_path) / (uid + '.json')
     with open(save_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
-    
-    
-    return {'status': 'success', 'response': f'create expert {expert_name} successfully.\n\n'}
 
-
-
+    return {
+        'status': 'success',
+        'response': f'create expert {expert_name} successfully.\n\n'
+    }
 
 
 @router.post("/expert/update")
-async def update_expert(user_input:ExpertEditInfo):
+async def update_expert(user_input: ExpertEditInfo):
     """update expert config file and create chromadb for each file, also delete chromadb that need to delete(check if other expert use it or not)
 
     Args:
@@ -407,58 +411,67 @@ async def update_expert(user_input:ExpertEditInfo):
     new_embedding_model = user_input.new_embedding_model
     new_chunk_size = user_input.new_chunk_size
     add_datasets = user_input.add_datasets
-    
+
     file_paths = []
     delete_chromdb = []
     if new_embedding_model.split(':')[0] == 'openai':
         if not apu.load_openai(config=user_input.openai_config):
-            return {'status': 'fail', 'response': 'load openai config failed.\n\n'}
-        
-        
+            return {
+                'status': 'fail',
+                'response': 'load openai config failed.\n\n'
+            }
+
     uid = apu.generate_hash(owner, expert_name)
     old_uid = uid
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
-    data_path = Path(expert_config_path) / (uid+'.json')
-    if not data_path.exists():
-        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
 
-    
+    data_path = Path(expert_config_path) / (uid + '.json')
+    if not data_path.exists():
+        return {
+            'status': 'fail',
+            'response': 'expert config file not found.\n\n'
+        }
+
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-  
-    
+
     if expert_name != new_expert_name:
         ### edit config name
         uid = apu.generate_hash(owner, new_expert_name)
-        if (Path(expert_config_path) / (uid+'.json')) .exists():
-            return {'status': 'fail', 'response': 'new expert name already exists.\n\n'}
+        if (Path(expert_config_path) / (uid + '.json')).exists():
+            return {
+                'status': 'fail',
+                'response': 'new expert name already exists.\n\n'
+            }
         data['name'] = new_expert_name
         data['uid'] = uid
         expert_name = new_expert_name
 
-    
-    if new_embedding_model == data['embedding_model'] and new_chunk_size == data['chunk_size']:
-        
+    if new_embedding_model == data[
+            'embedding_model'] and new_chunk_size == data['chunk_size']:
+
         ### check chromadb that need to delete
         for dataset in delete_datasets:
             oner = dataset['owner']
             dataset_name = dataset['name']
             id = apu.generate_hash(oner, dataset_name)
             for file in dataset['files']:
-                cmd = apu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id, data_path)
+                cmd = apu.check_and_delete_chromadb(data['chunk_size'],
+                                                    data['embedding_model'],
+                                                    file, dataset_name, oner,
+                                                    id, data_path)
                 if cmd != "":
                     delete_chromdb.append(cmd)
-        
+
         ## add chromadb path for each new file
         for dataset in add_datasets:
-            doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset['name']
+            doc_path = DOCS_PATH + '/' + dataset['owner'] + '/' + dataset[
+                'name']
             for file in dataset['files']:
-                file_paths.append( doc_path  + '/' + file )
+                file_paths.append(doc_path + '/' + file)
 
-                  
     else:
         ### check all delete all chromadb
         for dataset in data['datasets']:
@@ -466,59 +479,63 @@ async def update_expert(user_input:ExpertEditInfo):
             dataset_name = dataset['name']
             id = apu.generate_hash(oner, dataset_name)
             for file in dataset['files']:
-                cmd = apu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id, data_path)
+                cmd = apu.check_and_delete_chromadb(data['chunk_size'],
+                                                    data['embedding_model'],
+                                                    file, dataset_name, oner,
+                                                    id, data_path)
                 if cmd != "":
                     delete_chromdb.append(cmd)
-    
-    
-    if len(delete_datasets) > 0 :
-        data['datasets'] = apu.delete_datasets_from_expert(data['datasets'], delete_datasets)
-    if len(add_datasets) > 0 :
-        data['datasets'] = apu.add_datasets_to_expert(data['datasets'], add_datasets)
-    
-    
-    if new_embedding_model != data['embedding_model'] or new_chunk_size != data['chunk_size']:
-        
+
+    if len(delete_datasets) > 0:
+        data['datasets'] = apu.delete_datasets_from_expert(
+            data['datasets'], delete_datasets)
+    if len(add_datasets) > 0:
+        data['datasets'] = apu.add_datasets_to_expert(data['datasets'],
+                                                      add_datasets)
+
+    if new_embedding_model != data[
+            'embedding_model'] or new_chunk_size != data['chunk_size']:
+
         data['embedding_model'] = new_embedding_model
         data['chunk_size'] = new_chunk_size
-        
+
         ## add chromadb file for each new file
         for dataset in data['datasets']:
             doc_path = DOCS_PATH + '/' + owner + '/' + dataset['name']
             for file in dataset['files']:
-                file_paths.append(doc_path  + '/' + file)
-                        
-        
+                file_paths.append(doc_path + '/' + file)
+
     # save_path = Path(expert_config_path) / (uid+'.json')
-    
+
     # ## write json file
     # with open(save_path, 'w', encoding='utf-8') as f:
     #     json.dump(data, f, indent=4, ensure_ascii=False)
-        
+
     return {'status': 'success', 'response': f'update expert {expert_name} successfully.\n\n', 'file_paths': file_paths, 'delete_chromadb' : delete_chromdb,\
         'new_json_data': data, 'old_uid':old_uid}
 
 
-
 @router.post("/expert/update2")
-async def update_expert2(user_input:NewExpert):
+async def update_expert2(user_input: NewExpert):
 
     data = user_input.data
     expert_config_path = apu.get_expert_config_path()
-    save_path = Path(expert_config_path) / (data['uid']+'.json')
-    old_path = Path(expert_config_path) / (user_input.old_uid+'.json')
-    
-    os.remove(old_path)        
+    save_path = Path(expert_config_path) / (data['uid'] + '.json')
+    old_path = Path(expert_config_path) / (user_input.old_uid + '.json')
+
+    os.remove(old_path)
     ## write json file
     with open(save_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-    return {'status': 'success', 'response': f'update expert {data["name"]} successfully.\n\n'}
-
+    return {
+        'status': 'success',
+        'response': f'update expert {data["name"]} successfully.\n\n'
+    }
 
 
 @router.post("/expert/delete")
-async def delete_expert(user_input:ExpertID):
+async def delete_expert(user_input: ExpertID):
     """delete expert config file and delete chromadb for each file it other expert not use it
 
     Args:
@@ -534,38 +551,41 @@ async def delete_expert(user_input:ExpertID):
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
+
     uid = apu.generate_hash(owner, expert_name)
-    data_path = Path(expert_config_path) / (uid+'.json')
+    data_path = Path(expert_config_path) / (uid + '.json')
     if not data_path.exists():
-        return {'status': 'fail', 'response': f'expert config file {expert_name} not found.\n\n'}
-    
+        return {
+            'status': 'fail',
+            'response': f'expert config file {expert_name} not found.\n\n'
+        }
+
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-        
-    
+
     ### check all delete all chromadb
     for dataset in data['datasets']:
         oner = dataset['owner']
         dataset_name = dataset['name']
         id = apu.generate_hash(oner, dataset_name)
-        
+
         for file in dataset['files']:
-            cmd = apu.check_and_delete_chromadb(data['chunk_size'], data['embedding_model'], file, dataset_name, oner, id, data_path)
+            cmd = apu.check_and_delete_chromadb(data['chunk_size'],
+                                                data['embedding_model'], file,
+                                                dataset_name, oner, id,
+                                                data_path)
             if cmd != "":
-                    delete_chromdb.append(cmd)
-    
+                delete_chromdb.append(cmd)
+
     ## delete Path(DATASET_CONFIG_PATH) / (uid+'.json') file
-    
+
 
     return {'status': 'success', 'response': f'delete expert {expert_name} successfully.\n\n','delete_chromadb' : delete_chromdb,\
         'delete_json_data': data_path}
 
 
-
-
 @router.post("/expert/share")
-async def share_expert(user_input:ExpertShare):
+async def share_expert(user_input: ExpertShare):
     """add 'shared_users' into expert config file
 
     Args:
@@ -583,26 +603,32 @@ async def share_expert(user_input:ExpertShare):
     expert_config_path = apu.get_expert_config_path()
     if not apu.check_config(expert_config_path):
         return {'status': 'fail', 'response': 'create config path failed.\n\n'}
-    
+
     uid = apu.generate_hash(owner, expert_name)
-    data_path = Path(expert_config_path) / (uid+'.json')
+    data_path = Path(expert_config_path) / (uid + '.json')
     if not data_path.exists():
-        return {'status': 'fail', 'response': 'expert config file not found.\n\n'}
-    
+        return {
+            'status': 'fail',
+            'response': 'expert config file not found.\n\n'
+        }
+
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-        
+
     if 'shared_users' not in data.keys():
         data['shared_users'] = []
-    
+
     ### add shared users into data['shared_users']
     vis = set(data['shared_users'])
     for user in shared_users:
         vis.add(user)
-        
+
     data['shared_users'] = list(vis)
-    
+
     with open(data_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
-    
-    return {'status': 'success', 'response': f'share dataset {expert_name} successfully.\n\n'}
+
+    return {
+        'status': 'success',
+        'response': f'share dataset {expert_name} successfully.\n\n'
+    }

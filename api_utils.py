@@ -6,7 +6,6 @@ import time
 import json
 import hashlib
 
-
 HOST = os.getenv("API_HOST", "127.0.0.1")
 PORT = os.getenv("API_PORT", "8000")
 api_url = {
@@ -20,6 +19,7 @@ EXPERT_CONFIG_PATH = "./config/experts"
 DATASET_CONFIG_PATH = "./config/datasets/"
 DB_PATH = "./chromadb/"
 DEFAULT_CONFIG = {
+    "system_prompt": "",
     "language_model": "openai:gpt-3.5-turbo",
     "search_type": "svm",
     "top_k": 5,
@@ -191,7 +191,8 @@ def get_lastupdate_of_dataset(dataset_name: str, owner: str) -> str:
         docs_path = os.path.join(owner_path.__str__(), dataset_name)
         dataset_files = get_file_list_of_dataset(docs_path)
         for file in dataset_files:
-            last_updates.append(get_lastupdate_of_file_in_dataset(docs_path, file))
+            last_updates.append(
+                get_lastupdate_of_file_in_dataset(docs_path, file))
 
         if len(last_updates) == 0:
             raise Exception(f"Dataset={dataset_name} has not file.")
@@ -202,9 +203,8 @@ def get_lastupdate_of_dataset(dataset_name: str, owner: str) -> str:
     return time.ctime(max(last_updates))
 
 
-def update_dataset_name_from_chromadb(
-    old_dataset_name: str, dataset_name: str, md5_list: list
-):
+def update_dataset_name_from_chromadb(old_dataset_name: str, dataset_name: str,
+                                      md5_list: list):
     """change dataset name in chromadb file, in chromadn directory, change directory name of {old_dataset_name}_md5 to {dataset_name}_md5
 
     Args:
@@ -218,16 +218,15 @@ def update_dataset_name_from_chromadb(
         tag = old_dataset_name + "_" + md5
         for file in p.glob("*"):
             if tag in file.name:
-                new_name = (
-                    dataset_name + "_" + md5 + "_" + "_".join(file.name.split("_")[2:])
-                )
+                new_name = (dataset_name + "_" + md5 + "_" +
+                            "_".join(file.name.split("_")[2:]))
                 file.rename(Path(DB_PATH) / new_name)
     return
 
 
-def check_and_delete_files_from_expert(
-    dataset_name: str, owner: str, delete_files: list, old_dataset_name: str
-) -> bool:
+def check_and_delete_files_from_expert(dataset_name: str, owner: str,
+                                       delete_files: list,
+                                       old_dataset_name: str) -> bool:
     """check every expert if they use this dataset, if yes, delete files that are in delete_files from expert's dataset list.
     change dataset name to new dataset name if dataset_name != old_dataset_name.
         if the expert has no dataset after deletion, delete the expert file.
@@ -250,7 +249,8 @@ def check_and_delete_files_from_expert(
         with open(file, "r", encoding="utf-8") as ff:
             expert = json.load(ff)
         for dataset in expert["datasets"]:
-            if dataset["name"] == old_dataset_name and dataset["owner"] == owner:
+            if dataset["name"] == old_dataset_name and dataset[
+                    "owner"] == owner:
                 dataset["name"] = dataset_name
                 for file in dataset["files"]:
                     if file in delete_set:
@@ -264,7 +264,10 @@ def check_and_delete_files_from_expert(
             ## delete file if no dataset in expert
             res = requests.post(
                 api_url["delete_expert"],
-                json={"owner": expert["owner"], "expert_name": expert["name"]},
+                json={
+                    "owner": expert["owner"],
+                    "expert_name": expert["name"]
+                },
             ).json()
         else:
             with open(file, "w", encoding="utf-8") as f:
@@ -301,7 +304,10 @@ def check_and_delete_dataset(dataset_name: str, owner: str) -> bool:
             ## delete file if no dataset in expert
             res = requests.post(
                 api_url["delete_expert"],
-                json={"owner": expert["owner"], "expert_name": expert["name"]},
+                json={
+                    "owner": expert["owner"],
+                    "expert_name": expert["name"]
+                },
             ).json()
         else:
             with open(file, "w", encoding="utf-8") as f:
@@ -313,15 +319,9 @@ def check_and_delete_dataset(dataset_name: str, owner: str) -> bool:
     return False
 
 
-def check_and_delete_chromadb(
-    chunk_size: int,
-    embedding_model: str,
-    filename: str,
-    dataset_name: str,
-    owner: str,
-    id: str,
-    data_path: Path
-) -> str:
+def check_and_delete_chromadb(chunk_size: int, embedding_model: str,
+                              filename: str, dataset_name: str, owner: str,
+                              id: str, data_path: Path) -> str:
     """check if any of other expert use the same file with same chunk size and embedding model, if not, delete the chromadb file
 
     Args:
@@ -348,12 +348,11 @@ def check_and_delete_chromadb(
         with open(file, "r", encoding="utf-8") as ff:
             expert = json.load(ff)
 
-        if (
-            expert["chunk_size"] == chunk_size
-            and expert["embedding_model"] == embedding_model
-        ):
+        if (expert["chunk_size"] == chunk_size
+                and expert["embedding_model"] == embedding_model):
             for dataset in expert["datasets"]:
-                if dataset["name"] == dataset_name and dataset["owner"] == owner:
+                if dataset["name"] == dataset_name and dataset[
+                        "owner"] == owner:
                     if filename in dataset["files"]:
                         return ""
 
@@ -371,20 +370,10 @@ def check_and_delete_chromadb(
                 md5 = file["MD5"]
                 break
 
-    db_storage_path = (
-        DB_PATH
-        + dataset_name
-        + "_"
-        + filename.split(".")[0].replace(" ", "").replace("_", "")
-        + "_"
-        + md5
-        + "_"
-        + embed_type
-        + "_"
-        + embed_name.replace("/", "-")
-        + "_"
-        + str(chunk_size)
-    )
+    db_storage_path = (DB_PATH + dataset_name + "_" +
+                       filename.split(".")[0].replace(" ", "").replace(
+                           "_", "") + "_" + md5 + "_" + embed_type + "_" +
+                       embed_name.replace("/", "-") + "_" + str(chunk_size))
 
     if Path(db_storage_path).exists():
         return db_storage_path
@@ -437,8 +426,10 @@ def add_datasets_to_expert(ori_datasets: list, add_datasets: list) -> list:
     for dataset in add_datasets:
         if (dataset["owner"], dataset["name"]) in append_hash:
             for file in dataset["files"]:
-                if file not in append_hash[(dataset["owner"], dataset["name"])]:
-                    append_hash[(dataset["owner"], dataset["name"])].append(file)
+                if file not in append_hash[(dataset["owner"],
+                                            dataset["name"])]:
+                    append_hash[(dataset["owner"],
+                                 dataset["name"])].append(file)
         else:
             append_hash[(dataset["owner"], dataset["name"])] = dataset["files"]
 
@@ -446,9 +437,11 @@ def add_datasets_to_expert(ori_datasets: list, add_datasets: list) -> list:
 
     ## rebuild ori_datasets
     for key in append_hash:
-        ori_datasets.append(
-            {"owner": key[0], "name": key[1], "files": append_hash[key]}
-        )
+        ori_datasets.append({
+            "owner": key[0],
+            "name": key[1],
+            "files": append_hash[key]
+        })
 
     return ori_datasets
 
@@ -525,12 +518,8 @@ def load_openai(config: dict) -> bool:
 
         return True
 
-    if (
-        "azure_key" in config
-        and "azure_base" in config
-        and config["azure_key"] != ""
-        and config["azure_base"] != ""
-    ):
+    if ("azure_key" in config and "azure_base" in config
+            and config["azure_key"] != "" and config["azure_base"] != ""):
         os.environ["OPENAI_API_KEY"] = config["azure_key"]
         os.environ["OPENAI_API_BASE"] = config["azure_base"]
         os.environ["OPENAI_API_TYPE"] = "azure"
