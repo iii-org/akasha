@@ -12,9 +12,5 @@ credentials:
       email: cws@gmail.com
       name: cws
       password: $2b$12$jCB8MeVqMc3jWDynjNyeVeLS8IWBduxnX362gLfJ1KIkeTPH9KYha
-    tea9296:
-      email: tea9296@gmail.com
-      name: '123'
-      password: $2b$12$YH81sHJmxGd50I4J2dy4ou3DnyA6r3hei5167GqmefV8CafYjAx/q
 preauthorized:
   emails: []

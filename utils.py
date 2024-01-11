@@ -6,6 +6,7 @@ import requests
 from pathlib import Path
 import api_utils as apu
 import akasha.db
+import subprocess
 
 CHUNKSIZE = 3000
 SPINNER_MESSAGE = "Wait for api response..."
@@ -1655,3 +1656,25 @@ def get_openai_from_file(username: str):
 
     return response["response"]["openai_key"], response["response"][
         "azure_key"], response["response"]["azure_base"]
+
+
+def run_command(command: str,
+                capture_output: bool = False) -> subprocess.CompletedProcess:
+    """Execute the command and return the result.
+
+    Parameters
+    ----------
+    command : str
+        The command to be executed.
+
+    Returns
+    -------
+    subprocess.CompletedProcess
+        The object (subprocess.CompletedProcess) after execution.
+    """
+    result = subprocess.run(command,
+                            shell=True,
+                            capture_output=capture_output,
+                            text=True)
+
+    return result

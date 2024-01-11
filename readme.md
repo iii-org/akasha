@@ -19,3 +19,19 @@
 <br/>
 
 (optional) if you want to use.gguf models or other models from huggingface, you can download the model and put it in './model' folder in the same directory of api.py, then you can use it in consult page.
+
+
+
+# Docker 
+To use Docker to run akasha dev-ui, you can clone the whole project and use Dockerfile to build the image 
+
+``` bash
+git clone https://gitlab-devops.iii.org.tw/root/qaiii-1.git@dev-ui
+mkdir model  # you can put the model you want to use in here
+mkdir config # directory that save the dataset, expert configs
+sudo docker build -t akasha_dev_ui:0.1 .
+sudo docker run -v ./model:/app/model -v ./config:/app/config -p 8501:8501 --name akasha_dev_ui akasha_dev_ui:0.1 
+
+
+
+```

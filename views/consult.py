@@ -94,7 +94,6 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                     st.markdown(st.session_state['que'])
                 with col_answer.chat_message("assistant"):
                     st.markdown(st.session_state['ans'])
-    return expert_owner
 
 
 def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
