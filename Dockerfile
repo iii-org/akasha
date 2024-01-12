@@ -12,7 +12,7 @@ COPY accounts.yaml /app
 COPY ./views /app/views
 COPY ./routers /app/routers
 RUN chmod u+x *.sh
-RUN apt-get update && apt-get install -y gcc-11 build-essential g++ clang
+RUN apt-get update && apt-get install -y gcc-11 build-essential g++ clang curl
 RUN python -m pip install --upgrade pip && \
 python -m pip install -r requirements.txt 
 EXPOSE 8501
