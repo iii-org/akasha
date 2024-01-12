@@ -36,9 +36,9 @@ git clone https://gitlab-devops.iii.org.tw/root/qaiii-1.git@dev-ui
 ```
 
 
-2. (optional) edit .env file 
+2. (optional) edit install.env file 
 
-(.env)
+(install.env)
 
 ``` bash
 MODEL=./model    # put the model you want to use in here
@@ -68,6 +68,6 @@ you can download the docker image in [akasha_dev_ui.tar](https://iiiorgtw-my.sha
 
 ``` bash 
 sudo docker load -i akasha_dev_ui.tar
-sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -p 8501:8501 --name akasha_dev_ui akasha_dev_ui:0.1 
+sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -p 8501:8501 --name akasha_dev_ui akasha_dev_ui:0.1 
 
 ```

@@ -392,7 +392,10 @@ def list_models() -> list:
     Returns:
         list[str]: list of models, noted that the format is model_type:model_name, for example: openai:gpt-3.5-turbo
     """
-    base = ["openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k"]
+    base = [
+        "openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k", "openai:gpt-4",
+        "openai:gpt-4-32k"
+    ]
     try:
         with st.spinner(SPINNER_MESSAGE):
             modes_dir = requests.get(
