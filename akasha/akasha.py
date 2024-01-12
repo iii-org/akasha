@@ -387,6 +387,39 @@ class atman:
         print("save logs to " + str(file_path))
         return
 
+    def _ask_model(self, system_prompt: str, prompt: str) -> str:
+
+        splitter = '\n----------------\n'
+
+        try:
+            text_input = system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
+                splitter + prompt
+
+            if self.verbose:
+                print("Prompt after formatting:", "\n\n" + text_input)
+        except Exception as e:
+            print(e)
+            print(
+                "\n\nText generation encountered an error before querying the language model (LLM).\
+                Please check your input data or configuration settings.\n\n")
+            response = ""
+            return response
+        try:
+            response = helper.call_model(self.model_obj, text_input)
+            response = helper.sim_to_trad(response)
+
+            if response[:8] == "System: ":
+                response = response[8:]
+        except Exception as e:
+            print(e)
+            print("\n\nllm error\n\n")
+
+            response = ""
+        if self.verbose:
+            print("llm response:", "\n\n" + response)
+
+        return response
+
 
 class Doc_QA(atman):
     """class for implement search db based on user prompt and generate response from llm model, include get_response and chain_of_thoughts."""
@@ -442,39 +475,6 @@ class Doc_QA(atman):
         self.doc_length = 0
         self.response = ""
         self.prompt = ""
-
-    def _ask_model(self, system_prompt: str, prompt: str) -> str:
-
-        splitter = '\n----------------\n'
-
-        try:
-            text_input = system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
-                splitter + prompt
-
-            if self.verbose:
-                print("Prompt after formatting:", "\n\n" + text_input)
-        except Exception as e:
-            print(e)
-            print(
-                "\n\nText generation encountered an error before querying the language model (LLM).\
-                Please check your input data or configuration settings.\n\n")
-            response = ""
-            return response
-        try:
-            response = helper.call_model(self.model_obj, text_input)
-            response = helper.sim_to_trad(response)
-
-            if response[:8] == "System: ":
-                response = response[8:]
-        except Exception as e:
-            print(e)
-            print("\n\nllm error\n\n")
-
-            response = ""
-        if self.verbose:
-            print("llm response:", "\n\n" + response)
-
-        return response
 
     def get_response(self, doc_path: Union[List[str], str], prompt: str,
                      **kwargs) -> str:
