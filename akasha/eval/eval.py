@@ -378,7 +378,7 @@ class Model_Eval(akasha.atman):
                     response = akasha.helper.call_model(
                         self.model_obj, category_prompt)
                     response = akasha.helper.sim_to_trad(response)
-                    print(response)
+
                     json_response = akasha.helper.extract_json(response)
                     if json_response is None:
                         raise Exception("Response Format Error")
