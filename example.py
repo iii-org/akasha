@@ -2,7 +2,6 @@ import akasha
 import akasha.eval as eval
 import akasha.summary as summary
 
-
 query1 = "五軸是甚麼?"
 query2 = [
     "西門子自有工廠如何朝工業4.0 發展",
@@ -13,14 +12,13 @@ query2 = [
 
 ## used for custom search type, use query_embeds and docs_embeds to determine relevant documents.
 # you can add your own variables using log to record, for example log['dd'] = "miao"
-def cust(query_embeds, docs_embeds, k: int, relevancy_threshold: float, log: dict):
+def test_search(query_embeds, docs_embeds, k: int, relevancy_threshold: float,
+                log: dict):
     from scipy.spatial.distance import euclidean
     import numpy as np
 
-    distance = [
-        [euclidean(query_embeds, docs_embeds[idx]), idx]
-        for idx in range(len(docs_embeds))
-    ]
+    distance = [[euclidean(query_embeds, docs_embeds[idx]), idx]
+                for idx in range(len(docs_embeds))]
     distance = sorted(distance, key=lambda x: x[0])
 
     ## change dist if embeddings not between 0~1
@@ -33,7 +31,8 @@ def cust(query_embeds, docs_embeds, k: int, relevancy_threshold: float, log: dic
     log["dd"] = "miao"
 
     return [
-        idx for dist, idx in distance[:k] if (max_dist - dist) >= relevancy_threshold
+        idx for dist, idx in distance[:k]
+        if (max_dist - dist) >= relevancy_threshold
     ]
 
 
@@ -65,7 +64,7 @@ def QA(doc_path="./docs/mic/"):
         prompt=query1,
         chunk_size=500,
         record_exp="",
-        search_type=cust,
+        search_type=test_search,
         max_doc_len=1500,
         system_prompt="請你在回答前面加上喵",
     )
@@ -76,7 +75,7 @@ def QA(doc_path="./docs/mic/"):
     # use qa.timestamp_list to get the timestamp of each run, so you can get the log of each run by using it as key.
     # timestamp_list = qa.timestamp_list
     # print(qa.logs[timestamp_list[-1]])
-    # print(qa.logs[timestamp_list[-1]]['dd'])   # the variable you add to log in cust function
+    # print(qa.logs[timestamp_list[-1]]['dd'])   # the variable you add to log in custom search function
 
     response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list=query2)
     print(response_list)
@@ -85,41 +84,40 @@ def QA(doc_path="./docs/mic/"):
 
 qa_obj = QA()
 
-
 ### EVAL ###
 
 
-### remember the question_type must match the q_file's type
+### remember the question_style must match the q_file's type
 def EVAL(doc_path: str = "./docs/mic/"):
-    eva = eval.Model_Eval(
-        question_type="single_choice", record_exp="1234test", verbose=True
-    )
+    eva = eval.Model_Eval(question_style="single_choice",
+                          question_type="fact",
+                          verbose=True)
 
     b, c = eva.auto_create_questionset(
         doc_path=doc_path,
         question_num=2,
-        record_exp="1234test",
-        question_type="single_choice",
+        question_style="single_choice",
         chunk_size=850,
+        output_file_path="questionset/mic_single_choice.txt",
     )
-    # b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2, record_exp="1234test", question_type="essay")
+    # b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2,  question_type="essay")
 
     # qs_path = eva.logs[eva.timestamp_list[-1]]['questionset_path']
     print(
         eva.auto_evaluation(
-            questionset_file="questionset/mic_3.txt",
+            questionset_file="questionset/mic_single_choice.txt",
             doc_path=doc_path,
             verbose=True,
-        )
-    )
+        ))
     # print(eva.__dict__)
 
     # eva.optimum_combination(q_file="questionset/mic_15.txt", doc_path=doc_path, chunk_size_list=[500]\
-    #     ,search_type_list=[cust,"svm","tfidf"])
+    #     ,search_type_list=[test_search,"svm","tfidf"])
     return eva
 
 
 eval_obj = EVAL()
+
 #eval_obj.save_logs("./eva.json")
 
 
@@ -139,9 +137,10 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
         temperature=0.0,
     )
 
-    sum.summarize_file(
-        file_path=file_name, summary_type="map_reduce", summary_len=100, verbose=True
-    )
+    sum.summarize_file(file_path=file_name,
+                       summary_type="map_reduce",
+                       summary_len=100,
+                       verbose=True)
     print(sum.logs)
     return sum
 
@@ -151,9 +150,8 @@ summary_obj = SUM()
 # summary_obj.save_logs("./summary_logs.json")
 # summary_obj.save_logs(file_type="txt")
 
-
 ### VISION ###
-
+## need to use gpt-4-vision ##
 # ret = akasha.openai_vision(pic_path=["C:/Users/ccchang/Pictures/oruya.png"], prompt="這張圖是甚麼意思?")
 
 # print(ret)

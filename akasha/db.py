@@ -2,13 +2,14 @@ from typing import Union, List
 from tqdm import tqdm
 import time, os, shutil
 import datetime
-from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain.document_loaders.csv_loader import CSVLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
+from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import (
     CharacterTextSplitter,
     RecursiveCharacterTextSplitter,
 )
-from langchain.vectorstores import Chroma, chroma
+from langchain_community.vectorstores import chroma
+from langchain_community.vectorstores.chroma import Chroma
 from langchain.docstore.document import Document
 from pathlib import Path
 import uuid
@@ -207,7 +208,7 @@ def get_docs_from_doc(doc_path: str, chunk_size: int, ignore_check: bool):
             chunk_overlap=100,
         )
         docs = text_splitter.split_documents(documents)
-        texts = texts.extend(docs)
+        texts.extend(docs)
     if len(texts) == 0:
         return None
     return texts

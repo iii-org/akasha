@@ -4,8 +4,8 @@ import json, re
 from pathlib import Path
 import opencc
 from typing import Callable, Union
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.chat_models import ChatOpenAI, AzureChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
@@ -149,7 +149,7 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
             "transformer",
             "hf",
     ]:
-        from langchain.embeddings import (
+        from langchain_community.embeddings import (
             HuggingFaceEmbeddings,
             SentenceTransformerEmbeddings,
         )
@@ -164,7 +164,7 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
             "tensorflowhubembeddings",
             "tensorflowembeddings",
     ]:
-        from langchain.embeddings import TensorflowHubEmbeddings
+        from langchain_community.embeddings import TensorflowHubEmbeddings
 
         embeddings = TensorflowHubEmbeddings()
         info = "selected tensorflow embeddings.\n"

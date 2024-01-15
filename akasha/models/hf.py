@@ -4,7 +4,7 @@ from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
 from transformers import AutoTokenizer, AutoModel
 from transformers import pipeline
-from langchain.llms import HuggingFacePipeline
+from langchain_community.llms import HuggingFacePipeline
 import torch
 import numpy
 import warnings, os
@@ -29,12 +29,11 @@ class chatGLM(LLM):
             model_name = "THUDM/chatglm2-6b"
 
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name, trust_remote_code=True
-        )
-        self.model = AutoModel.from_pretrained(
-            model_name, trust_remote_code=True, device="cuda"
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                       trust_remote_code=True)
+        self.model = AutoModel.from_pretrained(model_name,
+                                               trust_remote_code=True,
+                                               device="cuda")
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
@@ -91,7 +90,10 @@ class custom_embed(BaseModel, Embeddings):
     encode_kwargs: Dict[str, Any] = {}
     """Keyword arguments to pass when calling the `encode` method of the model."""
 
-    def __init__(self, func: Any, encode_kwargs: Dict[str, Any] = {}, **kwargs: Any):
+    def __init__(self,
+                 func: Any,
+                 encode_kwargs: Dict[str, Any] = {},
+                 **kwargs: Any):
         """Initialize the sentence_transformer."""
         super().__init__(**kwargs)
 
@@ -223,9 +225,8 @@ def get_hf_model(model_name, temperature: float = 0.0):
                 model = HuggingFacePipeline(pipeline=pipe)
         except:
             if model_name.lower().find("taiwan-llama") != -1:
-                model = TaiwanLLaMaGPTQ(
-                    model_name_or_path=model_name, temperature=temperature
-                )
+                model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
+                                        temperature=temperature)
             else:
                 model = Llama2(
                     model_name_or_path=model_name,

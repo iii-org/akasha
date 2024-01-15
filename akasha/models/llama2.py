@@ -3,12 +3,14 @@ from langchain.llms.base import LLM
 import torch, sys
 from transformers import AutoTokenizer, TextStreamer
 from peft import AutoPeftModelForCausalLM
-from langchain.llms import LlamaCpp
+from langchain_community.llms.llamacpp import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 
-def get_llama_cpp_model(model_type: str, model_name: str, temperature: float = 0.0):
+def get_llama_cpp_model(model_type: str,
+                        model_name: str,
+                        temperature: float = 0.0):
     """define llama-cpp model, use llama-cpu for pure cpu, use llama-gpu for gpu acceleration.
 
     Args:
@@ -25,7 +27,11 @@ def get_llama_cpp_model(model_type: str, model_name: str, temperature: float = 0
             n_ctx=4096,
             temperature=temperature,
             model_path=model_name,
-            input={"temperature": 0.0, "max_length": 4096, "top_p": 1},
+            input={
+                "temperature": 0.0,
+                "max_length": 4096,
+                "top_p": 1
+            },
             callback_manager=callback_manager,
             verbose=False,
             repetition_penalty=1.5,
@@ -72,9 +78,10 @@ class Llama2(LLM):
         max_token: int = 2048,
     ):
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name_or_path, use_fast=False, max_length=max_token, truncation=True
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
+                                                       use_fast=False,
+                                                       max_length=max_token,
+                                                       truncation=True)
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.max_token = max_token
         self.temperature = temperature
@@ -111,8 +118,8 @@ class Llama2(LLM):
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         input_ids = self.tokenizer(
-            prompt, return_tensors="pt", add_special_tokens=False
-        ).input_ids.to("cuda")
+            prompt, return_tensors="pt",
+            add_special_tokens=False).input_ids.to("cuda")
 
         generate_input = {
             "input_ids": input_ids,
@@ -129,10 +136,11 @@ class Llama2(LLM):
         self.model.config.max_position_embeddings = 4096
         generate_ids = self.model.generate(**generate_input)
 
-        generate_ids = [item[len(input_ids[0]) : -1] for item in generate_ids]
+        generate_ids = [item[len(input_ids[0]):-1] for item in generate_ids]
         result_message = self.tokenizer.batch_decode(
-            generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
-        )[0]
+            generate_ids,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False)[0]
         return result_message
 
 
@@ -152,18 +160,18 @@ class peft_Llama2(LLM):
     tokenizer: Any
     model: Any
 
-    def __init__(
-        self, model_name_or_path: str, max_token: int = 2048, temperature: float = 0.01
-    ):
+    def __init__(self,
+                 model_name_or_path: str,
+                 max_token: int = 2048,
+                 temperature: float = 0.01):
         super().__init__()
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
         self.max_token = max_token
         device_map = {"": 0}
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name_or_path, trust_remote_code=True
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
+                                                       trust_remote_code=True)
         self.model = AutoPeftModelForCausalLM.from_pretrained(
             model_name_or_path + "/adapter_model",
             temperature=0.1,
@@ -188,7 +196,8 @@ class peft_Llama2(LLM):
             do_sample=True,
         )
 
-        result_message = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        result_message = self.tokenizer.decode(outputs[0],
+                                               skip_special_tokens=True)
 
         return result_message
 
@@ -224,9 +233,9 @@ class TaiwanLLaMaGPTQ(LLM):
             strict=False,
         )
 
-        self.streamer = TextStreamer(
-            self.tokenizer, skip_prompt=True, skip_special_tokens=True
-        )
+        self.streamer = TextStreamer(self.tokenizer,
+                                     skip_prompt=True,
+                                     skip_special_tokens=True)
 
     @property
     def _llm_type(self) -> str:
@@ -247,6 +256,7 @@ class TaiwanLLaMaGPTQ(LLM):
             bos_token_id=self.tokenizer.bos_token_id,
             pad_token_id=self.tokenizer.pad_token_id,
         )
-        output = self.tokenizer.decode(generate_ids[0, len(tokens[0]) : -1]).strip()
+        output = self.tokenizer.decode(
+            generate_ids[0, len(tokens[0]):-1]).strip()
 
         return output

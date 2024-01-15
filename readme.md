@@ -613,7 +613,7 @@ You can either generate **single choice question file** or **essay question file
   dir_path = "doc/pvc/"
   exp_name = "exp_akasha_auto_evaluation"
 
-  eva = eval.Model_Eval(question_type="single_choice", search_type='merge',\
+  eva = eval.Model_Eval(question_style="single_choice", search_type='merge',\
       model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp=exp_name)
   print(eva.auto_evaluation("question_pvc.txt", dir_path ))
   ## correct rate: 0.9, tokens: 3228 ##
@@ -655,16 +655,35 @@ For example, the code create a questionset text file 'mic_1.txt' with ten questi
 
 import akasha.eval as eval
 
-eva = eval.Model_Eval(question_type="essay", search_type='merge',\
+eva = eval.Model_Eval(question_style="essay", search_type='merge',\
       model="openai:gpt-3.5-turbo", embeddings="openai:text-embedding-ada-002",record_exp="exp_mic_auto_questionset")
 
-eva.auto_create_questionset(doc_path="doc/mic/", question_num=10)
+eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_essay.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_1.txt", doc_path="doc/mic/", question_type = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
 
 # bert_score = 0.782
 # rouge = 0.81
 # llm_score = 0.393
+```
+
+<br/>
+<br/>
+
+## Use different question types to test different abilities of LLM
+question_types parameter offers four question types, **fact**, **summary**, **irrelevant**, **compared**, default is **fact**.
+
+
+```python
+
+import akasha.eval as eval
+
+eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="openai:gpt-3.5-turbo", record_exp="exp_mic_auto_questionset")
+
+eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_irre.txt")
+
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+
 ```
 
 
@@ -700,7 +719,7 @@ embeddings_list = ["hf:shibing624/text2vec-base-chinese", "openai:text-embedding
 model_list = ["openai:gpt-3.5-turbo","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit","hf:meta-llama/Llama-2-7b-chat-hf",\
             "llama-gpu:model/llama-2-7b-chat.Q5_K_S.gguf", "llama-gpu:model/llama-2-13b-chat.Q5_K_S.gguf"]
 
-eva = eval.Model_Eval(question_type="single_choice")
+eva = eval.Model_Eval(question_style="single_choice")
 eva.optimum_combination("question_pvc.txt", dir_path,  embeddings_list = embeddings_list, model_list = model_list,
             chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name,topK_list=[2,3])
 
