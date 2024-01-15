@@ -26,19 +26,33 @@ def test_Model_Eval(base_line):
     assert eva.temperature == 0.15
 
     ql, al = eva.auto_create_questionset(doc_path,
+                                         question_type="compared",
                                          question_num=2,
-                                         question_type="essay")
+                                         question_style="essay")
+    com_name = eva.logs[eva.timestamp_list[-1]]["questionset_path"]
+    assert len(ql) == len(al)
+
+    ql, al = eva.auto_create_questionset(doc_path,
+                                         question_type="summary",
+                                         question_num=2,
+                                         question_style="essay")
+    sum_name = eva.logs[eva.timestamp_list[-1]]["questionset_path"]
+    assert len(ql) == len(al)
+
+    ql, al = eva.auto_create_questionset(doc_path,
+                                         question_num=2,
+                                         question_style="essay")
     f1_name = eva.logs[eva.timestamp_list[-1]]["questionset_path"]
     assert len(ql) == len(al)
 
     ql, al = eva.auto_create_questionset(doc_path,
                                          question_num=2,
-                                         question_type="single_choice")
+                                         question_style="single_choice")
     f2_name = eva.logs[eva.timestamp_list[-1]]["questionset_path"]
     assert len(ql) == len(al)
 
     avg_bert, avg_rouge, avg_llm_score, tokens = eva.auto_evaluation(
-        f1_name, doc_path, question_type="essay")
+        f1_name, doc_path, question_style="essay")
     assert isinstance(avg_bert, float)
     assert isinstance(avg_rouge, float)
     assert isinstance(avg_llm_score, float)
@@ -50,7 +64,7 @@ def test_Model_Eval(base_line):
 
     cor_rate, tokens = eva.auto_evaluation(f2_name,
                                            doc_path,
-                                           question_type="single_choice")
+                                           question_style="single_choice")
     assert isinstance(cor_rate, float)
     assert isinstance(tokens, int)
 
