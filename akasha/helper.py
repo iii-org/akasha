@@ -1,17 +1,18 @@
 import numpy as np
 import jieba
-import json
+import json, re
 from pathlib import Path
 import opencc
 from typing import Callable, Union
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.chat_models import ChatOpenAI, AzureChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os
 import shutil
 
-jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
+jieba.setLogLevel(
+    jieba.logging.INFO)  ## ignore logging jieba model information
 
 
 def del_path(path, tag="temp_c&r@md&"):
@@ -107,14 +108,14 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
 
     embedding_type, embedding_name = _separate_name(embedding_name)
 
-    if embedding_type in ["text-embedding-ada-002", "openai", "openaiembeddings"]:
+    if embedding_type in [
+            "text-embedding-ada-002", "openai", "openaiembeddings"
+    ]:
         import openai
 
-        if (
-            "AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure"
-        ) or (
-            "OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"
-        ):
+        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in os.environ
+                                and os.environ["OPENAI_API_TYPE"] == "azure"):
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env()
             embeddings = OpenAIEmbeddings(
@@ -142,13 +143,13 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
         embeddings = "rerank:" + embedding_name
         info = "selected rerank embeddings.\n"
     elif embedding_type in [
-        "huggingface",
-        "huggingfaceembeddings",
-        "transformers",
-        "transformer",
-        "hf",
+            "huggingface",
+            "huggingfaceembeddings",
+            "transformers",
+            "transformer",
+            "hf",
     ]:
-        from langchain.embeddings import (
+        from langchain_community.embeddings import (
             HuggingFaceEmbeddings,
             SentenceTransformerEmbeddings,
         )
@@ -157,13 +158,13 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
         info = "selected hugging face embeddings.\n"
 
     elif embedding_type in [
-        "tf",
-        "tensorflow",
-        "tensorflowhub",
-        "tensorflowhubembeddings",
-        "tensorflowembeddings",
+            "tf",
+            "tensorflow",
+            "tensorflowhub",
+            "tensorflowhubembeddings",
+            "tensorflowembeddings",
     ]:
-        from langchain.embeddings import TensorflowHubEmbeddings
+        from langchain_community.embeddings import TensorflowHubEmbeddings
 
         embeddings = TensorflowHubEmbeddings()
         info = "selected tensorflow embeddings.\n"
@@ -177,9 +178,9 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
     return embeddings
 
 
-def handle_model(
-    model_name: Union[str, Callable], verbose: bool, temperature: float = 0.0
-) -> vars:
+def handle_model(model_name: Union[str, Callable],
+                 verbose: bool,
+                 temperature: float = 0.0) -> vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -201,11 +202,9 @@ def handle_model(
     if model_type in ["openai", "openaiembeddings"]:
         import openai
 
-        if (
-            "AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"] == "azure"
-        ) or (
-            "OPENAI_API_TYPE" in os.environ and os.environ["OPENAI_API_TYPE"] == "azure"
-        ):
+        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in os.environ
+                                and os.environ["OPENAI_API_TYPE"] == "azure"):
             model_name = model_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env()
             model = AzureChatOpenAI(
@@ -234,7 +233,8 @@ def handle_model(
             base_url = os.environ["OPENAI_API_BASE"]
         else:
             base_url = ""
-            print("can not find the openai {check} in environment variable.\n\n")
+            print(
+                "can not find the openai {check} in environment variable.\n\n")
         model = ChatOpenAI(
             model=model_name,
             temperature=temperature,
@@ -243,19 +243,18 @@ def handle_model(
         )
         info = f"selected remote model {model_name}.\n"
 
-    elif (
-        model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
-        and model_name != ""
-    ):
+    elif (model_type
+          in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
+          and model_name != ""):
         model = get_llama_cpp_model(model_type, model_name, temperature)
         info = "selected llama-cpp model\n"
     elif model_type in [
-        "huggingface",
-        "huggingfacehub",
-        "transformers",
-        "transformer",
-        "huggingface-hub",
-        "hf",
+            "huggingface",
+            "huggingfacehub",
+            "transformers",
+            "transformer",
+            "huggingface-hub",
+            "hf",
     ]:
         model = get_hf_model(model_name, temperature)
         info = f"selected huggingface model {model_name}.\n"
@@ -265,7 +264,8 @@ def handle_model(
         info = f"selected chatglm model {model_name}.\n"
 
     elif model_type in ["lora", "peft"]:
-        model = peft_Llama2(model_name_or_path=model_name, temperature=temperature)
+        model = peft_Llama2(model_name_or_path=model_name,
+                            temperature=temperature)
         info = f"selected peft model {model_name}.\n"
     else:
         model = ChatOpenAI(model="gpt-3.5-turbo", temperature=temperature)
@@ -290,7 +290,7 @@ def handle_search_type(search_type: str, verbose: bool = False) -> str:
     return search_type_str
 
 
-def get_doc_length(language: str, text:str) -> int:
+def get_doc_length(language: str, text: str) -> int:
     """calculate the length of terms in a giving Document
 
     Args:
@@ -323,7 +323,7 @@ def get_docs_length(language: str, docs: list) -> int:
     return docs_length
 
 
-def get_question_from_file(path: str, question_type: str):
+def get_question_from_file(path: str, question_style: str):
     """load questions from file and save the questions into lists.
     a question list include the question, mutiple options, and the answer (the number of the option),
       and they are all separate by space in the file.
@@ -340,7 +340,7 @@ def get_question_from_file(path: str, question_type: str):
     questions = []
     answers = []
 
-    if question_type.lower() == "essay":
+    if question_style.lower() == "essay":
         content = content.split("\n\n")
         for i in range(len(content)):
             if content[i] == "":
@@ -354,7 +354,11 @@ def get_question_from_file(path: str, question_type: str):
     for con in content.split("\n"):
         if con == "":
             continue
-        questions.append([word for word in con.split("\t") if word != ""])
+        words = [word for word in con.split("\t") if word != ""]
+
+        questions.append(words[:-1])
+        answers.append(words[-1])
+
     return questions, answers
 
 
@@ -378,6 +382,30 @@ def extract_result(response: str):
 
                 break
     return res
+
+
+def extract_json(s) -> Union[dict, None]:
+    """parse the JSON part of the string
+
+    Args:
+        s (str): string that contains JSON part
+
+    Returns:
+        Union[dict, None]: return the JSON part of the string, if not found return None
+    """
+    # Use a regular expression to find the JSON part of the string
+    match = re.search(r'\{[\s\S]*\}', s)
+    if match:
+        json_part = match.group(0)
+        try:
+            # Try to parse the JSON part of the string
+            return json.loads(json_part)
+        except json.JSONDecodeError:
+            print("The JSON part of the string is not well-formatted")
+            return None
+    else:
+        print("No JSON found in the string")
+        return None
 
 
 def get_all_combine(
@@ -427,19 +455,9 @@ def get_best_combination(result_list: list, idx: int) -> list:
     for tup in sorted_res:
         if tup[idx] < max_score:
             break
-        res_str = (
-            "embeddings: "
-            + tup[-5]
-            + ", chunk size: "
-            + str(tup[-4])
-            + ", model: "
-            + tup[-3]
-            + ", topK: "
-            + str(tup[-2])
-            + ", search type: "
-            + tup[-1]
-            + "\n"
-        )
+        res_str = ("embeddings: " + tup[-5] + ", chunk size: " + str(tup[-4]) +
+                   ", model: " + tup[-3] + ", topK: " + str(tup[-2]) +
+                   ", search type: " + tup[-1] + "\n")
         print(res_str)
         res.append(tup[-5:])
 
@@ -459,9 +477,11 @@ def sim_to_trad(text: str) -> str:
     return cc.convert(text)
 
 
-def _get_text(
-    texts: list, previous_summary: str, i: int, max_doc_len: int, language:str="ch"
-) -> (int, str, int):
+def _get_text(texts: list,
+              previous_summary: str,
+              i: int,
+              max_doc_len: int,
+              language: str = "ch") -> (int, str, int):
     """used in summary, combine chunks of texts into one chunk that can fit into llm model
 
     Args:
@@ -482,7 +502,7 @@ def _get_text(
         cur_text += texts[i] + "\n"
         i += 1
         if i < len(texts):
-            words_len = get_doc_length(language,texts[i])
+            words_len = get_doc_length(language, texts[i])
 
     return cur_count, cur_text, i
 
@@ -505,14 +525,15 @@ def call_model(model, prompt: str) -> str:
     return response
 
 
-def get_non_repeat_rand_int(vis: set, num: int):
+def get_non_repeat_rand_int(vis: set, num: int, doc_range: int):
     temp = np.random.randint(num)
-    if len(vis) >= num:
+    if len(vis) >= num // 2:
         vis = set()
-    if temp not in vis:
-        vis.add(temp)
+    if (temp not in vis) and (temp + doc_range - 1 not in vis):
+        for i in range(doc_range):
+            vis.add(temp + i)
         return temp
-    return get_non_repeat_rand_int(vis, num)
+    return get_non_repeat_rand_int(vis, num, doc_range)
 
 
 def get_text_md5(text):

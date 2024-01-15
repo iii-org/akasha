@@ -58,9 +58,10 @@ eva.json
 model/chinese-alpaca-2-7b.Q5_K_S.gguf
 model/chinese-alpaca-2-13b.Q5_K_M.gguf
 .coverage
-test_st.py
 dataset.json
 expert.json
 akasha_ui_1_5.tar
 akasha_builder_1_0.tar
 question_set2.txt
+result.csv
+test_*.py

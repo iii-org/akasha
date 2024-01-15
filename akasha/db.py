@@ -2,13 +2,14 @@ from typing import Union, List
 from tqdm import tqdm
 import time, os, shutil
 import datetime
-from langchain.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain.document_loaders.csv_loader import CSVLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
+from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import (
     CharacterTextSplitter,
     RecursiveCharacterTextSplitter,
 )
-from langchain.vectorstores import Chroma, chroma
+from langchain_community.vectorstores import chroma
+from langchain_community.vectorstores.chroma import Chroma
 from langchain.docstore.document import Document
 from pathlib import Path
 import uuid
@@ -24,7 +25,7 @@ class dbs:
         self.embeds = []
         self.metadatas = []
         self.docs = []
-
+        self.vis = set()
         if isinstance(chrdb, list):
             pass
 
@@ -32,7 +33,7 @@ class dbs:
             data = chrdb.get(include=["embeddings", "metadatas", "documents"])
             if "ids" in data:
                 self.ids = data["ids"]
-
+                self.vis = set(data["ids"])
             if "embeddings" in data:
                 self.embeds = data["embeddings"]
             else:
@@ -47,10 +48,18 @@ class dbs:
                 self.docs = ["" for _ in range(len(data["ids"]))]
 
     def merge(self, db):
-        self.ids.extend(db.ids)
-        self.embeds.extend(db.embeds)
-        self.metadatas.extend(db.metadatas)
-        self.docs.extend(db.docs)
+
+        for i in range(len(db.ids)):
+            if db.ids[i] not in self.vis:
+                self.ids.append(db.ids[i])
+                self.embeds.append(db.embeds[i])
+                self.metadatas.append(db.metadatas[i])
+                self.docs.append(db.docs[i])
+                self.vis.add(db.ids[i])
+        # self.ids.extend(db.ids)
+        # self.embeds.extend(db.embeds)
+        # self.metadatas.extend(db.metadatas)
+        # self.docs.extend(db.docs)
 
     def add_chromadb(self, chrdb):
         data = chrdb.get(include=["embeddings", "metadatas", "documents"])
@@ -147,7 +156,7 @@ def _load_files(doc_path: str, extension: str = "pdf") -> list:
     return loaders
 
 
-def get_docs_from_doc(doc_path: str, chunk_size: int):
+def get_docs_from_doc(doc_path: str, chunk_size: int, ignore_check: bool):
     """get all documents from doc_path directory and split them into sentences with chunk_size
 
     Args:
@@ -158,20 +167,48 @@ def get_docs_from_doc(doc_path: str, chunk_size: int):
         list: list of Documents
     """
     # Split the documents into sentences
-    documents = []
+    documents, files = [], []
+    texts = []
+    db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
     txt_extensions = ["pdf", "md", "docx", "txt", "csv"]
     for extension in txt_extensions:
-        for file in _load_files(doc_path, extension):
-            documents.extend(_load_file(doc_path + file, extension))
-    if len(documents) == 0:
+        files.extend(_load_files(doc_path, extension))
+
+    progress = tqdm(total=len(files), desc="Vec Storage")
+
+    for file in files:
+
+        exist = False
+        progress.update(1)
+        if ignore_check:  ## if ignore_check is True, don't load file text and check md5 if the db is existed, to increase loading speed ##
+            storage_directory, exist = check_db_name(file, db_dir, '*', '*',
+                                                     chunk_size)
+        if exist:
+            temp_chroma = Chroma(persist_directory=storage_directory)
+            if temp_chroma is not None:
+                temp_docs = temp_chroma.get(include=["documents", "metadatas"])
+                texts.extend([
+                    Document(page_content=temp_docs["documents"][i],
+                             metadata=temp_docs["metadatas"][i])
+                    for i in range(len(temp_docs["documents"]))
+                ])
+                del temp_chroma, temp_docs
+            continue
+
+        ## if ignore_check is false or no db found, load file text and split into sentences ##
+        documents.extend(_load_file(doc_path + file, file.split(".")[-1]))
+
+    progress.close()
+    if len(documents) == 0 and len(texts) == 0:
         return None
-    text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n", " ", ",", ".", "。", "!"],
-        chunk_size=chunk_size,
-        chunk_overlap=100,
-    )
-    docs = text_splitter.split_documents(documents)
-    texts = [doc for doc in docs]
+    if len(documents) != 0:
+        text_splitter = RecursiveCharacterTextSplitter(
+            separators=["\n", " ", ",", ".", "。", "!"],
+            chunk_size=chunk_size,
+            chunk_overlap=100,
+        )
+        docs = text_splitter.split_documents(documents)
+        texts.extend(docs)
     if len(texts) == 0:
         return None
     return texts
@@ -300,8 +337,12 @@ def processMultiDB(
     if isinstance(embeddings, str):
         texts = []
         for doc_path in doc_path_list:
-            temp = create_chromadb(doc_path, verbose, embeddings,
-                                   embeddings_name, chunk_size)
+            temp = create_chromadb(doc_path,
+                                   verbose,
+                                   embeddings,
+                                   embeddings_name,
+                                   chunk_size,
+                                   ignore_check=ignore_check)
             if isinstance(temp, tuple):
                 temp = temp[0]
             if temp is not None:
@@ -373,7 +414,7 @@ def create_chromadb(doc_path: str,
 
     ## if embeddings is a str, use rerank, so return docuemnts, not vectors ##
     if isinstance(embeddings, str):
-        return get_docs_from_doc(doc_path, chunk_size)
+        return get_docs_from_doc(doc_path, chunk_size, ignore_check)
 
     if embed_type == "openai":
         add_pic = True

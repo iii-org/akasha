@@ -10,6 +10,7 @@ import torch, gc
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
 from typing import Callable, Union, Tuple, List
+from collections import defaultdict
 
 
 def _generate_single_choice_question(
@@ -59,15 +60,16 @@ def _generate_single_choice_question(
         if wrong_ans == "":
             continue
         elif count == random_index:
-            res += "\t" + cor_ans.replace("\n", "")
+            res += "\t" + str(count + 1) + '.' + cor_ans.replace("\n", "")
             count += 1
 
-        wrong_ans = wrong_ans.replace("\n", "").replace("錯誤答案", "")
+        wrong_ans = str(count + 1) + '.' + wrong_ans.replace("\n", "").replace(
+            "錯誤答案", "")
         res += "\t" + wrong_ans
         count += 1
 
     if count < choice_num:
-        res += "\t" + cor_ans.replace("\n", "")
+        res += "\t" + str(count + 1) + '.' + cor_ans.replace("\n", "")
 
     res += "\t" + str(random_index + 1)
 
@@ -91,7 +93,8 @@ class Model_Eval(akasha.atman):
         system_prompt: str = "",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
-        question_type: str = "essay",
+        question_type: str = "fact",
+        question_style: str = "essay",
         use_chroma: bool = False,
         ignore_check: bool = False,
     ):
@@ -116,7 +119,8 @@ class Model_Eval(akasha.atman):
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
-            **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
+            **question_style (str, optional)**: the style of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
+            **question_type (str, optional)**: the type of question you want to generate, "fact", "summary", "irrelevant", "compared". Defaults to "fact".\n
         """
 
         super().__init__(
@@ -135,6 +139,7 @@ class Model_Eval(akasha.atman):
         ### set argruments ###
         self.doc_path = ""
         self.question_type = question_type
+        self.question_style = question_style
         self.question_num = 0
 
         ### set variables ###
@@ -156,6 +161,480 @@ class Model_Eval(akasha.atman):
         self.score = {}
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
+
+    def _save_questionset(self, timestamp: str, output_file_path: str):
+        """save questions and ref answers into txt file, and save the path of question set into logs
+
+        Args:
+            timestamp (str): the timestamp of the question set created function
+            output_file_path (str): file name of the question set txt file, if not assign, use doc_path+datetime as the file name.
+        """
+        ### write question and answer into txt file, but first check if "questionset" directory exist or not, it not, first create it.
+        ### for filename, if not assign, use doc_path+datetime as the file name.
+        if not os.path.exists("questionset"):
+            os.makedirs("questionset")
+        if isinstance(self.doc_path, list):
+            suf_path = self.doc_path[0].split("/")[-2]
+        else:
+            suf_path = self.doc_path.split("/")[-2]
+        if output_file_path == "":
+            now = datetime.datetime.now()
+            date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
+            output_file_path = ("questionset/" + suf_path + "_" +
+                                str(date_time_string) + ".txt")
+        elif output_file_path[-4:] != ".txt":
+            output_file_path = output_file_path + ".txt"
+        with open(output_file_path, "w", encoding="utf-8") as f:
+            for w in range(len(self.question)):
+                if self.question_style == "essay":
+                    f.write(self.question[w] + self.answer[w] + "\n\n")
+                else:
+                    if w == len(self.question) - 1:
+                        f.write(self.question[w].replace("\n", "") +
+                                self.answer[w].replace("\n", ""))
+                    else:
+                        f.write(self.question[w].replace("\n", "") +
+                                self.answer[w].replace("\n", "") + "\n")
+
+        print("question set saved in ", output_file_path, "\n\n")
+
+        self.logs[timestamp]["question"] = self.question
+        self.logs[timestamp]["answer"] = self.answer
+        self.logs[timestamp]["questionset_path"] = output_file_path
+        return
+
+    def _process_fact(self, response: str, doc_text: str,
+                      choice_num: int) -> bool:
+        """parse the question and answer from the llm response, and save it into question and answer list. 
+        if can not parse the response, return False
+
+        Args:
+            response (str): llm generated response
+            doc_text (str): the document text that used to generate question and answer
+            choice_num (int): the number of options for each single choice question
+
+        Returns:
+            bool: if can not parse the response, return False
+        """
+        process = "".join(response.split("問題：")).split("答案：")
+        if len(process) < 2:
+            False
+
+        self.question.append("問題： " + process[0])
+        if self.question_style == "essay":
+            self.answer.append("答案： " + process[1])
+
+        else:
+            anss = _generate_single_choice_question(
+                doc_text,
+                process[0],
+                process[1],
+                self.model_obj,
+                self.system_prompt,
+                choice_num,
+            )
+            self.answer.append(anss)
+            response = process[0] + "\n" + "選項:\n" + anss + "\n\n"
+
+        if self.verbose:
+            print(response)
+
+        return True
+
+    def _process_summary(self, response, doc_text: str) -> bool:
+        """parse the question and answer from the llm response, and save it into question and answer list. 
+        if can not parse the response, return False
+
+        Args:
+            response (str): llm generated response
+            doc_text (str): the document text that used to generate question and answer
+
+        Returns:
+            bool: if can not parse the response, return False
+        """
+        process = response.split("答案：")
+        if len(process) < 2:
+            False
+        self.question.append("問題：  " + doc_text.replace("\n", "") + "\n")
+        self.answer.append("答案： " + process[-1].replace("\n", ""))
+        if self.verbose:
+            print(response)
+        return True
+
+    def _process_irrelevant(self, response, doc_text: str,
+                            choice_num: int) -> bool:
+        """current not used, since llm may generate questions that can be answered.
+
+        Args:
+            response (_type_): _description_
+            doc_text (str): _description_
+            choice_num (int): _description_
+
+        Returns:
+            bool: _description_
+        """
+        process = response.split("問題：")
+        if len(process) < 2:
+            False
+        default_ans = "根據文件中的訊息，無法回答此問題。"
+
+        self.question.append("問題： " + process[-1])
+        if self.question_style == "essay":
+            self.answer.append("答案： " + default_ans)
+            response += "\n答案： " + default_ans
+        else:
+            anss = _generate_single_choice_question(
+                doc_text,
+                process[-1],
+                default_ans,
+                self.model_obj,
+                self.system_prompt,
+                choice_num,
+            )
+            self.answer.append(anss)
+            response = process[0] + "\n" + "選項:\n" + anss + "\n\n"
+
+        if self.verbose:
+            print(response)
+
+        return True
+
+    def _process_response(self, response: str, doc_text: str, choice_num: int):
+        """process the response from llm model, and generate question and answer pair
+            based on the question type and question style
+        """
+        if self.question_type.lower() in ["fact", "facts", "factoid", "factoids", "事實"] or \
+            self.question_type.lower() in ["irre", "irrelevant", "irrelevance", "無關"] or \
+                self.question_type.lower() in ["compared", "compare", "comparison", "comparisons", "比較"]:
+            return self._process_fact(response, doc_text, choice_num)
+
+        elif self.question_type.lower() in [
+                "summary", "sum", "summarization", "summarize", "summaries",
+                "摘要"
+        ]:
+            return self._process_summary(response, doc_text)
+
+        return self._process_fact(response, doc_text, choice_num)
+
+    def _create_compare_questionset(self, choice_num: int,
+                                    output_file_path: str):
+        """create compare question set, first randomly select documents and label the category of some proper nouns in the documents,
+        can use the documents and proper nouns that have same category to generate compare question and answer pair.
+
+        Args:
+            choice_num (int): the number of options for each single choice question
+            output_file_path (str): file name of the question set txt file, if not assign, use doc_path+datetime as the file name.
+
+        Returns:
+            _type_: _description_
+        """
+        ## set local variables ##
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self.timestamp_list.append(timestamp)
+        start_time = time.time()
+        doc_range = 1
+        cate_threshold = 3
+        vis_doc_range = set()
+        self.doc_tokens, self.doc_length = 0, 0
+        self.question, self.answer, self.docs = [], [], []
+        table = {}
+
+        ## add logs ##
+        self._add_basic_log(timestamp, "auto_create_questionset")
+        self.logs[timestamp]["doc_range"] = doc_range
+        self.logs[timestamp]["question_num"] = self.question_num
+        self.logs[timestamp]["question_type"] = self.question_type
+        self.logs[timestamp]["question_style"] = self.question_style
+        self.logs[timestamp]["choice_num"] = choice_num
+
+        texts = [doc.page_content for doc in self.db]
+        metadata = [doc.metadata for doc in self.db]
+
+        progress = tqdm(total=self.question_num,
+                        desc=f"Create Q({self.question_type})")
+        regenerate_limit = self.question_num
+        category = defaultdict(list)
+        set_category = defaultdict(set)
+        for i in range(self.question_num):
+            docs = []
+            progress.update(1)
+
+            ### start to random choose text, and use text to add different category things into dictionary,###
+            ### if the value of any category large than category threshold, then we can use the category to create compare question ###
+            compare_resource = find_same_category(category, cate_threshold)
+            while not isinstance(compare_resource, list):
+                random_index = akasha.helper.get_non_repeat_rand_int(
+                    vis_doc_range,
+                    len(texts) - doc_range, doc_range)
+                doc_text = texts[random_index]
+                docs.append(
+                    Document(page_content=texts[random_index],
+                             metadata=metadata[random_index]))
+                count = 3
+                try:
+                    ## ask model to get category & nouns, add to category ##
+                    category_prompt = akasha.prompts.format_category_prompt(
+                        doc_text, self.language)
+                    response = akasha.helper.call_model(
+                        self.model_obj, category_prompt)
+                    response = akasha.helper.sim_to_trad(response)
+                    print(response)
+                    json_response = akasha.helper.extract_json(response)
+                    if json_response is None:
+                        raise Exception("Response Format Error")
+
+                    for k, v in json_response.items():
+                        if k not in set_category[v]:
+                            category[v].append([k, doc_text])
+                            set_category[v].add(k)
+                    compare_resource = find_same_category(
+                        category, cate_threshold)
+
+                except Exception as e:
+                    print("error during generate categories\n", e)
+                    count -= 1
+                    if count == 0:
+                        break
+            topic, nouns, used_texts = compare_resource
+            used_texts = "\n".join(set(used_texts))
+            nouns = ", ".join(nouns)
+            try:
+                q_prompt = akasha.prompts.compare_question_prompt(
+                    self.question_style, topic, nouns, used_texts)
+                response = akasha.helper.call_model(self.model_obj, q_prompt)
+                response = akasha.helper.sim_to_trad(response)
+
+                if not self._process_response(response, used_texts,
+                                              choice_num):
+                    raise Exception("Question Format Error")
+
+                self.doc_length += akasha.helper.get_docs_length(
+                    self.language, docs)
+                self.doc_tokens += self.model_obj.get_num_tokens(used_texts)
+                self.docs.extend(docs)
+
+            except Exception as e:
+                if regenerate_limit > 0:
+                    regenerate_limit -= 1
+                    i -= 1
+                    progress.update(-1)
+                    print(
+                        "Question Format Error while generating questions. Regenerate\n"
+                    )
+                    continue
+                else:
+                    print(
+                        "Question Format Error while generating questions. Stop\n"
+                    )
+                    break
+
+            # remove the category from category dictionary
+            del category[topic]
+            # remove the category from set_category dictionary
+            del set_category[topic]
+
+            new_table = akasha.format.handle_table(self.question[-1], docs,
+                                                   self.answer[-1])
+            for key in new_table:
+                if key not in table:
+                    table[key] = []
+                table[key].append(new_table[key])
+
+        progress.close()  # end running llm progress bar
+
+        end_time = time.time()
+
+        ### record logs ###
+        if self.record_exp != "":
+            params = akasha.format.handle_params(
+                self.model,
+                self.embeddings,
+                self.chunk_size,
+                self.search_type_str,
+                self.topK,
+                self.threshold,
+                self.language,
+            )
+            metrics = akasha.format.handle_metrics(self.doc_length,
+                                                   end_time - start_time,
+                                                   self.doc_tokens)
+            params["doc_range"] = doc_range
+            akasha.aiido_upload(self.record_exp, params, metrics, table)
+
+        self._add_result_log(timestamp, end_time - start_time)
+
+        self._save_questionset(timestamp, output_file_path)
+        del self.db
+        return self.question, self.answer
+
+    def _eval_get_res_fact(self, question: Union[str, list], answer: str,
+                           timestamp: str) -> dict:
+        """generate fact resposne from the question, can evaluate with reference answer
+
+        Args:
+            question (Union[str, list]): if it's single_choice, it should be a list(include options), else it should be a string of question
+            answer (str): the reference answer of the question
+            timestamp (str): the timestamp of the auto evaluation function
+
+        Returns:
+            dict: evaluation result
+        """
+
+        ### format question ###
+        if self.question_style.lower() == "essay":
+            query = question
+            prod_sys = self.system_prompt + akasha.prompts.default_doc_ask_prompt(
+            )
+            prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
+                prod_sys, question)
+        else:
+            prod_sys = self.system_prompt
+            query, ans = akasha.prompts.format_question_query(question, answer)
+            query_with_prompt = akasha.prompts.format_llama_json(query)
+
+        ### get docs ###
+        self.docs, docs_len, docs_token = akasha.search.get_docs(
+            self.db,
+            self.embeddings_obj,
+            query,
+            self.topK,
+            self.threshold,
+            self.language,
+            self.search_type,
+            self.verbose,
+            self.model_obj,
+            self.max_doc_len,
+            self.logs[timestamp],
+        )
+
+        ### ask llm ###
+        try:
+            response = self._ask_model(prod_sys, query_with_prompt)
+            self.response.append(response)
+            self.doc_length += docs_len
+            self.doc_tokens += docs_token
+        except Exception as e:
+            print("running model error\n", e)
+            response = ["running model error"]
+            torch.cuda.empty_cache()
+
+        if self.question_style.lower() == "essay":
+
+            if self.verbose:
+                print("Question: ", question, "\n\n")
+                print("Reference Answer: ", answer, "\n\n")
+                print("Generated Response: ", response, "\n\n")
+
+            self.score["bert"].append(
+                eval.scores.get_bert_score(response, answer, self.language))
+            self.score["rouge"].append(
+                eval.scores.get_rouge_score(response, answer, self.language))
+            self.score["llm_score"].append(
+                eval.scores.get_llm_score(response, answer, self.eval_model))
+
+            new_table = akasha.format.handle_table(
+                question + "\nAnswer:  " + answer, self.docs, response)
+            new_table = akasha.format.handle_score_table(
+                new_table,
+                self.score["bert"][-1],
+                self.score["rouge"][-1],
+                self.score["llm_score"][-1],
+            )
+
+        else:
+            if self.verbose:
+                print("Question: ", question, "\n\n")
+                print("Reference Answer: ", ans, "\n\n")
+                print("Generated Response: ", response, "\n\n")
+
+            new_table = akasha.format.handle_table(query + "\nAnswer:  " + ans,
+                                                   self.docs, response)
+            result = akasha.helper.extract_result(response)
+            if str(result) == str(ans):
+                self.score["correct_count"] += 1
+
+        return new_table
+
+    def _eval_get_res_summary(self, sum_doc: str, answer: str,
+                              timestamp: str) -> dict:
+        """generate summary resposne from the question, can evaluate with reference answer
+
+        Args:
+            sum_doc (str): text that need to be summarized
+            answer (str): the reference answer of the summary
+            timestamp (str): the timestamp of the auto evaluation function
+
+        Returns:
+            dict: evaluation result
+        """
+
+        prompt = "請對以上文件進行摘要。"
+        prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
+            self.system_prompt, prompt)
+
+        self.docs = [
+            Document(page_content=sum_doc, metadata={
+                "source": "",
+                "page": 0
+            })
+        ]
+
+        try:
+            response = self._ask_model(prod_sys, query_with_prompt)
+            self.response.append(response)
+            self.doc_length += akasha.helper.get_doc_length(
+                self.language, sum_doc)
+            self.doc_tokens += self.model_obj.get_num_tokens(sum_doc)
+        except Exception as e:
+            print("running model error\n", e)
+            response = ["running model error"]
+            torch.cuda.empty_cache()
+
+        if self.verbose:
+            print("Question: ", prompt + "\n" + sum_doc, "\n\n")
+            print("Reference Answer: ", answer, "\n\n")
+            print("Generated Response: ", response, "\n\n")
+
+        self.score["bert"].append(
+            eval.scores.get_bert_score(response, answer, self.language))
+        self.score["rouge"].append(
+            eval.scores.get_rouge_score(response, answer, self.language))
+        self.score["llm_score"].append(
+            eval.scores.get_llm_score(response, answer, self.eval_model))
+
+        new_table = akasha.format.handle_table(prompt + "\nAnswer:  " + answer,
+                                               self.docs, response)
+        new_table = akasha.format.handle_score_table(
+            new_table,
+            self.score["bert"][-1],
+            self.score["rouge"][-1],
+            self.score["llm_score"][-1],
+        )
+
+        return new_table
+
+    def _eval_get_res(self, question: Union[list, str], answer: str,
+                      timestamp: str) -> dict:
+        """separate the question type and call different function to generate response
+
+        Args:
+            question (str): the question that need to be evaluated
+            answer (str): the reference answer of the question
+            timestamp (str): the timestamp of the auto evaluation function
+
+        Returns:
+            dict: _description_
+        """
+        if self.question_type.lower() in ["fact", "facts", "factoid", "factoids", "事實"] or \
+            self.question_type.lower() in ["irre", "irrelevant", "irrelevance", "無關"] or\
+            self.question_type.lower() in ["compared", "compare", "comparison", "comparisons", "比較"]:
+            return self._eval_get_res_fact(question, answer, timestamp)
+
+        elif self.question_type.lower() in [
+                "summary", "sum", "summarization", "summarize", "summaries",
+                "摘要"
+        ]:
+            return self._eval_get_res_summary(question, answer, timestamp)
 
     def auto_create_questionset(
         self,
@@ -186,7 +665,7 @@ class Model_Eval(akasha.atman):
             Defaults to 4.\n
                 **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                question_style, question_type, embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
                 system_prompt, max_doc_len, temperature.
             Raises:
                 Exception: _description_
@@ -200,6 +679,9 @@ class Model_Eval(akasha.atman):
         self.doc_path = doc_path
         self.question_num = question_num
 
+        if check_sum_type(self.question_type, self.question_style):
+            return [], []
+
         ## check db ##
         if self.use_chroma:
             self.db, db_path_names = akasha.db.get_db_from_chromadb(
@@ -209,7 +691,14 @@ class Model_Eval(akasha.atman):
                 self.doc_path, self.verbose, "eval_get_doc", self.embeddings,
                 self.chunk_size, self.ignore_check)
         if not self._check_db():
-            return ""
+            return [], []
+
+        ## process of creating compare question is different from other, so we separate it ##
+        if self.question_type in [
+                "compare", "comparison", "comparisons", "比較", "compared"
+        ]:
+            return self._create_compare_questionset(choice_num,
+                                                    output_file_path)
 
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
@@ -228,11 +717,9 @@ class Model_Eval(akasha.atman):
         self.logs[timestamp]["doc_range"] = doc_range
         self.logs[timestamp]["question_num"] = question_num
         self.logs[timestamp]["question_type"] = self.question_type
+        self.logs[timestamp]["question_style"] = self.question_style
         self.logs[timestamp]["choice_num"] = choice_num
 
-        # db_data = self.db.get(include=['documents','metadatas'])
-        # texts = db_data['documents']
-        # metadata =  db_data['metadatas']
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
 
@@ -245,29 +732,30 @@ class Model_Eval(akasha.atman):
 
             random_index = akasha.helper.get_non_repeat_rand_int(
                 vis_doc_range,
-                len(texts) - doc_range)
+                len(texts) - doc_range, doc_range)
 
             doc_text = "\n".join(texts[random_index:random_index + doc_range])
             docs = [
                 Document(page_content=texts[k], metadata=metadata[k])
                 for k in range(random_index, random_index + doc_range)
             ]
-            self.doc_length += akasha.helper.get_docs_length(
-                self.language, docs)
-            self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
-            self.docs.extend(docs)
+
             try:
                 q_prompt = akasha.prompts.format_create_question_prompt(
-                    doc_text, self.question_type)
+                    doc_text, self.question_type, self.question_style)
 
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
                 response = akasha.helper.sim_to_trad(
                     response
                 )  # transform simplified chinese to traditional chinese
-
-                process = "".join(response.split("問題：")).split("答案：")
-                if len(process) < 2:
+                if not self._process_response(response, doc_text, choice_num):
                     raise Exception("Question Format Error")
+
+                self.doc_length += akasha.helper.get_docs_length(
+                    self.language, docs)
+                self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
+                self.docs.extend(docs)
+
             except:
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
@@ -282,26 +770,6 @@ class Model_Eval(akasha.atman):
                         "Question Format Error while generating questions. Stop\n"
                     )
                     break
-
-            self.question.append("問題：" + process[0])
-
-            if self.question_type == "essay":
-                self.answer.append("答案：" + process[1])
-
-            else:
-                anss = _generate_single_choice_question(
-                    doc_text,
-                    process[0],
-                    process[1],
-                    self.model_obj,
-                    self.system_prompt,
-                    choice_num,
-                )
-                self.answer.append(anss)
-                response = process[0] + "\n" + "選項:\n" + anss + "\n\n"
-
-            if self.verbose:
-                print(response)
 
             new_table = akasha.format.handle_table(self.question[-1], docs,
                                                    self.answer[-1])
@@ -331,40 +799,9 @@ class Model_Eval(akasha.atman):
             params["doc_range"] = doc_range
             akasha.aiido_upload(self.record_exp, params, metrics, table)
 
-        ### write question and answer into txt file, but first check if "questionset" directory exist or not, it not, first create it.
-        ### for filename, if not assign, use doc_path+datetime as the file name.
-        if not os.path.exists("questionset"):
-            os.makedirs("questionset")
-        if isinstance(doc_path, list):
-            suf_path = doc_path[0].split("/")[-2]
-        else:
-            suf_path = doc_path.split("/")[-2]
-        if output_file_path == "":
-            now = datetime.datetime.now()
-            date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
-            output_file_path = ("questionset/" + suf_path + "_" +
-                                str(date_time_string) + ".txt")
-        elif output_file_path[-4:] != ".txt":
-            output_file_path = output_file_path + ".txt"
-        with open(output_file_path, "w", encoding="utf-8") as f:
-            for w in range(len(self.question)):
-                if self.question_type == "essay":
-                    f.write(self.question[w] + self.answer[w] + "\n\n")
-                else:
-                    if w == len(self.question) - 1:
-                        f.write(self.question[w].replace("\n", "") +
-                                self.answer[w].replace("\n", ""))
-                    else:
-                        f.write(self.question[w].replace("\n", "") +
-                                self.answer[w].replace("\n", "") + "\n")
-
-        print("question set saved in ", output_file_path, "\n\n")
-
         self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["question"] = self.question
-        self.logs[timestamp]["answer"] = self.answer
-        self.logs[timestamp]["questionset_path"] = output_file_path
 
+        self._save_questionset(timestamp, output_file_path)
         del self.db
         return self.question, self.answer
 
@@ -394,9 +831,12 @@ class Model_Eval(akasha.atman):
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
-        if (self.question_type == "essay" and self.language == "ch"
-                and "用中文回答" not in self.system_prompt):
-            self.system_prompt = self.system_prompt + " 用中文回答 "
+        self.eval_model = eval_model
+        if check_sum_type(self.question_type, self.question_style):
+            return 0.0, 0
+        self.system_prompt = check_essay_system_prompt(
+            self.question_style, self.language,
+            self.system_prompt) + self.system_prompt
 
         ## check db ##
         if self.use_chroma:
@@ -415,100 +855,32 @@ class Model_Eval(akasha.atman):
         start_time = time.time()
         self.doc_tokens, self.doc_length = 0, 0
         self.question, self.answer, self.docs = [], [], []
-        if self.question_type.lower() == "essay":
+        if self.question_style.lower() == "essay":
             self.score = {"bert": [], "rouge": [], "llm_score": []}
         else:
             self.score = {"correct_count": 0}
         table = {}
+        total_docs = []
         question, answer = akasha.helper.get_question_from_file(
-            questionset_file, self.question_type)
+            questionset_file, self.question_style)
         self.question_num = len(question)
         progress = tqdm(total=self.question,
-                        desc=f"Run Eval({self.question_type})")
+                        desc=f"Run Eval({self.question_style})")
         ## add logs ##
 
         self._add_basic_log(timestamp, "auto_evaluation")
         self.logs[timestamp]["questionset_path"] = questionset_file
         self.logs[timestamp]["question_num"] = self.question_num
         self.logs[timestamp]["question_type"] = self.question_type
+        self.logs[timestamp]["question_style"] = self.question_style
         self.logs[timestamp]["search_type"] = self.search_type_str
-
         ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
         for i in range(self.question_num):
             progress.update(1)
-            if self.question_type.lower() == "essay":
-                query = question[i]
-                prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
-                    self.system_prompt, question[i])
-                query_with_prompt = prod_sys + query_with_prompt
-            else:
-                query, ans = akasha.prompts.format_question_query(question[i])
-                query_with_prompt = akasha.prompts.format_llama_json(query)
 
-            docs, docs_len, docs_token = akasha.search.get_docs(
-                self.db,
-                self.embeddings_obj,
-                query,
-                self.topK,
-                self.threshold,
-                self.language,
-                self.search_type,
-                self.verbose,
-                self.model_obj,
-                self.max_doc_len,
-                self.logs[timestamp],
-            )
-            self.doc_length += docs_len
-            self.doc_tokens += docs_token
-
-            try:
-                chain = load_qa_chain(llm=self.model_obj,
-                                      chain_type="stuff",
-                                      verbose=self.verbose)
-                response = chain.run(input_documents=docs,
-                                     question=query_with_prompt)
-                response = akasha.helper.sim_to_trad(response)
-                self.docs.extend(docs)
-                self.response.append(response)
-            except Exception as e:
-                print("running model error\n", e)
-                response = ["running model error"]
-                torch.cuda.empty_cache()
-
-            if self.verbose:
-                print("Question: ", question[i], "\n\n")
-                if self.question_type.lower() == "essay":
-                    print("Reference Answer: ", answer[i], "\n\n")
-                else:
-                    print("Reference Answer: ", ans, "\n\n")
-                print("Generated Response: ", response, "\n\n")
-
+            new_table = self._eval_get_res(question[i], answer[i], timestamp)
+            total_docs.extend(self.docs)
             # ---- #
-
-            if self.question_type.lower() == "essay":
-                self.score["bert"].append(
-                    eval.scores.get_bert_score(response, answer[i],
-                                               self.language))
-                self.score["rouge"].append(
-                    eval.scores.get_rouge_score(response, answer[i],
-                                                self.language))
-                self.score["llm_score"].append(
-                    eval.scores.get_llm_score(response, answer[i], eval_model))
-
-                new_table = akasha.format.handle_table(
-                    question[i] + "\nAnswer:  " + answer[i], docs, response)
-                new_table = akasha.format.handle_score_table(
-                    new_table,
-                    self.score["bert"][-1],
-                    self.score["rouge"][-1],
-                    self.score["llm_score"][-1],
-                )
-            else:
-                new_table = akasha.format.handle_table(
-                    query + "\nAnswer:  " + ans, docs, response)
-                result = akasha.helper.extract_result(response)
-                if str(result) == str(ans):
-                    self.score["correct_count"] += 1
 
             for key in new_table:
                 if key not in table:
@@ -516,13 +888,13 @@ class Model_Eval(akasha.atman):
                 table[key].append(new_table[key])
 
         progress.close()  # end running llm progress bar
-
+        self.docs = total_docs
         ### record logs ###
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
         self.logs[timestamp]["response"] = self.response
 
-        if self.question_type.lower() == "essay":
+        if self.question_style.lower() == "essay":
             avg_bert = round(
                 sum(self.score["bert"]) / len(self.score["bert"]), 3)
             avg_rouge = round(
@@ -712,3 +1084,50 @@ class Model_Eval(akasha.atman):
         if self.question_type.lower() == "essay":
             return bs_combination, rs_combination, ls_combination
         return bs_combination, bc_combination
+
+
+### sub func###
+def check_sum_type(question_type: str, question_style: str) -> bool:
+    ## check question_type and question_style, summary can not be used in single_choice question_type ##
+    if question_type.lower() in [
+            "summary", "sum", "summarization", "summarize", "summaries", "摘要"
+    ] and question_style.lower() == "single_choice":
+        print("summary can not be used in single_choice question_type")
+
+        return True
+
+    return False
+
+
+def check_essay_system_prompt(question_style: str, language: str,
+                              system_prompt: str) -> str:
+    ## check question_style and language, if question_style is essay and language is chinese, add prompt ##
+    if question_style.lower() == "essay" and language.lower(
+    ) == "ch" and "用中文回答" not in system_prompt:
+        return " 用中文回答 "
+
+    return ""
+
+
+def find_same_category(
+    category: dict,
+    cate_threshold: int,
+) -> Union[list, bool]:
+    """iterate the category dictionary and check if any category has more than cate_threshold items,
+    if yes, return the category name. 
+
+    Args:
+        category (dict): {"category_name":[[item1,doc1], [item2,doc2],...], ...}
+        cate_threshold (int): default 3
+
+    Returns:
+        _type_: _description_
+    """
+    for k, v in category.items():
+        if len(v) >= cate_threshold:
+            res = [
+                k, [noun[0] for noun in category[k]],
+                [doc[1] for doc in category[k]]
+            ]
+            return res
+    return False

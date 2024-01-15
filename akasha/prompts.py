@@ -1,3 +1,5 @@
+from typing import List, Union
+
 sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
 
@@ -26,7 +28,7 @@ def format_sys_prompt(system_prompt: str,
     return prod_sys_prompt, prod_prompt
 
 
-def format_question_query(question: list) -> (str, str):
+def format_question_query(question: list, answer: str) -> (str, str):
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
        return the question query string and the answer string.\n
       example:    ["what is 1+1 euqals to?", "2", "4", "8", "10", "1"]
@@ -39,7 +41,7 @@ def format_question_query(question: list) -> (str, str):
             "
         ans = "1"
     Args:
-        **question (list)**: list of question and selections and answer\n
+        **question (list)**: list of question and selections\n
 
     Returns:
         (str, str): return the question query string and the answer string
@@ -51,10 +53,10 @@ def format_question_query(question: list) -> (str, str):
         return "Question: " + question[0], ""
     query = "Question: " + question[0] + "\n"
 
-    for i in range(1, n - 1):
-        query += str(i) + ". " + question[i] + "\n"
+    for i in range(1, n):
+        query += question[i] + "\n"
 
-    return query, question[-1]
+    return query, answer
 
 
 def format_llama_json(query):
@@ -127,7 +129,9 @@ def format_wrong_answer(num: int, doc_text: str, question: str,
     return q_prompt
 
 
-def format_create_question_prompt(doc_text: str, question_type: str) -> str:
+def format_create_question_prompt(doc_text: str,
+                                  question_type: str = "fact",
+                                  question_style: str = "essay") -> str:
     """prompts for auto generate question from document
 
     Args:
@@ -138,19 +142,69 @@ def format_create_question_prompt(doc_text: str, question_type: str) -> str:
         str: combined prompt
     """
     qt = ""
-    if question_type != "essay":
+    question_type = question_type.lower()
+    question_style = question_style.lower()
+    if question_style not in [
+            "essay", "問答", "essay question", "essay_question"
+    ]:
         qt = "少於100字的"
-    # q_prompt = "Human: You are a teacher coming up with questions to ask on a quiz. \nGiven the following document, please generate a question and answer based on that document.\n\nExample Format:\n<Begin Document>\n...\n<End Document>\nQUESTION: question here\nANSWER: answer here\n\nThese questions should be detailed and be based explicitly on information in the document. Begin!\n\n<Begin Document>\n\n"
-    q_prompt = (
-        sys_s +
-        f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
-        + sys_e + "<開始文件>\n")
+
+    if question_type in ["fact", "facts", "factoid", "factoids", "事實"]:
+        q_prompt = fact_question_prompt(qt)
+    elif question_type in [
+            "summary", "sum", "summarization", "summarize", "summaries", "摘要"
+    ]:
+        q_prompt = summary_question_prompt(qt)
+    elif question_type in ["irre", "irrelevant", "irrelevance", "無關"]:
+        q_prompt = irre_question_prompt(qt)
+
     # end_prompt = "<End Document>\n"
     end_prompt = "<結束文件>\n"
     # generate question prompt = generate_question_prompt(Document)
     q_prompt = q_prompt + doc_text + end_prompt
 
     return q_prompt
+
+
+def fact_question_prompt(qt: str = "") -> str:
+    """prompt for generate fact question"""
+
+    fact_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。"
+    format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
+    return (sys_s + fact_prompt + format_prompt + sys_e + "<開始文件>\n")
+
+
+def summary_question_prompt(qt: str = "") -> str:
+    """prompt for generate summary question"""
+
+    sum_prompt = "人類： 請根據以下文件進行摘要，並將摘要放在 \"答案\"後面."
+    format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n答案：摘要在這裡\n\n。開始吧！"
+    return (sys_s + sum_prompt + format_prompt + sys_e + "<開始文件>\n")
+
+
+def irre_question_prompt(qt: str = "") -> str:
+    """prompt for generate irrelevant question"""
+
+    irre_prompt = f"人類：我想測試語言模型根據文件回答的可靠性。\n請只生成一個名詞或領域與文件內容相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
+    format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
+    return (sys_s + irre_prompt + format_prompt + sys_e + "<開始文件>\n")
+
+
+def compare_question_prompt(question_style: str, topic: str, nouns: str,
+                            used_texts: str):
+    """prompt for generate compare question"""
+
+    qt = ""
+    if question_style not in [
+            "essay", "問答", "essay question", "essay_question"
+    ]:
+        qt = "少於100字的"
+
+    com_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件和相關主題只生成一個相關主題之間的比較問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。"
+    format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n<開始相關主題>\n...\n<結束相關主題>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
+
+    return (sys_s + com_prompt + format_prompt + sys_e + "<開始文件>\n" +
+            used_texts + "<結束文件>\n" + "<開始相關主題>\n" + nouns + "<結束相關主題>\n")
 
 
 def format_llm_score(cand: str, ref: str):
@@ -244,3 +298,84 @@ def default_doc_ask_prompt():
     prompt = f"""Use the following pieces of context to answer the user's question. 
 If you don't know the answer, just say that you don't know, don't try to make up an answer.\n"""
     return prompt
+
+
+def format_category_prompt(doc_text, language: str):
+    """prompt for generate category for proper nouns"""
+
+    if language == "ch":
+        prompt = "用中文回答"
+    else:
+        prompt = ""
+    prompt += f"""The document discuss some proper nouns, please find most important two of them and give those "proper noun" a general "category", categories like company, system, flower, software. The format of response is
+    {{
+      "proper noun": "category",
+      "proper noun": "category",
+    }}\n
+    For example, the document may discuss the 5G, since 5G is a kind of communication technology, you should output "5G":"communication technology". 
+    REMEMBER, the output should be formatted as a JSON instance. below is the document content:\n{doc_text}"""
+
+    return prompt
+
+
+class OutputSchema:
+    """
+    structure for generate JSON schema, used in JSON_formatter
+    """
+
+    def __init__(self, name: str, description: str, type: str = "str"):
+        type = type.lower()
+        self.name = name
+        self.description = description
+        self.type = type
+
+        if type not in [
+                "str", "int", "list", "dict", "tuple", "float", "double",
+                "long"
+        ]:
+            self.type = "str"
+
+    def __str__(self):
+        return f"\t{self.name}: {self.type}  // {self.description}"
+
+
+def JSON_formatter(schemas: Union[list, OutputSchema]):
+    """generate prompt for generate JSON format, input list of OutputSchema, which include every key and value you want to generate in JSON format"""
+
+    if isinstance(schemas, OutputSchema):
+        schemas = [schemas]
+
+    schema_str = "\n".join([sche.__str__() for sche in schemas])
+    format_instruct = f"""The output should be formatted as a JSON instance that conforms to the JSON schema below:
+    {{
+    {schema_str}
+    }}\n
+    """
+    return format_instruct
+
+
+def JSON_formatter_list(names: list,
+                        descriptions: list,
+                        types: list = ["str"]):
+    """generate prompt for generate JSON format, input list name and descriptions, which include every key and value you want to generate in JSON format"""
+
+    if len(names) != len(descriptions):
+        print("error, names and descriptions should have the same length\n\n")
+        return ""
+    schema_str = ""
+    for i in range(len(names)):
+        if i < len(types) and types[i] in [
+                "str", "int", "list", "dict", "tuple", "float", "double",
+                "long"
+        ]:
+            checked_type = types[i]
+        else:
+            checked_type = "str"
+        schema_str += f"\t{names[i]}: {checked_type}  // {descriptions[i]}\n"
+
+    format_instruct = f"""The output should be formatted as a JSON instance that conforms to the JSON schema below:
+    {{
+    {schema_str}
+    }}\n
+    """
+    return format_instruct

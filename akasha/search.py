@@ -1,13 +1,13 @@
 from langchain.schema import Document
-from langchain.retrievers import (
+from langchain_community.retrievers import (
     TFIDFRetriever,
-    ContextualCompressionRetriever,
     SVMRetriever,
     KNNRetriever,
 )
-
+from langchain.retrievers import ContextualCompressionRetriever
 from langchain.schema.vectorstore import VectorStoreRetriever
-from langchain.vectorstores import Chroma, chroma
+from langchain_community.vectorstores import chroma
+from langchain_community.vectorstores.chroma import Chroma
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
