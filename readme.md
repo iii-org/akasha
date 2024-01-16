@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.7](https://img.shields.io/badge/pypi%20package-0.8.7-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.8](https://img.shields.io/badge/pypi%20package-0.8.7-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -287,6 +287,7 @@ huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variabl
 quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
 mistral = "hf:Mistral-7B-Instruct-v0.2" 
+mediatek_Breeze = "hf:MediaTek-Research/Breeze-7B-Instruct-64k-v0.1"
 ### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 
 ### from https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF  and the name behind "llama-gpu:" or "llama-cpu:"
 ### from https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF

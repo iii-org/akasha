@@ -10,7 +10,7 @@ import akasha.search as search
 import akasha.format as format
 import akasha.prompts as prompts
 import akasha.db
-import datetime
+import datetime, traceback
 from dotenv import load_dotenv
 
 load_dotenv(pathlib.Path().cwd() / ".env")
@@ -397,6 +397,7 @@ class atman:
             if self.verbose:
                 print("Prompt after formatting:", "\n\n" + text_input)
         except Exception as e:
+            traceback.print_exc()
             print(e)
             print(
                 "\n\nText generation encountered an error before querying the language model (LLM).\
@@ -410,6 +411,7 @@ class atman:
             if response[:8] == "System: ":
                 response = response[8:]
         except Exception as e:
+            traceback.print_exc()
             print(e)
             print("\n\nllm error\n\n")
 
@@ -730,7 +732,6 @@ class Doc_QA(atman):
             self.system_prompt = prompts.default_doc_ask_prompt()
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
             self.system_prompt, self.prompt)
-
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()

@@ -8,7 +8,7 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.chat_models import ChatOpenAI, AzureChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
-import os
+import os, traceback
 import shutil
 
 jieba.setLogLevel(
@@ -33,6 +33,7 @@ def is_path_exist(path: str) -> bool:
         if not des_path.exists():
             raise FileNotFoundError("can not find the path")
     except FileNotFoundError as err:
+        traceback.print_exc()
         print(err, path)
         return False
     return True
@@ -81,6 +82,7 @@ def _handle_azure_env() -> (str, str, str):
                     )
             count += 1
     except Exception as err:
+        traceback.print_exc()
         print(err)
 
     return ret[0], ret[1], ret[2]
@@ -401,6 +403,7 @@ def extract_json(s) -> Union[dict, None]:
             # Try to parse the JSON part of the string
             return json.loads(json_part)
         except json.JSONDecodeError:
+            traceback.print_exc()
             print("The JSON part of the string is not well-formatted")
             return None
     else:
@@ -517,10 +520,19 @@ def call_model(model, prompt: str) -> str:
     Returns:
         str: llm response
     """
-    try:  ### try call openai llm model
-        response = model.predict(prompt)
 
+    try:
+        model_type = model._llm_type
     except:
+        try:
+            ### try call openai llm model
+            response = model.predict(prompt)
+        except:
+            response = model._call(prompt)
+
+    if "openai" in model_type:
+        response = model.predict(prompt)
+    else:
         response = model._call(prompt)
     return response
 

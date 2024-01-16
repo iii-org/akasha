@@ -4,7 +4,7 @@ from tqdm import tqdm
 import akasha
 import akasha.eval as eval
 import akasha.db
-import os
+import os, traceback
 import numpy as np
 import torch, gc
 from langchain.schema import Document
@@ -514,6 +514,7 @@ class Model_Eval(akasha.atman):
             self.doc_length += docs_len
             self.doc_tokens += docs_token
         except Exception as e:
+            traceback.print_exc()
             print("running model error\n", e)
             response = ["running model error"]
             torch.cuda.empty_cache()
@@ -586,6 +587,7 @@ class Model_Eval(akasha.atman):
                 self.language, sum_doc)
             self.doc_tokens += self.model_obj.get_num_tokens(sum_doc)
         except Exception as e:
+            traceback.print_exc()
             print("running model error\n", e)
             response = ["running model error"]
             torch.cuda.empty_cache()
