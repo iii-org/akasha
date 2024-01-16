@@ -1,6 +1,6 @@
 from typing import Union, List
 from tqdm import tqdm
-import time, os, shutil
+import time, os, shutil, traceback
 import datetime
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
@@ -135,6 +135,7 @@ def _load_file(file_path: str, extension: str):
 
         return docs
     except Exception as err:
+        traceback.print_exc()
         print("Load", file_path, "failed, ignored.\n message: \n", err)
         return ""
 
