@@ -131,7 +131,8 @@ def format_wrong_answer(num: int, doc_text: str, question: str,
 
 def format_create_question_prompt(doc_text: str,
                                   question_type: str = "fact",
-                                  question_style: str = "essay") -> str:
+                                  question_style: str = "essay",
+                                  topic: str = "") -> str:
     """prompts for auto generate question from document
 
     Args:
@@ -150,13 +151,13 @@ def format_create_question_prompt(doc_text: str,
         qt = "少於100字的"
 
     if question_type in ["fact", "facts", "factoid", "factoids", "事實"]:
-        q_prompt = fact_question_prompt(qt)
+        q_prompt = fact_question_prompt(qt, topic)
     elif question_type in [
             "summary", "sum", "summarization", "summarize", "summaries", "摘要"
     ]:
         q_prompt = summary_question_prompt(qt)
     elif question_type in ["irre", "irrelevant", "irrelevance", "無關"]:
-        q_prompt = irre_question_prompt(qt)
+        q_prompt = irre_question_prompt(qt, topic)
 
     # end_prompt = "<End Document>\n"
     end_prompt = "<結束文件>\n"
@@ -166,10 +167,13 @@ def format_create_question_prompt(doc_text: str,
     return q_prompt
 
 
-def fact_question_prompt(qt: str = "") -> str:
+def fact_question_prompt(qt: str = "", topic: str = "") -> str:
     """prompt for generate fact question"""
 
-    fact_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。"
+    if topic != "":
+        topic = f"相關{topic}的"
+
+    fact_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個{topic}問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
     return (sys_s + fact_prompt + format_prompt + sys_e + "<開始文件>\n")
 
@@ -182,10 +186,12 @@ def summary_question_prompt(qt: str = "") -> str:
     return (sys_s + sum_prompt + format_prompt + sys_e + "<開始文件>\n")
 
 
-def irre_question_prompt(qt: str = "") -> str:
+def irre_question_prompt(qt: str = "", topic: str = "") -> str:
     """prompt for generate irrelevant question"""
+    if topic != "":
+        topic = f"和{topic}"
 
-    irre_prompt = f"人類：我想測試語言模型根據文件回答的可靠性。\n請只生成一個名詞或領域與文件內容相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
+    irre_prompt = f"人類：我想測試語言模型根據文件回答的可靠性。\n請只生成一個名詞或領域與文件內容{topic}相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
     return (sys_s + irre_prompt + format_prompt + sys_e + "<開始文件>\n")
 
@@ -339,6 +345,31 @@ class OutputSchema:
         return f"\t{self.name}: {self.type}  // {self.description}"
 
 
+def XML_formatter(schemas: Union[list, OutputSchema]):
+    """generate prompt for generate XML format, input list of OutputSchema, which include every key and value you want to generate in JSON format"""
+
+    if isinstance(schemas, OutputSchema):
+        schemas = [schemas]
+
+    schema_str = "\n".join([sche.__str__() for sche in schemas])
+    XML_FORMAT_INSTRUCTIONS = f"""The output should be formatted as a XML file.
+    1. Output should conform to the tags below. 
+    2. If tags are not given, make them on your own.
+    3. Remember to always open and close all the tags.
+
+    As an example, for the tags ["foo", "bar", "baz"]:
+    1. String "<foo>\n   <bar>\n      <baz></baz>\n   </bar>\n</foo>" is a well-formatted instance of the schema. 
+    2. String "<foo>\n   <bar>\n   </foo>" is a badly-formatted instance.
+    3. String "<foo>\n   <tag>\n   </tag>\n</foo>" is a badly-formatted instance.
+
+    Here are the output tags:
+    ```
+    {schema_str}
+    ```"""
+
+    return XML_FORMAT_INSTRUCTIONS
+
+
 def JSON_formatter(schemas: Union[list, OutputSchema]):
     """generate prompt for generate JSON format, input list of OutputSchema, which include every key and value you want to generate in JSON format"""
 
@@ -346,6 +377,7 @@ def JSON_formatter(schemas: Union[list, OutputSchema]):
         schemas = [schemas]
 
     schema_str = "\n".join([sche.__str__() for sche in schemas])
+
     format_instruct = f"""The output should be formatted as a JSON instance that conforms to the JSON schema below:
     {{
     {schema_str}
@@ -379,3 +411,7 @@ def JSON_formatter_list(names: list,
     }}\n
     """
     return format_instruct
+
+
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain.output_parsers import XMLOutputParser

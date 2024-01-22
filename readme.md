@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.8](https://img.shields.io/badge/pypi%20package-0.8.7-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.9](https://img.shields.io/badge/pypi%20package-0.8.7-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -684,6 +684,27 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_irre.txt")
 
 bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+
+```
+
+<br/>
+<br/>
+
+
+## assign certain topic of questionset
+If you want to generate certain topic of question, you can use **create_topic_questionset** function, it will use the topic input to find related texts in the documents
+ and generate question set.
+
+
+```python
+
+import akasha.eval as eval
+
+eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="openai:gpt-3.5-turbo", record_exp="exp_mic_auto_questionset")
+
+eva.create_topic_questionset(doc_path="doc/mic/", topic= "工業4.0", question_num=3, output_file_path="questionset/mic_topic_irre.txt")
+
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
 
 ```
 

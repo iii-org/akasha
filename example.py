@@ -1,6 +1,7 @@
 import akasha
 import akasha.eval as eval
 import akasha.summary as summary
+import akasha.prompts as prompts
 
 query1 = "五軸是甚麼?"
 query2 = [
@@ -155,3 +156,26 @@ summary_obj = SUM()
 # ret = akasha.openai_vision(pic_path=["C:/Users/ccchang/Pictures/oruya.png"], prompt="這張圖是甚麼意思?")
 
 # print(ret)
+
+
+### JSON FORMATTER ###
+def JSON():
+    formatter = [
+        prompts.OutputSchema(name="學歷", description="受試者的就讀大學", type="str"),
+        prompts.OutputSchema(name="經驗", description="受試者的工作經驗", type="str"),
+        prompts.OutputSchema(name="專長", description="受試者的專長能力", type="list"),
+        prompts.OutputSchema(name="年資", description="受試者的總工作年數", type="int")
+    ]
+    ak = akasha.Doc_QA(
+        topK=10,
+        threshold=0.0,
+        verbose=True,
+    )
+
+    response = ak.ask_whole_file(file_path="docs/resume_pool/A.docx",
+                                 system_prompt="用中文回答" +
+                                 prompts.JSON_formatter(formatter),
+                                 prompt=f'''以上是受試者的履歷，請回答該受試者的學歷、經驗、專長、年資''')
+
+    parse_json = akasha.helper.extract_json(response)
+    print(parse_json, type(parse_json))

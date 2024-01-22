@@ -565,7 +565,6 @@ class Doc_QA(atman):
             table = format.handle_table(prompt, self.docs, self.response)
             aiido_upload(self.record_exp, params, metrics, table)
 
-        del self.db
         return self.response
 
     def chain_of_thought(self, doc_path: Union[List[str], str],
@@ -686,7 +685,6 @@ class Doc_QA(atman):
                                             self.doc_tokens)
             aiido_upload(self.record_exp, params, metrics, table)
 
-        del self.db
         return self.response
 
     def ask_whole_file(self, file_path: str, prompt: str, **kwargs) -> str:
