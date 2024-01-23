@@ -5,12 +5,13 @@ from utils import check_expert_is_shared, get_last_consult_for_expert
 
 def consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
                  username):
-    st.title('Consult Expert')
-    consult_strategy = st.radio('Consult Strategy', ['Regular', 'Deep'],
-                                index=0,
-                                help='Choose strategy when consulting expert',
-                                horizontal=True,
-                                label_visibility='collapsed')
+    st.title('Consult Knowledge')
+    consult_strategy = st.radio(
+        'Consult Strategy', ['Regular', 'Deep'],
+        index=0,
+        help='Choose strategy when consulting Knowledge',
+        horizontal=True,
+        label_visibility='collapsed')
 
     if consult_strategy == 'Regular':
         _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
@@ -28,17 +29,17 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                  divider='rainbow',
                  help='Single Question at a time')
     col_answer, col_question = st.columns([3, 1])
-    shared = col_question.toggle('Shared Experts',
+    shared = col_question.toggle('Shared Knowledges',
                                  value=False,
                                  key='use-shared-experts',
-                                 help='Use Shared Experts')
+                                 help='Use Shared Knowledges')
     if not shared:
         EXPERTS = [e for e in EXPERTS if not check_expert_is_shared(e)]
     if EXPERTS == []:
         col_question.error(
-            'No experts available, create one or use shared experts')
+            'No Knowledges available, create one or use shared Knowledges')
     else:
-        expert_name = col_question.selectbox('Choose Expert', EXPERTS)
+        expert_name = col_question.selectbox('Choose Knowledge', EXPERTS)
         if check_expert_is_shared(expert_name):
             expert_name, expert_owner = expert_name.split('@')
         else:
@@ -50,9 +51,9 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
         consultable, reason = check_consultable(datasets, embeddings_model,
                                                 chunk_size)
         if not consultable:
-            enable_msg = 'Please contact the owner of this expert to enable consultation.' if expert_owner != username else 'Please enable consultation in "Experts" settings.'
+            enable_msg = 'Please contact the owner of this Knowledge to enable consultation.' if expert_owner != username else 'Please enable consultation in "Knowledges" settings.'
             col_question.warning(
-                f'Expert="{expert_name}" is currently not consultable since {reason}{enable_msg}'
+                f'Knowledge="{expert_name}" is currently not consultable since {reason}{enable_msg}'
             )
         else:
             last_consult_config_for_expert = get_last_consult_for_expert(
@@ -83,7 +84,7 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                 'Submit',
                 type='primary',
                 use_container_width=True,
-                help='Submit question to expert',
+                help='Submit question to Knowledge',
                 on_click=ask_question,
                 args=(username, prompt, expert_owner, expert_name,
                       advanced_params, auto_clean),
@@ -103,19 +104,19 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
         help=
         'Divide questions into layers of sub-questions to increase precision.')
     col_answer, col_layer_area, col_layer_config = st.columns([2, 1, 1])
-    shared = col_layer_config.toggle('Shared Experts',
+    shared = col_layer_config.toggle('Shared Knowledges',
                                      value=False,
                                      key='use-shared-experts',
-                                     help='Use Shared Experts')
+                                     help='Use Shared Knowledges')
     if not shared:
         EXPERTS = [e for e in EXPERTS if not check_expert_is_shared(e)]
     if EXPERTS == []:
         col_layer_config.error(
-            'No experts available, create one or use shared experts')
+            'No Knowledges available, create one or use shared Knowledges')
     else:
 
         with col_layer_config:
-            expert_name = st.selectbox('Choose Expert', EXPERTS)
+            expert_name = st.selectbox('Choose Knowledge', EXPERTS)
             if check_expert_is_shared(expert_name):
                 expert_name, expert_owner = expert_name.split('@')
             else:
@@ -127,7 +128,7 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
             consultable, reason = check_consultable(datasets, embeddings_model,
                                                     chunk_size)
             if not consultable:
-                enable_msg = 'Please contact the owner of this expert to enable consultation.' if expert_owner != username else 'Please enable consultation in "Experts" settings.'
+                enable_msg = 'Please contact the owner of this Knowledge to enable consultation.' if expert_owner != username else 'Please enable consultation in "Knowledges" settings.'
                 st.warning(
                     f'Expert="{expert_name}" is currently not consultable since {reason}{enable_msg}'
                 )
@@ -167,7 +168,7 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                     'Submit',
                     type='primary',
                     use_container_width=True,
-                    help='Submit layers of questions to expert',
+                    help='Submit layers of questions to Knowledge',
                     on_click=ask_question_deep,
                     args=(col_answer, layers, username, prompt, expert_owner,
                           expert_name, advanced_params, auto_clean),

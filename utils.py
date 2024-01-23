@@ -7,6 +7,7 @@ from pathlib import Path
 import api_utils as apu
 import akasha.db
 import subprocess
+import time
 
 CHUNKSIZE = 3000
 SPINNER_MESSAGE = "Wait for api response..."
@@ -145,6 +146,7 @@ def ask_question(
 
     if not prompt or prompt == "":
         st.error("❌ Please input question")
+        time.sleep(3)
         return False
 
     if (advanced_params["embedding_model"].split(":")[0] == "openai"
@@ -175,8 +177,13 @@ def ask_question(
         "max_doc_len": advanced_params["max_doc_len"],
         "openai_config": openai_config,
     }
-    with st.spinner(SPINNER_MESSAGE):
-        response = requests.post(api_urls["regular_consult"], json=data).json()
+    try:
+        with st.spinner(SPINNER_MESSAGE):
+            response = requests.post(api_urls["regular_consult"],
+                                     json=data).json()
+    except Exception as e:
+        api_fail(e.__str__())
+
     if response["status"] != "success":
         api_fail(response["response"])
         return False
@@ -299,8 +306,13 @@ def ask_question_deep(
         "max_doc_len": advanced_params["max_doc_len"],
         "openai_config": openai_config,
     }
-    with st.spinner(SPINNER_MESSAGE):
-        response = requests.post(api_urls["deep_consult"], json=data).json()
+    try:
+        with st.spinner(SPINNER_MESSAGE):
+            response = requests.post(api_urls["deep_consult"],
+                                     json=data).json()
+    except Exception as e:
+        api_fail(e.__str__())
+
     if response["status"] != "success":
         api_fail(response["response"])
         return False
@@ -446,6 +458,7 @@ def create_expert(
     user_experts = list_experts(owner, name_only=True)
     if expert_name in user_experts:
         st.error(f"❌ Expert '{expert_name}' already exists")
+        time.sleep(3)
         return False
 
     try:
@@ -496,12 +509,13 @@ def create_expert(
         loading_bar = st.progress(progress_count, text="Creating chromadb...")
 
         for file_path in response["file_paths"]:
-            progress_count += progress_itv
+
             file_name = file_path.split("/")[-1]
             loading_bar.progress(progress_count,
                                  text=f"Creating chromadb for {file_name}...")
             suc, text = akasha.db.create_single_file_db(
                 file_path, expert_embedding, expert_chunksize)
+            progress_count += progress_itv
             if not suc:
                 st.warning(
                     f"❌ Create chromadb for file {file_name} failed, {text}")
@@ -514,6 +528,7 @@ def create_expert(
 
     except Exception as e:
         st.error("❌ Expert creation failed, " + e.__str__())
+        time.sleep(3)
         return False
 
     return True
@@ -660,6 +675,7 @@ def edit_expert(
     except Exception as e:
         st.error("❌ Expert edition failed during process datasets, " +
                  e.__str__())
+        time.sleep(3)
         return False
 
     with st.spinner(SPINNER_MESSAGE):
@@ -678,12 +694,13 @@ def edit_expert(
         loading_bar = st.progress(progress_count, text="Creating chromadb...")
 
         for file_path in response["file_paths"]:
-            progress_count += progress_itv
+
             file_name = file_path.split("/")[-1]
             loading_bar.progress(progress_count,
                                  text=f"Creating chromadb for {file_name}...")
             suc, text = akasha.db.create_single_file_db(
                 file_path, new_expert_embedding, new_expert_chunksize)
+            progress_count += progress_itv
             if not suc:
                 st.warning(
                     f"❌ Create chromadb for file {file_name} failed, {text}")
@@ -941,6 +958,7 @@ def create_dataset(dataset_name: str, dataset_description: str,
         # st.success(f'Dataset\'{dataset_name}\' has been created successfully')
     except Exception as e:
         st.error("❌ Dataset creation failed, " + e.__str__())
+        time.sleep(3)
         return False
     return True
 
@@ -1052,6 +1070,7 @@ def edit_dataset(
 
     except Exception as e:
         st.error("❌ Dataset edition failed, " + e.__str__())
+        time.sleep(3)
         return False
 
     return True
@@ -1102,6 +1121,7 @@ def delete_dataset(dataset_name: str, owner: str):
         st.success(f"Dataset'{dataset_name}' has been deleted successfully")
     except Exception as e:
         st.error("Dataset deletion failed, " + e.__str__())
+        time.sleep(3)
         return
 
     return
@@ -1335,6 +1355,7 @@ def api_fail(response: Union[str, list]):
     elif isinstance(response, list):
         res = "".join(response)
         st.error(f"❌ API failed: {res}")
+    time.sleep(1)
 
     return
 

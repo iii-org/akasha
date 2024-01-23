@@ -16,7 +16,7 @@ from views.forgetpwd import forgetpwd_page
 from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command
 
 # info
-VERSION = '0.8'
+VERSION = '0.9'
 
 # get host ip
 if 'host_ip' not in st.session_state:
@@ -42,7 +42,7 @@ if 'ans' not in st.session_state:
 
 # page config
 st.set_page_config(
-    page_title="Akasha",
+    page_title="akasha",
     layout="wide",
 )
 
@@ -62,7 +62,7 @@ url_params = st.experimental_get_query_params()
 _, col_title, _ = st.columns([2, 6, 1])
 placeholder_title = col_title.empty()
 with placeholder_title:
-    st.title('_:rainbow[AKASHA: Your Personal Domain Expert]_')
+    st.title('_:rainbow[akasha: Your Personal Domain Expert]_')
 
 _, col_version, _ = st.columns([6, 1, 6])
 placeholder_version = col_version.empty()
@@ -120,20 +120,21 @@ if url_params == {}:
         placeholder_version.empty()
         with st.sidebar:
             st.markdown(
-                "<h1 style='text-align: center; color: black;'>AKASHA</h1>",
+                "<h1 style='text-align: center; color: black;'>akasha</h1>",
                 unsafe_allow_html=True)
             st.markdown(
                 "<h5 style='text-align: center; color: black;'>Your Personal Domain Expert</h1>",
                 unsafe_allow_html=True)
-            selected = option_menu(
-                f'Hi, {username}',
-                ['Consult', 'Experts', 'Datasets', 'Settings', 'User Guide'],
-                icons=[
-                    'chat-dots', 'lightbulb', 'file-earmark-arrow-up', 'gear',
-                    'book-half'
-                ],
-                menu_icon='house',
-                default_index=0)
+            selected = option_menu(f'Hi, {username}', [
+                'Consult', 'Knowledges', 'Datasets', 'Settings', 'User Guide'
+            ],
+                                   icons=[
+                                       'chat-dots', 'lightbulb',
+                                       'file-earmark-arrow-up', 'gear',
+                                       'book-half'
+                                   ],
+                                   menu_icon='house',
+                                   default_index=0)
             placeholder_hint = st.empty()
 
             authenticator.logout('Logout', location='main', key='logout_key')
@@ -145,7 +146,7 @@ if url_params == {}:
             consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES,
                          LANGUAGE_MODELS, username)
 
-        elif selected == 'Experts':
+        elif selected == 'Knowledges':
             experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS, username,
                          user_accounts)
 
