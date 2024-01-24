@@ -32,6 +32,8 @@ def _api_settings(username: str):
     )
     if tmp_openai_on != st.session_state.openai_on:
         st.session_state.openai_on = tmp_openai_on
+        if st.session_state.openai_on and st.session_state.azure_openai_on:
+            st.session_state.azure_openai_on = False
         st.rerun()
     openai_api_key = st.text_input('OpenAI Key', help='OpenAI Key', type='password', disabled=not st.session_state.openai_on,\
         value=st.session_state.openai_key)
@@ -43,6 +45,8 @@ def _api_settings(username: str):
                                     key='azure_openai')
     if tmp_azure_openai_on != st.session_state.azure_openai_on:
         st.session_state.azure_openai_on = tmp_azure_openai_on
+        if st.session_state.openai_on and st.session_state.azure_openai_on:
+            st.session_state.openai_on = False
         st.rerun()
 
     col_azure_key, col_azure_url = st.columns([1, 1])
