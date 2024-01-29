@@ -317,10 +317,14 @@ class atman:
                 str(doc.metadata["page"]) for doc in self.docs
             ])
         except:
-            self.logs[timestamp]["doc_metadata"] = "none"
-            self.logs[timestamp]["docs"] = "\n\n".join(
-                [doc for doc in self.docs])
-
+            try:
+                self.logs[timestamp]["doc_metadata"] = "none"
+                self.logs[timestamp]["docs"] = "\n\n".join(
+                    [doc for doc in self.docs])
+            except:
+                self.logs[timestamp]["doc_metadata"] = "none"
+                self.logs[timestamp]["docs"] = "\n\n".join(
+                    [doc.page_content for doc in self.docs])
         self.logs[timestamp]["system_prompt"] = self.system_prompt
 
         return
@@ -724,6 +728,73 @@ class Doc_QA(atman):
         if self.docs is None:
             print("\n\nNo Relevant Documents.\n\n")
             return ""
+        self.doc_length = helper.get_docs_length(self.language, self.docs)
+
+        ## format prompt ##
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = prompts.default_doc_ask_prompt()
+        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+            self.system_prompt, self.prompt)
+        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
+
+        end_time = time.time()
+        self._add_result_log(timestamp, end_time - start_time)
+        self.logs[timestamp]["prompt"] = self.prompt
+        self.logs[timestamp]["response"] = self.response
+        if self.record_exp != "":
+            params = format.handle_params(
+                self.model,
+                self.embeddings,
+                self.chunk_size,
+                self.search_type_str,
+                self.topK,
+                self.threshold,
+                self.language,
+            )
+            metrics = format.handle_metrics(self.doc_length,
+                                            end_time - start_time,
+                                            self.doc_tokens)
+            table = format.handle_table(prompt, self.docs, self.response)
+            aiido_upload(self.record_exp, params, metrics, table)
+
+        return self.response
+
+    def ask_self(self,
+                 prompt: str,
+                 info: Union[str, list] = "",
+                 **kwargs) -> str:
+        """input information and question, llm model will use the information to generate the response of the question.
+
+            Args:
+                **info (str,list)**: document file path\n
+                **prompt (str)**:question you want to ask.\n
+                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                system_prompt, max_doc_len, temperature.
+
+            Returns:
+                response (str): the response from llm model.
+        """
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.prompt = prompt
+        if isinstance(info, str):
+            self.docs = [Document(page_content=info)]
+        else:
+            self.docs = [Document(page_content=i) for i in info]
+
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self.timestamp_list.append(timestamp)
+        start_time = time.time()
+
+        self._add_basic_log(timestamp, "ask_self")
+        self.logs[timestamp]["embeddings"] = "ask_self"
+
+        ### start to get response ###
+        cur_documents = '\n'.join(
+            [db_doc.page_content for db_doc in self.docs])
+        self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
+
         self.doc_length = helper.get_docs_length(self.language, self.docs)
 
         ## format prompt ##
