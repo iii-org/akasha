@@ -9,6 +9,30 @@ query2 = [
     "詳細解釋「工業4.0 成熟度指數」發展路徑的六個成熟度",
     "根據西門子自有工廠朝工業4.0發展，探討其各項工業4.0的成熟度指標",
 ]
+install_requires = [
+    "pypdf",
+    "langchain>=0.1.0",
+    "chromadb==0.4.14",
+    "openai==0.27",
+    "tiktoken",
+    "lark==1.1.7",
+    "scikit-learn<1.3.0",
+    "jieba==0.42.1",
+    "sentence-transformers==2.2.2",
+    "torch==2.0.1",
+    "transformers>=4.33.4",
+    "llama-cpp-python==0.2.6",
+    "auto-gptq==0.3.1",
+    "tqdm==4.65.0",
+    "docx2txt==0.8",
+    "rouge==1.0.1",
+    "rouge-chinese==1.0.3",
+    "bert-score==0.3.13",
+    "click",
+    "tokenizers>=0.13.3",
+    "streamlit==1.28.2",
+    "streamlit_option_menu==0.3.6",
+]
 
 
 ## used for custom search type, use query_embeds and docs_embeds to determine relevant documents.
@@ -80,6 +104,19 @@ def QA(doc_path="./docs/mic/"):
 
     response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list=query2)
     print(response_list)
+
+    ## ask_whole_file
+    response = qa.ask_whole_file(
+        file_path="docs/mic/20230317_5軸工具機因應市場訴求改變的發展態勢.pdf",
+        prompt=f'''五軸是甚麼?''')
+    print(response)
+
+    ## ask_self
+    qa.ask_self(model="openai:gpt-4",
+                max_doc_len=5000,
+                prompt="langchain的套件版本?",
+                info=install_requires)
+    print(qa.response)
     return qa
 
 

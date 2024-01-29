@@ -526,7 +526,7 @@ def call_model(model, prompt: str) -> str:
     except:
         try:
             ### try call openai llm model
-            response = model.predict(prompt)
+            response = model.invoke(prompt)
         except:
             response = model._call(prompt)
 

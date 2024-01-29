@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.9](https://img.shields.io/badge/pypi%20package-0.8.7-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.10](https://img.shields.io/badge/pypi%20package-0.8.10-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -432,6 +432,97 @@ response 3:
 
 總的來說，根據西門子自有工廠朝工業4.0發展的方式，可以看出他們在工業4.0成熟度指標中已經達到了可連結、可視化、可分析和可預測，優化生產設備和工序。
 ```
+
+<br/>
+<br/>
+
+
+
+## ask question from a single file 
+
+If there's only a short single file document, you can use ***ask_whole_file*** to ask LLM with the whole document file ***noted that the length of the document can not larger than the window size of the model.*** 
+
+### example
+
+```python
+import akasha
+
+ak = akasha.Doc_QA(
+    search_type="merge",
+    verbose=True,
+    max_doc_len=15000,
+    model="openai:gpt-4-32k",
+)
+
+response = ak.ask_whole_file(system_prompt="用列舉的方式描述"
+    file_path="docs/mic/20230726_工業4_0發展重點與案例分析，以西門子、鴻海為例.pdf",
+    prompt="工業4.0有什麼可以參考的標準或是架構嗎?")
+
+```
+
+```shell
+工業4.0的參考標準或架構主要有以下幾種：
+
+1. 「工業 4.0成熟度指數」：由德國國家工程院（Acatech）提出，將發展階段劃分為電腦化、可連結、可視化、可分析、可預測、自適應共六個成熟度，前項為後項發展基礎。
+
+2. 「新加坡工業智慧指數」（Singapore Smart Industry Readiness Index, SIRI）：由新加坡政府提出，用於評估企業在工業4.0的發展程度。
+
+3. 「工業 4.0實施步驟方法論」：這是一種實施工業4.0的具體步驟，包括盤點公司內部待改善問題，分析現況與預期目標差異，以及規劃具體要改善的業務流程路線圖。
+```
+
+
+<br/>
+<br/>
+
+
+
+## directly offer information to ask question
+If you do not want to use any document file, you can use ***ask_self*** function and input the information you need using parameter ***info***, ***info*** can be string or list of string.
+
+
+
+### example
+
+```python
+
+install_requires = [
+    "pypdf",
+    "langchain>=0.1.0",
+    "chromadb==0.4.14",
+    "openai==0.27",
+    "tiktoken",
+    "lark==1.1.7",
+    "scikit-learn<1.3.0",
+    "jieba==0.42.1",
+    "sentence-transformers==2.2.2",
+    "torch==2.0.1",
+    "transformers>=4.33.4", 
+    "llama-cpp-python==0.2.6",
+    "auto-gptq==0.3.1",
+    "tqdm==4.65.0",
+    "docx2txt==0.8",
+    "rouge==1.0.1",
+    "rouge-chinese==1.0.3",
+    "bert-score==0.3.13",
+    "click",
+    "tokenizers>=0.13.3",
+    "streamlit==1.28.2",
+    "streamlit_option_menu==0.3.6",
+]
+
+ak = akasha.Doc_QA(
+    verbose=True,
+    max_doc_len=15000,
+    model="openai:gpt-4",
+)
+response = ak.ask_self(prompt="langchain的套件版本?", info=install_requires)
+```
+
+
+```shell
+langchain的套件版本是0.1.0或更高版本。
+```
+
 
 <br/>
 <br/>
