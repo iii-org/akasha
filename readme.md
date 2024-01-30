@@ -30,33 +30,68 @@ To use Docker to run akasha dev-ui, you can clone the whole project and use Dock
 
 1. use git to clone or download the project 
 
-``` bash
-git clone https://gitlab-devops.iii.org.tw/root/qaiii-1.git@dev-ui
-
-```
+    ```shell
+    $ git clone --branch ui-dev https://github.com/iii-org/akasha.git
+    $ cd akasha
+    ```
 
 
 2. (optional) edit install.env file 
 
-(install.env)
+    ```bash
+    ## install.env ##
+    MODEL=./model    # put the model you want to use in here
+    CONFIG=./config # directory that save the dataset, expert configs
+    DOCS=./docs # directory that save the document files
+    IMAGE_NAME=akasha_dev_ui
+    IMAGE_VERSION=0.2
 
-``` bash
-MODEL=./model    # put the model you want to use in here
-CONFIG=./config # directory that save the dataset, expert configs
-DOCS=./docs # directory that save the document files
-IMAGE_NAME=akasha_dev_ui
-IMAGE_VERSION=0.1
-
-```
+    ```
 
 
 3. run the script to build image and run the container
 
-``` bash 
-sudo bash install.sh
+    ``` bash 
+    sudo bash install.sh
 
+    ```
+
+
+## Run Docker with default openAI Key
+If you want to add default openAI API key or Azure openAI API key so that every users and use it directly, in step 2, you can add your default key in ***install.env*** file.
+It will create a ***default_key.json*** file in your config directory, you can change the key value or delete it to remove the key after the akasha_dev_ui is activated.
+
+### openAI:
+
+```bash
+## install.env ##
+MODEL=./model   
+CONFIG=./config 
+DOCS=./docs 
+IMAGE_NAME=akasha_dev_ui
+IMAGE_VERSION=0.2
+DEFAULT_OPENAI_API_KEY={your openAI key}
 ```
 
+
+
+### Azure openAI:
+
+```bash
+## install.env ##
+MODEL=./model   
+CONFIG=./config 
+DOCS=./docs 
+IMAGE_NAME=akasha_dev_ui
+IMAGE_VERSION=0.2
+DEFAULT_AZURE_API_KEY={your Azure key}
+DEFAULT_AZURE_API_BASE={your Azure base url}
+```
+
+
+
+<br/>
+<br/>
 
 
 
@@ -68,6 +103,10 @@ you can download the docker image in [akasha_dev_ui.tar](https://iiiorgtw-my.sha
 
 ``` bash 
 sudo docker load -i akasha_dev_ui.tar
-sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -p 8501:8501 --name akasha_dev_ui akasha_dev_ui:0.1 
+sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 --name akasha_dev_ui akasha_dev_ui:0.2 
 
 ```
+
+
+
+

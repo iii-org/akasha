@@ -2,26 +2,38 @@ import streamlit as st
 import yaml
 from utils import save_api_configs, save_openai_to_file
 from utils import download_txt, download_json
+from utils import is_default_api
 
 
 def settings_page(authenticator, username, config, ACCOUNTS_PATH):
     st.title('Settings')
-    settings_option = st.radio('Option',
-                               ['API Settings', 'History', 'Account'],
-                               horizontal=True,
-                               label_visibility='collapsed')
-    st.markdown('')
+    if is_default_api():
+        settings_option = st.radio('Option', ['History', 'Account'],
+                                   horizontal=True,
+                                   label_visibility='collapsed')
+        st.markdown('')
+        if settings_option == 'History':
+            _history()
 
-    if settings_option == 'API Settings':
-        _api_settings(username)
-    elif settings_option == 'History':
-        _history()
+        elif settings_option == 'Account':
+            _account_settings(authenticator, username, config, ACCOUNTS_PATH)
+    else:
+        settings_option = st.radio('Option',
+                                   ['API Settings', 'History', 'Account'],
+                                   horizontal=True,
+                                   label_visibility='collapsed')
+        st.markdown('')
+        if settings_option == 'API Settings':
+            _api_settings(username)
+        elif settings_option == 'History':
+            _history()
 
-    elif settings_option == 'Account':
-        _account_settings(authenticator, username, config, ACCOUNTS_PATH)
+        elif settings_option == 'Account':
+            _account_settings(authenticator, username, config, ACCOUNTS_PATH)
 
 
 def _api_settings(username: str):
+
     st.header('API Settings', divider='rainbow')
     st.subheader('* Open AI', divider='grey')
 

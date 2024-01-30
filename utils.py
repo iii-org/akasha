@@ -41,6 +41,7 @@ api_urls = {
     "test_azure": f"{HOST}:{PORT}/openai/test_azure",
     "save_openai": f"{HOST}:{PORT}/openai/save",
     "choose_openai": f"{HOST}:{PORT}/openai/choose",
+    "is_default_api": f"{HOST}:{PORT}/openai/is_default_api",
     "get_consult": f"{HOST}:{PORT}/expert/get_consult",
     "save_consult": f"{HOST}:{PORT}/expert/save_consult",
     "get_default_consult": f"{HOST}:{PORT}/expert/get_default_consult",
@@ -181,50 +182,50 @@ def ask_question(
         with st.spinner(SPINNER_MESSAGE):
             response = requests.post(api_urls["regular_consult"],
                                      json=data).json()
+            if response["status"] != "success":
+                api_fail(response["response"])
+                return False
+
+        # akasha: get response from expert
+
+        if auto_clean:
+            st.session_state["question"] = ""
+        st.session_state["que"] = prompt
+        st.session_state["ans"] = response["response"]
+        st.session_state.logs[response["timestamp"]] = response["logs"]
+
+        # save last consult config for expert if is the owner of expert
+        if username == expert_owner:
+            data = {
+                "system_prompt":
+                advanced_params["system_prompt"],
+                "language_model":
+                advanced_params["model"],
+                "search_type":
+                advanced_params["search_type"],
+                "top_k":
+                advanced_params["topK"],
+                "threshold":
+                advanced_params["threshold"],
+                "max_doc_len":
+                advanced_params["max_doc_len"],
+                "temperature":
+                advanced_params["temperature"],
+                "use_compression":
+                advanced_params["use_compression"],
+                "compression_language_model":
+                advanced_params["compression_language_model"],
+            }
+            data["owner"] = expert_owner
+            data["expert_name"] = expert_name
+            with st.spinner(SPINNER_MESSAGE):
+                response = requests.post(api_urls["save_consult"],
+                                         json=data).json()
+            if response["status"] != "success":
+                st.warning("cannot save last consult config for expert")
+
     except Exception as e:
         api_fail(e.__str__())
-
-    if response["status"] != "success":
-        api_fail(response["response"])
-        return False
-    # akasha: get response from expert
-
-    if auto_clean:
-        st.session_state["question"] = ""
-    st.session_state["que"] = prompt
-    st.session_state["ans"] = response["response"]
-    st.session_state.logs[response["timestamp"]] = response["logs"]
-
-    # save last consult config for expert if is the owner of expert
-    if username == expert_owner:
-        data = {
-            "system_prompt":
-            advanced_params["system_prompt"],
-            "language_model":
-            advanced_params["model"],
-            "search_type":
-            advanced_params["search_type"],
-            "top_k":
-            advanced_params["topK"],
-            "threshold":
-            advanced_params["threshold"],
-            "max_doc_len":
-            advanced_params["max_doc_len"],
-            "temperature":
-            advanced_params["temperature"],
-            "use_compression":
-            advanced_params["use_compression"],
-            "compression_language_model":
-            advanced_params["compression_language_model"],
-        }
-        data["owner"] = expert_owner
-        data["expert_name"] = expert_name
-        with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["save_consult"],
-                                     json=data).json()
-        if response["status"] != "success":
-            st.warning("cannot save last consult config for expert")
-
     return True
 
 
@@ -1217,7 +1218,7 @@ def check_expert_use_shared_dataset(expert_datasets: list,
 
 
 # settings
-def _save_openai_configuration(key: str) -> bool:
+def _save_openai_configuration(key: str, add_session: bool = True) -> bool:
     """first check if openai api key is valid, then save openai api key to session state['openai_key'].
 
     Args:
@@ -1237,11 +1238,14 @@ def _save_openai_configuration(key: str) -> bool:
         api_fail(response["response"])
         return False
 
-    st.session_state["openai_key"] = key
+    if add_session:
+        st.session_state["openai_key"] = key
     return True
 
 
-def _save_azure_openai_configuration(key: str, endpoint: str) -> bool:
+def _save_azure_openai_configuration(key: str,
+                                     endpoint: str,
+                                     add_session: bool = True) -> bool:
     """first check if azure openai credentials are valid, then save azure openai credentials to session state['azure_key']
     and session state['azure_base'].
 
@@ -1264,8 +1268,9 @@ def _save_azure_openai_configuration(key: str, endpoint: str) -> bool:
         api_fail(response["response"])
         return False
 
-    st.session_state["azure_key"] = key
-    st.session_state["azure_base"] = endpoint
+    if add_session:
+        st.session_state["azure_key"] = key
+        st.session_state["azure_base"] = endpoint
     return True
 
 
@@ -1355,7 +1360,7 @@ def api_fail(response: Union[str, list]):
     elif isinstance(response, list):
         res = "".join(response)
         st.error(f"❌ API failed: {res}")
-    time.sleep(1)
+    time.sleep(3)
 
     return
 
@@ -1535,6 +1540,7 @@ def get_expert_info(owner: str, expert_name: str) -> (list, str, str, list):
 
 def get_openai_config(owner: str) -> dict:
     """get openai api configs from st.seesion_state and openai config file."""
+
     data = {
         "owner":
         owner,
@@ -1702,3 +1708,16 @@ def run_command(command: str,
                             text=True)
 
     return result
+
+
+def is_default_api():
+
+    try:
+        response = requests.get(api_urls["is_default_api"]).json()
+        if response["status"] != "success":
+            raise Exception(response["response"])
+    except Exception as e:
+        api_fail(e.__str__())
+        return False
+
+    return response["response"]
