@@ -98,11 +98,11 @@ DEFAULT_AZURE_API_BASE={your Azure base url}
 
 # Run Docker image
 
-you can download the docker image in [akasha_dev_ui.tar](https://iiiorgtw-my.sharepoint.com/:u:/g/personal/ccchang_iii_org_tw1/Eey7F7wIlldNrqiwdWE1H7wBb-TMCv3NY4rYxRUP5DVHug?e=OYwvkx) 
+you can download the docker image in [akasha_dev_ui_0_2.tar](https://iiiorgtw-my.sharepoint.com/:u:/g/personal/ccchang_iii_org_tw1/Eas6HTE_Sy1JhwNBY-Jcr9wBSfjad12CR_mdhBge9wOqTQ?e=Ea4ncM) 
 
 
 ``` bash 
-sudo docker load -i akasha_dev_ui.tar
+sudo docker load -i akasha_dev_ui_0_2.tar
 sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 --name akasha_dev_ui akasha_dev_ui:0.2 
 
 ```
