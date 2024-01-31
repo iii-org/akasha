@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui-dev
+  namespace: akasha
+spec:
+  selector:
+    app: akasha-rag
+  type: ClusterIP
+  ports:
+  - name: frontend
+    protocol: TCP
+    port: 8501
+    targetPort: 8501

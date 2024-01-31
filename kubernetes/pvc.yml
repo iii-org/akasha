@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: akasha-model-pvc
+  namespace: akasha
+  labels:
+    app: akasha-rag
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: akasha-config-pvc
+  namespace: akasha
+  labels:
+    app: akasha-rag
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: akasha-docs-pvc
+  namespace: akasha
+  labels:
+    app: akasha-rag
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: akasha-chromadb-pvc
+  namespace: akasha
+  labels:
+    app: akasha-rag
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 250Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: akasha-account-pvc
+  namespace: akasha
+  labels:
+    app: akasha-rag
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
