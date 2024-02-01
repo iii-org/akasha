@@ -125,6 +125,7 @@ def openai_vision(
 
     ### call model ###
     import os
+    from langchain_openai import ChatOpenAI, AzureChatOpenAI
     from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
     from langchain.schema.messages import HumanMessage, SystemMessage
     from langchain.callbacks import get_openai_callback

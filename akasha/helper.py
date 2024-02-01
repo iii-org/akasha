@@ -4,9 +4,8 @@ import json, re
 from pathlib import Path
 import opencc
 from typing import Callable, Union
-#from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-#from langchain_community.chat_models import ChatOpenAI, AzureChatOpenAI
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os, traceback
@@ -124,14 +123,9 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
             embeddings = AzureOpenAIEmbeddings(azure_deployment=embedding_name,
                                                azure_endpoint=api_base,
                                                api_key=api_key,
-                                               api_version=api_version)
-            # embeddings = OpenAIEmbeddings(
-            #     deployment=embedding_name,
-            #     openai_api_base=api_base,
-            #     api_key=api_key,
-            #     openai_api_type="azure",
-            #     api_version=api_version,
-            # )
+                                               api_version=api_version,
+                                               validate_base_url=False)
+
         else:
             openai.api_type = "open_ai"
 
@@ -220,6 +214,7 @@ def handle_model(model_name: Union[str, Callable],
                 azure_endpoint=api_base,
                 api_key=api_key,
                 api_version=api_version,
+                validate_base_url=False,
             )
         else:
             openai.api_type = "open_ai"
@@ -539,6 +534,14 @@ def call_model(model, prompt: str) -> str:
         response = model.invoke(prompt)
     else:
         response = model._call(prompt)
+
+    if isinstance(response, AIMessage):
+        response = response.content
+        if isinstance(response, dict):
+            response = response.__str__()
+        if isinstance(response, list):
+            response = '\n'.join(response)
+
     return response
 
 

@@ -10,7 +10,7 @@ long_description = "n"  #(this_directory / "read.md").read_text(encoding="utf-8"
 install_requires = [
     "pypdf",
     "langchain>=0.1.0",
-    "langchain_openai"
+    "langchain_openai",
     "chromadb==0.4.14",
     "openai>=0.27",
     "tiktoken",
@@ -39,7 +39,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.11",
+    version="0.8.13",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
