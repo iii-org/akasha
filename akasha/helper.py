@@ -536,7 +536,7 @@ def call_model(model, prompt: str) -> str:
             response = model._call(prompt)
 
     if "openai" in model_type:
-        response = model.predict(prompt)
+        response = model.invoke(prompt)
     else:
         response = model._call(prompt)
     return response
