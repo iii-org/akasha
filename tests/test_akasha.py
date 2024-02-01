@@ -17,11 +17,10 @@ def base_search(query_embeds, docs_embeds, k: int, relevancy_threshold: float,
 
 def base_model(prompt: str):
     import openai
-    from langchain.chat_models import ChatOpenAI
+    from langchain_community.chat_models import ChatOpenAI
 
-    openai.api_type = "azure"
-    model = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
-    ret = model.predict(prompt)
+    model = akasha.helper.handle_model("gpt-3.5-turbo", False, 0.0)
+    ret = akasha.helper.call_model(model, prompt)
 
     return ret
 

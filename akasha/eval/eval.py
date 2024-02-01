@@ -745,7 +745,6 @@ class Model_Eval(akasha.atman):
             try:
                 q_prompt = akasha.prompts.format_create_question_prompt(
                     doc_text, self.question_type, self.question_style)
-
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
                 response = akasha.helper.sim_to_trad(
                     response
