@@ -10,8 +10,9 @@ long_description = "n"  #(this_directory / "read.md").read_text(encoding="utf-8"
 install_requires = [
     "pypdf",
     "langchain>=0.1.0",
+    "langchain_openai"
     "chromadb==0.4.14",
-    "openai==0.27",
+    "openai>=0.27",
     "tiktoken",
     "lark==1.1.7",
     "scikit-learn<1.3.0",
