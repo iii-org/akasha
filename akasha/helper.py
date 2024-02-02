@@ -71,8 +71,12 @@ def _handle_azure_env() -> (str, str, str):
         for check in check_env:
             if f"AZURE_API_{check}" in os.environ:
                 ret[count] = os.environ[f"AZURE_API_{check}"]
+                if "OPENAI_API_BASE" in os.environ:
+                    os.environ.pop("OPENAI_API_BASE", None)
             elif f"OPENAI_API_{check}" in os.environ:
                 ret[count] = os.environ[f"OPENAI_API_{check}"]
+                os.environ["AZURE_API_BASE"] = os.environ["OPENAI_API_BASE"]
+                os.environ.pop("OPENAI_API_BASE", None)
             else:
                 if check == "VERSION":
                     ret[count] = "2023-05-15"
