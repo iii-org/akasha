@@ -4,7 +4,6 @@ from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
 from transformers import AutoTokenizer, AutoModel
 from transformers import pipeline
-from langchain_community.llms import HuggingFacePipeline
 import torch
 import numpy
 import warnings, os
@@ -181,6 +180,50 @@ class custom_model(LLM):
         return response
 
 
+class hf_model(LLM):
+
+    max_token: int = 4096
+    tokenizer: Any
+    model: Any
+    pipe_line: Any
+
+    def __init__(self, pipe: pipeline):
+        """define custom model, input func and temperature
+
+        Args:
+            **func (Callable)**: the function return response from llm\n
+        """
+        super().__init__()
+        self.pipe_line = pipe
+
+    @property
+    def _llm_type(self) -> str:
+        """return llm type
+
+        Returns:
+            str: llm type
+        """
+        return "huggingface pipeline"
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
+
+        response = self.pipe_line(prompt)
+        return response[0]["generated_text"]
+
+    def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        response = self.pipe_line(prompt)
+        return response[0]["generated_text"]
+
+
 def get_hf_model(model_name, temperature: float = 0.0):
     """try different methods to define huggingface model, first use pipline and then use llama2.
 
@@ -191,26 +234,28 @@ def get_hf_model(model_name, temperature: float = 0.0):
         _type_: llm model
     """
     with warnings.catch_warnings():
-        warnings.simplefilter(action="ignore", category=FutureWarning)
+        #warnings.simplefilter(action="ignore", category=FutureWarning)
         hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
         try:
-            if hf_token is None:
+            pipe = pipeline(
+                "text-generation",
+                model=model_name,
+                use_auth_token=hf_token,
+                max_new_tokens=512,
+                model_kwargs={
+                    "temperature": temperature,
+                    "repetition_penalty": 1.2,
+                },
+                device_map="auto",
+                batch_size=1,
+                torch_dtype=torch.float16,
+            )
+            model = hf_model(pipe=pipe)
+
+        except Exception as e:
+            try:
                 pipe = pipeline(
-                    "text-generation",
-                    model=model_name,
-                    model_kwargs={
-                        "temperature": temperature,
-                        "repetition_penalty": 1.2,
-                    },
-                    device_map="auto",
-                    max_new_tokens=512,
-                    batch_size=1,
-                    torch_dtype=torch.float16,
-                )
-                model = HuggingFacePipeline(pipeline=pipe)
-            else:
-                pipe = pipeline(
-                    "text-generation",
+                    "question-answering",
                     model=model_name,
                     use_auth_token=hf_token,
                     max_new_tokens=512,
@@ -222,17 +267,18 @@ def get_hf_model(model_name, temperature: float = 0.0):
                     batch_size=1,
                     torch_dtype=torch.float16,
                 )
-                model = HuggingFacePipeline(pipeline=pipe)
-        except:
-            if model_name.lower().find("taiwan-llama") != -1:
-                model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
-                                        temperature=temperature)
-            else:
-                model = Llama2(
-                    model_name_or_path=model_name,
-                    temperature=temperature,
-                    bit4=True,
-                    max_token=4096,
-                )
+                model = hf_model(pipe=pipe)
+
+            except Exception as e:
+                if model_name.lower().find("taiwan-llama") != -1:
+                    model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
+                                            temperature=temperature)
+                else:
+                    model = Llama2(
+                        model_name_or_path=model_name,
+                        temperature=temperature,
+                        bit4=True,
+                        max_token=4096,
+                    )
 
     return model
