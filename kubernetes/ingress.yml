@@ -1,0 +1,19 @@
+apiVersion:  networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ui-dev-ingress
+  namespace: akasha
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /akasha-dev # Change this to the path you want to serve your app at
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: ui-dev
+            port:
+              number: 8501
