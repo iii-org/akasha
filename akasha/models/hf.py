@@ -3,6 +3,7 @@ from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
 from transformers import AutoTokenizer, AutoModel
+from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from transformers import pipeline
 import torch
 import numpy
@@ -194,7 +195,7 @@ class hf_model(LLM):
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__()
-        self.pipe_line = pipe
+        self.pipe_line = HuggingFacePipeline(pipeline=pipe)
 
     @property
     def _llm_type(self) -> str:
@@ -215,13 +216,12 @@ class hf_model(LLM):
         Returns:
             str: llm response
         """
-
-        response = self.pipe_line(prompt)
-        return response[0]["generated_text"]
+        response = self.pipe_line._generate([prompt]).generations[0][0]
+        return response.text
 
     def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-        response = self.pipe_line(prompt)
-        return response[0]["generated_text"]
+        response = self.pipe_line._generate([prompt]).generations[0][0]
+        return response.text
 
 
 def get_hf_model(model_name, temperature: float = 0.0):
@@ -234,7 +234,7 @@ def get_hf_model(model_name, temperature: float = 0.0):
         _type_: llm model
     """
     with warnings.catch_warnings():
-        #warnings.simplefilter(action="ignore", category=FutureWarning)
+        warnings.simplefilter(action="ignore", category=FutureWarning)
         hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
         try:
             pipe = pipeline(
