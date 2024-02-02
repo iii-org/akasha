@@ -528,12 +528,18 @@ def call_model(model, prompt: str) -> str:
             ### try call openai llm model
             response = model.invoke(prompt)
         except:
-            response = model._call(prompt)
+            try:
+                response = model._call(prompt)
+            except:
+                response = model._generate(prompt)
 
     if "openai" in model_type:
         response = model.invoke(prompt)
     else:
-        response = model._call(prompt)
+        try:
+            response = model._call(prompt)
+        except:
+            response = model._generate(prompt)
 
     if isinstance(response, AIMessage):
         response = response.content

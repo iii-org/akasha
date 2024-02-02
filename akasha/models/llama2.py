@@ -120,10 +120,9 @@ class Llama2(LLM):
         input_ids = self.tokenizer(
             prompt, return_tensors="pt",
             add_special_tokens=False).input_ids.to("cuda")
-
         generate_input = {
             "input_ids": input_ids,
-            "max_new_tokens": 4096,
+            "max_new_tokens": 512,
             "do_sample": True,
             "top_k": 50,
             "top_p": self.top_p,
@@ -133,15 +132,9 @@ class Llama2(LLM):
             "bos_token_id": self.tokenizer.bos_token_id,
             "pad_token_id": self.tokenizer.pad_token_id,
         }
-        self.model.config.max_position_embeddings = 4096
         generate_ids = self.model.generate(**generate_input)
-
-        generate_ids = [item[len(input_ids[0]):-1] for item in generate_ids]
-        result_message = self.tokenizer.batch_decode(
-            generate_ids,
-            skip_special_tokens=True,
-            clean_up_tokenization_spaces=False)[0]
-        return result_message
+        text = self.tokenizer.decode(generate_ids[0])
+        return text
 
 
 class peft_Llama2(LLM):
