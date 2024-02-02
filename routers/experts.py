@@ -69,7 +69,7 @@ router = APIRouter()
 
 
 @router.get("/expert/get_default_consult")
-async def get_default_consult():
+def get_default_consult():
     """get the default consultation parameter of the expert
 
     Returns:
@@ -79,7 +79,7 @@ async def get_default_consult():
 
 
 @router.get("/expert/get_chromadb_path")
-async def get_default_chromadb_path():
+def get_default_chromadb_path():
     """get the default chromadb path
 
     Returns:
@@ -89,7 +89,7 @@ async def get_default_chromadb_path():
 
 
 @router.get("/expert/get_expert_path")
-async def get_default_expert_path():
+def get_default_expert_path():
     """get the default expert config path
 
     Returns:
@@ -99,7 +99,7 @@ async def get_default_expert_path():
 
 
 @router.get("/expert/show")
-async def get_info_of_expert(user_input: ExpertID):
+def get_info_of_expert(user_input: ExpertID):
     """input the current user id and expert name, return the expert info(dict)
 
     Args:
@@ -127,7 +127,7 @@ async def get_info_of_expert(user_input: ExpertID):
 
 
 @router.get("/expert/get_owner")
-async def get_owner_expert_list(user_input: UserID):
+def get_owner_expert_list(user_input: UserID):
     """input current user id, return all expert name and its owner name that current user has(list of dict)
 
     Args:
@@ -158,7 +158,7 @@ async def get_owner_expert_list(user_input: UserID):
 
 
 @router.get("/expert/get")
-async def get_use_expert_list(user_input: UserID):
+def get_use_expert_list(user_input: UserID):
     """input current user id, return all expert name and its owner name that current user can use(list of dict)
 
     Args:
@@ -194,7 +194,7 @@ async def get_use_expert_list(user_input: UserID):
 
 
 @router.get("/expert/get_consult")
-async def get_consult_from_expert(user_input: ExpertID):
+def get_consult_from_expert(user_input: ExpertID):
     """get the last consultation parameter of the expert
 
     Args:
@@ -235,7 +235,7 @@ async def get_consult_from_expert(user_input: ExpertID):
 
 
 @router.post("/expert/save_consult")
-async def save_consult_to_expert(user_input: ExpertConsult):
+def save_consult_to_expert(user_input: ExpertConsult):
     """save the consultation parameter to expert config file
 
     Args:
@@ -285,7 +285,7 @@ async def save_consult_to_expert(user_input: ExpertConsult):
 
 
 @router.post("/expert/create_chromadb")
-async def create_chromadb_file(user_input: chromadbInfo):
+def create_chromadb_file(user_input: chromadbInfo):
     """given the file path, embedding model and chunk size, create chromadb file
 
     Args:
@@ -309,7 +309,7 @@ async def create_chromadb_file(user_input: chromadbInfo):
 
 
 @router.post("/expert/create")
-async def create_expert(user_input: ExpertInfo):
+def create_expert(user_input: ExpertInfo):
     """create expert config file and create chromadb for each file
 
     Args:
@@ -349,7 +349,7 @@ async def create_expert(user_input: ExpertInfo):
 
 
 @router.post("/expert/create2")
-async def create_expert2(user_input: ExpertInfo):
+def create_expert2(user_input: ExpertInfo):
 
     expert_name = user_input.expert_name
     embedding_model = user_input.embedding_model
@@ -385,7 +385,7 @@ async def create_expert2(user_input: ExpertInfo):
 
 
 @router.post("/expert/update")
-async def update_expert(user_input: ExpertEditInfo):
+def update_expert(user_input: ExpertEditInfo):
     """update expert config file and create chromadb for each file, also delete chromadb that need to delete(check if other expert use it or not)
 
     Args:
@@ -516,7 +516,7 @@ async def update_expert(user_input: ExpertEditInfo):
 
 
 @router.post("/expert/update2")
-async def update_expert2(user_input: NewExpert):
+def update_expert2(user_input: NewExpert):
 
     data = user_input.data
     expert_config_path = apu.get_expert_config_path()
@@ -535,7 +535,7 @@ async def update_expert2(user_input: NewExpert):
 
 
 @router.post("/expert/delete")
-async def delete_expert(user_input: ExpertID):
+def delete_expert(user_input: ExpertID):
     """delete expert config file and delete chromadb for each file it other expert not use it
 
     Args:
@@ -585,7 +585,7 @@ async def delete_expert(user_input: ExpertID):
 
 
 @router.post("/expert/share")
-async def share_expert(user_input: ExpertShare):
+def share_expert(user_input: ExpertShare):
     """add 'shared_users' into expert config file
 
     Args:

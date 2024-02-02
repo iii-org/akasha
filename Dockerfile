@@ -16,5 +16,5 @@ RUN apt-get update && apt-get install -y gcc-11 build-essential g++ clang curl
 RUN python -m pip install --upgrade pip && \
 python -m pip install -r requirements.txt 
 EXPOSE 8501
-
+EXPOSE 8000
 ENTRYPOINT nohup /bin/bash -c "./start.sh &" && streamlit run main.py --server.maxUploadSize 200000  --server.port 8501

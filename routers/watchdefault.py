@@ -27,12 +27,12 @@ def check_api_key():
     if "azure_key" in data:
         if _save_azure_openai_configuration(data["azure_key"],
                                             data["azure_base"], False):
-            print("azure key changed\n\n")
+            print("default azure key changed\n\n")
             os.environ['show_api_setting'] = 'True'
             os.environ['default_azure_key'] = data["azure_key"]
             os.environ['default_azure_base'] = data["azure_base"]
         else:
-            print("azure key changed FAILED!\n\n")
+            print("default azure key changed FAILED!\n\n")
             os.environ.pop('default_azure_key', None)
             os.environ.pop('default_azure_base', None)
 

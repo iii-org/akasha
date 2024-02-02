@@ -504,14 +504,16 @@ def load_openai(config: dict) -> bool:
     Returns:
         bool: load success or not
     """
-    if "OPENAI_API_BASE" in os.environ:
-        del os.environ["OPENAI_API_BASE"]
     if "OPENAI_API_KEY" in os.environ:
         del os.environ["OPENAI_API_KEY"]
-    if "OPENAI_API_TYPE" in os.environ:
-        del os.environ["OPENAI_API_TYPE"]
-    if "OPENAI_API_VERSION" in os.environ:
-        del os.environ["OPENAI_API_VERSION"]
+    if "AZURE_API_BASE" in os.environ:
+        del os.environ["AZURE_API_BASE"]
+    if "AZURE_API_KEY" in os.environ:
+        del os.environ["AZURE_API_KEY"]
+    if "AZURE_API_TYPE" in os.environ:
+        del os.environ["AZURE_API_TYPE"]
+    if "AZURE_API_VERSION" in os.environ:
+        del os.environ["AZURE_API_VERSION"]
 
     if "openai_key" in config and config["openai_key"] != "":
         os.environ["OPENAI_API_KEY"] = config["openai_key"]
@@ -520,11 +522,10 @@ def load_openai(config: dict) -> bool:
 
     if ("azure_key" in config and "azure_base" in config
             and config["azure_key"] != "" and config["azure_base"] != ""):
-        os.environ["OPENAI_API_KEY"] = config["azure_key"]
-        os.environ["OPENAI_API_BASE"] = config["azure_base"]
-        os.environ["OPENAI_API_TYPE"] = "azure"
-        os.environ["OPENAI_API_VERSION"] = "2023-05-15"
-
+        os.environ["AZURE_API_KEY"] = config["azure_key"]
+        os.environ["AZURE_API_BASE"] = config["azure_base"]
+        os.environ["AZURE_API_TYPE"] = "azure"
+        os.environ["AZURE_API_VERSION"] = "2023-05-15"
         return True
 
     return False

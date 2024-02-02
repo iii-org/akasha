@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any, Union
 from pathlib import Path
 import json, os
 import api_utils as apu
-
+import gc, torch
 ## if default_key.json exist, create a thread to keep checking if the key is valid
 if Path("./config/default_key.json").exists():
     thread = threading.Thread(target=start_observer)
@@ -21,6 +21,11 @@ app.include_router(datasets.router)
 app.include_router(experts.router)
 
 OPENAI_CONFIG_PATH = "./config/openai/"
+
+
+def clean():
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 ### data class ###
@@ -59,7 +64,7 @@ class OpenAIKey(BaseModel):
 
 
 @app.post("/regular_consult")
-async def regular_consult(user_input: ConsultModel):
+def regular_consult(user_input: ConsultModel):
     """load openai config and run get_response in akasha.Doc_QA
 
     Args:
@@ -93,6 +98,7 @@ async def regular_consult(user_input: ConsultModel):
     qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
         , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
+
     response = qa.get_response(doc_path=user_input.data_path,
                                prompt=user_input.prompt)
 
@@ -117,12 +123,14 @@ async def regular_consult(user_input: ConsultModel):
                                          logs=logs,
                                          timestamp=timesp)
 
+    del qa.model_obj
     del qa
+    clean()
     return user_output
 
 
 @app.post("/deep_consult")
-async def deep_consult(user_input: ConsultModel):
+def deep_consult(user_input: ConsultModel):
     """load openai config and run chain_of_thought in akasha.Doc_QA
 
     Args:
@@ -181,12 +189,14 @@ async def deep_consult(user_input: ConsultModel):
                                          logs=logs,
                                          timestamp=timesp)
 
+    del qa.model_obj
     del qa
+    clean()
     return user_output
 
 
 @app.post("/openai/save")
-async def save_openai_key(user_input: OpenAIKey):
+def save_openai_key(user_input: OpenAIKey):
     """save openai key into config file
 
     Args:
@@ -233,7 +243,7 @@ async def save_openai_key(user_input: OpenAIKey):
 
 
 @app.get("/openai/test_openai")
-async def test_openai_key(user_input: OpenAIKey):
+def test_openai_key(user_input: OpenAIKey):
     """test openai key is valid or not
 
     Args:
@@ -245,15 +255,17 @@ async def test_openai_key(user_input: OpenAIKey):
     import openai
     openai.api_type = "open_ai"
     openai.api_version = None
-    if openai.api_base != "https://api.openai.com/v1":
-        openai.api_base = "https://api.openai.com/v1"
+
+    if openai.base_url != "https://api.openai.com/v1":
+        openai.base_url = "https://api.openai.com/v1"
 
     openai_key = user_input.openai_key.replace(' ', '')
     if openai_key != "":
-        openai.api_key = openai_key
+        client = openai.OpenAI(api_key=openai_key, base_url=openai.base_url)
         try:
-            openai.Model.list()
+            client.models.list()
         except Exception as e:
+            print(e.__str__())
             return {
                 'status': 'fail',
                 'response': 'openai key is invalid.\n\n' + e.__str__()
@@ -268,7 +280,7 @@ async def test_openai_key(user_input: OpenAIKey):
 
 
 @app.get("/openai/test_azure")
-async def test_azure_key(user_input: OpenAIKey):
+def test_azure_key(user_input: OpenAIKey):
     """test azure key is valid or not
 
     Args:
@@ -282,12 +294,12 @@ async def test_azure_key(user_input: OpenAIKey):
     azure_key = user_input.azure_key.replace(' ', '')
     azure_base = user_input.azure_base.replace(' ', '')
     if azure_key != "" and azure_base != "":
-        openai.api_type = "azure"
-        openai.api_base = azure_base
-        openai.api_version = "2023-05-15"
-        openai.api_key = azure_key
+        client = openai.AzureOpenAI(azure_endpoint=azure_base,
+                                    api_key=azure_key,
+                                    api_version="2023-05-15")
+
         try:
-            openai.Model.list()
+            client.models.list()
         except Exception as e:
             return {
                 'status': 'fail',
@@ -306,7 +318,7 @@ async def test_azure_key(user_input: OpenAIKey):
 
 
 @app.get("/openai/load_openai")
-async def load_openai_from_file(user_input: UserBase):
+def load_openai_from_file(user_input: UserBase):
     """load openai key from config file
 
     Args:
@@ -340,7 +352,7 @@ async def load_openai_from_file(user_input: UserBase):
 
 
 @app.get("/openai/choose")
-async def choose_openai_key(user_input: OpenAIKey):
+def choose_openai_key(user_input: OpenAIKey):
     """choose valid openai key from session_state and config file
 
     Args:
@@ -368,7 +380,7 @@ async def choose_openai_key(user_input: OpenAIKey):
         openai_key = user_input.openai_key
         azure_key = user_input.azure_key
         azure_base = user_input.azure_base
-    print(openai_key, azure_key, azure_base)
+
     config = apu.choose_openai_key(openai_config_file_path, openai_key,
                                    azure_key, azure_base)
 
@@ -382,7 +394,7 @@ async def choose_openai_key(user_input: OpenAIKey):
 
 
 @app.get("/openai/is_default_api")
-async def is_default_api():
+def is_default_api():
     """ check if os.environ['show_api_setting'] == 'True'"""
 
     if 'show_api_setting' in os.environ and os.environ[

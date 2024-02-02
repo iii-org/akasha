@@ -36,4 +36,4 @@ fi
  sudo docker build -t $IMAGE_NAME:$IMAGE_VERSION .
 
 # ## run container
- sudo docker run -v $MODEL:/app/model -v $CONFIG:/app/config -v $DOCS:/app/docs -v $CHROMADB:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 --name $IMAGE_NAME $IMAGE_NAME:$IMAGE_VERSION
+ sudo docker run -v $MODEL:/app/model -v $CONFIG:/app/config -v $DOCS:/app/docs -v $CHROMADB:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 -p 8000:8000 --name $IMAGE_NAME $IMAGE_NAME:$IMAGE_VERSION
