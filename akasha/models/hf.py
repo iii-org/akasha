@@ -234,7 +234,6 @@ class remote_model(LLM):
         }
         headers = {"Content-Type": "application/json"}
         response = requests.post(self.url, json=data, headers=headers).json()
-        print(response)
         return response[0]["generated_text"]
 
 
