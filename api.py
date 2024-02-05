@@ -265,7 +265,6 @@ def test_openai_key(user_input: OpenAIKey):
         try:
             client.models.list()
         except Exception as e:
-            print(e.__str__())
             return {
                 'status': 'fail',
                 'response': 'openai key is invalid.\n\n' + e.__str__()
@@ -299,7 +298,11 @@ def test_azure_key(user_input: OpenAIKey):
                                     api_version="2023-05-15")
 
         try:
-            client.models.list()
+            embedding = client.embeddings.create(
+                input="<input>",
+                model="text-embedding-ada-002"  # model = "deployment_name".
+            )
+            #print(client.models.list())
         except Exception as e:
             return {
                 'status': 'fail',
