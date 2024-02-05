@@ -9,6 +9,7 @@ import torch
 import numpy
 import warnings, os
 from akasha.models.llama2 import Llama2, TaiwanLLaMaGPTQ
+import requests
 
 
 class chatGLM(LLM):
@@ -179,6 +180,62 @@ class custom_model(LLM):
 
         response = self.func(prompt)
         return response
+
+
+class remote_model(LLM):
+    max_token: int = 4096
+    temperature: float = 0.01
+    top_p: float = 0.95
+    history: list = []
+    tokenizer: Any
+    model: Any
+    url: Any
+
+    def __init__(self, base_url: str, temperature: float = 0.001):
+        """define custom model, input func and temperature
+
+        Args:
+            **func (Callable)**: the function return response from llm\n
+        """
+        super().__init__()
+        self.url = base_url
+        self.temperature = temperature
+        if self.temperature == 0.0:
+            self.temperature = 0.001
+
+    @property
+    def _llm_type(self) -> str:
+        """return llm type
+
+        Returns:
+            str: llm type
+        """
+        return "remote api"
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
+        data = {
+            "inputs": prompt,
+            "parameters": {
+                'temperature': self.temperature,
+                'max_new_tokens': 1024,
+                'do_sample': True,
+                'top_k': 10,
+                'top_p': 0.95,
+            }
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(self.url, json=data, headers=headers).json()
+        print(response)
+        return response[0]["generated_text"]
 
 
 class hf_model(LLM):
