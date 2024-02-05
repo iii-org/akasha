@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.16](https://img.shields.io/badge/pypi%20package-0.8.16-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.17](https://img.shields.io/badge/pypi%20package-0.8.17-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -238,11 +238,11 @@ you can also combine gpu with cpu to run llama-cpp, using **llama-gpu:model/llam
 
 
 ### 4. remote server api example
-If you deploy your own language model in other server using TGI (Text Generation Inference), you can use **remote:{model_name}** to call the model after you set **REMOTE_API_BASE={your LLM api url}** in ".env" file.
+If you deploy your own language model in other server using TGI (Text Generation Inference), you can use **remote:{your LLM api url}** to call the model.
 
 ``` python
 ak = akasha.Doc_QA()
-ak.get_response(dir_path, prompt,  model="remote:Taiwan-LLM-13B-v2.0-chat")
+ak.get_response(dir_path, prompt,  model="remote:http://140.92.60.189:8081")
 
 ```
 

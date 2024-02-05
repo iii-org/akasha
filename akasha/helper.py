@@ -6,7 +6,7 @@ import opencc
 from typing import Callable, Union
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed
+from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os, traceback
 import shutil
@@ -49,7 +49,11 @@ def _separate_name(name: str):
         (str, str): res_type , res_name
     """
     sep = name.split(":")
-    if len(sep) != 2:
+
+    if len(sep) > 2:
+        res_type = sep[0].lower()
+        res_name = ':'.join(sep[1:])
+    elif len(sep) < 2:
         ### if the format type not equal to type:name ###
         res_type = sep[0].lower()
         res_name = ""
@@ -230,24 +234,10 @@ def handle_model(model_name: Union[str, Callable],
         info = f"selected openai model {model_name}.\n"
 
     elif model_type in ["remote", "server"]:
-        import openai
 
-        openai.api_type = "open_ai"
-        if "REMOTE_API_BASE" in os.environ:
-            base_url = os.environ["REMOTE_API_BASE"]
-        elif "OPENAI_API_BASE" in os.environ:
-            base_url = os.environ["OPENAI_API_BASE"]
-        else:
-            base_url = ""
-            print(
-                "can not find the openai {check} in environment variable.\n\n")
-        model = ChatOpenAI(
-            model=model_name,
-            temperature=temperature,
-            api_key="EMPTY",
-            base_url=base_url,
-        )
-        info = f"selected remote model {model_name}.\n"
+        base_url = model_name
+        info = f"selected remote model. \n"
+        model = remote_model(base_url, temperature)
 
     elif (model_type
           in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
