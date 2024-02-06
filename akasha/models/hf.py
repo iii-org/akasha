@@ -233,9 +233,15 @@ class remote_model(LLM):
             }
         }
         headers = {"Content-Type": "application/json"}
-        response = requests.post(self.url, json=data, headers=headers).json()
-        print(response)
-        return response[0]["generated_text"]
+
+        try:
+            response = requests.post(self.url + "/generate",
+                                     json=data,
+                                     headers=headers).json()
+        except Exception as e:
+            print("call remote model failed\n\n", e.__str__())
+            return None
+        return response["generated_text"]
 
 
 class hf_model(LLM):
