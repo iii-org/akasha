@@ -411,6 +411,8 @@ class atman:
             return response
         try:
             response = helper.call_model(self.model_obj, text_input)
+            if response is None:
+                raise Exception("llm response is None")
             response = helper.sim_to_trad(response)
 
             if response[:8] == "System: ":

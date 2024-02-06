@@ -208,32 +208,7 @@ def handle_model(model_name: Union[str, Callable],
 
     model_type, model_name = _separate_name(model_name)
 
-    if model_type in ["openai", "openaiembeddings"]:
-        import openai
-
-        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
-                == "azure") or ("OPENAI_API_TYPE" in os.environ
-                                and os.environ["OPENAI_API_TYPE"] == "azure"):
-            model_name = model_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env()
-            model = AzureChatOpenAI(
-                deployment_name=model_name,
-                temperature=temperature,
-                azure_endpoint=api_base,
-                api_key=api_key,
-                api_version=api_version,
-                validate_base_url=False,
-            )
-        else:
-            openai.api_type = "open_ai"
-            model = ChatOpenAI(
-                model=model_name,
-                temperature=temperature,
-                api_key=os.environ["OPENAI_API_KEY"],
-            )
-        info = f"selected openai model {model_name}.\n"
-
-    elif model_type in ["remote", "server"]:
+    if model_type in ["remote", "server", "tgi", "text-generation-inference"]:
 
         base_url = model_name
         info = f"selected remote model. \n"
@@ -264,9 +239,33 @@ def handle_model(model_name: Union[str, Callable],
                             temperature=temperature)
         info = f"selected peft model {model_name}.\n"
     else:
-        model = ChatOpenAI(model="gpt-3.5-turbo", temperature=temperature)
-        info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
-        print(info)
+        if model_type not in ["openai", "gpt-3.5", "gpt"]:
+            info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
+            model_name = "gpt-3.5-turbo"
+            print(info)
+        import openai
+
+        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in os.environ
+                                and os.environ["OPENAI_API_TYPE"] == "azure"):
+            model_name = model_name.replace(".", "")
+            api_base, api_key, api_version = _handle_azure_env()
+            model = AzureChatOpenAI(
+                deployment_name=model_name,
+                temperature=temperature,
+                azure_endpoint=api_base,
+                api_key=api_key,
+                api_version=api_version,
+                validate_base_url=False,
+            )
+        else:
+            openai.api_type = "open_ai"
+            model = ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                api_key=os.environ["OPENAI_API_KEY"],
+            )
+        info = f"selected openai model {model_name}.\n"
     if verbose:
         print(info)
 
