@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from typing import List, Union, Dict, Any
+from typing import List, Union, Dict, Any, Tuple
 import requests
 from pathlib import Path
 import api_utils as apu
@@ -49,6 +49,9 @@ api_urls = {
     "get_md5_name": f"{HOST}:{PORT}/dataset/get_md5",
     "regular_consult": f"{HOST}:{PORT}/regular_consult",
     "deep_consult": f"{HOST}:{PORT}/deep_consult",
+    "get_summary": f"{HOST}:{PORT}/get_summary",
+    "get_nickname": f"{HOST}:{PORT}/get_nickname",
+    "get_nicknames": f"{HOST}:{PORT}/get_all_nicknames",
 }
 
 
@@ -80,7 +83,7 @@ def check_expert_is_shared(expert_name: str) -> bool:
     return "@" in expert_name
 
 
-def add_question_layer(add_button: st.columns) -> list:
+def add_question_layer(buttons: st.columns) -> list:
     """add layer of questions for deep consult, return a list of layers.
     each layer is a tuple, layer[1]'s a dataframe contains prompt, use list(layer[1].columns)[0] to get the column name "Sub-Questions"
 
@@ -90,30 +93,39 @@ def add_question_layer(add_button: st.columns) -> list:
     Returns:
         list: list of layers
     """
-    df = pd.DataFrame([{"Sub-Questions": ""}])
+    with buttons:
+        df = pd.DataFrame([{"Sub-Questions": ""}])
 
-    with add_button:
-        add = st.button(label="➕ Add Layer", use_container_width=True)
-    if st.session_state.get("question_layers") == None:
-        st.session_state.question_layers = 1
-    if add:
-        st.session_state.question_layers += 1
-        # st.experimental_rerun()
-    layers = ["" for _ in range(st.session_state.question_layers)]
+        add_button, delete_button = st.columns([1, 1])
+        with add_button:
+            add = st.button(label="➕ Add Layer", use_container_width=True)
+        with delete_button:
+            delete = st.button(label="➖ Delete Layer",
+                               use_container_width=True)
+        if st.session_state.get("question_layers") == None:
+            st.session_state.question_layers = 1
+        if add:
+            st.session_state.question_layers += 1
 
-    for i in range(st.session_state.question_layers):
-        # col_layer_id, col_layer_data = st.columns([1, 6])
-        layer_name = st.caption(f"Layer {i+1}")
-        layer_content = st.data_editor(
-            df,
-            key=f"question-layer-{i}",
-            num_rows="dynamic",
-            use_container_width=True,
-            hide_index=True,
-        )
-        layers[i] = (layer_name, layer_content
-                     )  # (col_layer_data, col_layer_id)
-        # layers[i] = st.data_editor(df, key=f'question-layer-{i}', num_rows='dynamic', use_container_width=True)
+        if delete:
+            if st.session_state.question_layers > 1:
+                st.session_state.question_layers -= 1
+
+        layers = ["" for _ in range(st.session_state.question_layers)]
+
+        for i in range(st.session_state.question_layers):
+            # col_layer_id, col_layer_data = st.columns([1, 6])
+            layer_name = st.caption(f"Layer {i+1}")
+            layer_content = st.data_editor(
+                df,
+                key=f"question-layer-{i}",
+                num_rows="dynamic",
+                use_container_width=True,
+                hide_index=True,
+            )
+            layers[i] = (layer_name, layer_content
+                         )  # (col_layer_data, col_layer_id)
+            # layers[i] = st.data_editor(df, key=f'question-layer-{i}', num_rows='dynamic', use_container_width=True)
 
     return layers
 
@@ -1445,7 +1457,7 @@ def get_last_consult_for_expert(expert_owner: str, expert_name: str) -> dict:
 
 
 def check_consultable(datasets: list, embed: str,
-                      chunk_size: int) -> (bool, str):
+                      chunk_size: int) -> Tuple[bool, str]:
     """check if the datasets, embed model, chunksize are valid.
 
     Args:
@@ -1472,7 +1484,7 @@ def check_consultable(datasets: list, embed: str,
     return True, ""
 
 
-def get_dataset_info(owner: str, dataset_name: str) -> (list, str, str):
+def get_dataset_info(owner: str, dataset_name: str) -> Tuple[list, str, str]:
     """get all parameters of dataset.
 
     Args:
@@ -1497,14 +1509,26 @@ def get_dataset_info(owner: str, dataset_name: str) -> (list, str, str):
         api_fail(response["response"])
         return [], "", ""
     filelist = [f["filename"] for f in response["response"]["files"]]
+
+    old_shared_users = []
+    if "shared_users" in response["response"]:
+        name_dic = get_all_nicknames()
+        for u in response["response"]["shared_users"]:
+            nick_name = name_dic.get(u, "")
+            if nick_name == "":
+                continue
+
+            old_shared_users.append(f"{u} ({nick_name})")
     return (
         filelist,
         response["response"]["description"],
         response["response"]["last_update"],
+        old_shared_users,
     )
 
 
-def get_expert_info(owner: str, expert_name: str) -> (list, str, str, list):
+def get_expert_info(owner: str,
+                    expert_name: str) -> Tuple[list, str, str, list]:
     """get all parameters of expert config file.
 
     Args:
@@ -1528,7 +1552,13 @@ def get_expert_info(owner: str, expert_name: str) -> (list, str, str, list):
         return [], "", "", []
     shared_users = []
     if "shared_users" in response["response"]:
-        shared_users = response["response"]["shared_users"]
+        name_dic = get_all_nicknames()
+        for u in response["response"]["shared_users"]:
+            nick_name = name_dic.get(u, "")
+            if nick_name == "":
+                continue
+
+            shared_users.append(f"{u} ({nick_name})")
 
     return (
         response["response"]["datasets"],
@@ -1721,3 +1751,146 @@ def is_default_api():
         return False
 
     return response["response"]
+
+
+def get_nickname(username: str) -> str:
+    """get the nickname of the user.
+
+    Args:
+        username (str): user name
+
+    Returns:
+        str: nickname
+    """
+    response = requests.get(api_urls["get_nickname"],
+                            json={
+                                "user_name": username
+                            }).json()
+
+    if response["status"] != "success":
+        api_fail(response["response"])
+        return ""
+
+    return response["response"]
+
+
+def get_all_nicknames() -> dict:
+    """get the nickname of the user.
+
+    Args:
+        username (str): user name
+
+    Returns:
+        str: nickname
+    """
+    response = requests.get(api_urls["get_nicknames"],
+                            json={
+                                "user_name": "all"
+                            }).json()
+
+    if response["status"] != "success":
+        api_fail(response["response"])
+        return {}
+
+    return response["response"]
+
+
+def get_other_users_names(username: str, all_users: list):
+    """get all other users' usernames and nick names, output one list and a dictionary. one is the list of "username (nickname)", 
+    the dictionary is the mapping of username and "username (nickname)".
+    
+
+    Args:
+        username (str): current user name
+        all_users (list): all users' names
+    """
+
+    other_users_nicknames = []
+    users_mapping = {}
+    nick_dic = get_all_nicknames()
+    for u in all_users:
+        if u == username:
+            continue
+
+        name_nick = f"{u} ({nick_dic.get(u, u)})"
+        #other_users.append(u)
+        other_users_nicknames.append(name_nick)
+        users_mapping[name_nick] = u
+
+    return other_users_nicknames, users_mapping
+
+
+def save_tmp_file(uploaded_file: vars) -> str:
+    """check the upload file and save it to the tmp directory.
+
+    Args:
+        uploaded_file (vars): _description_
+
+    Returns:
+        str: saved path of the file
+    """
+    save_path = "./tmp/"
+    os.makedirs(save_path, exist_ok=True)
+    bytes_data = uploaded_file.read()
+
+    if len(bytes_data) == 0:
+        st.error(f"File={uploaded_file.name} is empty")
+        return ""
+    if len(bytes_data) > 100000000:
+        st.error(f"File={uploaded_file.name} is too large")
+        return ""
+    file_path = save_path + (uploaded_file.name)
+    with open(Path(file_path), "wb") as f:
+        f.write(bytes_data)
+
+    return file_path
+
+
+def get_doc_file_path(dataset_owner, dataset_name, file_name) -> str:
+    try:
+        DOCS_PATH = requests.get(api_urls["get_docs_path"]).json()["response"]
+    except Exception as e:
+        api_fail(e.__str__())
+        return ""
+
+    return DOCS_PATH + f"/{dataset_owner}/{dataset_name}/{file_name}"
+
+    # return (Path(DOCS_PATH) / dataset_owner / dataset_name /
+    #         file_name).__fspath__()
+
+
+def ask_summary(system_prompt: str, username: str, tmp_file_name: str,
+                language_model: str, summary_type: str, summary_len: int):
+
+    if (language_model.split(":")[0] == "openai"):
+        openai_config = get_openai_config(username)
+    else:
+        openai_config = {}
+
+    data = {
+        "file_path": tmp_file_name,
+        "language_model": language_model,
+        "summary_type": summary_type,
+        "summary_len": summary_len,
+        "system_prompt": system_prompt,
+        "openai_config": openai_config
+    }
+
+    try:
+        with st.spinner(SPINNER_MESSAGE):
+            response = requests.post(api_urls["get_summary"], json=data).json()
+            if response["status"] != "success":
+                api_fail(response["response"])
+                return False
+
+        # akasha: get response from expert
+
+        st.session_state[
+            "que"] = f"(Instruction: {system_prompt}) Summary of \"{tmp_file_name.split('/')[-1]}\":"
+        st.session_state["ans"] = response["response"]
+        st.session_state.logs[response["timestamp"]] = response["logs"]
+
+    except Exception as e:
+        api_fail(e.__str__())
+
+    return True

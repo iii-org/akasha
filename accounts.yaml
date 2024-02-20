@@ -4,13 +4,17 @@ cookie:
   name: random_cookie_name
 credentials:
   usernames:
+    asd:
+      email: asdasd@gmail.com
+      name: "\u6211\u662F\u6E2C\u8A66"
+      password: $2b$12$LyLMmbmOdGl51zwH9VJRdeVsCKd/.eTPU2TKF2IaaDBQFLioYfe7C
     ccchang:
       email: ccchang@iii.org.tw
-      name: ccchang
+      name: ccc_ni
       password: $2b$12$TYbzkptTsD.sJcClBQ3S0ex7BSd2Odbi.1SZMgiC66p8tnkMR2RLO
     cws:
       email: cws@gmail.com
-      name: cws
+      name: cws_ni
       password: $2b$12$jCB8MeVqMc3jWDynjNyeVeLS8IWBduxnX362gLfJ1KIkeTPH9KYha
 preauthorized:
   emails: []

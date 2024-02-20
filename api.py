@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query, UploadFile, File
 import threading
 from routers.watchdefault import start_observer
 import akasha
+import akasha.summary as summary
 from routers import datasets, experts
 import akasha.helper
 import akasha.db
@@ -11,6 +12,7 @@ from pathlib import Path
 import json, os
 import api_utils as apu
 import gc, torch
+import yaml
 ## if default_key.json exist, create a thread to keep checking if the key is valid
 if Path("./config/default_key.json").exists():
     thread = threading.Thread(target=start_observer)
@@ -61,6 +63,15 @@ class OpenAIKey(BaseModel):
     openai_key: Optional[str] = ""
     azure_key: Optional[str] = ""
     azure_base: Optional[str] = ""
+
+
+class SummaryModel(BaseModel):
+    file_path: str
+    summary_type: Optional[str] = "map_reduce"
+    summary_len: Optional[int] = 500
+    model: Optional[str] = "openai:gpt-3.5-turbo"
+    system_prompt: Optional[str] = ""
+    openai_config: Optional[Dict[str, Any]] = {}
 
 
 @app.post("/regular_consult")
@@ -192,6 +203,63 @@ def deep_consult(user_input: ConsultModel):
     del qa.model_obj
     del qa
     clean()
+    return user_output
+
+
+@app.post("/get_summary")
+def get_summary(user_input: SummaryModel):
+    """load oprnai config and get summary from akasha.Summary
+
+    Args:
+        user_input (SummaryModel): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    if user_input.model.split(':')[0] == "openai":
+        if not apu.load_openai(config=user_input.openai_config):
+            return {
+                'status': 'fail',
+                'response': 'load openai config failed.\n\n'
+            }
+    sum = summary.Summary(
+        chunk_size=500,
+        chunk_overlap=50,
+        model=user_input.model,
+        verbose=True,
+        system_prompt=user_input.system_prompt,
+        max_doc_len=2000,
+        temperature=0.0,
+    )
+
+    response = sum.summarize_file(file_path=user_input.file_path,
+                                  summary_type=user_input.summary_type,
+                                  summary_len=user_input.summary_len)
+    ## get logs
+    timesp = ''
+    if len(sum.timestamp_list) == 0:
+        logs = {}
+    else:
+        timesp = sum.timestamp_list[-1]
+        if timesp in sum.logs:
+            logs = sum.logs[timesp]
+
+    if response == None or response == "":
+        user_output = ConsultModelReturn(
+            response="Can not get summary from akasha.Summary.\n",
+            status="fail",
+            logs=logs,
+            timestamp=timesp)
+    else:
+        user_output = ConsultModelReturn(response=response,
+                                         status="success",
+                                         logs=logs,
+                                         timestamp=timesp)
+    del sum.model_obj
+    del sum
+    clean()
+
     return user_output
 
 
@@ -405,3 +473,55 @@ def is_default_api():
         return {'status': 'success', 'response': True}
 
     return {'status': 'success', 'response': False}
+
+
+@app.get("/get_all_nicknames")
+def get_all_nicknames(user_input: UserBase):
+    """get all nicknames from database
+
+    Args:
+        user_input (UserBase): user name
+    Returns:
+        dict: status, response
+    """
+    username = user_input.user_name
+    accounts_path = apu.get_accounts_path()
+
+    try:
+        with open(accounts_path, 'r') as f:
+            accounts = yaml.safe_load(f)
+            nicknames = {
+                username: details.get('name')
+                for username, details in accounts['credentials']
+                ['usernames'].items()
+            }
+
+    except Exception as e:
+        return {'status': 'fail', 'response': 'load account.yaml error.\n\n'}
+    if not isinstance(nicknames, dict):
+        return {'status': 'fail', 'response': 'can not find nickname.\n\n'}
+    return {'status': 'success', 'response': nicknames}
+
+
+@app.get("/get_nickname")
+def get_nickname(user_input: UserBase):
+    """get nickname from database
+
+    Args:
+        user_input (UserBase): user name
+    Returns:
+        dict: status, response
+    """
+    username = user_input.user_name
+    accounts_path = apu.get_accounts_path()
+
+    try:
+        with open(accounts_path, 'r') as f:
+            accounts = yaml.safe_load(f)
+            nickname = accounts['credentials']['usernames'].get(username,
+                                                                {}).get('name')
+    except Exception as e:
+        return {'status': 'fail', 'response': 'load account.yaml error.\n\n'}
+    if nickname == None:
+        return {'status': 'fail', 'response': 'can not find nickname.\n\n'}
+    return {'status': 'success', 'response': nickname}

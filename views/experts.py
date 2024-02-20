@@ -4,6 +4,7 @@ from utils import get_datasets_of_expert, create_expert, delete_expert, edit_exp
 from utils import get_file_list_of_dataset, get_lastupdate_of_file_in_dataset, list_datasets
 from utils import check_expert_use_shared_dataset, get_expert_info
 from utils import check_dataset_is_shared, check_expert_is_shared, add_shared_users_to_expert, check_file_selected_by_expert
+from utils import get_other_users_names
 
 
 def experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS, username, USERS):
@@ -169,20 +170,24 @@ def _new_expert(EMBEDDING_MODELS, DATASETS, username, all_users):
     # share option
     st.subheader('3. Share Option', divider='grey')
     col_share, col_share_users = st.columns([1, 3])
-    other_users = [u for u in all_users if u != username]
+    #other_users = [u for u in all_users if u != username]
+    other_users_nicknames, users_mapping = get_other_users_names(
+        username, all_users)
+
     share_boolean = col_share.toggle('Share with other users',
                                      key=f'share-expert-{new_expert_name}',
-                                     disabled=len(other_users) == 0)
+                                     disabled=len(other_users_nicknames) == 0)
     shared_users = col_share_users.multiselect(
         'User List',
-        options=other_users,
+        options=other_users_nicknames,
         default=[],
         placeholder='Select user(s) to share',
         key=f'share-dataset-users-{new_expert_name}',
         disabled=not share_boolean,
         label_visibility='collapsed')
+    shared_users = [users_mapping[n] for n in shared_users
+                    ]  # convert "username (nickname)" to "username"
 
-    # st.write(st.session_state['expert-add-files'])
     st.markdown('')
     _, col_create_expert_button, _ = st.columns([1, 2, 1])
     create_expert_button = col_create_expert_button.button(
@@ -331,21 +336,25 @@ def _update_expert(EXPERTS, EMBEDDING_MODELS, DATASETS, username, all_users):
             # share option
             st.subheader('3. Share Option', divider='grey')
             col_share, col_share_users = st.columns([1, 3])
-            other_users = [u for u in all_users if u != username]
-
+            #other_users = [u for u in all_users if u != username]
+            other_users_nicknames, users_mapping = get_other_users_names(
+                username, all_users)
             share_boolean = col_share.toggle(
                 'Share with other users',
                 key=f'share-expert-{editing_expert_name}',
                 value=len(default_expert_shared_users) > 0,
-                disabled=len(other_users) == 0)
+                disabled=len(other_users_nicknames) == 0)
             shared_users = col_share_users.multiselect(
                 'User List',
-                options=other_users,
+                options=other_users_nicknames,
                 default=default_expert_shared_users,
                 placeholder='Select user(s) to share',
                 key=f'share-dataset-users-{editing_expert_name}',
                 disabled=not share_boolean,
                 label_visibility='collapsed')
+            shared_users = [users_mapping[n] for n in shared_users
+                            ]  # convert "username (nickname)" to "username"
+
             # st.write(888,st.session_state[f'expert-add-files-{editing_expert_name}'])
             st.markdown('')
             st.markdown('')

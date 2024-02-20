@@ -15,7 +15,7 @@ from views.forgetpwd import forgetpwd_page
 from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command
 
 # info
-VERSION = '0.3'
+VERSION = '0.4'
 
 # get host ip
 if 'host_ip' not in st.session_state:
@@ -30,6 +30,9 @@ if 'openai_on' not in st.session_state:
     st.session_state.openai_on = False
 if 'azure_openai_on' not in st.session_state:
     st.session_state.azure_openai_on = False
+
+if 'sum_dataset_on' not in st.session_state:
+    st.session_state.sum_dataset_on = True
 
 if 'logs' not in st.session_state:
     st.session_state['logs'] = {}
@@ -124,7 +127,7 @@ if url_params == {}:
             st.markdown(
                 "<h5 style='text-align: center; color: black;'>Your Personal Domain Expert</h1>",
                 unsafe_allow_html=True)
-            selected = option_menu(f'Hi, {username}', [
+            selected = option_menu(f'Hi, {name}', [
                 'Consult', 'Knowledges', 'Datasets', 'Settings', 'User Guide'
             ],
                                    icons=[
@@ -137,13 +140,13 @@ if url_params == {}:
             placeholder_hint = st.empty()
 
             authenticator.logout('Logout', location='main', key='logout_key')
-            st.caption('©️2023 Institute for Information Industry')
+            st.caption('©️2024 Institute for Information Industry')
             st.caption(f'version {VERSION}')
 
         user_accounts = config['credentials']['usernames']
         if selected == 'Consult':
-            consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES,
-                         LANGUAGE_MODELS, username)
+            consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
+                         username)
 
         elif selected == 'Knowledges':
             experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS, username,

@@ -13,6 +13,7 @@ api_url = {
     "test_openai": f"{HOST}:{PORT}/openai/test_openai",
     "test_azure": f"{HOST}:{PORT}/openai/test_azure",
 }
+ACCOUNTS_PATH = "./accounts.yaml"
 DOCS_PATH = "./docs"
 CONFIG_PATH = "./config"
 EXPERT_CONFIG_PATH = "./config/experts"
@@ -57,6 +58,10 @@ def get_dataset_config_path():
 
 def get_model_path():
     return "./model"
+
+
+def get_accounts_path():
+    return ACCOUNTS_PATH
 
 
 def _separate_name(name: str):

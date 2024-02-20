@@ -1,13 +1,14 @@
 import streamlit as st
 from utils import add_question_layer, ask_question, ask_question_deep, get_expert_info, check_consultable
-from utils import check_expert_is_shared, get_last_consult_for_expert
+from utils import check_expert_is_shared, get_last_consult_for_expert, save_tmp_file, check_dataset_is_shared
+from utils import get_dataset_info, get_doc_file_path, ask_summary
+import os
 
 
-def consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
-                 username):
+def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
     st.title('Consult Knowledge')
     consult_strategy = st.radio(
-        'Consult Strategy', ['Regular', 'Deep'],
+        'Consult Strategy', ['Regular', 'Deep', 'Summary'],
         index=0,
         help='Choose strategy when consulting Knowledge',
         horizontal=True,
@@ -17,7 +18,11 @@ def consult_page(placeholder_hint, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
         _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
     elif consult_strategy == 'Deep':
         _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
-
+    elif consult_strategy == 'Summary':
+        st.subheader('File Summarization',
+                     divider='rainbow',
+                     help='choose a document file to summarize')
+        _summary(DATASETS, LANGUAGE_MODELS, username)
     # with st.sidebar:
     #     with placeholder_hint:
     #         with st.expander('Hint', expanded=False):
@@ -58,16 +63,6 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
         else:
             last_consult_config_for_expert = get_last_consult_for_expert(
                 expert_owner, expert_name)
-            prompt = col_question.text_area(
-                'Question',
-                help='Prompt',
-                placeholder='Ask something' if consultable else '',
-                height=150,
-                key='question')
-            auto_clean = col_question.toggle('Auto Clean',
-                                             value=False,
-                                             key='auto-clean-on-submit',
-                                             help='Clean Question upon submit')
 
             ### use default advanced param if shared expert, else can be modified ##
             if (expert_owner == username):
@@ -80,15 +75,10 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                     False, last_consult_config_for_expert, LANGUAGE_MODELS,
                     SEARCH_TYPES, datasets, chunk_size, embeddings_model)
 
-            submit_question = col_question.button(
-                'Submit',
-                type='primary',
-                use_container_width=True,
-                help='Submit question to Knowledge',
-                on_click=ask_question,
-                args=(username, prompt, expert_owner, expert_name,
-                      advanced_params, auto_clean),
-                disabled=prompt == '')
+            prompt = st.chat_input("Ask your question here")
+            if prompt:
+                ask_question(username, prompt, expert_owner, expert_name,
+                             advanced_params)
 
             if st.session_state['que'] != '' and st.session_state['ans'] != '':
                 with col_answer.chat_message("user"):
@@ -103,7 +93,7 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
         divider='rainbow',
         help=
         'Divide questions into layers of sub-questions to increase precision.')
-    col_answer, col_layer_area, col_layer_config = st.columns([2, 1, 1])
+    col_answer, col_layer_config = st.columns([3, 1])
     shared = col_layer_config.toggle('Shared Knowledges',
                                      value=False,
                                      key='use-shared-experts',
@@ -122,6 +112,9 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
             else:
                 expert_owner = username
 
+            add_layer, _ = st.columns([999, 1])
+            layers = add_question_layer(col_layer_config)
+
             datasets, embeddings_model, chunk_size, _ = get_expert_info(
                 expert_owner, expert_name)
             chunk_size = int(chunk_size)
@@ -135,18 +128,6 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
             else:
                 last_consult_config_for_expert = get_last_consult_for_expert(
                     expert_owner, expert_name)
-                prompt = st.text_area(
-                    'Question',
-                    help=
-                    'Final Prompt based on response from previous layer(s) of question(s)',
-                    placeholder='Ask something',
-                    height=150,
-                    key='final-question')
-                auto_clean = st.toggle(
-                    'Auto Clean',
-                    value=False,
-                    key='auto-clean-on-submit-layers',
-                    help='Clean Question & Layers upon submit')
 
                 ### use default advanced param if shared expert, else can be modified ##
                 if (expert_owner == username):
@@ -160,26 +141,16 @@ def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                         False, last_consult_config_for_expert, LANGUAGE_MODELS,
                         SEARCH_TYPES, datasets, chunk_size, embeddings_model)
 
-                with col_layer_area:
-                    add_layer, _ = st.columns([999, 1])
-                    layers = add_question_layer(col_layer_area)
+        prompt = st.chat_input("Ask your final question here")
+        if prompt:
+            ask_question_deep(col_answer, layers, username, prompt,
+                              expert_owner, expert_name, advanced_params)
 
-                submit_layers_of_questions = st.button(
-                    'Submit',
-                    type='primary',
-                    use_container_width=True,
-                    help='Submit layers of questions to Knowledge',
-                    on_click=ask_question_deep,
-                    args=(col_answer, layers, username, prompt, expert_owner,
-                          expert_name, advanced_params, auto_clean),
-                    disabled=prompt == '')
-
-                if st.session_state['que'] != '' and st.session_state[
-                        'ans'] != '':
-                    with col_answer.chat_message("user"):
-                        st.markdown(st.session_state['que'])
-                    with col_answer.chat_message("assistant"):
-                        st.markdown(st.session_state['ans'])
+        if st.session_state['que'] != '' and st.session_state['ans'] != '':
+            with col_answer.chat_message("user"):
+                st.markdown(st.session_state['que'])
+            with col_answer.chat_message("assistant"):
+                st.markdown(st.session_state['ans'])
 
 
 def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
@@ -269,3 +240,92 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
         compression_language_model if use_compression else ''
     }
     return advanced_params
+
+
+def _summary(DATASETS, LANGUAGE_MODELS, username):
+
+    col_answer, setting_col = st.columns([2, 1])
+
+    with setting_col:
+        ### select models ###
+        language_model = st.selectbox('language model',
+                                      LANGUAGE_MODELS,
+                                      index=0)
+        ### summary type and sumary length ###
+        sum_t, sum_l = st.columns([1, 1])
+        with sum_t:
+            summary_type = st.selectbox(
+                "Summary Type",
+                ["map_reduce", "refine"],
+                index=0,
+                help=
+                "map_reduce is faster but may lack clarity and detail, refine is slower but offers a comprehensive understanding of the content.",
+            )
+        with sum_l:
+            summary_len = st.number_input(
+                "Summary Length",
+                value=500,
+                min_value=100,
+                max_value=1000,
+                step=10,
+                help=
+                "The length of the output summary you want LLM to generate.",
+            )
+
+        tmp_dataset_on = st.toggle(
+            'Use Dataset File',
+            value=st.session_state.sum_dataset_on,
+        )
+        if tmp_dataset_on != st.session_state.sum_dataset_on:
+            st.session_state.sum_dataset_on = tmp_dataset_on
+            st.rerun()
+
+        tmp_file_name = _select_dataset_file(DATASETS, username)
+
+        if not st.session_state.sum_dataset_on:
+            uploaded_file = st.file_uploader("Upload a file",
+                                             type=["txt", "pdf", "docx"])
+
+            if uploaded_file is not None:
+                tmp_file_name = save_tmp_file(uploaded_file)
+
+    system_prompt = st.chat_input("Type instruction here (ex. 用中文回答)")
+    if system_prompt and tmp_file_name == "":
+        st.warning("Please select a file first.")
+    elif system_prompt:
+        ask_summary(system_prompt, username, tmp_file_name, language_model,
+                    summary_type, summary_len)
+        ### delete tmp file is using uploaded file ###
+        if not st.session_state.sum_dataset_on:
+            os.remove(tmp_file_name)
+
+    if st.session_state['que'] != '' and st.session_state['ans'] != '':
+        with col_answer.chat_message("user"):
+            st.markdown(st.session_state['que'])
+        with col_answer.chat_message("assistant"):
+            st.markdown(st.session_state['ans'])
+
+
+def _select_dataset_file(DATASETS: list, username: str) -> str:
+
+    if st.session_state.sum_dataset_on:
+        show_shared_dataset = st.toggle(
+            'Shared Datasets',
+            key='show-shared-datasets',
+            value=False,
+            disabled=len([d for d in DATASETS
+                          if check_dataset_is_shared(d)]) == 0)
+        if not show_shared_dataset:
+            DATASETS = [d for d in DATASETS if not check_dataset_is_shared(d)]
+        dataset_name = st.selectbox('select dataset', DATASETS, index=0)
+
+        if check_dataset_is_shared(dataset_name):
+            dataset_name, dataset_owner = dataset_name.split('@')
+        else:
+            dataset_owner = username
+        dataset_filelist, dataset_description, dataset_lastupdate, old_shared_users = get_dataset_info(
+            dataset_owner, dataset_name)
+
+        file_name = st.selectbox('select file', dataset_filelist, index=0)
+
+        return get_doc_file_path(dataset_owner, dataset_name, file_name)
