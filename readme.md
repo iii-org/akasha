@@ -7,11 +7,11 @@
 
 <br/>
 
-Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
+Akasha simplifies document-based Question Answering (QA) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents. Use Retrieval Augmented Generation (RAG) to make LLM generate correct information from documents.
 
 With Akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
 
-
+For the chinese manual, please visit [manual](https://hackmd.io/@akasha-terminal-2024/ryS4pS1ca)
 <br/>
 <br/>
 
