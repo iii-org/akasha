@@ -65,3 +65,8 @@ akasha_builder_1_0.tar
 question_set2.txt
 result.csv
 test_*.py
+.vscode/settings.json
+SIMYOU.TTF
+SIMYOU.cw127.pkl
+SIMYOU.pkl
+default.pdf

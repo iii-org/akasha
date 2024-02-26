@@ -11,6 +11,7 @@ import akasha.format as format
 import akasha.prompts as prompts
 import akasha.db
 import datetime, traceback
+import warnings
 from dotenv import load_dotenv
 
 load_dotenv(pathlib.Path().cwd() / ".env")
@@ -179,7 +180,7 @@ class atman:
         chunk_size: int = 1000,
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
-        topK: int = 2,
+        topK: int = -1,
         threshold: float = 0.2,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
@@ -224,6 +225,10 @@ class atman:
         self.temperature = temperature
 
         self.timestamp_list = []
+        if topK != -1:
+            warnings.warn(
+                "The 'topK' parameter is deprecated and will be removed in future versions",
+                DeprecationWarning)
 
     def _set_model(self, **kwargs):
         """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
@@ -438,18 +443,42 @@ class Doc_QA(atman):
         chunk_size: int = 1000,
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
-        topK: int = 2,
+        topK: int = -1,
         threshold: float = 0.2,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
+        prompt_format_type: str = "gpt",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         compression: bool = False,
         use_chroma: bool = False,
+        use_rerank: bool = False,
         ignore_check: bool = False,
     ):
+        """initials of Doc_QA class
+
+        Args:
+            embeddings (_type_, optional): embedding model, including two types(openai and huggingface). Defaults to "openai:text-embedding-ada-002".
+            chunk_size (int, optional): the max length of each text segments. Defaults to 1000.
+            model (_type_, optional): language model. Defaults to "openai:gpt-3.5-turbo".
+            verbose (bool, optional): print the processing text or not. Defaults to False.
+            topK (int, optional): the number of documents to be selected. Defaults to 2.
+            threshold (float, optional): threshold of similarity for searching relavant documents. Defaults to 0.2.
+            language (str, optional): "ch" chinese or "en" english. Defaults to "ch".
+            search_type (Union[str, Callable], optional): _description_. Defaults to "svm".
+            record_exp (str, optional): experiment name of aiido. Defaults to "".
+            system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
+            prompt_format_type (str, optional): the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
+            max_doc_len (int, optional): max total length of selected documents. Defaults to 1500.
+            temperature (float, optional): temperature for language model. Defaults to 0.0.
+            compression (bool, optional): compress the selected documents or not. Defaults to False.
+            use_chroma (bool, optional): use chroma db name instead of documents path to load data or not. Defaults to False.
+            use_rerank (bool, optional): use rerank model to re-rank the selected documents or not. Defaults to False.
+            ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
+        """
+
         super().__init__(
             chunk_size,
             model,
@@ -468,6 +497,8 @@ class Doc_QA(atman):
         self.compression = compression
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
+        self.use_rerank = use_rerank
+        self.prompt_format_type = prompt_format_type
         ### set variables ###
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose,
@@ -529,7 +560,7 @@ class Doc_QA(atman):
             self.db,
             self.embeddings_obj,
             self.prompt,
-            self.topK,
+            self.use_rerank,
             self.threshold,
             self.language,
             self.search_type,
@@ -548,7 +579,7 @@ class Doc_QA(atman):
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt()
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt)
+            self.system_prompt, self.prompt, self.prompt_format_type)
 
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
@@ -639,7 +670,7 @@ class Doc_QA(atman):
                         self.db,
                         self.embeddings_obj,
                         prompt,
-                        self.topK,
+                        self.use_rerank,
                         self.threshold,
                         self.language,
                         self.search_type,
@@ -655,7 +686,7 @@ class Doc_QA(atman):
                     self.docs = docs + pre_result
                     ## format prompt ##
                     prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-                        self.system_prompt, prompt)
+                        self.system_prompt, prompt, self.prompt_format_type)
 
                     response = self._ask_model(prod_sys_prompt, prod_prompt)
 
@@ -736,7 +767,7 @@ class Doc_QA(atman):
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt()
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt)
+            self.system_prompt, self.prompt, self.prompt_format_type)
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
@@ -803,7 +834,7 @@ class Doc_QA(atman):
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt()
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt)
+            self.system_prompt, self.prompt, self.prompt_format_type)
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
