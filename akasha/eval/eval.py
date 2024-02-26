@@ -85,17 +85,19 @@ class Model_Eval(akasha.atman):
         chunk_size: int = 1000,
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
-        topK: int = 2,
+        topK: int = -1,
         threshold: float = 0.2,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
+        prompt_format_type: str = "gpt",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         question_type: str = "fact",
         question_style: str = "essay",
         use_chroma: bool = False,
+        use_rerank: bool = False,
         ignore_check: bool = False,
     ):
         """initials of Model_Eval class
@@ -121,6 +123,7 @@ class Model_Eval(akasha.atman):
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **question_style (str, optional)**: the style of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **question_type (str, optional)**: the type of question you want to generate, "fact", "summary", "irrelevant", "compared". Defaults to "fact".\n
+            **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
         """
 
         super().__init__(
@@ -141,7 +144,7 @@ class Model_Eval(akasha.atman):
         self.question_type = question_type
         self.question_style = question_style
         self.question_num = 0
-
+        self.prompt_format_type = prompt_format_type
         ### set variables ###
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose,
@@ -161,6 +164,7 @@ class Model_Eval(akasha.atman):
         self.score = {}
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
+        self.use_rerank = use_rerank
 
     def _save_questionset(self, timestamp: str, output_file_path: str):
         """save questions and ref answers into txt file, and save the path of question set into logs
@@ -486,7 +490,7 @@ class Model_Eval(akasha.atman):
             prod_sys = self.system_prompt + akasha.prompts.default_doc_ask_prompt(
             )
             prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
-                prod_sys, question)
+                prod_sys, question, self.prompt_format_type)
         else:
             prod_sys = self.system_prompt
             query, ans = akasha.prompts.format_question_query(question, answer)
@@ -497,7 +501,7 @@ class Model_Eval(akasha.atman):
             self.db,
             self.embeddings_obj,
             query,
-            self.topK,
+            self.use_rerank,
             self.threshold,
             self.language,
             self.search_type,
@@ -571,7 +575,7 @@ class Model_Eval(akasha.atman):
 
         prompt = "請對以上文件進行摘要。"
         prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
-            self.system_prompt, prompt)
+            self.system_prompt, prompt, self.prompt_format_type)
 
         self.docs = [
             Document(page_content=sum_doc, metadata={
@@ -645,7 +649,7 @@ class Model_Eval(akasha.atman):
         choice_num: int = 4,
         output_file_path: str = "",
         **kwargs,
-    ) -> (list, list):
+    ) -> Tuple[list, list]:
         """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory,
         then use llm model to generate a question and answer pair, and save it into a txt file.
         1.The format of "single_choice" questionset should be one line one question, and the possibles answers and questions are separate by tab(\t),
@@ -953,10 +957,9 @@ class Model_Eval(akasha.atman):
         embeddings_list: list = ["openai:text-embedding-ada-002"],
         chunk_size_list: list = [500],
         model_list: list = ["openai:gpt-3.5-turbo"],
-        topK_list: list = [2],
         search_type_list: list = ["svm", "tfidf", "mmr"],
         **kwargs,
-    ) -> (list, list):
+    ) -> Tuple[list, list]:
         """test all combinations of giving lists, and run auto_evaluation to find parameters of the best result.
 
         Args:
@@ -966,7 +969,6 @@ class Model_Eval(akasha.atman):
             **embeddings_list (_type_, optional)**: list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].\n
             **chunk_size_list (list, optional)**: list of chunk sizes. Defaults to [500].\n
             **model_list (_type_, optional)**: list of models. Defaults to ["openai:gpt-3.5-turbo"].\n
-            **topK_list (list, optional)**: list of topK. Defaults to [2].\n
             **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
             **search_type_list (list, optional)**: list of search types, currently have "merge", "svm", "knn", "tfidf", "mmr". Defaults to ['svm','tfidf','mmr'].
         Returns:
@@ -977,7 +979,7 @@ class Model_Eval(akasha.atman):
         start_time = time.time()
         combinations = akasha.helper.get_all_combine(embeddings_list,
                                                      chunk_size_list,
-                                                     model_list, topK_list,
+                                                     model_list,
                                                      search_type_list)
         progress = tqdm(len(combinations),
                         total=len(combinations),
@@ -991,7 +993,7 @@ class Model_Eval(akasha.atman):
         else:
             bcr = 0.0
 
-        for embed, chk, mod, tK, st in combinations:
+        for embed, chk, mod, st in combinations:
             progress.update(1)
 
             if self.question_type.lower() == "essay":
@@ -1001,7 +1003,6 @@ class Model_Eval(akasha.atman):
                     embeddings=embed,
                     chunk_size=chk,
                     model=mod,
-                    topK=tK,
                     search_type=st,
                 )
 
@@ -1015,7 +1016,6 @@ class Model_Eval(akasha.atman):
                     embed,
                     chk,
                     mod,
-                    tK,
                     self.search_type_str,
                 )
             else:
@@ -1025,7 +1025,6 @@ class Model_Eval(akasha.atman):
                     embeddings=embed,
                     chunk_size=chk,
                     model=mod,
-                    topK=tK,
                     search_type=st,
                 )
                 bcr = max(bcr, cur_correct_rate)
@@ -1035,7 +1034,6 @@ class Model_Eval(akasha.atman):
                     embed,
                     chk,
                     mod,
-                    tK,
                     self.search_type_str,
                 )
             result_list.append(cur_tup)
@@ -1093,7 +1091,7 @@ class Model_Eval(akasha.atman):
         choice_num: int = 4,
         output_file_path: str = "",
         **kwargs,
-    ) -> (list, list):
+    ) -> Tuple[list, list]:
         """similar to auto_create_questionset, but it will use the topic to find the related documents and create questionset.
             Args:
                 **doc_path (str)**: documents directory path\n
@@ -1157,19 +1155,19 @@ class Model_Eval(akasha.atman):
             self.db,
             self.embeddings_obj,
             topic,
-            99,
+            self.use_rerank,
             self.threshold,
             self.language,
             self.search_type,
             self.verbose,
             self.model_obj,
-            999999,
+            25000,
             self.logs[timestamp],
         )
 
         texts = [doc.page_content for doc in self.docs]
         metadata = [doc.metadata for doc in self.docs]
-        print(texts)
+
         doc_range = min(doc_range, len(texts))
 
         progress = tqdm(total=question_num,

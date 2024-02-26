@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.18](https://img.shields.io/badge/pypi%20package-0.8.18-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.19](https://img.shields.io/badge/pypi%20package-0.8.19-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -536,7 +536,6 @@ Args:
             **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
             **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
             **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
-            **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
             **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.\n
@@ -549,6 +548,9 @@ Args:
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **use_chroma (bool, optional)**: use chroma db name instead of documents path to load data or not. Defaults to False.
+            **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
+            **ignore_check (bool, optional)**: speed up loading data if the chroma db is already existed. Defaults to False.
 
 """
 ```
@@ -752,7 +754,7 @@ eva = eval.Model_Eval(question_style="essay", search_type='merge',\
 
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_essay.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 # bert_score = 0.782
 # rouge = 0.81
@@ -774,7 +776,7 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_irre.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 ```
 
@@ -795,7 +797,7 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 
 eva.create_topic_questionset(doc_path="doc/mic/", topic= "工業4.0", question_num=3, output_file_path="questionset/mic_topic_irre.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",topK=3,search_type="svm")
+bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 ```
 
@@ -811,7 +813,7 @@ bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset
 ## Find Optimum Combination
 
 To test all available combinations and find the best parameters, you can use function **optimum_combination** , you can give different 
-embeddings, document chunk sizes, models, document similarity searching type and number of most relative documents (topK), and the function will
+embeddings, document chunk sizes, models, document similarity searching type, and the function will
 test all combinations to find the best combination based on the given question set and documents. 
 
 Noted that best score combination is the highest correct rate combination, and best cost-effective 
@@ -834,7 +836,7 @@ model_list = ["openai:gpt-3.5-turbo","hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 
 eva = eval.Model_Eval(question_style="single_choice")
 eva.optimum_combination("question_pvc.txt", dir_path,  embeddings_list = embeddings_list, model_list = model_list,
-            chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name,topK_list=[2,3])
+            chunk_size_list=[200, 400, 600], search_type_list=["merge","tfidf",],record_exp=exp_name)
 
 ```
 
@@ -845,11 +847,11 @@ eva.optimum_combination("question_pvc.txt", dir_path,  embeddings_list = embeddi
 Best correct rate:  1.000
 Best score combination:  
 
-embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 3, search type: merge
+embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.5-turbo, search type: merge
 
  
 
-embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 3, search type: tfidf
+embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.5-turbo, search type: tfidf
 
  
 
@@ -857,7 +859,7 @@ embeddings: openai:text-embedding-ada-002, chunk size: 400, model: openai:gpt-3.
 
 Best cost-effective:
 
-embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:gpt-3.5-turbo, topK: 2, search type: tfidf
+embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:gpt-3.5-turbo, search type: tfidf
 
 ```
 
@@ -872,7 +874,6 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
             **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.
             **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".
             **verbose (bool, optional)**: show log texts or not. Defaults to False.
-            **topK (int, optional)**: search top k number of similar documents. Defaults to 2.
             **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.
@@ -886,6 +887,7 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.
             **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".
+            **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
 """
 ```
 
@@ -1139,7 +1141,7 @@ Options:
   -e, --embeddings TEXT       embeddings for storing the documents
   -c, --chunk_size INTEGER    chunk size for storing the documents
   -m, --model TEXT            llm model for generating the response
-  -k, --topk INTEGER          select topK relevant documents
+  -ur --use_rerank BOOL       use rerank to sort the documents
   -t, --threshold FLOAT       threshold score for selecting the relevant
                               documents
   -l, --language TEXT         language for the documents, default is 'ch' for

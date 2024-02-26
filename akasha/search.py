@@ -4,6 +4,7 @@ from langchain_community.retrievers import (
     SVMRetriever,
     KNNRetriever,
 )
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.schema.vectorstore import VectorStoreRetriever
 from langchain_community.vectorstores import chroma
@@ -11,7 +12,7 @@ from langchain_community.vectorstores.chroma import Chroma
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
-from typing import Any, List, Optional, Callable, Union
+from typing import Any, List, Optional, Callable, Union, Tuple
 import numpy as np
 import akasha.helper as helper
 import akasha.prompts as prompts
@@ -60,7 +61,7 @@ def _get_relevant_doc_custom(
     else:
         docs = customR.get_relevant_documents(query)
 
-    if k >= 100:
+    if k >= 200:
         docs = rerank_reduce(query, docs, k)
 
     return docs
@@ -99,7 +100,7 @@ def __get_relevant_doc_knn(
     else:
         docs = knnR.get_relevant_documents(query)
 
-    if k >= 100:
+    if k >= 200:
         docs = rerank_reduce(query, docs, k)
 
     return docs
@@ -124,7 +125,7 @@ def _get_relevant_doc_tfidf(
         list: list of Documents
     """
 
-    retriever = TFIDFRetriever.from_documents(docs_list, k=k)
+    retriever = myTFIDFRetriever.from_documents(docs_list, k=k)
     if compression:
         compressor = LLMChainExtractor.from_llm(
             model, llm_chain_kwargs={"verbose": verbose})
@@ -134,7 +135,7 @@ def _get_relevant_doc_tfidf(
     else:
         docs = retriever.get_relevant_documents(query)
 
-    if k >= 100:
+    if k >= 200:
         docs = rerank_reduce(query, docs[:k], k)
 
     return docs[:k]
@@ -173,7 +174,7 @@ def _get_relevant_doc_svm(
     else:
         docs = svmR.get_relevant_documents(query)
 
-    if k >= 100:
+    if k >= 200:
         docs = rerank_reduce(query, docs, k)
     return docs
 
@@ -236,14 +237,14 @@ def _get_relevant_doc_mmr(
 
     del retriever
 
-    if k >= 100:
+    if k >= 200:
         docs = rerank_reduce(query, docs, k)
 
     return docs
 
 
 def _merge_docs(docs_list: list, topK: int, language: str, verbose: bool,
-                max_doc_len: int, model) -> (list, int):
+                max_doc_len: int, model) -> Tuple[list, int]:
     """merge different search types documents, if total len of documents too large,
         will not select all documents.
         use jieba to count length of chinese words, use split space otherwise.
@@ -291,7 +292,7 @@ def get_docs(
     db: Union[dbs, list],
     embeddings,
     query: str,
-    topK: int,
+    use_rerank: bool,
     threshold: float,
     language: str,
     search_type: Union[str, Callable],
@@ -300,7 +301,7 @@ def get_docs(
     max_token: int,
     log: dict,
     compression: bool = False,
-) -> (list, int):
+) -> Tuple[list, int]:
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together.
 
@@ -320,6 +321,12 @@ def get_docs(
     Returns:
         list: selected list of similar documents.
     """
+
+    ### if use rerank to get more accurate similar documents, set topK to 200 ###
+    if use_rerank:
+        topK = 200
+    else:
+        topK = 199
 
     if callable(search_type):
 
@@ -560,7 +567,8 @@ class myKNNRetriever(BaseRetriever):
         denominator = np.max(similarities) - np.min(similarities) + 1e-6
         normalized_similarities = (similarities -
                                    np.min(similarities)) / denominator
-
+        # print([normalized_similarities[row]
+        #        for row in sorted_ix[0:self.k]])  # stats
         top_k_results = [
             Document(page_content=self.texts[row], metadata=self.metadata[row])
             for row in sorted_ix[0:self.k]
@@ -600,6 +608,23 @@ class myKNNRetriever(BaseRetriever):
         return top_k_results
 
 
+class myTFIDFRetriever(TFIDFRetriever):
+
+    def _get_relevant_documents(
+            self, query: str, *,
+            run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
+        from sklearn.metrics.pairwise import cosine_similarity
+
+        query_vec = self.vectorizer.transform(
+            [query])  # Ip -- (n_docs,x), Op -- (n_docs,n_Feats)
+        results = cosine_similarity(self.tfidf_array, query_vec).reshape(
+            (-1, ))  # Op -- (n_docs,1) -- Cosine Sim with each doc
+
+        # print(results)  # stats
+        return_docs = [self.docs[i] for i in results.argsort()[-self.k:][::-1]]
+        return return_docs
+
+
 class mySVMRetriever(BaseRetriever):
     embeddings: Embeddings
     """Embeddings model to use."""
@@ -621,7 +646,6 @@ class mySVMRetriever(BaseRetriever):
         relevancy_threshold: float = 0.2,
         **kwargs: Any,
     ) -> SVMRetriever:
-        # db_data = _get_all_docs(db)
 
         index = np.array(db.get_embeds())
         texts = db.get_docs()
@@ -694,6 +718,7 @@ class mySVMRetriever(BaseRetriever):
 
         top_k_results = []
         for row in sorted_ix[1:self.k + 1]:
+            # print(normalized_similarities[row])  # stats
             if (self.relevancy_threshold is None or
                     normalized_similarities[row] >= self.relevancy_threshold):
                 top_k_results.append(
@@ -767,7 +792,7 @@ def rerank_reduce(query, docs, topK):
     model = AutoModelForSequenceClassification.from_pretrained(model_name).to(
         device)
     model.eval()
-    topK //= 5
+    topK //= 2
     k, score_list = 0, []
     while k < len(docs):
         pairs = [[query, doc.page_content] for doc in docs[k:k + 10]]

@@ -3,7 +3,7 @@ import jieba
 import json, re
 from pathlib import Path
 import opencc
-from typing import Callable, Union
+from typing import Callable, Union, Tuple
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model
@@ -64,7 +64,7 @@ def _separate_name(name: str):
     return res_type, res_name
 
 
-def _handle_azure_env() -> (str, str, str):
+def _handle_azure_env() -> Tuple[str, str, str]:
     """from environment variable get the api_base, api_key, api_version
 
     Returns:
@@ -408,7 +408,6 @@ def get_all_combine(
     embeddings_list: list,
     chunk_size_list: list,
     model_list: list,
-    topK_list: list,
     search_type_list: list,
 ) -> list:
     """record all combinations of giving lists
@@ -417,7 +416,6 @@ def get_all_combine(
         **embeddings_list (list)**: list of embeddings(str)\n
         **chunk_size_list (list)**: list of chunk sizes(int)\n
         **model_list (list)**: list of models(str)\n
-        **topK_list (list)**: list of topK(int)\n
         **search_type_list (list)**: list of search types(str)\n
 
     Returns:
@@ -427,9 +425,8 @@ def get_all_combine(
     for embed in embeddings_list:
         for chk in chunk_size_list:
             for mod in model_list:
-                for tK in topK_list:
-                    for st in search_type_list:
-                        res.append((embed, chk, mod, tK, st))
+                for st in search_type_list:
+                    res.append((embed, chk, mod, st))
 
     return res
 
@@ -451,11 +448,10 @@ def get_best_combination(result_list: list, idx: int) -> list:
     for tup in sorted_res:
         if tup[idx] < max_score:
             break
-        res_str = ("embeddings: " + tup[-5] + ", chunk size: " + str(tup[-4]) +
-                   ", model: " + tup[-3] + ", topK: " + str(tup[-2]) +
-                   ", search type: " + tup[-1] + "\n")
+        res_str = ("embeddings: " + tup[-4] + ", chunk size: " + str(tup[-3]) +
+                   ", model: " + tup[-2] + ", search type: " + tup[-1] + "\n")
         print(res_str)
-        res.append(tup[-5:])
+        res.append(tup[-4:])
 
     return res
 
@@ -477,7 +473,7 @@ def _get_text(texts: list,
               previous_summary: str,
               i: int,
               max_doc_len: int,
-              language: str = "ch") -> (int, str, int):
+              language: str = "ch") -> Tuple[int, str, int]:
     """used in summary, combine chunks of texts into one chunk that can fit into llm model
 
     Args:

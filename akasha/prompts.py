@@ -1,16 +1,17 @@
-from typing import List, Union
+from typing import List, Union, Tuple
 
 sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
 
 
-def format_llama_sys_prompt(system_prompt: str, prompt: str) -> (str, str):
+def format_llama_sys_prompt(system_prompt: str,
+                            prompt: str) -> Tuple[str, str]:
     if system_prompt == "":
         return "", "[INST] " + prompt + " [/INST]\n"
     return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n", prompt + " [/INST]\n"
 
 
-def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> (str, str):
+def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> Tuple[str, str]:
     if system_prompt == "":
         return "", "Human: " + prompt + "\n"
     return "System: " + system_prompt + "\n", "Human: " + prompt + "\n"
@@ -18,8 +19,8 @@ def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> (str, str):
 
 def format_sys_prompt(system_prompt: str,
                       prompt: str,
-                      model_type: str = "GPT"):
-    if model_type == "llama":
+                      model_type: str = "gpt"):
+    if model_type.lower() == "llama":
         prod_sys_prompt, prod_prompt = format_llama_sys_prompt(
             system_prompt, prompt)
     else:
@@ -28,7 +29,7 @@ def format_sys_prompt(system_prompt: str,
     return prod_sys_prompt, prod_prompt
 
 
-def format_question_query(question: list, answer: str) -> (str, str):
+def format_question_query(question: list, answer: str) -> Tuple[str, str]:
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
        return the question query string and the answer string.\n
       example:    ["what is 1+1 euqals to?", "2", "4", "8", "10", "1"]
@@ -388,13 +389,13 @@ def JSON_formatter(schemas: Union[list, OutputSchema]):
 
 def JSON_formatter_list(names: list,
                         descriptions: list,
-                        types: list = ["str"]):
+                        types: list = ["str"]) -> list:
     """generate prompt for generate JSON format, input list name and descriptions, which include every key and value you want to generate in JSON format"""
-
+    ret = []
     if len(names) != len(descriptions):
         print("error, names and descriptions should have the same length\n\n")
-        return ""
-    schema_str = ""
+        return ret
+
     for i in range(len(names)):
         if i < len(types) and types[i] in [
                 "str", "int", "list", "dict", "tuple", "float", "double",
@@ -403,15 +404,36 @@ def JSON_formatter_list(names: list,
             checked_type = types[i]
         else:
             checked_type = "str"
-        schema_str += f"\t{names[i]}: {checked_type}  // {descriptions[i]}\n"
+        #schema_str += f"\t{names[i]}: {checked_type}  // {descriptions[i]}\n"
+        schema = OutputSchema(names[i], descriptions[i], checked_type)
+        ret.append(schema)
 
-    format_instruct = f"""The output should be formatted as a JSON instance that conforms to the JSON schema below:
-    {{
-    {schema_str}
-    }}\n
-    """
-    return format_instruct
+    return ret
 
 
-from langchain.output_parsers import ResponseSchema, StructuredOutputParser
-from langchain.output_parsers import XMLOutputParser
+def JSON_formatter_dict(var_list: Union[list, dict]) -> list:
+    """generate prompt for generate JSON format, input list of dictionary, keys contain name,type and descriptions, which represent every variable you want to generate in JSON format"""
+    ret = []
+    if isinstance(var_list, dict):
+        var_list = [var_list]
+
+    if not isinstance(var_list, list):
+        print("error, var_list should be a list of dictionary\n\n")
+        return ret
+
+    for var in var_list:
+        if "name" not in var or "description" not in var:
+            print("var should contain name and description, ignore.\n\n")
+            continue
+        if "type" in var and var["type"] in [
+                "str", "int", "list", "dict", "tuple", "float", "double",
+                "long"
+        ]:
+            checked_type = var["type"]
+        else:
+            checked_type = "str"
+
+        schema = OutputSchema(var["name"], var["description"], checked_type)
+        ret.append(schema)
+
+    return ret

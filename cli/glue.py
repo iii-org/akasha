@@ -13,19 +13,24 @@ def akasha():
 @click.option(
     "--doc_path",
     "-d",
-    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help=
+    "document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
-@click.option("--prompt", "-p", help="prompt you want to ask to llm", required=True)
+@click.option("--prompt",
+              "-p",
+              help="prompt you want to ask to llm",
+              required=True)
 @click.option(
     "--embeddings",
     "-e",
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option(
-    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
-)
+@click.option("--chunk_size",
+              "-c",
+              default=1000,
+              help="chunk size for storing the documents")
 @click.option(
     "--model",
     "-m",
@@ -55,14 +60,17 @@ def akasha():
     "--record_exp",
     "-r",
     default="",
-    help="input the experiment name if you want to record the experiment using aiido",
+    help=
+    "input the experiment name if you want to record the experiment using aiido",
 )
-@click.option(
-    "--system_prompt", "-sys", default="", help="system prompt for the llm model"
-)
-@click.option(
-    "--max_doc_len", "-md", default=1500, help="max doc len for the llm model input"
-)
+@click.option("--system_prompt",
+              "-sys",
+              default="",
+              help="system prompt for the llm model")
+@click.option("--max_doc_len",
+              "-md",
+              default=1500,
+              help="max doc len for the llm model input")
 def get_response(
     doc_path: str,
     prompt: str,
@@ -101,7 +109,8 @@ def get_response(
 @click.option(
     "--doc_path",
     "-d",
-    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help=
+    "document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
@@ -110,16 +119,20 @@ def get_response(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option(
-    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
-)
+@click.option("--chunk_size",
+              "-c",
+              default=1000,
+              help="chunk size for storing the documents")
 @click.option(
     "--model",
     "-m",
     default="openai:gpt-3.5-turbo",
     help="llm model for generating the response",
 )
-@click.option("--topk", "-k", default=2, help="select topK relevant documents")
+@click.option("--use_rerank",
+              "-ur",
+              default=False,
+              help="use rerank to sort the documents")
 @click.option(
     "--threshold",
     "-t",
@@ -138,18 +151,20 @@ def get_response(
     default="merge",
     help="search type for the documents, include merge, svm, mmr, tfidf",
 )
-@click.option(
-    "--system_prompt", "-sys", default="", help="system prompt for the llm model"
-)
-@click.option(
-    "--max_doc_len", "-md", default=3000, help="max token for the llm model input"
-)
+@click.option("--system_prompt",
+              "-sys",
+              default="",
+              help="system prompt for the llm model")
+@click.option("--max_doc_len",
+              "-md",
+              default=3000,
+              help="max token for the llm model input")
 def keep_responsing(
     doc_path: str,
     embeddings: str,
     chunk_size: int,
     model: str,
-    topk: int,
+    use_rerank: bool,
     threshold: float,
     language: str,
     search_type: str,
@@ -164,22 +179,22 @@ def keep_responsing(
     embeddings = helper.handle_embeddings(embeddings, False)
     model = helper.handle_model(model, False)
 
-    db = helper.create_chromadb(
-        doc_path, False, embeddings, embeddings_name, chunk_size
-    )
+    db = helper.create_chromadb(doc_path, False, embeddings, embeddings_name,
+                                chunk_size)
 
     if db is None:
         info = "document path not exist\n"
         print(info)
         return ""
 
-    user_input = click.prompt('Please input your question(type "exit()" to quit) ')
+    user_input = click.prompt(
+        'Please input your question(type "exit()" to quit) ')
     while user_input != "exit()":
         docs, docs_len, tokens = search.get_docs(
             db,
             embeddings,
             user_input,
-            topk,
+            use_rerank,
             threshold,
             language,
             search_type,
@@ -193,12 +208,14 @@ def keep_responsing(
 
         chain = load_qa_chain(llm=model, chain_type="stuff", verbose=False)
 
-        res = chain.run(input_documents=docs, question=system_prompt + user_input)
+        res = chain.run(input_documents=docs,
+                        question=system_prompt + user_input)
         res = helper.sim_to_trad(res)
 
         print("Response: ", res)
         print("\n\n")
-        user_input = click.prompt('Please input your question(type "exit()" to quit) ')
+        user_input = click.prompt(
+            'Please input your question(type "exit()" to quit) ')
 
     del db, model, embeddings
 
@@ -207,14 +224,16 @@ def keep_responsing(
 @click.option(
     "--doc_path",
     "-d",
-    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help=
+    "document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
     "--prompt",
     "-p",
     multiple=True,
-    help="prompt you want to ask to llm, if you want to ask multiple questions, use -p multiple times",
+    help=
+    "prompt you want to ask to llm, if you want to ask multiple questions, use -p multiple times",
     required=True,
 )
 @click.option(
@@ -223,9 +242,10 @@ def keep_responsing(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option(
-    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
-)
+@click.option("--chunk_size",
+              "-c",
+              default=1000,
+              help="chunk size for storing the documents")
 @click.option(
     "--model",
     "-m",
@@ -255,14 +275,17 @@ def keep_responsing(
     "--record_exp",
     "-r",
     default="",
-    help="input the experiment name if you want to record the experiment using aiido",
+    help=
+    "input the experiment name if you want to record the experiment using aiido",
 )
-@click.option(
-    "--system_prompt", "-sys", default="", help="system prompt for the llm model"
-)
-@click.option(
-    "--max_doc_len", "-md", default=1500, help="max token for the llm model input"
-)
+@click.option("--system_prompt",
+              "-sys",
+              default="",
+              help="system prompt for the llm model")
+@click.option("--max_doc_len",
+              "-md",
+              default=1500,
+              help="max token for the llm model input")
 def chain_of_thought(
     doc_path: str,
     prompt,
@@ -302,12 +325,14 @@ def chain_of_thought(
 @click.option(
     "--doc_path",
     "-d",
-    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help=
+    "document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
-@click.option(
-    "-question_num", "-qn", default=10, help="number of questions you want to generate"
-)
+@click.option("-question_num",
+              "-qn",
+              default=10,
+              help="number of questions you want to generate")
 @click.option(
     "-question_type",
     "--qt",
@@ -320,9 +345,10 @@ def chain_of_thought(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option(
-    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
-)
+@click.option("--chunk_size",
+              "-c",
+              default=1000,
+              help="chunk size for storing the documents")
 @click.option("--topk", "-k", default=2, help="select topK relevant documents")
 @click.option(
     "--threshold",
@@ -346,7 +372,8 @@ def chain_of_thought(
     "--record_exp",
     "-r",
     default="",
-    help="input the experiment name if you want to record the experiment using aiido",
+    help=
+    "input the experiment name if you want to record the experiment using aiido",
 )
 def auto_create_questionset(
     doc_path: str,
@@ -384,13 +411,15 @@ def auto_create_questionset(
 @click.option(
     "--question_path",
     "-qp",
-    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help=
+    "document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
     "--doc_path",
     "-d",
-    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help=
+    "document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
@@ -405,9 +434,10 @@ def auto_create_questionset(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option(
-    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
-)
+@click.option("--chunk_size",
+              "-c",
+              default=1000,
+              help="chunk size for storing the documents")
 @click.option(
     "--model",
     "-m",
@@ -437,11 +467,13 @@ def auto_create_questionset(
     "--record_exp",
     "-r",
     default="",
-    help="input the experiment name if you want to record the experiment using aiido",
+    help=
+    "input the experiment name if you want to record the experiment using aiido",
 )
-@click.option(
-    "--max_doc_len", "-md", default=1500, help="max token for the llm model input"
-)
+@click.option("--max_doc_len",
+              "-md",
+              default=1500,
+              help="max token for the llm model input")
 def auto_evaluation(
     question_path: str,
     doc_path: str,
@@ -510,8 +542,7 @@ def ui():
 
     # make a folder `docs/Default`
     if not os.path.exists("docs") or not os.path.exists(
-        os.path.join("docs", "Default")
-    ):
+            os.path.join("docs", "Default")):
         os.makedirs(os.path.join(".", "docs", "Default"))
     else:
         pass
@@ -547,7 +578,6 @@ akasha.add_command(chain_of_thought)
 akasha.add_command(auto_create_questionset)
 akasha.add_command(auto_evaluation)
 akasha.add_command(ui)
-
 
 if __name__ == "__main__":
     akasha()
