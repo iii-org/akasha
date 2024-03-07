@@ -325,8 +325,8 @@ def get_docs(
                 model, llm_chain_kwargs={"verbose": verbose})
             retri = ContextualCompressionRetriever(base_compressor=compressor,
                                                    base_retriever=retri)
-        docs = retri.get_relevant_documents(query)
-        docs, scores = retri._gs(query)
+        docs = retri._get_relevant_documents(query)
+        # docs, scores = retri._gs(query)
         final_docs.append(docs)
 
     docs, docs_len, tokens = _merge_docs(final_docs, topK, language, verbose,
@@ -529,6 +529,10 @@ class customRetriever(BaseRetriever):
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)
 
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+
+        return self._gs(query)
+
 
 class myKNNRetriever(BaseRetriever):
     embeddings: Embeddings
@@ -622,6 +626,10 @@ class myKNNRetriever(BaseRetriever):
         """
         return self._gs(query)[0]
 
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+
+        return self._gs(query)[0]
+
 
 class myTFIDFRetriever(TFIDFRetriever):
 
@@ -684,6 +692,10 @@ class myTFIDFRetriever(TFIDFRetriever):
         return_values = [results[i] for i in idxs]
 
         return return_docs, return_values
+
+    async def _aget_relevant_documents(self, query: str) -> List[Document]:
+
+        return self._gs(query)[0]
 
 
 class mySVMRetriever(BaseRetriever):
@@ -794,6 +806,10 @@ class mySVMRetriever(BaseRetriever):
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]
 
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+
+        return self._gs(query)[0]
+
 
 class myBM25Retriever(BaseRetriever):
     bm25: BM25Okapi
@@ -856,6 +872,10 @@ class myBM25Retriever(BaseRetriever):
         return top_k_results, top_k_scores
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
+        return self._gs(query)[0]
+
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+
         return self._gs(query)[0]
 
 
