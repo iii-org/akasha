@@ -61,13 +61,13 @@ def _get_relevant_doc_auto(
     #print(docs_mmr[:4])
 
     ### svm ###
-    svmR = retriver_list[1]
+    svmR = retriver_list[0]
     docs_svm, svm_scores = svmR._gs(query)
     #print("SVM: ", svm_scores, docs_svm[0], "\n\n")
 
     # ### tfidf ###
 
-    tfretriever = myTFIDFRetriever.from_documents(docs_list, k=k)
+    tfretriever = retriver_list[1]
     docs_tf, tf_scores = tfretriever._gs(query)
     #print("TFIDF", tf_scores, docs_tf[0], "\n\n")
 
@@ -229,7 +229,7 @@ def get_retrivers(
         if search_type == "merge" or "tfidf" or "auto":
             docs_list = db.get_Documents()
 
-        if search_type == "mmr" or search_type == "merge" or search_type == "auto":
+        if search_type == "mmr" or search_type == "merge":
             mmr_retriver = myMMRRetriever.from_db(db, embeddings, topK,
                                                   threshold)
             retriver_list.append(mmr_retriver)
@@ -239,7 +239,7 @@ def get_retrivers(
                                                   threshold)
             retriver_list.append(svm_retriver)
 
-        if search_type == "tfidf" or search_type == "merge":
+        if search_type == "tfidf" or search_type == "merge" or search_type == "auto":
             tfidf_retriver = myTFIDFRetriever.from_documents(docs_list, k=topK)
             retriver_list.append(tfidf_retriver)
 
@@ -325,7 +325,7 @@ def get_docs(
                 model, llm_chain_kwargs={"verbose": verbose})
             retri = ContextualCompressionRetriever(base_compressor=compressor,
                                                    base_retriever=retri)
-        docs = retri._get_relevant_documents(query)
+        docs = retri.get_relevant_documents(query)
         # docs, scores = retri._gs(query)
         final_docs.append(docs)
 
