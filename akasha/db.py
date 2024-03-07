@@ -287,7 +287,11 @@ def get_chromadb_from_file(documents: list,
                 time.sleep(sleep_time)
                 vectors = embeddings.embed_documents(page_contents)
 
-
+            if len(vectors) == 0:
+                print(f"\nwarning: {file_name} has empty content, ignored.")
+                k += interval
+                cum_ids += len(texts)
+                continue
             docsearch._collection.add(
                 embeddings=vectors, metadatas=[text.metadata for text in texts], documents=[text.page_content for text in texts]\
                     , ids=[formatted_date + "_" + str(cum_ids + i) for i in range(len(texts))]
@@ -303,7 +307,7 @@ def get_chromadb_from_file(documents: list,
         del docsearch
 
     if len(db.get_ids()) == 0:
-        print("Can not load file:", file_name)
+        print("\nCan not load file:", file_name)
         return None, add_pic
     return db, add_pic
 

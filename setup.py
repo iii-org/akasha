@@ -31,6 +31,7 @@ install_requires = [
     "tokenizers>=0.13.3",
     "streamlit==1.28.2",
     "streamlit_option_menu==0.3.6",
+    "rank_bm25",
 ]
 if platform.system() == "Windows":
     install_requires.append("opencc==1.1.1")
@@ -39,7 +40,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.19",
+    version="0.8.20",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
