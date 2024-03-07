@@ -472,7 +472,7 @@ class Model_Eval(akasha.atman):
         return self.question, self.answer
 
     def _eval_get_res_fact(self, question: Union[str, list], answer: str,
-                           timestamp: str) -> dict:
+                           timestamp: str, retrivers_list: list) -> dict:
         """generate fact resposne from the question, can evaluate with reference answer
 
         Args:
@@ -500,15 +500,14 @@ class Model_Eval(akasha.atman):
         self.docs, docs_len, docs_token = akasha.search.get_docs(
             self.db,
             self.embeddings_obj,
+            retrivers_list,
             query,
             self.use_rerank,
-            self.threshold,
             self.language,
             self.search_type,
             self.verbose,
             self.model_obj,
             self.max_doc_len,
-            self.logs[timestamp],
         )
 
         ### ask llm ###
@@ -620,7 +619,7 @@ class Model_Eval(akasha.atman):
         return new_table
 
     def _eval_get_res(self, question: Union[list, str], answer: str,
-                      timestamp: str) -> dict:
+                      timestamp: str, retrivers_list: list) -> dict:
         """separate the question type and call different function to generate response
 
         Args:
@@ -634,7 +633,8 @@ class Model_Eval(akasha.atman):
         if self.question_type.lower() in ["fact", "facts", "factoid", "factoids", "事實"] or \
             self.question_type.lower() in ["irre", "irrelevant", "irrelevance", "無關"] or\
             self.question_type.lower() in ["compared", "compare", "comparison", "comparisons", "比較"]:
-            return self._eval_get_res_fact(question, answer, timestamp)
+            return self._eval_get_res_fact(question, answer, timestamp,
+                                           retrivers_list)
 
         elif self.question_type.lower() in [
                 "summary", "sum", "summarization", "summarize", "summaries",
@@ -879,10 +879,15 @@ class Model_Eval(akasha.atman):
         self.logs[timestamp]["question_style"] = self.question_style
         self.logs[timestamp]["search_type"] = self.search_type_str
         ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
+        retrivers_list = akasha.search.get_retrivers(
+            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
+            self.search_type, self.logs[timestamp])
+
         for i in range(self.question_num):
             progress.update(1)
 
-            new_table = self._eval_get_res(question[i], answer[i], timestamp)
+            new_table = self._eval_get_res(question[i], answer[i], timestamp,
+                                           retrivers_list)
             total_docs.extend(self.docs)
             # ---- #
 

@@ -557,18 +557,21 @@ class Doc_QA(atman):
         self.logs[timestamp]["compression"] = self.compression
 
         ### start to get response ###
+        retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
+                                              self.use_rerank, self.threshold,
+                                              self.search_type,
+                                              self.logs[timestamp])
         self.docs, self.doc_length, self.doc_tokens = search.get_docs(
             self.db,
             self.embeddings_obj,
+            retrivers_list,
             self.prompt,
             self.use_rerank,
-            self.threshold,
             self.language,
             self.search_type,
             self.verbose,
             self.model_obj,
             self.max_doc_len,
-            self.logs[timestamp],
             compression=self.compression,
         )
 
@@ -658,6 +661,10 @@ class Doc_QA(atman):
         self.docs = []
         self.prompt = []
         total_docs = []
+        retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
+                                              self.use_rerank, self.threshold,
+                                              self.search_type,
+                                              self.logs[timestamp])
 
         def recursive_get_response(prompt_list):
             pre_result = []
@@ -667,18 +674,18 @@ class Doc_QA(atman):
                     pre_result.append(Document(page_content="".join(response)))
                 else:
                     self.prompt.append(prompt)
+
                     docs, docs_len, tokens = search.get_docs(
                         self.db,
                         self.embeddings_obj,
+                        retrivers_list,
                         prompt,
                         self.use_rerank,
-                        self.threshold,
                         self.language,
                         self.search_type,
                         self.verbose,
                         self.model_obj,
                         self.max_doc_len,
-                        self.logs[timestamp],
                         compression=self.compression,
                     )
                     total_docs.extend(docs)
@@ -859,3 +866,140 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
 
         return self.response
+
+    def ask_agent(self, doc_path: Union[List[str], str], prompt: str,
+                  **kwargs) -> str:
+        """input the documents directory path and question, will first store the documents
+        into vectors db (chromadb), then search similar documents based on the prompt question.
+        question will use self-ask with search to solve complex question.
+        llm model will use these documents to generate the response of the question.
+
+            Args:
+                **doc_path (str)**: documents directory path\n
+                **prompt (str)**:question you want to ask.\n
+                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                system_prompt, max_doc_len, temperature.
+
+            Returns:
+                response (str): the response from llm model.
+        """
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.doc_path = doc_path
+        self.prompt = prompt
+        self.intermediate_ans = []
+        original_sys_prompt = self.system_prompt
+
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self.timestamp_list.append(timestamp)
+        start_time = time.time()
+        ### start to get response ###
+
+        self_ask_prompt = prompts.default_self_ask_prompt(
+        ) + "Question: " + prompt
+
+        formatter = [
+            prompts.OutputSchema(
+                name="need",
+                description=
+                "the 0 or 1 value that the question need follow up questions to answer or not.",
+                type="bool"),
+            prompts.OutputSchema(
+                name="follow_up",
+                description=
+                "if need follow up questions, list of string of the follow up questions, else return empty list.",
+                type="list"),
+        ]
+
+        ## format sys prompt ##
+        self_ask_sys_prompt = ""
+        if self.language == "ch":
+            self_ask_sys_prompt = "用中文回答 "
+        self_ask_sys_prompt += prompts.JSON_formatter(formatter)
+        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+            self_ask_sys_prompt, self_ask_prompt, self.prompt_format_type)
+
+        ret = self.ask_self(prompt=prod_prompt, system_prompt=prod_sys_prompt)
+        parse_json = akasha.helper.extract_json(ret)
+        self.system_prompt = original_sys_prompt  # reset system prompt back, since the self-ask is done
+
+        if parse_json is None or int(parse_json["need"]) == 0:
+
+            return self.get_response(doc_path, prompt, search_type="auto")
+
+        for follow_up in parse_json["follow_up"]:
+            #ret = self.ask_self(prompt=follow_up, system_prompt=self.system_prompt)
+            follow_up = '\n'.join(self.intermediate_ans) + "\n" + follow_up
+            follow_up_response = self.get_response(doc_path,
+                                                   follow_up,
+                                                   search_type="auto")
+
+            check = self.ask_self(
+                prompt=
+                f"help me check if the below Response answer the Question or not, return 1 if yes, 0 if no.\
+            \nQuestion: {follow_up}\n\nResponse: " + follow_up_response,
+                system_prompt="return 1 or 0 only")
+            self.system_prompt = original_sys_prompt  # reset system prompt back, since the self-ask is done
+            if int(check) == 1:
+                self.intermediate_ans.append(follow_up_response)
+            else:
+                # agent = get_agent_buildin_tool(self.model_obj)
+                # self.intermediate_ans.append(agent(follow_up)['output'])
+                pass
+
+        self.response = self.get_response(
+            doc_path, prompt='\n'.join(self.intermediate_ans) + "\n" + prompt)
+
+        end_time = time.time()
+        self._add_basic_log(timestamp, "ask_agent")
+        self.logs[timestamp]["search_type"] = self.search_type_str
+        self.logs[timestamp]["embeddings"] = self.embeddings
+        self.logs[timestamp]["compression"] = self.compression
+        self._add_result_log(timestamp, end_time - start_time)
+        self.logs[timestamp]["prompt"] = prompt
+        self.logs[timestamp]["response"] = self.response
+        if self.record_exp != "":
+            params = format.handle_params(
+                self.model,
+                self.embeddings,
+                self.chunk_size,
+                self.search_type_str,
+                self.threshold,
+                self.language,
+            )
+            metrics = format.handle_metrics(self.doc_length,
+                                            end_time - start_time,
+                                            self.doc_tokens)
+            table = format.handle_table(prompt, self.docs, self.response)
+            aiido_upload(self.record_exp, params, metrics, table)
+
+        return self.response
+
+
+### temp test agent###
+# from langchain.agents import load_tools, initialize_agent, tool
+# from langchain.agents import AgentType
+# from langchain.agents import initialize_agent, Tool
+# from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
+
+# def get_agent_buildin_tool(llm):
+#     # gsearch = GoogleSerperAPIWrapper()
+#     # serp_tool = Tool(name="Intermediate Answer",
+#     #                  func=gsearch.run,
+#     #                  description="useful for when you need to ask with search")
+#     tools = []
+#     tools = load_tools([
+#         "llm-math",
+#         "wikipedia",
+#     ], llm=llm)
+#     #tools.append(serp_tool)
+#     return initialize_agent(
+#         tools,
+#         llm,
+#         agent=AgentType.
+#         CHAT_ZERO_SHOT_REACT_DESCRIPTION,  # CHAT_ZERO_SHOT_REACT_DESCRIPTION   SELF_ASK_WITH_SEARCH
+#         handle_parsing_errors=True,
+#         verbose=True,
+#         #callbacks=[handler],
+#     )

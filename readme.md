@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.19](https://img.shields.io/badge/pypi%20package-0.8.19-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.20](https://img.shields.io/badge/pypi%20package-0.8.19-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -255,7 +255,7 @@ ak.get_response(dir_path, prompt,  model="remote:http://140.92.60.189:8081")
 
 ## Select different search type
 Using parameter **"search_type"**, you can choose different search methods to find similar documents , default is **merge**, which is
-the combination of mmr, svm and tfidf. Currently you can select merge, mmr, svm and tfidf.
+the combination of mmr, svm and tfidf.**auto** is another strategy combine bm25/tfidf with svm and reranking. Currently you can select merge, mmr, svm and tfidf, bm25, auto.
 
 **Max Marginal Relevance(mmr)** select similar documents by cosine similarity, but it also consider diversity, so it will also penalize document for closeness to already selected documents.
 
@@ -263,6 +263,7 @@ the combination of mmr, svm and tfidf. Currently you can select merge, mmr, svm 
 
 **Term Frequency–Inverse Document Frequency(tfidf)** is a commonly used weighting technique in information retrieval and text mining. TF-IDF is a statistical method used to evaluate the importance of a term in a collection of documents or a corpus with respect to one specific document in the collection.
 
+**Okapi BM25(bm25)**  (BM is an abbreviation of best matching) is a bag-of-words retrieval function that ranks a set of documents based on the query terms appearing in each document, regardless of their proximity within the document. It is a family of scoring functions with slightly different components and parameters.
 
 ``` python
 ak = akasha.Doc_QA(search_type="merge")
@@ -553,6 +554,42 @@ Args:
             **ignore_check (bool, optional)**: speed up loading data if the chroma db is already existed. Defaults to False.
 
 """
+```
+
+
+
+
+<br/>
+<br/>
+
+
+
+## If you want to ask a complex question, use ***ask_agent***, using LLM to get intermediate answers of the question and can help LLM get better response.
+
+### example
+
+```python
+ak = akasha.Doc_QA(
+    verbose=True,
+    chunk_size=500,
+    model="openai:gpt-4",
+)
+res = ak.ask_agent(
+    doc_path="./docs/mic/",  #   
+    "LPWAN和5G的區別是什麼?",
+)
+
+```
+
+```shell
+LPWAN和5G的主要區別在於他們的頻寬、延遲、成本和應用場景。
+
+LPWAN的頻寬相對較低（0.3 KBps – 50KBps），延遲較高（秒 - 分），且成本較低。它的主要優點是低耗能、支援長距離傳輸，並且可以連接大量的設備。然而，由於其頻寬和延遲的限制，LPWAN在製造業中的
+應用主要適用於非即時、非關鍵性的應用，例如環境污染偵測、照明、人員移動等，且須長時間穩定使用的應用情境。
+
+相較之下，5G提供的頻寬範圍在1-10 Gbps，而延遲則在1-10 ms之間，成本較高。這使得5G非常適合需要高時序精密度的應用，例如異質設備協作、遠端操控、混合現實（MR）巡檢維修等。此外，5G網路在大型
+廠區中，相較於Wi-Fi，無移交控制（Handover）中斷問題，因此更適合如低延遲、快速移動型的自主移動機器人（AMR）或無人機（Drone）廣域應用。然而，5G私網的建置成本相對昂貴，可能會影響企業的導 
+入意願。
 ```
 
 

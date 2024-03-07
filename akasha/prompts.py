@@ -325,6 +325,47 @@ def format_category_prompt(doc_text, language: str):
     return prompt
 
 
+def default_self_ask_prompt():
+    # prompt = """user will give you a question, you need to decide if the question is complex that need follow up questions to answer this question or not, and if needed, you need to generate the follow up questions in order to get the final answer.
+    # Remember, those follow up questions are made to help you answer the user given question, so it need to be relevant to the user given question and can let you answer the question easier.\n"""
+    example = """For example:\nQuestion: Who lived longer, Muhammad Ali or Alan Turing?
+    Are follow up questions needed here: Yes.
+    Follow up: How old was Muhammad Ali when he died?
+    Intermediate answer: Muhammad Ali was 74 years old when he died.
+    Follow up: How old was Alan Turing when he died?
+    Intermediate answer: Alan Turing was 41 years old when he died.
+    So the final answer is: Muhammad Ali\n\n 
+    Question: When was the founder of craigslist born?
+    Are follow up questions needed here: Yes.
+    Follow up: Who was the founder of craigslist?
+    Intermediate answer: Craigslist was founded by Craig Newmark.
+    Follow up: When was Craig Newmark born?
+    Intermediate answer: Craig Newmark was born on December 6, 1952.
+    So the final answer is: December 6, 1952
+    
+    Question: Who was the maternal grandfather of George Washington?
+    Are follow up questions needed here: Yes.
+    Follow up: Who was the mother of George Washington?
+    Intermediate answer: The mother of George Washington was Mary Ball Washington.
+    Follow up: Who was the father of Mary Ball Washington?
+    Intermediate answer: The father of Mary Ball Washington was Joseph Ball.
+    So the final answer is: Joseph Ball 
+
+    Question: Are both the directors of Jaws and Casino Royale from the same country? 
+    Are follow up questions needed here: Yes. 
+    Follow up: Who is the director of Jaws? 
+    Intermediate Answer: The director of Jaws is Steven Spielberg. 
+    Follow up: Where is Steven Spielberg from? 
+    Intermediate Answer: The United States. 
+    Follow up: Who is the director of Casino Royale? 
+    Intermediate Answer: The director of Casino Royale is Martin Campbell. 
+    Follow up: Where is Martin Campbell from? 
+    Intermediate Answer: New Zealand. 
+    So the final answer is: No\n\n below is the user question.\n"""
+
+    return example
+
+
 class OutputSchema:
     """
     structure for generate JSON schema, used in JSON_formatter
