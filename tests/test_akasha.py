@@ -99,6 +99,12 @@ def test_get_response(base_line):
                         prompt=query,
                         search_type="mmr")) == str)
 
+    ## test "bm25"
+    assert (type(
+        ak.get_response(doc_path="./docs/mic/",
+                        prompt=query,
+                        search_type="bm25")) == str)
+
     ## test custom
     assert (type(
         ak.get_response(
