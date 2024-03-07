@@ -20,3 +20,4 @@ bert-score==0.3.13
 opencc==1.1.6
 click
 tokenizers>=0.13.3
+rank_bm25
