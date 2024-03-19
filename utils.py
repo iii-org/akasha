@@ -435,6 +435,8 @@ def list_models() -> list:
                             (Path(modes_dir) / dir_path.name).__str__())
     except:
         print("can not find model folder!\n\n")
+        # create model folder
+        subprocess.run(["mkdir", "-p", modes_dir])
     return base
 
 

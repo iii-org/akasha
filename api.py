@@ -20,6 +20,22 @@ if Path("./config/default_key.json").exists():
     thread = threading.Thread(target=start_observer)
     thread.start()
 
+if not Path("./accounts.yaml").exists():
+    with open("accounts.yaml", "w") as f:
+        f.write("""cookie:
+  expiry_days: 30
+  key: random_signature_key
+  name: random_cookie_name
+credentials:
+  usernames:
+    cws:
+      email: cws@gmail.com
+      name: cws
+      password: $2b$12$jCB8MeVqMc3jWDynjNyeVeLS8IWBduxnX362gLfJ1KIkeTPH9KYha
+preauthorized:
+  emails: []
+""")
+
 
 def loggings():
     if not Path("./logs").exists():
