@@ -174,18 +174,20 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
                                    index=SEARCH_TYPES.index(
                                        param.get('search_type',
                                                  SEARCH_TYPES[0])))
-        top_k = st.slider('Top K',
-                          min_value=1,
-                          max_value=20,
-                          value=param.get('top_k', 3))
+
+        max_doc_len = st.number_input('Max Doc Length',
+                                      min_value=100,
+                                      max_value=15000,
+                                      value=param.get('max_doc_len', 1500),
+                                      step=50)
+
+        top_k = param.get('top_k', 3)
+
         threshold = st.slider('Threshold',
                               min_value=0.0,
                               max_value=1.0,
                               value=param.get('threshold', 0.1))
-        max_doc_len = st.slider('Max Doc Length',
-                                min_value=100,
-                                max_value=15000,
-                                value=param.get('max_doc_len', 1500))
+
         temperature = st.slider('Temperature',
                                 min_value=0.0,
                                 max_value=1.0,

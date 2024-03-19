@@ -13,10 +13,51 @@ import json, os
 import api_utils as apu
 import gc, torch
 import yaml
+import logging, sys
+from logging.handlers import TimedRotatingFileHandler
 ## if default_key.json exist, create a thread to keep checking if the key is valid
 if Path("./config/default_key.json").exists():
     thread = threading.Thread(target=start_observer)
     thread.start()
+
+
+def loggings():
+    if not Path("./logs").exists():
+        os.mkdir("./logs")
+
+    # Set up logging
+    logger = logging.getLogger(__name__)
+    handler = TimedRotatingFileHandler('logs/app.log',
+                                       when="midnight",
+                                       interval=1,
+                                       encoding='utf-8')
+    handler.setFormatter(
+        logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+    class StreamToLogger:
+        """
+        Fake file-like stream object that redirects writes to a logger instance.
+        """
+
+        def __init__(self, logger, log_level=logging.INFO):
+            self.logger = logger
+            self.log_level = log_level
+
+        def write(self, buf):
+            for line in buf.rstrip().splitlines():
+                self.logger.log(self.log_level, line.rstrip())
+
+        def flush(self):
+            pass
+
+    sys.stdout = StreamToLogger(logger, logging.INFO)
+    sys.stderr = StreamToLogger(logger, logging.ERROR)
+
+
+loggings()
 
 app = FastAPI()
 app.include_router(datasets.router)
@@ -106,7 +147,7 @@ def regular_consult(user_input: ConsultModel):
                 'response': 'load openai config failed.\n\n'
             }
 
-    qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
+    qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
         , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
 
@@ -150,7 +191,7 @@ def deep_consult(user_input: ConsultModel):
         prompt: Union[str, List[str]]
         chunk_size:Optional[int]=1000
         model:Optional[str] = "openai:gpt-3.5-turbo"
-        topK:Optional[int] = 3 
+        topK:Optional[int] = -1 
         threshold:Optional[float] = 0.2
         search_type:Optional[str] = 'svm'
         system_prompt:Optional[str] = ""
@@ -173,7 +214,7 @@ def deep_consult(user_input: ConsultModel):
             }
 
 
-    qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, topK=user_input.topK, threshold=user_input.threshold\
+    qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
         , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
         ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
     response = qa.chain_of_thought(doc_path=user_input.data_path,
