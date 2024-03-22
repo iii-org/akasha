@@ -32,6 +32,9 @@ install_requires = [
     "streamlit==1.28.2",
     "streamlit_option_menu==0.3.6",
     "rank_bm25",
+    "unstructured",
+    "python-pptx",
+    "wikipedia"
 ]
 if platform.system() == "Windows":
     install_requires.append("opencc==1.1.1")
@@ -40,7 +43,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.20",
+    version="0.8.21",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",

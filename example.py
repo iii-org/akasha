@@ -122,8 +122,6 @@ def QA(doc_path="./docs/mic/"):
     return qa
 
 
-qa_obj = QA()
-
 ### EVAL ###
 
 
@@ -156,7 +154,7 @@ def EVAL(doc_path: str = "./docs/mic/"):
     return eva
 
 
-eval_obj = EVAL()
+# eval_obj = EVAL()
 
 #eval_obj.save_logs("./eva.json")
 
@@ -185,14 +183,14 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
     return sum
 
 
-summary_obj = SUM()
+# summary_obj = SUM()
 
 # summary_obj.save_logs("./summary_logs.json")
 # summary_obj.save_logs(file_type="txt")
 
 ### VISION ###
 ## need to use gpt-4-vision ##
-# ret = akasha.openai_vision(pic_path=["C:/Users/ccchang/Pictures/oruya.png"], prompt="這張圖是甚麼意思?")
+# ret = akasha.openai_vision(pic_path=["C:/Users/Pictures/oruya.png"], prompt="這張圖是甚麼意思?")
 
 # print(ret)
 
@@ -227,4 +225,34 @@ def JSON():
     print(parse_json, type(parse_json))
 
 
-JSON()
+### agent ###
+def input_func(question: str):
+    response = input(question)
+    return str({"question": question, "answer": response})
+
+
+def agent_example1():
+    input_tool = akasha.create_tool(
+        "user_question_tool",
+        "This is the tool to ask user question, the only one param question is the question string that has not been answered and we want to ask user.",
+        func=input_func)
+
+    ao = akasha.agent(verbose=True,
+                      tools=[
+                          input_tool,
+                          akasha.get_saveJSON_tool(),
+                      ],
+                      model="openai:gpt-3.5-turbo")
+    print(
+        ao("逐個詢問使用者以下問題，若所有問題都回答了，則將所有問題和回答儲存成default.json並結束。問題為:1.房間燈關了嗎? \n2. 有沒有人在家?  \n3.有哪些電器開啟?\n"
+           ))
+
+
+def agent_example2():
+
+    ao = akasha.agent(tools=[
+        akasha.get_wiki_tool(),
+        akasha.get_saveJSON_tool(),
+    ], )
+    print(ao("請用中文回答李遠哲跟馬英九誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json"))
+    ao.save_logs("ao2.json")
