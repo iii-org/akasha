@@ -1048,7 +1048,7 @@ In the example2, we add wikipedia tool enabling the LLM to access the Wikipedia 
 
 ```python
 
- ao = akasha.agent(tools=[
+ao = akasha.agent(tools=[
          akasha.get_wiki_tool(),
         akasha.get_saveJSON_tool(),
     ], )
