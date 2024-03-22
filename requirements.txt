@@ -21,3 +21,6 @@ opencc==1.1.6
 click
 tokenizers>=0.13.3
 rank_bm25
+unstructured
+python-pptx
+wikipedia
