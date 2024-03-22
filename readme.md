@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.20](https://img.shields.io/badge/pypi%20package-0.8.20-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.21](https://img.shields.io/badge/pypi%20package-0.8.21-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -20,7 +20,7 @@ For the chinese manual, please visit [manual](https://hackmd.io/@akasha-terminal
 
 # Installation
 
-We recommend using Python 3.8 to run our akasha package. You can use Anaconda to create virtual environment.
+We recommend using Python 3.9 to run our akasha package. You can use Anaconda to create virtual environment.
 
 ```bash
 
@@ -983,6 +983,89 @@ sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的�
 <br/>
 <br/>
 
+
+## agent
+By implementing an agent, you empower the LLM with the capability to utilize tools more effectively to accomplish tasks. You can allocate tools for tasks such as file editing, conducting Google searches, and enlisting the LLM's assistance in task execution, rather than solely relying on it to respond your questions.
+
+
+<br/>
+<br/>
+In the example1, we create a tool that can collect user inputs. Additionally, we integrate a tool into the agent's functionality to store text data in a JSON file. Following the creation of the agent, we instruct it to prompt users with questions and save their responses into a file named default.json.
+
+
+```python
+
+def input_func(question: str):
+    response = input(question)
+    return str({"question": question, "answer": response})
+
+
+
+input_tool = akasha.create_tool(
+    "user_question_tool",
+    "This is the tool to ask user question, the only one param question is the question string that has not been answered and we want to ask user.",
+    func=input_func)
+
+ao = akasha.agent(verbose=True,
+                    tools=[
+                        input_tool,
+                        akasha.get_saveJSON_tool(),
+                    ],
+                    model="openai:gpt-3.5-turbo")
+print(
+    ao("逐個詢問使用者以下問題，若所有問題都回答了，則將所有問題和回答儲存成default.json並結束。問題為:1.房間燈關了嗎? \n2. 有沒有人在家?  \n3.有哪些電器開啟?\n"
+        ))
+
+```
+
+
+```text
+
+I have successfully saved all the questions and answers into the "default.json" file. The conversation is now complete.
+
+### default.json ###
+[
+    {
+        "question": "房間燈關了嗎?",
+        "answer": "no"
+    },
+    {
+        "question": "有沒有人在家?",
+        "answer": "no"
+    },
+    {
+        "question": "有哪些電器開啟?",
+        "answer": "phone, shower"
+    }
+]
+
+```
+
+</br>
+</br>
+
+In the example2, we add wikipedia tool enabling the LLM to access the Wikipedia API for retrieving necessary information to respond to the questions posed to it.
+
+```python
+
+ ao = akasha.agent(tools=[
+         akasha.get_wiki_tool(),
+        akasha.get_saveJSON_tool(),
+    ], )
+print(ao("請用中文回答李遠哲跟馬英九誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json"))
+ao.save_logs("ao2.json")
+
+```
+
+```text
+根據維基百科的資訊，李遠哲比馬英九年長。我已經將查到的資訊和答案儲存成了一個名為AGE.json的json檔案。
+```
+
+
+</br>
+</br>
+</br>
+</br>
 
 
 # Custom Search Type, Embeddings and Model

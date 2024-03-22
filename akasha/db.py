@@ -2,7 +2,7 @@ from typing import Union, List
 from tqdm import tqdm
 import time, os, shutil, traceback
 import datetime
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, UnstructuredPowerPointLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.text_splitter import (
     CharacterTextSplitter,
@@ -99,7 +99,7 @@ class dbs:
 
 
 def _load_file(file_path: str, extension: str):
-    """get the content and metadata of a text file (.pdf, .docx, .txt, .csv) and return a Document object
+    """get the content and metadata of a text file (.pdf, .docx, .txt, .csv, .pptx) and return a Document object
 
     Args:
         file_path (str): the path of the text file\n
@@ -124,7 +124,10 @@ def _load_file(file_path: str, extension: str):
             for i in range(len(docs)):
                 docs[i].metadata["page"] = docs[i].metadata["row"]
                 del docs[i].metadata["row"]
-
+        elif extension == "pptx":
+            docs = UnstructuredPowerPointLoader(file_path).load()
+            for i in range(len(docs)):
+                docs[i].metadata["page"] = i
         else:
             docs = TextLoader(file_path, encoding="utf-8").load()
             for i in range(len(docs)):
@@ -171,7 +174,7 @@ def get_docs_from_doc(doc_path: str, chunk_size: int, ignore_check: bool):
     documents, files = [], []
     texts = []
     db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
-    txt_extensions = ["pdf", "md", "docx", "txt", "csv"]
+    txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
     for extension in txt_extensions:
         files.extend(_load_files(doc_path, extension))
 
@@ -245,7 +248,6 @@ def get_chromadb_from_file(documents: list,
     k = 0
     cum_ids = 0
     interval = 3
-
     if Path(storage_directory).exists():
         docsearch = Chroma(persist_directory=storage_directory,
                            embedding_function=embeddings)
@@ -305,7 +307,6 @@ def get_chromadb_from_file(documents: list,
         docsearch.persist()
         db = dbs(docsearch)
         del docsearch
-
     if len(db.get_ids()) == 0:
         print("\nCan not load file:", file_name)
         return None, add_pic
@@ -429,7 +430,7 @@ def create_chromadb(doc_path: str,
 
     dby = dbs()  # list of dbs
     files = []
-    txt_extensions = ["pdf", "md", "docx", "txt", "csv"]
+    txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
     for extension in txt_extensions:
         files.extend(_load_files(doc_path, extension))
     progress = tqdm(total=len(files), desc="Vec Storage")
@@ -468,7 +469,6 @@ def create_chromadb(doc_path: str,
         if db is not None:
             dby.merge(db)
             db_path_names.append(storage_directory)
-
     progress.close()
 
     if len(dby.get_ids()) == 0:
