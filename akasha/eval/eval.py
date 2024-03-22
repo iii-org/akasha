@@ -1167,7 +1167,7 @@ class Model_Eval(akasha.atman):
             self.verbose,
             self.model_obj,
             25000,
-            self.logs[timestamp],
+            False,
         )
 
         texts = [doc.page_content for doc in self.docs]

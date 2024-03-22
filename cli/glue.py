@@ -190,19 +190,10 @@ def keep_responsing(
     user_input = click.prompt(
         'Please input your question(type "exit()" to quit) ')
     while user_input != "exit()":
-        docs, docs_len, tokens = search.get_docs(
-            db,
-            embeddings,
-            user_input,
-            use_rerank,
-            threshold,
-            language,
-            search_type,
-            False,
-            model,
-            max_doc_len,
-            {},
-        )
+        docs, docs_len, tokens = search.get_docs(db, embeddings, user_input,
+                                                 use_rerank, threshold,
+                                                 language, search_type, False,
+                                                 model, max_doc_len, False)
         if docs is None:
             docs = []
 
