@@ -98,6 +98,13 @@ class dbs:
         return self.embeds
 
 
+def change_text_to_doc(texts: list):
+    return [
+        Document(page_content=texts[i], metadata={'page': i})
+        for i in range(len(texts))
+    ]
+
+
 def _load_file(file_path: str, extension: str):
     """get the content and metadata of a text file (.pdf, .docx, .txt, .csv, .pptx) and return a Document object
 
