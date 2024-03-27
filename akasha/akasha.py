@@ -216,7 +216,7 @@ class atman:
         self.verbose = verbose
         self.topK = topK
         self.threshold = threshold
-        self.language = language
+        self.language = format.handle_language(language)
         self.search_type_str = helper.handle_search_type(
             search_type, self.verbose)
         self.record_exp = record_exp
@@ -261,6 +261,9 @@ class atman:
                     or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = helper.handle_search_type(value)
 
+            elif key == "language":
+                self.language = format.handle_language(value)
+
             elif key in self.__dict__:  # check if variable exist
                 if (getattr(self, key, None)
                         != value):  # check if variable value is different
@@ -297,7 +300,7 @@ class atman:
         self.logs[timestamp]["chunk_size"] = self.chunk_size
         self.logs[timestamp]["topK"] = self.topK
         self.logs[timestamp]["threshold"] = self.threshold
-        self.logs[timestamp]["language"] = self.language
+        self.logs[timestamp]["language"] = format.language_dict[self.language]
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_doc_len"] = self.max_doc_len
         self.logs[timestamp]["doc_path"] = self.doc_path
@@ -913,7 +916,7 @@ class Doc_QA(atman):
 
         ## format sys prompt ##
         self_ask_sys_prompt = ""
-        if self.language == "ch":
+        if "chinese" in format.language_dict[self.language]:
             self_ask_sys_prompt = "用中文回答 "
         self_ask_sys_prompt += prompts.JSON_formatter(formatter)
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(

@@ -4,6 +4,8 @@ from pathlib import Path
 import time, datetime
 import torch, gc
 import akasha.db
+from typing import Union
+import akasha.format as afr
 
 
 class Summary(akasha.atman):
@@ -22,6 +24,8 @@ class Summary(akasha.atman):
         system_prompt: str = "",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
+        auto_translate: bool = False,
+        prompt_format_type: str = "gpt",
     ):
         """initials of Summary class
 
@@ -39,6 +43,9 @@ class Summary(akasha.atman):
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max doc size of llm document input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **auto_translate (bool, optional)**: auto translate the summary to target language since LLM may generate different language. 
+            Defaults to False.\n
+            **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
         """
 
         ### set argruments ###
@@ -46,28 +53,29 @@ class Summary(akasha.atman):
         self.chunk_overlap = chunk_overlap
         self.verbose = verbose
         self.threshold = threshold
-        self.language = language
+        self.language = akasha.format.handle_language(language)
         self.record_exp = record_exp
         self.format_prompt = format_prompt
         self.system_prompt = system_prompt
         self.max_doc_len = max_doc_len
         self.temperature = temperature
-
+        self.auto_translate = auto_translate
+        self.prompt_format_type = prompt_format_type
         ### set variables ###
         self.file_name = ""
         self.summary_type = ""
         self.summary_len = 500
         self.logs = {}
-        self.model_obj = akasha.helper.handle_model(
-            model, self.verbose, self.temperature
-        )
+        self.model_obj = akasha.helper.handle_model(model, self.verbose,
+                                                    self.temperature)
         self.model = akasha.helper.handle_search_type(model)
         self.doc_tokens = 0
         self.doc_length = 0
         self.summary = ""
         self.timestamp_list = []
 
-    def _add_log(self, fn_type: str, timestamp: str, time: float, response_list: list):
+    def _add_log(self, fn_type: str, timestamp: str, time: float,
+                 response_list: list):
         """call this method to add log to logs dictionary
 
         Args:
@@ -83,7 +91,8 @@ class Summary(akasha.atman):
         self.logs[timestamp]["chunk_size"] = self.chunk_size
 
         self.logs[timestamp]["threshold"] = self.threshold
-        self.logs[timestamp]["language"] = self.language
+        self.logs[timestamp]["language"] = akasha.format.language_dict[
+            self.language]
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_doc_len"] = self.max_doc_len
         self.logs[timestamp]["file_name"] = self.file_name
@@ -97,6 +106,7 @@ class Summary(akasha.atman):
         self.logs[timestamp]["summary_len"] = self.summary_len
         self.logs[timestamp]["summaries_list"] = response_list
         self.logs[timestamp]["summary"] = self.summary
+        self.logs[timestamp]["auto_translate"] = self.auto_translate
 
     def _set_model(self, **kwargs):
         """change model_obj if "model" or "temperature" changed"""
@@ -110,8 +120,7 @@ class Summary(akasha.atman):
                 new_model = kwargs["model"]
             if new_model != self.model or new_temp != self.temperature:
                 self.model_obj = akasha.helper.handle_model(
-                    new_model, self.verbose, new_temp
-                )
+                    new_model, self.verbose, new_temp)
 
     def _reduce_summary(self, texts: list, tokens: int, total_list: list):
         """Summarize each chunk and merge them until the combined chunks are smaller than the maximum token limit.
@@ -127,21 +136,20 @@ class Summary(akasha.atman):
         """
         response_list = []
         i = 0
+        prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+            self.system_prompt, "", self.prompt_format_type)
         while i < len(texts):
             token, cur_text, newi = akasha.helper._get_text(
-                texts, "", i, self.max_doc_len, self.language
-            )
+                texts, "", i, self.max_doc_len, self.language)
             tokens += token
 
             ### do the final summary if all chunks can be fits into llm model ###
             if i == 0 and newi == len(texts):
                 prompt = akasha.prompts.format_reduce_summary_prompt(
-                    cur_text, self.summary_len
-                )
+                    cur_text, self.summary_len)
 
                 response = akasha.helper.call_model(
-                    self.model_obj, self.system_prompt + prompt
-                )
+                    self.model_obj, prod_sys_prompt + "\n" + prompt)
 
                 total_list.append(response)
 
@@ -156,8 +164,7 @@ class Summary(akasha.atman):
             prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, 0)
 
             response = akasha.helper.call_model(
-                self.model_obj, self.system_prompt + prompt
-            )
+                self.model_obj, prod_sys_prompt + "\n" + prompt)
 
             i = newi
             if self.verbose:
@@ -169,7 +176,7 @@ class Summary(akasha.atman):
             total_list.append(response)
         return self._reduce_summary(response_list, tokens, total_list)
 
-    def _refine_summary(self, texts: list) -> (list, int):
+    def _refine_summary(self, texts: list) -> Union[list, int]:
         """refine summary summarizing a chunk at a time and using the previous summary as a prompt for
         summarizing the next chunk. This approach may be slower and require more tokens, but it results in a higher level of summary consistency.
 
@@ -184,26 +191,24 @@ class Summary(akasha.atman):
         i = 0
         tokens = 0
         response_list = []
+        prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+            self.system_prompt, "", self.prompt_format_type)
         ###
 
         while i < len(texts):
             token, cur_text, i = akasha.helper._get_text(
-                texts, previous_summary, i, self.max_doc_len, self.language
-            )
+                texts, previous_summary, i, self.max_doc_len, self.language)
 
             tokens += token
             if previous_summary == "":
                 prompt = akasha.prompts.format_reduce_summary_prompt(
-                    cur_text, self.summary_len
-                )
+                    cur_text, self.summary_len)
             else:
                 prompt = akasha.prompts.format_refine_summary_prompt(
-                    cur_text, previous_summary, self.summary_len
-                )
+                    cur_text, previous_summary, self.summary_len)
 
             response = akasha.helper.call_model(
-                self.model_obj, self.system_prompt + prompt
-            )
+                self.model_obj, prod_sys_prompt + "\n" + prompt)
 
             if self.verbose:
                 print("prompt: \n", self.system_prompt + prompt)
@@ -215,14 +220,12 @@ class Summary(akasha.atman):
 
         return response_list, tokens
 
-    def summarize_file(
-        self,
-        file_path: str,
-        summary_type: str = "map_reduce",
-        summary_len: int = 500,
-        output_file_path: str = "",
-        **kwargs
-    ) -> str:
+    def summarize_file(self,
+                       file_path: str,
+                       summary_type: str = "map_reduce",
+                       summary_len: int = 500,
+                       output_file_path: str = "",
+                       **kwargs) -> str:
         """input a file path and return a summary of the file
 
         Args:
@@ -252,11 +255,9 @@ class Summary(akasha.atman):
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.timestamp_list.append(timestamp)
 
-        if self.system_prompt != "" and "<<SYS>>" not in self.system_prompt:
-            self.system_prompt = "<<SYS>>" + self.system_prompt + "<<SYS>>"
-
         # Split the documents into sentences
-        documents = akasha.db._load_file(self.file_name, self.file_name.split(".")[-1])
+        documents = akasha.db._load_file(self.file_name,
+                                         self.file_name.split(".")[-1])
         text_splitter = RecursiveCharacterTextSplitter(
             separators=["\n", " ", ",", ".", "。", "!"],
             chunk_size=self.chunk_size,
@@ -272,37 +273,39 @@ class Summary(akasha.atman):
         else:
             response_list, self.doc_tokens = self._reduce_summary(texts, 0, [])
 
-        summaries = response_list[-1]
-        p = akasha.prompts.format_refine_summary_prompt("", "", self.summary_len)
+        self.summary = response_list[-1]
+        p = akasha.prompts.format_refine_summary_prompt(
+            "", "", self.summary_len)
 
-        ### write summary to file, and if language is chinese , translate it ###
-
+        ### write summary to file, and if auto_translate is True , translate it ###
         if self.format_prompt != "":
-            if "<<SYS>>" not in self.format_prompt:
-                self.format_prompt = "<<SYS>> " + self.format_prompt + "\n\n<<SYS>>"
-            response = akasha.helper.call_model(
+            prod_format_prompt, ___ = akasha.prompts.format_sys_prompt(
+                self.format_prompt, "", self.prompt_format_type)
+            self.summary = akasha.helper.call_model(
                 self.model_obj,
-                self.system_prompt + self.format_prompt + ": \n\n" + summaries,
+                prod_format_prompt + "\n\n" + self.summary,
             )
 
-        elif self.language == "ch":
-            response = akasha.helper.call_model(
-                self.model_obj,
-                "<<SYS>> translate the following text into chinese <<SYS>>: \n\n"
-                + summaries,
-            )
+        if self.auto_translate:
 
-        self.summary = akasha.helper.sim_to_trad(response)
-        self.summary = self.summary.replace("。", "。\n\n")
+            self.summary = akasha.helper.call_translator(
+                self.model_obj, self.summary, self.prompt_format_type,
+                self.language)
+
+        ## change sim to trad if target language is traditional chinese ##
+        if afr.language_dict[self.language] == "traditional chinese":
+            self.summary = akasha.helper.sim_to_trad(self.summary)
+            self.summary = self.summary.replace("。", "。\n\n")
+
         ### write summary to file ###
         if output_file_path == "":
             sum_path = Path("summarization/")
             if not sum_path.exists():
                 sum_path.mkdir()
 
-            output_file_path = (
-                "summarization/" + file_path.split("/")[-1].split(".")[-2] + ".txt"
-            )
+            output_file_path = ("summarization/" +
+                                file_path.split("/")[-1].split(".")[-2] +
+                                ".txt")
         elif output_file_path[-4:] != ".txt":
             output_file_path = output_file_path + ".txt"
 
@@ -312,22 +315,21 @@ class Summary(akasha.atman):
         print(self.summary, "\n\n\n\n")
 
         end_time = time.time()
-        self._add_log("summarize_file", timestamp, end_time - start_time, response_list)
+        self._add_log("summarize_file", timestamp, end_time - start_time,
+                      response_list)
         if self.record_exp != "":
-            params = akasha.format.handle_params(
-                self.model, "", self.chunk_size, "", -1, -1.0, self.language, False
-            )
+            params = akasha.format.handle_params(self.model, "",
+                                                 self.chunk_size, "", -1, -1.0,
+                                                 self.language, False)
             params["chunk_overlap"] = self.chunk_overlap
-            params["summary_type"] = (
-                "refine" if summary_type == "refine" else "map_reduce"
-            )
-            metrics = akasha.format.handle_metrics(
-                self.doc_length, end_time - start_time, self.doc_tokens
-            )
+            params["summary_type"] = ("refine" if summary_type == "refine" else
+                                      "map_reduce")
+            metrics = akasha.format.handle_metrics(self.doc_length,
+                                                   end_time - start_time,
+                                                   self.doc_tokens)
             table = akasha.format.handle_table(p, response_list, self.summary)
-            akasha.aiido_upload(
-                self.record_exp, params, metrics, table, output_file_path
-            )
+            akasha.aiido_upload(self.record_exp, params, metrics, table,
+                                output_file_path)
         print("summarization saved in ", output_file_path, "\n\n")
 
         return self.summary

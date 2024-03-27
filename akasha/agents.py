@@ -17,7 +17,14 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def _get_agent_type(agent_type: str) -> AgentType:
+    """check if the agent type is valid or not, if not, use default agent type instead.
 
+    Args:
+        agent_type (str): agent type string
+
+    Returns:
+        AgentType: agent type
+    """
     try:
         agent_t = getattr(AgentType, agent_type)
     except Exception as e:
@@ -27,7 +34,7 @@ def _get_agent_type(agent_type: str) -> AgentType:
 
 
 class MyCallbackHandler(BaseCallbackHandler):
-    """Callback Handler that prints to std out."""
+    """Callback Handler that save agent actions in the log."""
 
     def __init__(self, color: Optional[str] = None) -> None:
         """Initialize callback handler."""
@@ -74,10 +81,10 @@ class MyCallbackHandler(BaseCallbackHandler):
             self.log['observation'].append(observation_prefix)
             self.log['observation'].append(output)
             # print_text(
-            #     f"on_tool_end___observation_prefix:\n\n{observation_prefix}")
+            #     f"\n\n{observation_prefix}")
         #print_text(output, color=color or self.color)
         if llm_prefix is not None:
-            # print_text(f"on_tool_end___llm_prefix:\n\n{llm_prefix}")
+            # print_text(f"\n\n{llm_prefix}")
 
             self.log['llm-prefix'].append(llm_prefix)
 
@@ -89,7 +96,7 @@ class MyCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Run when agent ends."""
-        #print_text("on_text: \n" + text, color=color or self.color, end=end)
+        #print_text( text, color=color or self.color, end=end)
         pass
 
     def on_agent_finish(self,
@@ -97,12 +104,17 @@ class MyCallbackHandler(BaseCallbackHandler):
                         color: Optional[str] = None,
                         **kwargs: Any) -> None:
         """Run on agent end."""
-        # print_text("on_agent_finish: \n" + finish.log,
+        # print_text( finish.log,
         #            color=color or self.color,
         #            end="\n")
         pass
 
-    def get_log(self):
+    def get_log(self) -> Dict[str, Any]:
+        """return log of this callback handler
+
+        Returns:
+            dict: log of this callback handler
+        """
         return self.log
 
 
@@ -147,7 +159,7 @@ class agent:
 
     def _set_model(self, **kwargs):
         """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
-        ## check if we need to change db, model_obj or embeddings_obj ##
+        ## check if we need to change model_obj ##
         if "model" in kwargs or "temperature" in kwargs:
             new_temp = self.temperature
             new_model = self.model
@@ -288,6 +300,8 @@ class agent:
         return
 
     def __call__(self, question: str, **kwargs):
+        """run agent to get response
+        """
 
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
@@ -327,7 +341,16 @@ class agent:
 
 def create_tool(tool_name: str, tool_description: str,
                 func: Callable) -> Union[BaseTool, None]:
+    """input function to create a tool
 
+    Args:
+        tool_name (str): name of the tool
+        tool_description (str): description of the function and the parameters of the tool
+        func (Callable): callable function of the tool
+
+    Returns:
+        Union[BaseTool, None]: return the tool if success, return None if failed
+    """
     try:
 
         class custom_tool(BaseTool):
@@ -348,7 +371,16 @@ def create_tool(tool_name: str, tool_description: str,
 def get_wiki_tool(model: Union[str, Callable, LLM] = "openai:gpt-3.5-turbo",
                   verbose: bool = True,
                   temperature: float = 0.0):
+    """return the wikipedia tool from langchain
 
+    Args:
+        model ([str, Callable, LLM], optional): the LLM that used in wiki search. Defaults to "openai:gpt-3.5-turbo".
+        verbose (bool, optional): _description_. Defaults to True.
+        temperature (float, optional): _description_. Defaults to 0.0.
+
+    Returns:
+        _type_: _description_
+    """
     if isinstance(model, Callable) or isinstance(model, str):
         model = helper.handle_model(model,
                                     verbose=verbose,
@@ -364,15 +396,20 @@ def get_wiki_tool(model: Union[str, Callable, LLM] = "openai:gpt-3.5-turbo",
 
 
 def get_saveJSON_tool():
+    """return the json save tool that can save the content into json file.
+
+    Returns:
+        _type_: _description_
+    """
     return create_tool(
         tool_name="json_tool",
         tool_description=
-        "This is the tool to save the question and answer into json file, the input contains file_path and content.",
+        "This is the tool to save the content into json file, the input contains file_path and content.",
         func=_jsonSaveTool)
 
 
 def _jsonSaveTool(file_path: str = "default.json", content: str = None):
-
+    """save content into json file"""
     if content:
         try:
             # change content from string to json

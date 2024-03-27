@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.21](https://img.shields.io/badge/pypi%20package-0.8.21-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.22](https://img.shields.io/badge/pypi%20package-0.8.22-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -941,15 +941,15 @@ embeddings: hf:shibing624/text2vec-base-chinese, chunk size: 400, model: openai:
 
 
 ## File Summarization
-To create a summary of a text file in various formats like .pdf, .txt, or .docx, you can use the **summary.summarize_file** function. For example, the following code employs the **map_reduce** summary method to instruct LLM to generate a summary of approximately 500 words.
+To create a summary of a text file in various formats like .pdf, .txt, or .docx, you can use the **Summary.summarize_file** function. For example, the following code employs the **map_reduce** summary method to instruct LLM to generate a summary of approximately 500 words.
 
 There're two summary type, **map_reduce** and **refine**, **map_reduce** will summarize every text chunks and then use all summarized text chunks to generate a final summary; **refine** will summarize each text chunk at a time and using the previous summary as a prompt for 
 summarizing the next segment to get a higher level of summary consistency.
 
 ```python
 
-import akasha.summary as summary
-sum = summary.Summary( chunk_size=1000, chunk_overlap=100)
+import akasha
+sum = akasha.Summary( chunk_size=1000, chunk_overlap=100)
 sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
 , chunk_overlap=40)
 
