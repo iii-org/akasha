@@ -4,7 +4,7 @@ from pathlib import Path
 import time, datetime
 import torch, gc
 import akasha.db
-from typing import Union
+from typing import Union, List
 import akasha.format as afr
 
 
@@ -220,6 +220,11 @@ class Summary(akasha.atman):
 
         return response_list, tokens
 
+    def _handle_texts(self, texts):
+        if isinstance(texts, str):
+            texts = [texts]
+        return texts
+
     def summarize_file(self,
                        file_path: str,
                        summary_type: str = "map_reduce",
@@ -306,6 +311,122 @@ class Summary(akasha.atman):
             output_file_path = ("summarization/" +
                                 file_path.split("/")[-1].split(".")[-2] +
                                 ".txt")
+        elif output_file_path[-4:] != ".txt":
+            output_file_path = output_file_path + ".txt"
+
+        with open(output_file_path, "w", encoding="utf-8") as f:
+            f.write(self.summary)
+
+        print(self.summary, "\n\n\n\n")
+
+        end_time = time.time()
+        self._add_log("summarize_file", timestamp, end_time - start_time,
+                      response_list)
+        if self.record_exp != "":
+            params = akasha.format.handle_params(self.model, "",
+                                                 self.chunk_size, "", -1, -1.0,
+                                                 self.language, False)
+            params["chunk_overlap"] = self.chunk_overlap
+            params["summary_type"] = ("refine" if summary_type == "refine" else
+                                      "map_reduce")
+            metrics = akasha.format.handle_metrics(self.doc_length,
+                                                   end_time - start_time,
+                                                   self.doc_tokens)
+            table = akasha.format.handle_table(p, response_list, self.summary)
+            akasha.aiido_upload(self.record_exp, params, metrics, table,
+                                output_file_path)
+        print("summarization saved in ", output_file_path, "\n\n")
+
+        return self.summary
+
+    def summarize_articles(self,
+                           articles: Union[str, List[str]],
+                           summary_type: str = "map_reduce",
+                           summary_len: int = 500,
+                           output_file_path: str = "",
+                           **kwargs) -> str:
+        """input a file path and return a summary of the file
+
+        Args:
+            **articles (str)**:  the texts you want to summarize. Can be list of str or str.\n
+            **summary_type (str, optional)**: summary method, "map_reduce" or "refine". Defaults to "map_reduce".\n
+            **summary_len (int, optional)**: _description_. Defaults to 500.\n
+            **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
+            **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
+                chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
+                system_prompt, max_doc_len, temperature.
+        Returns:
+            str: the summary of the file
+        """
+
+        ## set variables ##
+        self.articles = self._handle_texts(articles)
+        self.articles_docs = akasha.db.change_text_to_doc(self.articles)
+        self.summary_type = summary_type.lower()
+        self.summary_len = summary_len
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        start_time = time.time()
+        table = {}
+        if ''.join(self.articles).replace(" ", "") == "":
+            print("Error! texts are empty.\n\n")
+            return ""
+
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self.timestamp_list.append(timestamp)
+
+        # Split the documents into sentences
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            separators=["\n", " ", ",", ".", "。", "!"],
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
+        )
+        docs = text_splitter.split_documents(self.articles_docs)
+        self.doc_length = akasha.helper.get_docs_length(self.language, docs)
+        texts = [doc.page_content for doc in docs]
+
+        if summary_type == "refine":
+            response_list, self.doc_tokens = self._refine_summary(texts)
+
+        else:
+            response_list, self.doc_tokens = self._reduce_summary(texts, 0, [])
+
+        self.summary = response_list[-1]
+        p = akasha.prompts.format_refine_summary_prompt(
+            "", "", self.summary_len)
+
+        ### write summary to file, and if auto_translate is True , translate it ###
+        if self.format_prompt != "":
+            prod_format_prompt, ___ = akasha.prompts.format_sys_prompt(
+                self.format_prompt, "", self.prompt_format_type)
+            self.summary = akasha.helper.call_model(
+                self.model_obj,
+                prod_format_prompt + "\n\n" + self.summary,
+            )
+
+        if self.auto_translate:
+
+            self.summary = akasha.helper.call_translator(
+                self.model_obj, self.summary, self.prompt_format_type,
+                self.language)
+
+        ## change sim to trad if target language is traditional chinese ##
+        if afr.language_dict[self.language] == "traditional chinese":
+            self.summary = akasha.helper.sim_to_trad(self.summary)
+            self.summary = self.summary.replace("。", "。\n\n")
+
+        ### write summary to file ###
+        if output_file_path == "":
+            sum_path = Path("summarization/")
+            if not sum_path.exists():
+                sum_path.mkdir()
+
+            output_file_path = (
+                "summarization/" +
+                f"summary_{timestamp.replace('/','-').replace(':','-')}" +
+                ".txt")
+
         elif output_file_path[-4:] != ".txt":
             output_file_path = output_file_path + ".txt"
 
