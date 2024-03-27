@@ -43,7 +43,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.21",
+    version="0.8.22",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -56,7 +56,6 @@ setup(
         "akasha.models",
         "cli",
         "akasha.eval",
-        "akasha.summary",
         #    "akasha.interface",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},

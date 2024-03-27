@@ -10,6 +10,9 @@ from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, 
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
 import os, traceback
 import shutil
+from langchain.llms.base import LLM
+import akasha.format as afr
+import akasha.prompts
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -295,7 +298,8 @@ def get_doc_length(language: str, text: str) -> int:
     Returns:
         doc_length: int Docuemtn length
     """
-    if language == "ch":
+
+    if "chinese" in afr.language_dict[language]:
         doc_length = len(list(jieba.cut(text)))
     else:
         doc_length = len(text.split())
@@ -499,11 +503,11 @@ def _get_text(texts: list,
     return cur_count, cur_text, i
 
 
-def call_model(model, prompt: str) -> str:
+def call_model(model: LLM, prompt: str) -> str:
     """call llm model and return the response
 
     Args:
-        model (_type_): llm model
+        model (LLM): llm model
         prompt (str): input prompt
 
     Returns:
@@ -573,3 +577,27 @@ def image_to_base64(image_path: str) -> str:
     with open(image_path, "rb") as img_file:
         img_str = base64.b64encode(img_file.read())
     return img_str.decode("utf-8")
+
+
+def call_translator(model_obj: LLM,
+                    texts: str,
+                    prompt_format_type: str = "gpt",
+                    language: str = "zh") -> str:
+    """translate texts to target language
+
+    Args:
+        model_obj (LLM): LLM that used to translate
+        texts (str): texts that need to be translated
+        prompt_format_type (str, optional): system prompt format. Defaults to "gpt".
+        language (str, optional): target language. Defaults to "zh".
+
+    Returns:
+        str: translated texts
+    """
+    sys_prompt = akasha.prompts.default_translate_prompt(language)
+    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+        sys_prompt, "", prompt_format_type)
+
+    response = call_model(model_obj, prod_sys_prompt + "\n" + texts)
+
+    return response

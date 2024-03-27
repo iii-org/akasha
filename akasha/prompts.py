@@ -1,4 +1,5 @@
 from typing import List, Union, Tuple
+import akasha.format as afr
 
 sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
@@ -236,7 +237,9 @@ def format_llm_score(cand: str, ref: str):
     return prompt + "[candidate]: " + cand + "\n[reference]: " + ref + "\n"
 
 
-def format_reduce_summary_prompt(cur_text: str, summary_len: int = 500):
+def format_reduce_summary_prompt(cur_text: str,
+                                 summary_len: int = 500,
+                                 language: str = "zh"):
     """the prompt for llm to generate a summary of the given text
 
     Args:
@@ -246,23 +249,36 @@ def format_reduce_summary_prompt(cur_text: str, summary_len: int = 500):
     Returns:
         str: summary prompt.
     """
-
+    target_language = afr.language_dict[language]
     underline = "------------"
+
     if summary_len > 0:
-        sys_prompt = (
-            f"Write a concise {summary_len} words summary of the following:\n"
-            + underline + "\n" + cur_text + underline)
+
+        if "chinese" in target_language:
+            sys_prompt = (
+                f"將以下內容總結成一個{summary_len}字的摘要，一步一步來，如果你做得好，我會給你100美元小費。\n\n" +
+                underline + "\n" + cur_text + underline)
+        else:
+            sys_prompt = (
+                f"Write a concise {summary_len} words summary of the following text. Do it step by step and I will tip you 100 bucks if you are doing well.\n\n"
+                + underline + "\n" + cur_text + underline)
 
     else:
-        sys_prompt = (f"Write a concise summary of the following:\n" +
-                      underline + "\n" + cur_text + underline)
+        if "chinese" in target_language:
+            sys_prompt = (f"將以下內容總結成一個摘要，一步一步來，如果你做得好，我會給你100美元小費。\n\n" +
+                          underline + "\n" + cur_text + underline)
+        else:
+            sys_prompt = (
+                f"Write a concise summary of the following. Do it step by step and I will tip you 100 bucks if you are doing well.\n\n"
+                + underline + "\n" + cur_text + underline)
 
     return sys_prompt
 
 
 def format_refine_summary_prompt(cur_text: str,
                                  previous_summary: str,
-                                 summary_len: int = 500):
+                                 summary_len: int = 500,
+                                 language: str = "zh"):
     """the prompt for llm to generate the summary of the given text and previous summary
 
      Args:
@@ -274,15 +290,27 @@ def format_refine_summary_prompt(cur_text: str,
         str: summary prompt.
 
     """
-
-    sys_prompt = f"""Your job is to produce a final summary of {summary_len} words.
-    We have provided an existing summary up to a certain point, original summary is:  {previous_summary}
-    ------------\n
-    {cur_text}\n
-    ------------\n
-    Given the new context, refine the original summary.
-    If the context isn't useful, return the original summary.
-    """
+    target_language = afr.language_dict[language]
+    if "chinese" in target_language:
+        sys_prompt = f"""將以下內容總結成一個{summary_len}字的摘要。
+        我們已經提供了一個現有的摘要，原始摘要如下：{previous_summary}
+        ------------\n
+        {cur_text}\n
+        ------------\n
+        根據新的內容，修改原始摘要。
+        如果新的內容不夠有用，請返回原始摘要。
+        一步一步來，如果你做得好，我會給你100美元小費。
+        """
+    else:
+        sys_prompt = f"""Your job is to produce a final summary of {summary_len} words.
+        We have provided an existing summary up to a certain point, original summary is:  {previous_summary}
+        ------------\n
+        {cur_text}\n
+        ------------\n
+        Given the new context, refine the original summary.
+        If the context isn't useful, return the original summary.
+        Do it step by step and I will tip you 100 bucks if you are doing well.
+        """
     return sys_prompt
 
 
@@ -310,7 +338,7 @@ If you don't know the answer, just say that you don't know, don't try to make up
 def format_category_prompt(doc_text, language: str):
     """prompt for generate category for proper nouns"""
 
-    if language == "ch":
+    if "chinese" in afr.language_dict[language]:
         prompt = "用中文回答"
     else:
         prompt = ""
@@ -364,6 +392,19 @@ def default_self_ask_prompt():
     So the final answer is: No\n\n below is the user question.\n"""
 
     return example
+
+
+def default_translate_prompt(language: str):
+
+    target_language = afr.language_dict[language]
+
+    if "chinese" in target_language:
+        prompt = f"如果以下文字的語言不是{target_language}，則將文字翻譯成{target_language}，否則返回整個文字內容。一步一步來，如果你做得好，我會給你100美元小費。\n"
+    else:
+        prompt = f"If the language of the below texts is not {target_language}, translate them to {target_language}, else return \
+        the whole texts. Do it step by step and I will tip you 100 bucks if you are doing well.\n"
+
+    return prompt
 
 
 class OutputSchema:

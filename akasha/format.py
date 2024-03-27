@@ -35,7 +35,7 @@ def handle_params(
     if threshold != -1.0:
         params["threshold"] = threshold
     if language != "":
-        params["language"] = language
+        params["language"] = language_dict[language]
 
     if chunk_size != -1:
         params["chunk_size"] = chunk_size
@@ -79,8 +79,8 @@ def handle_table(prompt: str, docs: list, response: str) -> dict:
         try:
             inputs = [doc.page_content for doc in docs]
             metadata = [
-                doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
-                for doc in docs
+                doc.metadata["source"] + "    page: " +
+                str(doc.metadata["page"]) for doc in docs
             ]
         except:
             metadata = ["none" for _ in docs]
@@ -95,9 +95,8 @@ def handle_table(prompt: str, docs: list, response: str) -> dict:
     return table
 
 
-def handle_score_table(
-    table: dict, bert: float, rouge: float, llm_score: float
-) -> dict:
+def handle_score_table(table: dict, bert: float, rouge: float,
+                       llm_score: float) -> dict:
     """add each response's bert and rouge score into table dictionary
 
     Args:
@@ -114,3 +113,44 @@ def handle_score_table(
     table["llm_score"] = llm_score
 
     return table
+
+
+def handle_language(language: str):
+
+    if language not in language_dict:
+        print("language not supported, use chinese as default\n\n")
+        return "ch"
+    else:
+        return language
+
+
+language_dict = {
+    "en": "english",
+    "ch": "traditional chinese",
+    "jp": "japanese",
+    "ja": "japanese",
+    "zh": "traditional chinese",
+    "cn": "simplified chinese",
+    "de": "german",
+    "el": "greek",
+    "es": "spanish",
+    "fr": "french",
+    "it": "italian",
+    "ko": "korean",
+    "nl": "dutch",
+    "pl": "polish",
+    "pt": "portuguese",
+    "ru": "russian",
+    "tr": "turkish",
+    "vi": "vietnamese",
+    "hi": "hindi",
+    "ar": "arabic",
+    "th": "thai",
+    "id": "indonesian",
+    "no": "norwegian",
+    "sv": "swedish",
+    "fi": "finnish",
+    "da": "danish",
+    "cs": "czech",
+    "hu": "hungarian",
+}
