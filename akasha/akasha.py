@@ -5,6 +5,7 @@ from typing import Callable, Union, List
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
+import akasha
 import akasha.helper as helper
 import akasha.search as search
 import akasha.format as format

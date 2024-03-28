@@ -71,7 +71,7 @@ def setting_page():
                 st.session_state.model)
             st.experimental_rerun()
 
-    cks, tpk, seat = st.columns([1, 1, 1])
+    cks, seat = st.columns([1, 1])
     with cks:
         ck = st.number_input(
             "Chunk Size",
@@ -85,19 +85,6 @@ def setting_page():
             st.session_state.chunksize = ck
             st.experimental_rerun()
 
-    with tpk:
-        topk = st.number_input(
-            "Top K",
-            value=st.session_state.topK,
-            min_value=1,
-            max_value=100,
-            step=1,
-            help=
-            "The number of top relevant chunks to be selected from documents.",
-        )
-        if topk != st.session_state.topK:
-            st.session_state.topK = topk
-            st.experimental_rerun()
     with seat:
         stp = st.selectbox(
             "Search Type",

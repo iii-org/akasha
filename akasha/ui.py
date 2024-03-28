@@ -6,7 +6,6 @@ from interface.res_page import response_page
 from interface.upload_file import upload_page
 from interface.setting import setting_page, set_model_dir
 from interface.sum_page import summary_page
-import akasha
 import datetime
 
 st.set_page_config(layout="wide")
@@ -149,8 +148,6 @@ if "model" not in st.session_state:
 
 if "chunksize" not in st.session_state:
     st.session_state.chunksize = 500
-if "topK" not in st.session_state:
-    st.session_state.topK = 2
 
 if "search_type" not in st.session_state:
     st.session_state.search_type = st.session_state.search_list[0]
