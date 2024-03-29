@@ -31,10 +31,10 @@ def get_bert_score(candidate_str: str,
     try:
         from bert_score import score
     except:
-        raise ImportError(
+        print("ImportError: " + str(
             "Can not find package bert_score, use pip install akasha-terminal[huggingface] to install.\n\n"
-        )
-
+        ))
+        return 0.0
     try:
         if "chinese" in akasha.format.language_dict[language]:
             P, R, F1 = score([candidate_str], [reference_str],
