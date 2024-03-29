@@ -6,7 +6,6 @@ import akasha.eval as eval
 import akasha.db
 import os, traceback
 import numpy as np
-import torch, gc
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
 from typing import Callable, Union, Tuple, List
@@ -520,7 +519,6 @@ class Model_Eval(akasha.atman):
             traceback.print_exc()
             print("running model error\n", e)
             response = ["running model error"]
-            torch.cuda.empty_cache()
 
         if self.question_style.lower() == "essay":
 
@@ -593,7 +591,6 @@ class Model_Eval(akasha.atman):
             traceback.print_exc()
             print("running model error\n", e)
             response = ["running model error"]
-            torch.cuda.empty_cache()
 
         if self.verbose:
             print("Question: ", prompt + "\n" + sum_doc, "\n\n")

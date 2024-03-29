@@ -163,7 +163,7 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
     ]:
         from langchain_community.embeddings import (
             HuggingFaceEmbeddings,
-            SentenceTransformerEmbeddings,
+            #SentenceTransformerEmbeddings,
         )
 
         embeddings = HuggingFaceEmbeddings(model_name=embedding_name)

@@ -1,7 +1,6 @@
 # coding:utf-8
 from rouge import Rouge
 import rouge_chinese
-from bert_score import score
 import jieba
 import warnings
 import akasha.prompts as prompts
@@ -29,6 +28,13 @@ def get_bert_score(candidate_str: str,
     Returns:
         float: bert score
     """
+    try:
+        from bert_score import score
+    except:
+        raise ImportError(
+            "Can not find package bert_score, use pip install akasha-terminal[huggingface] to install.\n\n"
+        )
+
     try:
         if "chinese" in akasha.format.language_dict[language]:
             P, R, F1 = score([candidate_str], [reference_str],
@@ -86,11 +92,7 @@ def get_llm_score(candidate_str: str,
                   round_digit: int = 3):
     prompt = prompts.format_llm_score(candidate_str, reference_str)
     model = akasha.helper.handle_model(model, False, 0.0)
-    try:
-        response = model.predict(prompt)
-
-    except:
-        response = model._call(prompt)
+    response = akasha.helper.call_model(model, prompt)
 
     # find the first float number in the response string and turn to float
     try:

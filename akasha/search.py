@@ -880,9 +880,13 @@ class myBM25Retriever(BaseRetriever):
 
 
 def rerank(query: str, docs: list, threshold: float, embed_name: str):
-    import torch, gc
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
+    try:
+        import torch, gc
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    except ImportError:
+        raise ImportError(
+            "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
+        )
     model_name = embed_name.split(":")[1]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -930,8 +934,13 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
 
 
 def rerank_reduce(query, docs, topK):
-    import torch, gc
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    try:
+        import torch, gc
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    except ImportError:
+        raise ImportError(
+            "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
+        )
 
     model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

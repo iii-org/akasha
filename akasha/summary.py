@@ -2,7 +2,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import akasha
 from pathlib import Path
 import time, datetime
-import torch, gc
 import akasha.db
 from typing import Union, List
 import akasha.format as afr
