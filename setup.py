@@ -56,7 +56,6 @@ setup(
         "akasha.models",
         "cli",
         "akasha.eval",
-        "akasha.summary",
         "akasha.interface",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
