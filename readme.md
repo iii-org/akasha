@@ -791,7 +791,7 @@ eva = eval.Model_Eval(question_style="essay", search_type='merge',\
 
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_essay.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
+bert_score, rouge, llm_score, tol_tokens = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 # bert_score = 0.782
 # rouge = 0.81
@@ -813,7 +813,7 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_irre.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
+bert_score, rouge, llm_score, tol_tokens = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 ```
 
@@ -834,7 +834,7 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 
 eva.create_topic_questionset(doc_path="doc/mic/", topic= "工業4.0", question_num=3, output_file_path="questionset/mic_topic_irre.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
+bert_score, rouge, llm_score, tol_tokens = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 ```
 

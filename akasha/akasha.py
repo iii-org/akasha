@@ -33,7 +33,8 @@ def aiido_upload(
         **table (dict, optional)**: table dictionary, used to compare text context between different runs in the experiment. Defaults to {}.\n
     """
     import aiido
-
+    if path_name is None:
+        path_name = ""
     if "model" not in params or "embeddings" not in params:
         aiido.init(experiment=exp_name, run=path_name)
 

@@ -122,6 +122,21 @@ class Summary(akasha.atman):
                 self.model_obj = akasha.helper.handle_model(
                     new_model, self.verbose, new_temp)
 
+    def _save_file(self, default_file_name: str, output_file_path: str):
+        ### write summary to file ###
+        if output_file_path == "":
+            sum_path = Path("summarization/")
+            if not sum_path.exists():
+                sum_path.mkdir()
+
+            output_file_path = ("summarization/" + default_file_name)
+        elif output_file_path[-4:] != ".txt":
+            output_file_path = output_file_path + ".txt"
+
+        with open(output_file_path, "w", encoding="utf-8") as f:
+            f.write(self.summary)
+        print("summarization saved in ", output_file_path, "\n\n")
+
     def _reduce_summary(self, texts: list, tokens: int, total_list: list):
         """Summarize each chunk and merge them until the combined chunks are smaller than the maximum token limit.
         Then, generate the final summary. This method is faster and requires fewer tokens than the refine method.
@@ -229,7 +244,7 @@ class Summary(akasha.atman):
                        file_path: str,
                        summary_type: str = "map_reduce",
                        summary_len: int = 500,
-                       output_file_path: str = "",
+                       output_file_path: Union[str, None] = None,
                        **kwargs) -> str:
         """input a file path and return a summary of the file
 
@@ -302,26 +317,11 @@ class Summary(akasha.atman):
             self.summary = akasha.helper.sim_to_trad(self.summary)
             self.summary = self.summary.replace("。", "。\n\n")
 
-        ### write summary to file ###
-        if output_file_path == "":
-            sum_path = Path("summarization/")
-            if not sum_path.exists():
-                sum_path.mkdir()
-
-            output_file_path = ("summarization/" +
-                                file_path.split("/")[-1].split(".")[-2] +
-                                ".txt")
-        elif output_file_path[-4:] != ".txt":
-            output_file_path = output_file_path + ".txt"
-
-        with open(output_file_path, "w", encoding="utf-8") as f:
-            f.write(self.summary)
-
-        print(self.summary, "\n\n\n\n")
-
         end_time = time.time()
         self._add_log("summarize_file", timestamp, end_time - start_time,
                       response_list)
+        print(self.summary, "\n\n\n\n")
+
         if self.record_exp != "":
             params = akasha.format.handle_params(self.model, "",
                                                  self.chunk_size, "", -1, -1.0,
@@ -335,7 +335,11 @@ class Summary(akasha.atman):
             table = akasha.format.handle_table(p, response_list, self.summary)
             akasha.aiido_upload(self.record_exp, params, metrics, table,
                                 output_file_path)
-        print("summarization saved in ", output_file_path, "\n\n")
+
+        if output_file_path is not None:
+            self._save_file(
+                file_path.split("/")[-1].split(".")[-2] + ".txt",
+                output_file_path)
 
         return self.summary
 
@@ -343,7 +347,7 @@ class Summary(akasha.atman):
                            articles: Union[str, List[str]],
                            summary_type: str = "map_reduce",
                            summary_len: int = 500,
-                           output_file_path: str = "",
+                           output_file_path: Union[str, None] = None,
                            **kwargs) -> str:
         """input a file path and return a summary of the file
 
@@ -416,23 +420,6 @@ class Summary(akasha.atman):
             self.summary = akasha.helper.sim_to_trad(self.summary)
             self.summary = self.summary.replace("。", "。\n\n")
 
-        ### write summary to file ###
-        if output_file_path == "":
-            sum_path = Path("summarization/")
-            if not sum_path.exists():
-                sum_path.mkdir()
-
-            output_file_path = (
-                "summarization/" +
-                f"summary_{timestamp.replace('/','-').replace(':','-')}" +
-                ".txt")
-
-        elif output_file_path[-4:] != ".txt":
-            output_file_path = output_file_path + ".txt"
-
-        with open(output_file_path, "w", encoding="utf-8") as f:
-            f.write(self.summary)
-
         print(self.summary, "\n\n\n\n")
 
         end_time = time.time()
@@ -451,6 +438,10 @@ class Summary(akasha.atman):
             table = akasha.format.handle_table(p, response_list, self.summary)
             akasha.aiido_upload(self.record_exp, params, metrics, table,
                                 output_file_path)
-        print("summarization saved in ", output_file_path, "\n\n")
+
+        if output_file_path is not None:
+            self._save_file(
+                f"summary_{timestamp.replace('/','-').replace(':','-')}",
+                output_file_path)
 
         return self.summary
