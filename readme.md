@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.22](https://img.shields.io/badge/pypi%20package-0.8.22-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.23](https://img.shields.io/badge/pypi%20package-0.8.23-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -791,7 +791,7 @@ eva = eval.Model_Eval(question_style="essay", search_type='merge',\
 
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_essay.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
+bert_score, rouge, llm_score, tol_tokens = eva.auto_evaluation(questionset_path="questionset/mic_essay.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 # bert_score = 0.782
 # rouge = 0.81
@@ -813,7 +813,7 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 
 eva.auto_create_questionset(doc_path="doc/mic/", question_num=10, output_file_path="questionset/mic_irre.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
+bert_score, rouge, llm_score, tol_tokens = eva.auto_evaluation(questionset_path="questionset/mic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 ```
 
@@ -834,7 +834,7 @@ eva = eval.Model_Eval(search_type='merge', question_type = "irrelevant", model="
 
 eva.create_topic_questionset(doc_path="doc/mic/", topic= "工業4.0", question_num=3, output_file_path="questionset/mic_topic_irre.txt")
 
-bert_score, rouge, llm_score = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
+bert_score, rouge, llm_score, tol_tokens = eva.auto_evaluation(questionset_path="questionset/mic_topic_irre.txt", doc_path="doc/mic/", question_style = "essay", record_exp="exp_mic_auto_evaluation",search_type="svm")
 
 ```
 
