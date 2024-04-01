@@ -2,9 +2,12 @@ from typing import Dict, List, Any, Optional, Callable
 from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
+from transformers import AutoTokenizer, AutoModel
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from transformers import pipeline
+import torch
 import numpy
-import warnings, os
+import warnings, os, logging
 from akasha.models.llama2 import Llama2, TaiwanLLaMaGPTQ
 import requests
 
@@ -23,13 +26,6 @@ class chatGLM(LLM):
         Args:
             **model_name (str)**: chatglm model name\n
         """
-        try:
-            from transformers import AutoTokenizer, AutoModel
-        except ImportError:
-            raise ImportError(
-                "Can not find package transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-            )
-
         if model_name == "":
             model_name = "THUDM/chatglm2-6b"
 
@@ -160,7 +156,7 @@ class custom_model(LLM):
         self.func = func
         self.temperature = temperature
         if self.temperature == 0.0:
-            self.temperature = 0.01
+            self.temperature = 0.001
 
     @property
     def _llm_type(self) -> str:
@@ -243,8 +239,8 @@ class remote_model(LLM):
                                      json=data,
                                      headers=headers).json()
         except Exception as e:
-            print("call remote model failed\n\n", e.__str__())
-            return None
+            logging.error("call remote model failed\n\n", e.__str__())
+            raise e
         return response["generated_text"]
 
 
@@ -254,12 +250,6 @@ class hf_model(LLM):
     tokenizer: Any
     model: Any
     pipe_line: Any
-    try:
-        from transformers import pipeline
-    except ImportError:
-        raise ImportError(
-            "Can not find package transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-        )
 
     def __init__(self, pipe: pipeline):
         """define custom model, input func and temperature
@@ -267,7 +257,6 @@ class hf_model(LLM):
         Args:
             **func (Callable)**: the function return response from llm\n
         """
-
         super().__init__()
         self.pipe_line = HuggingFacePipeline(pipeline=pipe)
 
@@ -307,14 +296,6 @@ def get_hf_model(model_name, temperature: float = 0.0):
     Returns:
         _type_: llm model
     """
-    try:
-        from transformers import pipeline
-        import torch
-    except ImportError:
-        raise ImportError(
-            "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-        )
-
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=FutureWarning)
         hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")

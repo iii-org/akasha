@@ -11,7 +11,7 @@ import akasha.format as format
 import akasha.prompts as prompts
 import akasha.db
 import datetime, traceback
-import warnings
+import warnings, logging
 from dotenv import load_dotenv
 
 load_dotenv(pathlib.Path().cwd() / ".env")
@@ -412,27 +412,29 @@ class atman:
             if self.verbose:
                 print("Prompt after formatting:", "\n\n" + text_input)
         except Exception as e:
-            traceback.print_exc()
-            print(e)
-            print(
+            #traceback.print_exc()
+            trace_text = traceback.format_exc()
+            logging.error(
+                trace_text +
                 "\n\nText generation encountered an error before querying the language model (LLM).\
                 Please check your input data or configuration settings.\n\n")
-            response = ""
-            return response
+            raise e
+
         try:
             response = helper.call_model(self.model_obj, text_input)
-            if response is None:
-                raise Exception("llm response is None")
+            if response is None or response == "":
+                raise Exception("LLM response is empty.")
             response = helper.sim_to_trad(response)
 
             if response[:8] == "System: ":
                 response = response[8:]
         except Exception as e:
-            traceback.print_exc()
-            print(e)
-            print("\n\nllm error\n\n")
+            trace_text = traceback.format_exc()
+            logging.error(trace_text +
+                          "\n\nText generation encountered an error.\
+                Please check your model.\n\n")
+            raise e
 
-            response = ""
         if self.verbose:
             print("llm response:", "\n\n" + response)
 
@@ -519,6 +521,7 @@ class Doc_QA(atman):
         self.doc_length = 0
         self.response = ""
         self.prompt = ""
+        self.ignored_files = []
 
     def get_response(self, doc_path: Union[List[str], str], prompt: str,
                      **kwargs) -> str:
@@ -542,10 +545,10 @@ class Doc_QA(atman):
         self.prompt = prompt
 
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 
@@ -641,10 +644,10 @@ class Doc_QA(atman):
         self.doc_path = doc_path
         table = {}
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 
@@ -979,31 +982,3 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
 
         return self.response
-
-
-### temp test agent###
-# from langchain.agents import load_tools, initialize_agent, tool
-# from langchain.agents import AgentType
-# from langchain.agents import initialize_agent, Tool
-# from langchain_community.utilities.google_serper import GoogleSerperAPIWrapper
-
-# def get_agent_buildin_tool(llm):
-#     # gsearch = GoogleSerperAPIWrapper()
-#     # serp_tool = Tool(name="Intermediate Answer",
-#     #                  func=gsearch.run,
-#     #                  description="useful for when you need to ask with search")
-#     tools = []
-#     tools = load_tools([
-#         "llm-math",
-#         "wikipedia",
-#     ], llm=llm)
-#     #tools.append(serp_tool)
-#     return initialize_agent(
-#         tools,
-#         llm,
-#         agent=AgentType.
-#         CHAT_ZERO_SHOT_REACT_DESCRIPTION,  # CHAT_ZERO_SHOT_REACT_DESCRIPTION   SELF_ASK_WITH_SEARCH
-#         handle_parsing_errors=True,
-#         verbose=True,
-#         #callbacks=[handler],
-#     )

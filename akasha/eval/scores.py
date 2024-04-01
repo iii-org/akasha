@@ -1,6 +1,7 @@
 # coding:utf-8
 from rouge import Rouge
 import rouge_chinese
+from bert_score import score
 import jieba
 import warnings
 import akasha.prompts as prompts
@@ -28,13 +29,6 @@ def get_bert_score(candidate_str: str,
     Returns:
         float: bert score
     """
-    try:
-        from bert_score import score
-    except:
-        print("ImportError: " + str(
-            "Can not find package bert_score, use pip install akasha-terminal[huggingface] to install.\n\n"
-        ))
-        return 0.0
     try:
         if "chinese" in akasha.format.language_dict[language]:
             P, R, F1 = score([candidate_str], [reference_str],

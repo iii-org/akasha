@@ -10,7 +10,7 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.utils import print_text
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from langchain_core.agents import AgentAction, AgentFinish
-import traceback, warnings, datetime, time
+import traceback, warnings, datetime, time, logging
 from langchain.llms.base import LLM
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -28,7 +28,7 @@ def _get_agent_type(agent_type: str) -> AgentType:
     try:
         agent_t = getattr(AgentType, agent_type)
     except Exception as e:
-        print(f"Cannot find the agent type, use default instead\n\n")
+        logging.warning(f"Cannot find the agent type, use default instead\n\n")
         agent_t = AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION
     return agent_t
 
@@ -327,11 +327,13 @@ class agent:
         try:
             self.response = self.agent_obj(self.question)
             self.response = self.response['output']
+
         except Exception as e:
-            self.response = traceback.format_exc(
+            trace_text = traceback.format_exc(
             ) + "\n\n" + "Error: agent get response failed.\n" + e.__str__(
             ) + "\n\n"
-            print(self.response)
+            logging.error(e + trace_text)
+            raise e
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
@@ -361,9 +363,9 @@ def create_tool(tool_name: str, tool_description: str,
                 return func(*args, **kwargs)
 
     except Exception as e:
-        print(f"Cannot create tool correctly, {e}\n\n")
 
-        return None
+        logging.error(f"Cannot create tool correctly, {e}\n\n")
+        raise e
 
     return custom_tool(name=tool_name, description=tool_description)
 

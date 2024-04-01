@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.23](https://img.shields.io/badge/pypi%20package-0.8.23-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.24](https://img.shields.io/badge/pypi%20package-0.8.23-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -26,8 +26,8 @@ We recommend using Python 3.9 to run our akasha package. You can use Anaconda to
 
 # create environment
 
-conda create --name py3-8 python=3.8
-activate py3-8
+conda create --name py3-9 python=3.9
+activate py3-9
 
 # install akasha
 pip install akasha-terminal
@@ -83,7 +83,7 @@ AZURE_API_VERSION=2023-05-15
 And now we can run akasha in python 
 
 ```python
-#PYTHON3.8
+#PYTHON3.9
 import akasha
 ak = akasha.Doc_QA(model="openai:gpt-3.5-turbo")
 response = ak.get_response(dir_path, prompt)
@@ -122,7 +122,7 @@ export HUGGINGFACEHUB_API_TOKEN="your api key"
 ```
 
 ```python
-#PYTHON3.8
+#PYTHON3.9
 import akasha
 ak = akasha.Doc_QA()
 response = ak.get_response(dir_path, prompt, model="hf:meta-llama/Llama-2-7b-chat-hf")

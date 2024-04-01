@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional
 from langchain.llms.base import LLM
-import sys
-#from transformers import AutoTokenizer, TextStreamer
+import torch, sys
+from transformers import AutoTokenizer, TextStreamer
 from peft import AutoPeftModelForCausalLM
 from langchain_community.llms.llamacpp import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
@@ -77,14 +77,6 @@ class Llama2(LLM):
         bit4: bool = True,
         max_token: int = 2048,
     ):
-        try:
-            from transformers import AutoTokenizer
-            import torch
-        except ImportError:
-            raise ImportError(
-                "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-            )
-
         super().__init__()
         self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
                                                        use_fast=False,
@@ -165,15 +157,6 @@ class peft_Llama2(LLM):
                  model_name_or_path: str,
                  max_token: int = 2048,
                  temperature: float = 0.01):
-
-        try:
-            from transformers import AutoTokenizer, TextStreamer
-            import torch
-        except ImportError:
-            raise ImportError(
-                "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-            )
-
         super().__init__()
         self.temperature = temperature
         if self.temperature == 0.0:
@@ -194,7 +177,6 @@ class peft_Llama2(LLM):
         return "peft_Llama2"
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-        import torch
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         inputs = self.tokenizer(prompt, return_tensors="pt").to(device)
@@ -226,14 +208,8 @@ class TaiwanLLaMaGPTQ(LLM):
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
+        from auto_gptq import AutoGPTQForCausalLM
 
-        try:
-            from transformers import AutoTokenizer, TextStreamer
-            from auto_gptq import AutoGPTQForCausalLM
-        except ImportError:
-            raise ImportError(
-                "Can not find package auto_gptq or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-            )
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_name_or_path,
             use_fast=True,

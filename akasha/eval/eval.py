@@ -4,8 +4,9 @@ from tqdm import tqdm
 import akasha
 import akasha.eval as eval
 import akasha.db
-import os, traceback
+import os, traceback, logging
 import numpy as np
+import torch, gc
 from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
 from typing import Callable, Union, Tuple, List
@@ -161,6 +162,7 @@ class Model_Eval(akasha.atman):
         self.answer = []
         self.response = []
         self.score = {}
+        self.ignored_files = []
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
         self.use_rerank = use_rerank
@@ -409,7 +411,7 @@ class Model_Eval(akasha.atman):
 
                 if not self._process_response(response, used_texts,
                                               choice_num):
-                    raise Exception("Question Format Error")
+                    raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
                     self.language, docs)
@@ -421,15 +423,11 @@ class Model_Eval(akasha.atman):
                     regenerate_limit -= 1
                     i -= 1
                     progress.update(-1)
-                    print(
-                        "Question Format Error while generating questions. Regenerate\n"
-                    )
+                    logging.warning(f"{e}.\n\n Regenerate\n")
                     continue
                 else:
-                    print(
-                        "Question Format Error while generating questions. Stop\n"
-                    )
-                    break
+                    logging.error(f"{e}.\n\n Stop\n")
+                    raise e
 
             # remove the category from category dictionary
             del category[topic]
@@ -517,8 +515,10 @@ class Model_Eval(akasha.atman):
             self.doc_tokens += docs_token
         except Exception as e:
             traceback.print_exc()
-            print("running model error\n", e)
-            response = ["running model error"]
+            #response = ["running model error"]
+            torch.cuda.empty_cache()
+            logging.error("running model error\n", e)
+            raise e
 
         if self.question_style.lower() == "essay":
 
@@ -589,8 +589,10 @@ class Model_Eval(akasha.atman):
             self.doc_tokens += self.model_obj.get_num_tokens(sum_doc)
         except Exception as e:
             traceback.print_exc()
-            print("running model error\n", e)
-            response = ["running model error"]
+            #response = ["running model error"]
+            torch.cuda.empty_cache()
+            logging.error("running model error\n", e)
+            raise e
 
         if self.verbose:
             print("Question: ", prompt + "\n" + sum_doc, "\n\n")
@@ -687,10 +689,10 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, "use rerank to get docs")
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, "eval_get_doc", self.embeddings,
                 self.chunk_size, self.ignore_check)
         if not self._check_db():
@@ -751,27 +753,23 @@ class Model_Eval(akasha.atman):
                     response
                 )  # transform simplified chinese to traditional chinese
                 if not self._process_response(response, doc_text, choice_num):
-                    raise Exception("Question Format Error")
+                    raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
                     self.language, docs)
                 self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
                 self.docs.extend(docs)
 
-            except:
+            except Exception as e:
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
                     progress.update(-1)
-                    print(
-                        "Question Format Error while generating questions. Regenerate\n"
-                    )
+                    logging.warning(f"{e}.\n\n Regenerate\n")
                     continue
                 else:
-                    print(
-                        "Question Format Error while generating questions. Stop\n"
-                    )
-                    break
+                    logging.error(f"{e}.\n\n Stop\n")
+                    raise e
 
             new_table = akasha.format.handle_table(self.question[-1], docs,
                                                    self.answer[-1])
@@ -841,10 +839,10 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
         if not self._check_db():
@@ -1122,10 +1120,10 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
         if not self._check_db():
@@ -1198,27 +1196,23 @@ class Model_Eval(akasha.atman):
                     response
                 )  # transform simplified chinese to traditional chinese
                 if not self._process_response(response, doc_text, choice_num):
-                    raise Exception("Question Format Error")
+                    raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
                     self.language, docs)
                 self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
                 self.docs.extend(docs)
 
-            except:
+            except Exception as e:
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
                     progress.update(-1)
-                    print(
-                        "Question Format Error while generating questions. Regenerate\n"
-                    )
+                    logging.warning(f"{e}.\n\n Regenerate\n")
                     continue
                 else:
-                    print(
-                        "Question Format Error while generating questions. Stop\n"
-                    )
-                    break
+                    logging.error(f"{e}.\n\n Stop\n")
+                    raise e
 
             new_table = akasha.format.handle_table(self.question[-1], docs,
                                                    self.answer[-1])

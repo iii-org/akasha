@@ -1,6 +1,6 @@
 from typing import Union, List
 from tqdm import tqdm
-import time, os, shutil, traceback
+import time, os, shutil, traceback, logging
 import datetime
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, UnstructuredPowerPointLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
@@ -12,7 +12,6 @@ from langchain_community.vectorstores import chroma
 from langchain_community.vectorstores.chroma import Chroma
 from langchain.docstore.document import Document
 from pathlib import Path
-import uuid
 import akasha.helper as helper
 import akasha.akasha
 
@@ -145,8 +144,14 @@ def _load_file(file_path: str, extension: str):
 
         return docs
     except Exception as err:
-        traceback.print_exc()
-        print("Load", file_path, "failed, ignored.\n message: \n", err)
+        try:
+            trace_text = traceback.format_exc()
+
+            logging.warning("\nLoad " + file_path + " failed, ignored.\n" +
+                            trace_text + "\n\n" + err)
+        except:
+            logging.warning("\nLoad file" + " failed, ignored.\n" +
+                            trace_text + "\n\n" + err)
         return ""
 
 
@@ -177,6 +182,7 @@ def get_docs_from_doc(doc_path: str, chunk_size: int, ignore_check: bool):
     Returns:
         list: list of Documents
     """
+    ignored_files = []
     # Split the documents into sentences
     documents, files = [], []
     texts = []
@@ -207,22 +213,31 @@ def get_docs_from_doc(doc_path: str, chunk_size: int, ignore_check: bool):
             continue
 
         ## if ignore_check is false or no db found, load file text and split into sentences ##
-        documents.extend(_load_file(doc_path + file, file.split(".")[-1]))
+        temp_docs = _load_file(doc_path + file, file.split(".")[-1])
+        if temp_docs == "" or len(temp_docs) == 0:
+            ignored_files.append(file)
+            continue
+        documents.extend(temp_docs)
 
     progress.close()
-    if len(documents) == 0 and len(texts) == 0:
-        return None
-    if len(documents) != 0:
-        text_splitter = RecursiveCharacterTextSplitter(
-            separators=["\n", " ", ",", ".", "。", "!"],
-            chunk_size=chunk_size,
-            chunk_overlap=100,
-        )
-        docs = text_splitter.split_documents(documents)
-        texts.extend(docs)
-    if len(texts) == 0:
-        return None
-    return texts
+    try:
+        if len(documents) == 0 and len(texts) == 0:
+            raise Exception("No documents found.\n\n")
+        if len(documents) != 0:
+            text_splitter = RecursiveCharacterTextSplitter(
+                separators=["\n", " ", ",", ".", "。", "!"],
+                chunk_size=chunk_size,
+                chunk_overlap=100,
+            )
+            docs = text_splitter.split_documents(documents)
+            texts.extend(docs)
+        if len(texts) == 0:
+            raise Exception("No texts found.\n\n")
+    except Exception as e:
+        logging.warning("\nLoad " + doc_path + " failed, ignored.\n" + str(e))
+        return None, ignored_files
+
+    return texts, ignored_files
 
 
 def get_chromadb_from_file(documents: list,
@@ -284,8 +299,8 @@ def get_chromadb_from_file(documents: list,
                         try:
                             page_contents[ix] = helper.call_model(open_model,"use traditional chinese to list details of below article:\n\n"\
                                 + text.page_content + "\n\n")
-                            print(
-                                "content too long, using llm to summarize for embedding..."
+                            logging.warning(
+                                "\ncontent too long, using llm to summarize for embedding...\n\n"
                             )
                         except:
                             pass
@@ -297,7 +312,7 @@ def get_chromadb_from_file(documents: list,
                 vectors = embeddings.embed_documents(page_contents)
 
             if len(vectors) == 0:
-                print(f"\nwarning: {file_name} has empty content, ignored.")
+                #logging.warning(f" {file_name} has empty content, ignored.\n")
                 k += interval
                 cum_ids += len(texts)
                 continue
@@ -313,10 +328,13 @@ def get_chromadb_from_file(documents: list,
         #     docsearch, add_pic = add_pic_summary_to_db(docsearch, file_name, chunk_size)
         docsearch.persist()
         db = dbs(docsearch)
+        docsearch._client._system.stop()
+        docsearch = None
         del docsearch
     if len(db.get_ids()) == 0:
-        print("\nCan not load file:", file_name)
-        return None, add_pic
+        logging.warning(f"\n{file_name} has empty content, ignored.\n")
+        shutil.rmtree(storage_directory)
+        return file_name, add_pic
     return db, add_pic
 
 
@@ -340,34 +358,37 @@ def processMultiDB(
     Returns:
         (Optional[Documents, Chromadb, None], List[str]): return list of documents if embeddings is a str, else return list of chromadb, and list of chromadb path names
     """
+    ignored_files = []
     ## if doc_path_list is a str, juest call create_chromadb function ##
     if isinstance(doc_path_list, str):
         doc_path_list = [doc_path_list]
     if len(doc_path_list) == 0:
-        return None, []
+        logging.error("\nCannot get file path.\n\n")
+        raise Exception("\nCannot get any file path.\n\n")
 
     ## if using rerank, extend all the documents into one list ##
     if isinstance(embeddings, str):
         texts = []
         for doc_path in doc_path_list:
-            temp = create_chromadb(doc_path,
-                                   verbose,
-                                   embeddings,
-                                   embeddings_name,
-                                   chunk_size,
-                                   ignore_check=ignore_check)
-            if isinstance(temp, tuple):
-                temp = temp[0]
-            if temp is not None:
-                texts.extend(temp)
+            cur_texts, cur_ignores = create_chromadb(doc_path,
+                                                     verbose,
+                                                     embeddings,
+                                                     embeddings_name,
+                                                     chunk_size,
+                                                     ignore_check=ignore_check)
+            # if isinstance(temp, tuple):
+            #     temp = temp[0]
+            ignored_files.extend(cur_ignores)
+            if cur_texts is not None:
+                texts.extend(cur_texts)
         if len(texts) == 0:
-            return None, []
-        return texts, []
+            logging.error("\nCannot get any document.\n\n")
+            raise Exception("\nCannot get any document.\n\n")
+        return texts, ignored_files
 
     ## if not using rerank, create chromadb for each doc_path and merge them ##
 
     dby = dbs()  # list of dbs
-    db_path_names = []
     for doc_path in doc_path_list:
 
         db2, db_names = create_chromadb(doc_path,
@@ -377,15 +398,18 @@ def processMultiDB(
                                         chunk_size,
                                         ignore_check=ignore_check)
 
+        ignored_files.extend(db_names)
         if db2 is not None:
             dby.merge(db2)
-            db_path_names.extend(db_names)
+
     ## check if dbs has any document ##
 
     if len(dby.get_ids()) == 0:
-        return None, []
+        logging.error("\nCannot get any document.\n\n")
+        raise Exception("\nCannot get any document.\n\n")
+        #return None, []
 
-    return dby, db_path_names
+    return dby, ignored_files
 
 
 def create_chromadb(doc_path: str,
@@ -417,6 +441,7 @@ def create_chromadb(doc_path: str,
 
     ### check if doc path exist ###
     if not helper.is_path_exist(doc_path):
+        logging.warning("\nCannot find the directory: " + doc_path + "\n\n")
         return None, []
 
     ## add '/' at the end of doc_path ##
@@ -452,8 +477,10 @@ def create_chromadb(doc_path: str,
             temp_chroma = Chroma(persist_directory=storage_directory)
             if temp_chroma is not None:
                 dby.add_chromadb(temp_chroma)
-                db_path_names.append(storage_directory)
+                #db_path_names.append(storage_directory)
                 del temp_chroma
+            else:
+                db_path_names.append(file)
             continue
 
         file_doc = _load_file(doc_path + file, file.split(".")[-1])
@@ -473,13 +500,15 @@ def create_chromadb(doc_path: str,
                                              doc_path + file, sleep_time,
                                              add_pic, embed_type)
 
-        if db is not None:
+        if isinstance(db, str):
+            db_path_names.append(db)
+        else:
             dby.merge(db)
-            db_path_names.append(storage_directory)
+
     progress.close()
 
     if len(dby.get_ids()) == 0:
-        return None, []
+        return None, db_path_names
 
     info = "\n\nload files:" + str(len(files)) + "\n\n"
     if verbose:
@@ -501,7 +530,7 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
     ### CHROMADB_PATH = "chromadb/"
 
     progress = tqdm(total=len(db_path_list), desc="Vec Storage")
-
+    ignored_files = []
     if "rerank" in embedding_name:
         texts = []
         for doc_path in db_path_list:
@@ -513,27 +542,39 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
                          metadata=temp["metadatas"][i])
                 for i in range(len(temp["documents"]))
             ]
-            if temp is not None:
+            if temp is None or ''.join([d.page_content for d in db]) == "":
+                ignored_files.append(doc_path)
+            else:
                 texts.extend(db)
+
         if len(texts) == 0:
-            return None, []
+            progress.close()
+            logging.error("\nCannot get any document.\n\n")
+            raise Exception("\nCannot get any document.\n\n")
+            #return None, []
         progress.close()
-        return texts, []
+        return texts, ignored_files
 
     dby = dbs()
     for db_path in db_path_list:
         progress.update(1)
         doc_search = Chroma(persist_directory=db_path)
         db = dbs(doc_search)
-        if db is not None:
+
+        if db is None or ''.join(db.get_docs()) == "":
+            logging.warning("Cannot get any text from " + db_path + "\n\n")
+            ignored_files.append(db_path)
+        else:
             dby.merge(db)
         del db, doc_search
     progress.close()
 
     if len(dby.get_ids()) == 0:
-        return None, []
+        logging.error("\nCannot get any document.\n\n")
+        raise Exception("\nCannot get any document.\n\n")
+        # return None, []
 
-    return dby, db_path_list
+    return dby, ignored_files
 
 
 def create_single_file_db(file_path: str,
@@ -576,9 +617,9 @@ def create_single_file_db(file_path: str,
                                          doc_path + file_name, sleep_time,
                                          add_pic, embed_type)
 
-    if db is None:
+    if isinstance(db, str):
         del embeddings_obj
-        return False, "create chromadb failed.\n\n"
+        return False, f"create chromadb {db} failed.\n\n"
     del embeddings_obj, db
 
     return True, storage_directory

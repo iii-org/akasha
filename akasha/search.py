@@ -300,7 +300,7 @@ def get_docs(
         topK = 199
 
     final_docs = []
-    times = _get_threshold_times(db)
+
     if len(retriver_list) == 0:
         docs = rerank(query, db, 0.0, embeddings)
         docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose,
@@ -313,6 +313,7 @@ def get_docs(
 
         if search_type == "auto":
             docs_list = db.get_Documents()
+            times = _get_threshold_times(db)
             docs = _get_relevant_doc_auto(retriver_list, docs_list, query,
                                           topK, times, verbose)
             docs, docs_len, tokens = _merge_docs([docs], topK, language,
@@ -880,13 +881,9 @@ class myBM25Retriever(BaseRetriever):
 
 
 def rerank(query: str, docs: list, threshold: float, embed_name: str):
-    try:
-        import torch, gc
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    except ImportError:
-        raise ImportError(
-            "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-        )
+    import torch, gc
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
     model_name = embed_name.split(":")[1]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -934,13 +931,8 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
 
 
 def rerank_reduce(query, docs, topK):
-    try:
-        import torch, gc
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    except ImportError:
-        raise ImportError(
-            "Can not find package torch or transformers, please install with `pip install akasha-terminal[huggingface] to install.\n\n"
-        )
+    import torch, gc
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

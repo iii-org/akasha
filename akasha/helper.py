@@ -8,7 +8,7 @@ from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
-import os, traceback
+import os, traceback, logging
 import shutil
 from langchain.llms.base import LLM
 import akasha.format as afr
@@ -163,7 +163,7 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
     ]:
         from langchain_community.embeddings import (
             HuggingFaceEmbeddings,
-            #SentenceTransformerEmbeddings,
+            SentenceTransformerEmbeddings,
         )
 
         embeddings = HuggingFaceEmbeddings(model_name=embedding_name)
@@ -513,34 +513,42 @@ def call_model(model: LLM, prompt: str) -> str:
     Returns:
         str: llm response
     """
-
     try:
-        model_type = model._llm_type
-    except:
         try:
-            ### try call openai llm model
-            response = model.invoke(prompt)
+            model_type = model._llm_type
         except:
+            try:
+                ### try call openai llm model
+                response = model.invoke(prompt)
+            except:
+                try:
+                    response = model._call(prompt)
+                except:
+                    response = model._generate(prompt)
+
+        if "openai" in model_type:
+            response = model.invoke(prompt)
+        else:
             try:
                 response = model._call(prompt)
             except:
                 response = model._generate(prompt)
 
-    if "openai" in model_type:
-        response = model.invoke(prompt)
-    else:
-        try:
-            response = model._call(prompt)
-        except:
-            response = model._generate(prompt)
+        if isinstance(response, AIMessage):
+            response = response.content
+            if isinstance(response, dict):
+                response = response.__str__()
+            if isinstance(response, list):
+                response = '\n'.join(response)
 
-    if isinstance(response, AIMessage):
-        response = response.content
-        if isinstance(response, dict):
-            response = response.__str__()
-        if isinstance(response, list):
-            response = '\n'.join(response)
+        if response is None or response == "":
+            raise Exception("LLM response is empty.")
 
+    except Exception as e:
+        trace_text = traceback.format_exc()
+        logging.error(trace_text + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n")
+        raise e
     return response
 
 
