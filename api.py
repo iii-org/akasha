@@ -42,7 +42,7 @@ def loggings():
         os.mkdir("./logs")
 
     # Set up logging
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger()  #__name__
     handler = TimedRotatingFileHandler('logs/app.log',
                                        when="midnight",
                                        interval=1,
@@ -51,14 +51,14 @@ def loggings():
         logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.WARNING)
 
     class StreamToLogger:
         """
         Fake file-like stream object that redirects writes to a logger instance.
         """
 
-        def __init__(self, logger, log_level=logging.INFO):
+        def __init__(self, logger, log_level=logging.WARNING):
             self.logger = logger
             self.log_level = log_level
 
@@ -69,8 +69,8 @@ def loggings():
         def flush(self):
             pass
 
-    sys.stdout = StreamToLogger(logger, logging.INFO)
-    sys.stderr = StreamToLogger(logger, logging.ERROR)
+    #sys.stdout = StreamToLogger(logger, logging.WARNING)
+    #sys.stderr = StreamToLogger(logger, logging.ERROR)
 
 
 loggings()
@@ -113,6 +113,7 @@ class ConsultModelReturn(BaseModel):
     status: str
     logs: Dict[str, Any]
     timestamp: str
+    warnings: List[str] = []
 
 
 class OpenAIKey(BaseModel):
@@ -162,13 +163,22 @@ def regular_consult(user_input: ConsultModel):
                 'status': 'fail',
                 'response': 'load openai config failed.\n\n'
             }
+    try:
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
 
-    qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-        , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
-        ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
+        response = qa.get_response(doc_path=user_input.data_path,
+                                   prompt=user_input.prompt)
 
-    response = qa.get_response(doc_path=user_input.data_path,
-                               prompt=user_input.prompt)
+    except Exception as e:
+        err_message = e.__str__()
+        response = None
+
+    try:
+        ig_files = qa.ignored_files
+    except:
+        ig_files = []
 
     ## get logs
     timesp = ''
@@ -179,17 +189,19 @@ def regular_consult(user_input: ConsultModel):
         if timesp in qa.logs:
             logs = qa.logs[timesp]
 
-    if response == None or response == "":
+    if response == None:
         user_output = ConsultModelReturn(
-            response="Can not get response from get_resposne.\n",
+            response=f"text generation encounter errors, {err_message}\n",
             status="fail",
             logs=logs,
-            timestamp=timesp)
+            timestamp=timesp,
+            warnings=ig_files)
     else:
         user_output = ConsultModelReturn(response=response,
                                          status="success",
                                          logs=logs,
-                                         timestamp=timesp)
+                                         timestamp=timesp,
+                                         warnings=ig_files)
 
     del qa.model_obj
     del qa
@@ -229,12 +241,21 @@ def deep_consult(user_input: ConsultModel):
                 'response': 'load openai config failed.\n\n'
             }
 
+    try:
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
+        response = qa.chain_of_thought(doc_path=user_input.data_path,
+                                       prompt_list=user_input.prompt)
+    except Exception as e:
+        err_message = e.__str__()
+        response = None
 
-    qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-        , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
-        ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
-    response = qa.chain_of_thought(doc_path=user_input.data_path,
-                                   prompt_list=user_input.prompt)
+    try:
+        ig_files = qa.ignored_files
+    except:
+        ig_files = []
+
     ## get logs
     timesp = ''
 
@@ -245,17 +266,19 @@ def deep_consult(user_input: ConsultModel):
         if timesp in qa.logs:
             logs = qa.logs[timesp]
 
-    if response == None or response == [] or response == "":
+    if response == None:
         user_output = ConsultModelReturn(
-            response="Can not get response from chain_of_thought.\n",
+            response=f"text generation encounter errors, {err_message}\n",
             status="fail",
             logs=logs,
-            timestamp=timesp)
+            timestamp=timesp,
+            warnings=ig_files)
     else:
         user_output = ConsultModelReturn(response=response,
                                          status="success",
                                          logs=logs,
-                                         timestamp=timesp)
+                                         timestamp=timesp,
+                                         warnings=ig_files)
 
     del qa.model_obj
     del qa
@@ -280,19 +303,24 @@ def get_summary(user_input: SummaryModel):
                 'status': 'fail',
                 'response': 'load openai config failed.\n\n'
             }
-    sum = summary.Summary(
-        chunk_size=500,
-        chunk_overlap=50,
-        model=user_input.model,
-        verbose=True,
-        system_prompt=user_input.system_prompt,
-        max_doc_len=2000,
-        temperature=0.0,
-    )
+    try:
+        sum = summary.Summary(
+            chunk_size=500,
+            chunk_overlap=50,
+            model=user_input.model,
+            verbose=True,
+            system_prompt=user_input.system_prompt,
+            max_doc_len=2000,
+            temperature=0.0,
+        )
 
-    response = sum.summarize_file(file_path=user_input.file_path,
-                                  summary_type=user_input.summary_type,
-                                  summary_len=user_input.summary_len)
+        response = sum.summarize_file(file_path=user_input.file_path,
+                                      summary_type=user_input.summary_type,
+                                      summary_len=user_input.summary_len)
+    except Exception as e:
+        err_message = e.__str__()
+        response = None
+
     ## get logs
     timesp = ''
     if len(sum.timestamp_list) == 0:
@@ -302,9 +330,9 @@ def get_summary(user_input: SummaryModel):
         if timesp in sum.logs:
             logs = sum.logs[timesp]
 
-    if response == None or response == "":
+    if response == None:
         user_output = ConsultModelReturn(
-            response="Can not get summary from akasha.Summary.\n",
+            response=f"text generation encounter errors, {err_message}\n",
             status="fail",
             logs=logs,
             timestamp=timesp)

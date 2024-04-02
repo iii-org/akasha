@@ -194,6 +194,11 @@ def ask_question(
         with st.spinner(SPINNER_MESSAGE):
             response = requests.post(api_urls["regular_consult"],
                                      json=data).json()
+            if len(response["warnings"]) > 0:
+                for w in response["warnings"]:
+                    st.warning(
+                        f"Encountered issues while reading the file: {w} ")
+
             if response["status"] != "success":
                 api_fail(response["response"])
                 return False
@@ -323,8 +328,13 @@ def ask_question_deep(
         with st.spinner(SPINNER_MESSAGE):
             response = requests.post(api_urls["deep_consult"],
                                      json=data).json()
+
     except Exception as e:
         api_fail(e.__str__())
+
+    if len(response["warnings"]) > 0:
+        for w in response["warnings"]:
+            st.warning(f"Encountered issues while reading the file: {w} ")
 
     if response["status"] != "success":
         api_fail(response["response"])
