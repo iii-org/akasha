@@ -274,6 +274,8 @@ def get_chromadb_from_file(documents: list,
         docsearch = Chroma(persist_directory=storage_directory,
                            embedding_function=embeddings)
         db = dbs(docsearch)
+        docsearch._client._system.stop()
+        docsearch = None
         del docsearch
 
     else:
@@ -566,6 +568,9 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
             ignored_files.append(db_path)
         else:
             dby.merge(db)
+
+        doc_search._client._system.stop()
+        doc_search = None
         del db, doc_search
     progress.close()
 
@@ -589,6 +594,7 @@ def create_single_file_db(file_path: str,
             doc_path = "/".join(file_path.split("/")[:-1])
             file_name = file_path.split("/")[-1]
     except:
+        logging.warning("file path error.\n\n")
         return False, "file path error.\n\n"
 
     ## add '/' at the end of doc_path ##
@@ -601,6 +607,7 @@ def create_single_file_db(file_path: str,
 
     file_doc = _load_file(doc_path + file_name, file_name.split(".")[-1])
     if file_doc == "" or len(file_doc) == 0:
+        logging.warning("file load failed or empty.\n\n")
         return False, "file load failed or empty.\n\n"
 
     md5_hash = helper.get_text_md5("".join(
@@ -619,6 +626,7 @@ def create_single_file_db(file_path: str,
 
     if isinstance(db, str):
         del embeddings_obj
+        logging.warning(f"create chromadb {db} failed.\n\n")
         return False, f"create chromadb {db} failed.\n\n"
     del embeddings_obj, db
 

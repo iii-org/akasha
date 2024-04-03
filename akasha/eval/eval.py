@@ -53,8 +53,12 @@ def _generate_single_choice_question(
         if len(process) != choice_num - 1:
             raise Exception("Answer Format Error")
     except:
-        process = response.split("：")[1:]
-
+        try:
+            process = response.split("：")[1:]
+            if len(process) != choice_num - 1:
+                raise Exception("Answer Format Error")
+        except:
+            process = response.split(":")[1:]
     ### combine the wrong answers and correct answer into a single choice question ###
     for wrong_ans in process:
         if wrong_ans == "":
@@ -221,9 +225,14 @@ class Model_Eval(akasha.atman):
         Returns:
             bool: if can not parse the response, return False
         """
-        process = "".join(response.split("問題：")).split("答案：")
-        if len(process) < 2:
-            False
+        try:
+            process = "".join(response.split("問題：")).split("答案：")
+            if len(process) < 2:
+                raise ("Question Format Error")
+        except:
+            process = "".join(response.split("問題:")).split("答案:")
+            if len(process) < 2:
+                return False
 
         self.question.append("問題： " + process[0])
         if self.question_style == "essay":
@@ -257,9 +266,15 @@ class Model_Eval(akasha.atman):
         Returns:
             bool: if can not parse the response, return False
         """
-        process = response.split("答案：")
-        if len(process) < 2:
-            False
+        try:
+            process = response.split("答案：")
+            if len(process) < 2:
+                raise ("Question Format Error")
+        except:
+            process = response.split("答案:")
+            if len(process) < 2:
+                return False
+
         self.question.append("問題：  " + doc_text.replace("\n", "") + "\n")
         self.answer.append("答案： " + process[-1].replace("\n", ""))
         if self.verbose:
@@ -278,9 +293,15 @@ class Model_Eval(akasha.atman):
         Returns:
             bool: _description_
         """
-        process = response.split("問題：")
-        if len(process) < 2:
-            False
+        try:
+            process = response.split("問題：")
+            if len(process) < 2:
+                raise Exception("Question Format Error")
+        except:
+            process = response.split("問題:")
+            if len(process) < 2:
+                return False
+
         default_ans = "根據文件中的訊息，無法回答此問題。"
 
         self.question.append("問題： " + process[-1])
