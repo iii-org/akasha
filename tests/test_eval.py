@@ -10,6 +10,7 @@ def base_line():
         chunk_size=500,
         max_doc_len=1234,
         temperature=0.15,
+        keep_logs=True,
     )
     doc_path = "./docs/mic/"
     return eva, doc_path

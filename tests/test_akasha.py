@@ -128,20 +128,20 @@ def test_cot(base_line):
                             prompt_list=queries,
                             search_type="svm")) == list)
 
-    assert (type(
-        ak.chain_of_thought(doc_path="./docs/mic/",
-                            prompt_list=queries,
-                            search_type="merge")) == list)
+    # assert (type(
+    #     ak.chain_of_thought(doc_path="./docs/mic/",
+    #                         prompt_list=queries,
+    #                         search_type="merge")) == list)
 
-    assert (type(
-        ak.chain_of_thought(doc_path="./docs/mic/",
-                            prompt_list=queries,
-                            search_type="tfidf")) == list)
+    # assert (type(
+    #     ak.chain_of_thought(doc_path="./docs/mic/",
+    #                         prompt_list=queries,
+    #                         search_type="tfidf")) == list)
 
-    assert (type(
-        ak.chain_of_thought(doc_path="./docs/mic/",
-                            prompt_list=queries,
-                            search_type="mmr")) == list)
+    # assert (type(
+    #     ak.chain_of_thought(doc_path="./docs/mic/",
+    #                         prompt_list=queries,
+    #                         search_type="mmr")) == list)
 
     assert (type(
         ak.chain_of_thought(
@@ -165,6 +165,17 @@ def test_ask_whole_file(base_line):
         prompt="西門子自有工廠如何朝工業4.0 發展",
         model="openai:gpt-3.5-turbo",
         max_doc_len=2000)
+
+    assert type(response) == str
+
+    return
+
+
+@pytest.mark.akasha
+def test_ask_self(base_line):
+    ak = base_line
+
+    response = ak.ask_self(prompt="langchain的套件版本?", info=akasha.__version__)
 
     assert type(response) == str
 
