@@ -88,7 +88,7 @@ def _new_dataset(username, all_users):
 
     st.subheader('2. File List', divider='grey')
     uploaded_files = st.file_uploader('Upload Data',
-                                      type=['txt', 'pdf', 'docx'],
+                                      type=['txt', 'pdf', 'docx', 'md', 'csv'],
                                       accept_multiple_files=True,
                                       key='upload-data-create')
 
@@ -163,10 +163,11 @@ def _update_dataset(DATASETS, username, all_users):
             st.subheader('2. File List', divider='grey')
 
             # upload new file(s)
-            uploaded_files = st.file_uploader('Upload Data',
-                                              type=['txt', 'pdf', 'docx'],
-                                              accept_multiple_files=True,
-                                              key='upload-data-edit')
+            uploaded_files = st.file_uploader(
+                'Upload Data',
+                type=['txt', 'pdf', 'docx', 'md', 'csv'],
+                accept_multiple_files=True,
+                key='upload-data-edit')
 
             # Existed Files
             ## remove file list

@@ -285,8 +285,8 @@ def _summary(DATASETS, LANGUAGE_MODELS, username):
         tmp_file_name = _select_dataset_file(DATASETS, username)
 
         if not st.session_state.sum_dataset_on:
-            uploaded_file = st.file_uploader("Upload a file",
-                                             type=["txt", "pdf", "docx"])
+            uploaded_file = st.file_uploader(
+                "Upload a file", type=["txt", "pdf", "docx", "md", "csv"])
 
             if uploaded_file is not None:
                 tmp_file_name = save_tmp_file(uploaded_file)
