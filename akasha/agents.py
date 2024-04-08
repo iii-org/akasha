@@ -201,7 +201,7 @@ class agent:
                         self.__dict__[key] = value
 
             else:
-                print(f"argument {key} not exist")
+                logging.warning(f"argument {key} not exist")
 
         return
 
