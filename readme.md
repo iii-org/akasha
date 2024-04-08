@@ -69,7 +69,7 @@ MODEL=./model
 CONFIG=./config 
 DOCS=./docs 
 IMAGE_NAME=akasha_dev_ui
-IMAGE_VERSION=0.2
+IMAGE_VERSION=0.6
 DEFAULT_OPENAI_API_KEY={your openAI key}
 ```
 
@@ -83,7 +83,7 @@ MODEL=./model
 CONFIG=./config 
 DOCS=./docs 
 IMAGE_NAME=akasha_dev_ui
-IMAGE_VERSION=0.2
+IMAGE_VERSION=0.6
 DEFAULT_AZURE_API_KEY={your Azure key}
 DEFAULT_AZURE_API_BASE={your Azure base url}
 ```
