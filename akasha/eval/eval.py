@@ -98,6 +98,7 @@ class Model_Eval(akasha.atman):
         prompt_format_type: str = "gpt",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
+        keep_logs: bool = False,
         question_type: str = "fact",
         question_style: str = "essay",
         use_chroma: bool = False,
@@ -125,6 +126,7 @@ class Model_Eval(akasha.atman):
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **question_style (str, optional)**: the style of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **question_type (str, optional)**: the type of question you want to generate, "fact", "summary", "irrelevant", "compared". Defaults to "fact".\n
             **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
@@ -142,6 +144,7 @@ class Model_Eval(akasha.atman):
             system_prompt,
             max_doc_len,
             temperature,
+            keep_logs,
         )
         ### set argruments ###
         self.doc_path = ""
@@ -206,10 +209,11 @@ class Model_Eval(akasha.atman):
                                 self.answer[w].replace("\n", "") + "\n")
 
         print("question set saved in ", output_file_path, "\n\n")
+        if self.keep_logs == True:
+            self.logs[timestamp]["question"] = self.question
+            self.logs[timestamp]["answer"] = self.answer
+            self.logs[timestamp]["questionset_path"] = output_file_path
 
-        self.logs[timestamp]["question"] = self.question
-        self.logs[timestamp]["answer"] = self.answer
-        self.logs[timestamp]["questionset_path"] = output_file_path
         return
 
     def _process_fact(self, response: str, doc_text: str,
@@ -356,7 +360,6 @@ class Model_Eval(akasha.atman):
         """
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
         doc_range = 1
         cate_threshold = 3
@@ -366,12 +369,14 @@ class Model_Eval(akasha.atman):
         table = {}
 
         ## add logs ##
-        self._add_basic_log(timestamp, "auto_create_questionset")
-        self.logs[timestamp]["doc_range"] = doc_range
-        self.logs[timestamp]["question_num"] = self.question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["choice_num"] = choice_num
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "auto_create_questionset")
+            self.logs[timestamp]["doc_range"] = doc_range
+            self.logs[timestamp]["question_num"] = self.question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["choice_num"] = choice_num
 
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
@@ -483,7 +488,8 @@ class Model_Eval(akasha.atman):
             params["doc_range"] = doc_range
             akasha.aiido_upload(self.record_exp, params, metrics, table)
 
-        self._add_result_log(timestamp, end_time - start_time)
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
 
         self._save_questionset(timestamp, output_file_path)
 
@@ -728,7 +734,7 @@ class Model_Eval(akasha.atman):
 
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
+
         start_time = time.time()
         doc_range = (
             1999 + self.chunk_size
@@ -738,13 +744,14 @@ class Model_Eval(akasha.atman):
         self.question, self.answer, self.docs = [], [], []
         table = {}
         ## add logs ##
-
-        self._add_basic_log(timestamp, "auto_create_questionset")
-        self.logs[timestamp]["doc_range"] = doc_range
-        self.logs[timestamp]["question_num"] = question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["choice_num"] = choice_num
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "auto_create_questionset")
+            self.logs[timestamp]["doc_range"] = doc_range
+            self.logs[timestamp]["question_num"] = question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["choice_num"] = choice_num
 
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
@@ -871,10 +878,10 @@ class Model_Eval(akasha.atman):
 
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
         self.doc_tokens, self.doc_length = 0, 0
         self.question, self.answer, self.docs = [], [], []
+        search_dict = {}
         if self.question_style.lower() == "essay":
             self.score = {"bert": [], "rouge": [], "llm_score": []}
         else:
@@ -887,17 +894,19 @@ class Model_Eval(akasha.atman):
         progress = tqdm(total=self.question,
                         desc=f"Run Eval({self.question_style})")
         ## add logs ##
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "auto_evaluation")
+            self.logs[timestamp]["questionset_path"] = questionset_file
+            self.logs[timestamp]["question_num"] = self.question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["search_type"] = self.search_type_str
 
-        self._add_basic_log(timestamp, "auto_evaluation")
-        self.logs[timestamp]["questionset_path"] = questionset_file
-        self.logs[timestamp]["question_num"] = self.question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["search_type"] = self.search_type_str
         ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
         retrivers_list = akasha.search.get_retrivers(
             self.db, self.embeddings_obj, self.use_rerank, self.threshold,
-            self.search_type, self.logs[timestamp])
+            self.search_type, search_dict)
 
         for i in range(self.question_num):
             progress.update(1)
@@ -916,8 +925,11 @@ class Model_Eval(akasha.atman):
         self.docs = total_docs
         ### record logs ###
         end_time = time.time()
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["response"] = self.response
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["response"] = self.response
+            for k, v in search_dict.items():
+                self.logs[timestamp][k] = v
 
         if self.question_style.lower() == "essay":
             avg_bert = round(
@@ -926,9 +938,10 @@ class Model_Eval(akasha.atman):
                 sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(
                 sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3)
-            self.logs[timestamp]["bert"] = self.score["bert"]
-            self.logs[timestamp]["rouge"] = self.score["rouge"]
-            self.logs[timestamp]["llm_score"] = self.score["llm_score"]
+            if self.keep_logs == True:
+                self.logs[timestamp]["bert"] = self.score["bert"]
+                self.logs[timestamp]["rouge"] = self.score["rouge"]
+                self.logs[timestamp]["llm_score"] = self.score["llm_score"]
             if self.record_exp != "":
                 params = akasha.format.handle_params(
                     self.model,
@@ -950,8 +963,10 @@ class Model_Eval(akasha.atman):
             return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
 
         else:
-            self.logs[timestamp]["correct_rate"] = (
-                self.score["correct_count"] / self.question_num)
+            correct_rate = (self.score["correct_count"] / self.question_num)
+            if self.keep_logs == True:
+                self.logs[timestamp]["correct_rate"] = correct_rate
+
             if self.record_exp != "":
                 params = akasha.format.handle_params(
                     self.model,
@@ -969,7 +984,7 @@ class Model_Eval(akasha.atman):
                                            self.question_num)
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
 
-            return self.logs[timestamp]["correct_rate"], self.doc_tokens
+            return correct_rate, self.doc_tokens
 
     def optimum_combination(
         self,
@@ -1161,15 +1176,16 @@ class Model_Eval(akasha.atman):
 
         ## add logs ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
-        self._add_basic_log(timestamp, "related_questionset")
-        self.logs[timestamp]["doc_range"] = doc_range
-        self.logs[timestamp]["question_num"] = question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["choice_num"] = choice_num
-        self.logs[timestamp]["topic"] = topic
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "related_questionset")
+            self.logs[timestamp]["doc_range"] = doc_range
+            self.logs[timestamp]["question_num"] = question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["choice_num"] = choice_num
+            self.logs[timestamp]["topic"] = topic
 
         ## search related documents ##
         self.docs, docs_len, docs_token = akasha.search.get_docs(

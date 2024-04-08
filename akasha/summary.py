@@ -23,6 +23,7 @@ class Summary(akasha.atman):
         system_prompt: str = "",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
+        keep_logs: bool = False,
         auto_translate: bool = False,
         prompt_format_type: str = "gpt",
     ):
@@ -42,6 +43,7 @@ class Summary(akasha.atman):
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max doc size of llm document input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **auto_translate (bool, optional)**: auto translate the summary to target language since LLM may generate different language. 
             Defaults to False.\n
             **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
@@ -60,6 +62,7 @@ class Summary(akasha.atman):
         self.temperature = temperature
         self.auto_translate = auto_translate
         self.prompt_format_type = prompt_format_type
+        self.keep_logs = keep_logs
         ### set variables ###
         self.file_name = ""
         self.summary_type = ""
@@ -83,6 +86,9 @@ class Summary(akasha.atman):
             time (float): the spent time of the method
             response_list (list): the response list of the method
         """
+        if not self.keep_logs:
+            return
+
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
         self.logs[timestamp]["fn_type"] = fn_type
@@ -272,7 +278,6 @@ class Summary(akasha.atman):
             return ""
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
 
         # Split the documents into sentences
         documents = akasha.db._load_file(self.file_name,
@@ -317,8 +322,10 @@ class Summary(akasha.atman):
             self.summary = self.summary.replace("。", "。\n\n")
 
         end_time = time.time()
-        self._add_log("summarize_file", timestamp, end_time - start_time,
-                      response_list)
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_log("summarize_file", timestamp, end_time - start_time,
+                          response_list)
         print(self.summary, "\n\n\n\n")
 
         if self.record_exp != "":
@@ -376,7 +383,6 @@ class Summary(akasha.atman):
             return ""
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
 
         # Split the documents into sentences
 
@@ -422,8 +428,11 @@ class Summary(akasha.atman):
         print(self.summary, "\n\n\n\n")
 
         end_time = time.time()
-        self._add_log("summarize_file", timestamp, end_time - start_time,
-                      response_list)
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_log("summarize_file", timestamp, end_time - start_time,
+                          response_list)
+
         if self.record_exp != "":
             params = akasha.format.handle_params(self.model, "",
                                                  self.chunk_size, "", -1, -1.0,

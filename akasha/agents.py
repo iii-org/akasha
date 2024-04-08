@@ -129,6 +129,7 @@ class agent:
         verbose: bool = False,
         language: str = "ch",
         temperature: float = 0.0,
+        keep_logs: bool = False,
     ):
         """initials of agent class
 
@@ -138,6 +139,7 @@ class agent:
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
         """
 
         self.verbose = verbose
@@ -145,6 +147,7 @@ class agent:
         self.temperature = temperature
         self.timestamp_list = []
         self.logs = {}
+        self.keep_logs = keep_logs
         self.agent_type = _get_agent_type(agent_type)
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature)
@@ -209,6 +212,8 @@ class agent:
             timestamp (str): timestamp of this run
             fn_type (str): function type of this run
         """
+        if self.keep_logs == False:
+            return
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
         self.logs[timestamp]["fn_type"] = fn_type
@@ -224,6 +229,10 @@ class agent:
             timestamp (str): timestamp of this run
             time (float): spent time of this run
         """
+
+        if self.keep_logs == False:
+            return
+
         tool_list = []
         for tool in self.tools:
             tool_list.append(tool.name)
@@ -320,8 +329,9 @@ class agent:
             self.new_agent_flag = False
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
-        self._add_basic_log(timestamp, "agent")
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "agent")
 
         # ask question #
         try:

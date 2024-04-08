@@ -190,6 +190,7 @@ class atman:
         system_prompt: str = "",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
+        keep_logs: bool = False,
     ):
         """initials of atman class
 
@@ -211,6 +212,7 @@ class atman:
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 1500.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
         """
 
         self.chunk_size = chunk_size
@@ -225,7 +227,7 @@ class atman:
         self.system_prompt = system_prompt
         self.max_doc_len = max_doc_len
         self.temperature = temperature
-
+        self.keep_logs = keep_logs
         self.timestamp_list = []
         if topK != -1:
             warnings.warn(
@@ -283,10 +285,9 @@ class atman:
         """
         if self.db is None:
             info = "document path not exist or don't have any file.\n"
-            print(info)
-            return False
-        else:
-            return True
+            raise Exception(info)
+
+        return True
 
     def _add_basic_log(self, timestamp: str, fn_type: str):
         """add pre-process log to self.logs
@@ -295,6 +296,9 @@ class atman:
             timestamp (str): timestamp of this run
             fn_type (str): function type of this run
         """
+        if self.keep_logs == False:
+            return
+
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
         self.logs[timestamp]["fn_type"] = fn_type
@@ -316,6 +320,10 @@ class atman:
             timestamp (str): timestamp of this run
             time (float): spent time of this run
         """
+
+        if self.keep_logs == False:
+            return
+
         self.logs[timestamp]["time"] = time
         self.logs[timestamp]["doc_length"] = self.doc_length
         self.logs[timestamp]["doc_tokens"] = self.doc_tokens
@@ -459,6 +467,7 @@ class Doc_QA(atman):
         prompt_format_type: str = "gpt",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
+        keep_logs: bool = False,
         compression: bool = False,
         use_chroma: bool = False,
         use_rerank: bool = False,
@@ -480,25 +489,16 @@ class Doc_QA(atman):
             prompt_format_type (str, optional): the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
             max_doc_len (int, optional): max total length of selected documents. Defaults to 1500.
             temperature (float, optional): temperature for language model. Defaults to 0.0.
+            keep_logs (bool, optional): record logs or not. Defaults to False.
             compression (bool, optional): compress the selected documents or not. Defaults to False.
             use_chroma (bool, optional): use chroma db name instead of documents path to load data or not. Defaults to False.
             use_rerank (bool, optional): use rerank model to re-rank the selected documents or not. Defaults to False.
             ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
         """
 
-        super().__init__(
-            chunk_size,
-            model,
-            verbose,
-            topK,
-            threshold,
-            language,
-            search_type,
-            record_exp,
-            system_prompt,
-            max_doc_len,
-            temperature,
-        )
+        super().__init__(chunk_size, model, verbose, topK, threshold, language,
+                         search_type, record_exp, system_prompt, max_doc_len,
+                         temperature, keep_logs)
         ### set argruments ###
         self.doc_path = ""
         self.compression = compression
@@ -543,7 +543,7 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         self.doc_path = doc_path
         self.prompt = prompt
-
+        search_dict = {}
         if self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
@@ -552,22 +552,20 @@ class Doc_QA(atman):
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
-        if not self._check_db():
-            return ""
-
-        self._add_basic_log(timestamp, "get_response")
-        self.logs[timestamp]["search_type"] = self.search_type_str
-        self.logs[timestamp]["embeddings"] = self.embeddings
-        self.logs[timestamp]["compression"] = self.compression
+        self._check_db()
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "get_response")
+            self.logs[timestamp]["search_type"] = self.search_type_str
+            self.logs[timestamp]["embeddings"] = self.embeddings
+            self.logs[timestamp]["compression"] = self.compression
 
         ### start to get response ###
         retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
                                               self.use_rerank, self.threshold,
-                                              self.search_type,
-                                              self.logs[timestamp])
+                                              self.search_type, search_dict)
         self.docs, self.doc_length, self.doc_tokens = search.get_docs(
             self.db,
             self.embeddings_obj,
@@ -595,9 +593,14 @@ class Doc_QA(atman):
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["prompt"] = self.prompt
-        self.logs[timestamp]["response"] = self.response
+
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["prompt"] = self.prompt
+            self.logs[timestamp]["response"] = self.response
+            for k, v in search_dict.items():
+                self.logs[timestamp][k] = v
+
         if self.record_exp != "":
             params = format.handle_params(
                 self.model,
@@ -643,6 +646,7 @@ class Doc_QA(atman):
             self.system_prompt = prompts.default_doc_ask_prompt()
         self.doc_path = doc_path
         table = {}
+        search_dict = {}
         if self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
@@ -651,16 +655,15 @@ class Doc_QA(atman):
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
-        if not self._check_db():
-            return []
-
-        self._add_basic_log(timestamp, "chain_of_thought")
-        self.logs[timestamp]["search_type"] = self.search_type_str
-        self.logs[timestamp]["embeddings"] = self.embeddings
-        self.logs[timestamp]["compression"] = self.compression
+        self._check_db()
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "chain_of_thought")
+            self.logs[timestamp]["search_type"] = self.search_type_str
+            self.logs[timestamp]["embeddings"] = self.embeddings
+            self.logs[timestamp]["compression"] = self.compression
 
         self.doc_tokens = 0
         self.doc_length = 0
@@ -670,8 +673,7 @@ class Doc_QA(atman):
         total_docs = []
         retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
                                               self.use_rerank, self.threshold,
-                                              self.search_type,
-                                              self.logs[timestamp])
+                                              self.search_type, search_dict)
 
         def recursive_get_response(prompt_list):
             pre_result = []
@@ -719,9 +721,12 @@ class Doc_QA(atman):
         recursive_get_response(prompt_list)
         end_time = time.time()
         self.docs = total_docs
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["prompt"] = self.prompt
-        self.logs[timestamp]["response"] = self.response
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["prompt"] = self.prompt
+            self.logs[timestamp]["response"] = self.response
+            for k, v in search_dict.items():
+                self.logs[timestamp][k] = v
 
         if self.record_exp != "":
             params = format.handle_params(
@@ -762,11 +767,11 @@ class Doc_QA(atman):
         self.docs = akasha.db._load_file(file_path, file_path.split('.')[-1])
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
-
-        self._add_basic_log(timestamp, "ask_whole_file")
-        self.logs[timestamp]["embeddings"] = "ask_whole_file"
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "ask_whole_file")
+            self.logs[timestamp]["embeddings"] = "ask_whole_file"
 
         ### start to get response ###
         cur_documents = '\n'.join(
@@ -786,9 +791,11 @@ class Doc_QA(atman):
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["prompt"] = self.prompt
-        self.logs[timestamp]["response"] = self.response
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["prompt"] = self.prompt
+            self.logs[timestamp]["response"] = self.response
+
         if self.record_exp != "":
             params = format.handle_params(
                 self.model,
@@ -831,12 +838,14 @@ class Doc_QA(atman):
         else:
             self.docs = [Document(page_content=i) for i in info]
 
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
 
-        self._add_basic_log(timestamp, "ask_self")
-        self.logs[timestamp]["embeddings"] = "ask_self"
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "ask_self")
+            self.logs[timestamp]["embeddings"] = "ask_self"
 
         ### start to get response ###
         cur_documents = '\n'.join(
@@ -853,9 +862,11 @@ class Doc_QA(atman):
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
 
         end_time = time.time()
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["prompt"] = self.prompt
-        self.logs[timestamp]["response"] = self.response
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["prompt"] = self.prompt
+            self.logs[timestamp]["response"] = self.response
+
         if self.record_exp != "":
             params = format.handle_params(
                 self.model,
@@ -899,7 +910,6 @@ class Doc_QA(atman):
         original_sys_prompt = self.system_prompt
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
         ### start to get response ###
 
@@ -959,13 +969,16 @@ class Doc_QA(atman):
             doc_path, prompt='\n'.join(self.intermediate_ans) + "\n" + prompt)
 
         end_time = time.time()
-        self._add_basic_log(timestamp, "ask_agent")
-        self.logs[timestamp]["search_type"] = self.search_type_str
-        self.logs[timestamp]["embeddings"] = self.embeddings
-        self.logs[timestamp]["compression"] = self.compression
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["prompt"] = prompt
-        self.logs[timestamp]["response"] = self.response
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "ask_agent")
+            self.logs[timestamp]["search_type"] = self.search_type_str
+            self.logs[timestamp]["embeddings"] = self.embeddings
+            self.logs[timestamp]["compression"] = self.compression
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["prompt"] = prompt
+            self.logs[timestamp]["response"] = self.response
+
         if self.record_exp != "":
             params = format.handle_params(
                 self.model,

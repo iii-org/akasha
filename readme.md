@@ -604,12 +604,12 @@ LPWAN的頻寬相對較低（0.3 KBps – 50KBps），延遲較高（秒 - 分�
 
 
 ## Save Logs
-Each time you run any function from akasha, it will save logs that record the parameters of this run and the results. Each run will have a timestamp, you can use {obj_name}.timestamp_list to check them, and use it to find the log of the run you want see.
+In Doc_QA, Eval and Summary, if you set ***keep_logs*** to True, each time you run any function from akasha, it will save logs that record the parameters of this run and the results. Each run will have a timestamp, you can use {obj_name}.timestamp_list to check them, and use it to find the log of the run you want see.
 
 You can also save logs into .txt file or .json file
 
 ```python
-qa = akasha.Doc_QA(verbose=False, search_type="merge", max_doc_len=1500,model="llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf")
+qa = akasha.Doc_QA(verbose=False, search_type="merge", max_doc_len=1500, keep_logs=True)
 query1 = "五軸是什麼"
 qa.get_response(doc_path="./doc/mic/", prompt = query1)
 qa.get_response(doc_path="./doc/mic/", prompt = query1)
