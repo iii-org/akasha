@@ -169,7 +169,8 @@ def regular_consult(user_input: ConsultModel):
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
 
         response = qa.get_response(doc_path=user_input.data_path,
-                                   prompt=user_input.prompt)
+                                   prompt=user_input.prompt,
+                                   keep_logs=True)
 
     except Exception as e:
         err_message = e.__str__()
@@ -246,7 +247,8 @@ def deep_consult(user_input: ConsultModel):
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
         response = qa.chain_of_thought(doc_path=user_input.data_path,
-                                       prompt_list=user_input.prompt)
+                                       prompt_list=user_input.prompt,
+                                       keep_logs=True)
     except Exception as e:
         err_message = e.__str__()
         response = None
@@ -316,7 +318,8 @@ def get_summary(user_input: SummaryModel):
 
         response = sum.summarize_file(file_path=user_input.file_path,
                                       summary_type=user_input.summary_type,
-                                      summary_len=user_input.summary_len)
+                                      summary_len=user_input.summary_len,
+                                      keep_logs=True)
     except Exception as e:
         err_message = e.__str__()
         response = None
