@@ -300,7 +300,7 @@ def get_docs(
         topK = 199
 
     final_docs = []
-    times = _get_threshold_times(db)
+
     if len(retriver_list) == 0:
         docs = rerank(query, db, 0.0, embeddings)
         docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose,
@@ -313,6 +313,7 @@ def get_docs(
 
         if search_type == "auto":
             docs_list = db.get_Documents()
+            times = _get_threshold_times(db)
             docs = _get_relevant_doc_auto(retriver_list, docs_list, query,
                                           topK, times, verbose)
             docs, docs_len, tokens = _merge_docs([docs], topK, language,

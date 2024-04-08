@@ -91,16 +91,10 @@ def QA(doc_path="./docs/mic/"):
         record_exp="",
         search_type=test_search,
         max_doc_len=1500,
-        system_prompt="請你在回答前面加上喵",
+        system_prompt="請用中文回答",
     )
 
     print(qa.response)
-
-    ### you can use qa.logs to get the log of each run, logs is a dictonary, for each run, the key is timestamp and the log of that run is the value.
-    # use qa.timestamp_list to get the timestamp of each run, so you can get the log of each run by using it as key.
-    # timestamp_list = qa.timestamp_list
-    # print(qa.logs[timestamp_list[-1]])
-    # print(qa.logs[timestamp_list[-1]]['dd'])   # the variable you add to log in custom search function
 
     response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list=query2)
     print(response_list)
@@ -122,9 +116,26 @@ def QA(doc_path="./docs/mic/"):
     return qa
 
 
+### logs ###
+def QA_log(doc_path="./docs/mic/"):
+    # set keep_logs=True to keep logs
+    qa = akasha.Doc_QA(verbose=False, search_type="svm", keep_logs=True)
+
+    qa.get_response(
+        doc_path=doc_path,
+        prompt=query1,
+        chunk_size=500,
+        max_doc_len=1500,
+    )
+    print(qa.response)
+
+    ### you can use qa.logs to get the log of each run, logs is a dictonary, for each run, the key is timestamp and the log of that run is the value.
+    # use qa.timestamp_list to get the timestamp of each run, so you can get the log of each run by using it as key.
+    timestamps = qa.timestamp_list
+    print(qa.logs[timestamps[-1]])
+
+
 ### EVAL ###
-
-
 ### remember the question_style must match the q_file's type
 def EVAL(doc_path: str = "./docs/mic/"):
     eva = eval.Model_Eval(question_style="single_choice",
@@ -140,7 +151,6 @@ def EVAL(doc_path: str = "./docs/mic/"):
     )
     # b,c = eva.auto_create_questionset(doc_path=doc_path, question_num=2,  question_type="essay")
 
-    # qs_path = eva.logs[eva.timestamp_list[-1]]['questionset_path']
     print(
         eva.auto_evaluation(
             questionset_file="questionset/mic_single_choice.txt",

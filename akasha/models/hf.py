@@ -7,7 +7,7 @@ from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from transformers import pipeline
 import torch
 import numpy
-import warnings, os
+import warnings, os, logging
 from akasha.models.llama2 import Llama2, TaiwanLLaMaGPTQ
 import requests
 
@@ -239,8 +239,8 @@ class remote_model(LLM):
                                      json=data,
                                      headers=headers).json()
         except Exception as e:
-            print("call remote model failed\n\n", e.__str__())
-            return None
+            logging.error("call remote model failed\n\n", e.__str__())
+            raise e
         return response["generated_text"]
 
 

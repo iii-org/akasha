@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.23](https://img.shields.io/badge/pypi%20package-0.8.23-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.24](https://img.shields.io/badge/pypi%20package-0.8.23-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -26,8 +26,8 @@ We recommend using Python 3.9 to run our akasha package. You can use Anaconda to
 
 # create environment
 
-conda create --name py3-8 python=3.8
-activate py3-8
+conda create --name py3-9 python=3.9
+activate py3-9
 
 # install akasha
 pip install akasha-terminal
@@ -83,7 +83,7 @@ AZURE_API_VERSION=2023-05-15
 And now we can run akasha in python 
 
 ```python
-#PYTHON3.8
+#PYTHON3.9
 import akasha
 ak = akasha.Doc_QA(model="openai:gpt-3.5-turbo")
 response = ak.get_response(dir_path, prompt)
@@ -122,7 +122,7 @@ export HUGGINGFACEHUB_API_TOKEN="your api key"
 ```
 
 ```python
-#PYTHON3.8
+#PYTHON3.9
 import akasha
 ak = akasha.Doc_QA()
 response = ak.get_response(dir_path, prompt, model="hf:meta-llama/Llama-2-7b-chat-hf")
@@ -604,12 +604,12 @@ LPWAN的頻寬相對較低（0.3 KBps – 50KBps），延遲較高（秒 - 分�
 
 
 ## Save Logs
-Each time you run any function from akasha, it will save logs that record the parameters of this run and the results. Each run will have a timestamp, you can use {obj_name}.timestamp_list to check them, and use it to find the log of the run you want see.
+In Doc_QA, Eval and Summary, if you set ***keep_logs*** to True, each time you run any function from akasha, it will save logs that record the parameters of this run and the results. Each run will have a timestamp, you can use {obj_name}.timestamp_list to check them, and use it to find the log of the run you want see.
 
 You can also save logs into .txt file or .json file
 
 ```python
-qa = akasha.Doc_QA(verbose=False, search_type="merge", max_doc_len=1500,model="llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf")
+qa = akasha.Doc_QA(verbose=False, search_type="merge", max_doc_len=1500, keep_logs=True)
 query1 = "五軸是什麼"
 qa.get_response(doc_path="./doc/mic/", prompt = query1)
 qa.get_response(doc_path="./doc/mic/", prompt = query1)

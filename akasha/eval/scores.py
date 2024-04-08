@@ -86,11 +86,7 @@ def get_llm_score(candidate_str: str,
                   round_digit: int = 3):
     prompt = prompts.format_llm_score(candidate_str, reference_str)
     model = akasha.helper.handle_model(model, False, 0.0)
-    try:
-        response = model.predict(prompt)
-
-    except:
-        response = model._call(prompt)
+    response = akasha.helper.call_model(model, prompt)
 
     # find the first float number in the response string and turn to float
     try:

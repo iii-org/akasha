@@ -4,7 +4,7 @@ from tqdm import tqdm
 import akasha
 import akasha.eval as eval
 import akasha.db
-import os, traceback
+import os, traceback, logging
 import numpy as np
 import torch, gc
 from langchain.schema import Document
@@ -53,8 +53,12 @@ def _generate_single_choice_question(
         if len(process) != choice_num - 1:
             raise Exception("Answer Format Error")
     except:
-        process = response.split("：")[1:]
-
+        try:
+            process = response.split("：")[1:]
+            if len(process) != choice_num - 1:
+                raise Exception("Answer Format Error")
+        except:
+            process = response.split(":")[1:]
     ### combine the wrong answers and correct answer into a single choice question ###
     for wrong_ans in process:
         if wrong_ans == "":
@@ -94,6 +98,7 @@ class Model_Eval(akasha.atman):
         prompt_format_type: str = "gpt",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
+        keep_logs: bool = False,
         question_type: str = "fact",
         question_style: str = "essay",
         use_chroma: bool = False,
@@ -121,6 +126,7 @@ class Model_Eval(akasha.atman):
                 in searching relevant documents. Defaults to "".\n
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **question_style (str, optional)**: the style of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **question_type (str, optional)**: the type of question you want to generate, "fact", "summary", "irrelevant", "compared". Defaults to "fact".\n
             **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
@@ -138,6 +144,7 @@ class Model_Eval(akasha.atman):
             system_prompt,
             max_doc_len,
             temperature,
+            keep_logs,
         )
         ### set argruments ###
         self.doc_path = ""
@@ -162,6 +169,7 @@ class Model_Eval(akasha.atman):
         self.answer = []
         self.response = []
         self.score = {}
+        self.ignored_files = []
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
         self.use_rerank = use_rerank
@@ -201,10 +209,11 @@ class Model_Eval(akasha.atman):
                                 self.answer[w].replace("\n", "") + "\n")
 
         print("question set saved in ", output_file_path, "\n\n")
+        if self.keep_logs == True:
+            self.logs[timestamp]["question"] = self.question
+            self.logs[timestamp]["answer"] = self.answer
+            self.logs[timestamp]["questionset_path"] = output_file_path
 
-        self.logs[timestamp]["question"] = self.question
-        self.logs[timestamp]["answer"] = self.answer
-        self.logs[timestamp]["questionset_path"] = output_file_path
         return
 
     def _process_fact(self, response: str, doc_text: str,
@@ -220,9 +229,14 @@ class Model_Eval(akasha.atman):
         Returns:
             bool: if can not parse the response, return False
         """
-        process = "".join(response.split("問題：")).split("答案：")
-        if len(process) < 2:
-            False
+        try:
+            process = "".join(response.split("問題：")).split("答案：")
+            if len(process) < 2:
+                raise ("Question Format Error")
+        except:
+            process = "".join(response.split("問題:")).split("答案:")
+            if len(process) < 2:
+                return False
 
         self.question.append("問題： " + process[0])
         if self.question_style == "essay":
@@ -256,9 +270,15 @@ class Model_Eval(akasha.atman):
         Returns:
             bool: if can not parse the response, return False
         """
-        process = response.split("答案：")
-        if len(process) < 2:
-            False
+        try:
+            process = response.split("答案：")
+            if len(process) < 2:
+                raise ("Question Format Error")
+        except:
+            process = response.split("答案:")
+            if len(process) < 2:
+                return False
+
         self.question.append("問題：  " + doc_text.replace("\n", "") + "\n")
         self.answer.append("答案： " + process[-1].replace("\n", ""))
         if self.verbose:
@@ -277,9 +297,15 @@ class Model_Eval(akasha.atman):
         Returns:
             bool: _description_
         """
-        process = response.split("問題：")
-        if len(process) < 2:
-            False
+        try:
+            process = response.split("問題：")
+            if len(process) < 2:
+                raise Exception("Question Format Error")
+        except:
+            process = response.split("問題:")
+            if len(process) < 2:
+                return False
+
         default_ans = "根據文件中的訊息，無法回答此問題。"
 
         self.question.append("問題： " + process[-1])
@@ -334,7 +360,6 @@ class Model_Eval(akasha.atman):
         """
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
         doc_range = 1
         cate_threshold = 3
@@ -344,12 +369,14 @@ class Model_Eval(akasha.atman):
         table = {}
 
         ## add logs ##
-        self._add_basic_log(timestamp, "auto_create_questionset")
-        self.logs[timestamp]["doc_range"] = doc_range
-        self.logs[timestamp]["question_num"] = self.question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["choice_num"] = choice_num
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "auto_create_questionset")
+            self.logs[timestamp]["doc_range"] = doc_range
+            self.logs[timestamp]["question_num"] = self.question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["choice_num"] = choice_num
 
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
@@ -410,7 +437,7 @@ class Model_Eval(akasha.atman):
 
                 if not self._process_response(response, used_texts,
                                               choice_num):
-                    raise Exception("Question Format Error")
+                    raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
                     self.language, docs)
@@ -422,15 +449,11 @@ class Model_Eval(akasha.atman):
                     regenerate_limit -= 1
                     i -= 1
                     progress.update(-1)
-                    print(
-                        "Question Format Error while generating questions. Regenerate\n"
-                    )
+                    logging.warning(f"{e}.\n\n Regenerate\n")
                     continue
                 else:
-                    print(
-                        "Question Format Error while generating questions. Stop\n"
-                    )
-                    break
+                    logging.error(f"{e}.\n\n Stop\n")
+                    raise e
 
             # remove the category from category dictionary
             del category[topic]
@@ -465,7 +488,8 @@ class Model_Eval(akasha.atman):
             params["doc_range"] = doc_range
             akasha.aiido_upload(self.record_exp, params, metrics, table)
 
-        self._add_result_log(timestamp, end_time - start_time)
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
 
         self._save_questionset(timestamp, output_file_path)
 
@@ -518,9 +542,10 @@ class Model_Eval(akasha.atman):
             self.doc_tokens += docs_token
         except Exception as e:
             traceback.print_exc()
-            print("running model error\n", e)
-            response = ["running model error"]
+            #response = ["running model error"]
             torch.cuda.empty_cache()
+            logging.error("running model error\n", e)
+            raise e
 
         if self.question_style.lower() == "essay":
 
@@ -591,9 +616,10 @@ class Model_Eval(akasha.atman):
             self.doc_tokens += self.model_obj.get_num_tokens(sum_doc)
         except Exception as e:
             traceback.print_exc()
-            print("running model error\n", e)
-            response = ["running model error"]
+            #response = ["running model error"]
             torch.cuda.empty_cache()
+            logging.error("running model error\n", e)
+            raise e
 
         if self.verbose:
             print("Question: ", prompt + "\n" + sum_doc, "\n\n")
@@ -690,10 +716,10 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, "use rerank to get docs")
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, "eval_get_doc", self.embeddings,
                 self.chunk_size, self.ignore_check)
         if not self._check_db():
@@ -708,7 +734,7 @@ class Model_Eval(akasha.atman):
 
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
+
         start_time = time.time()
         doc_range = (
             1999 + self.chunk_size
@@ -718,13 +744,14 @@ class Model_Eval(akasha.atman):
         self.question, self.answer, self.docs = [], [], []
         table = {}
         ## add logs ##
-
-        self._add_basic_log(timestamp, "auto_create_questionset")
-        self.logs[timestamp]["doc_range"] = doc_range
-        self.logs[timestamp]["question_num"] = question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["choice_num"] = choice_num
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "auto_create_questionset")
+            self.logs[timestamp]["doc_range"] = doc_range
+            self.logs[timestamp]["question_num"] = question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["choice_num"] = choice_num
 
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
@@ -754,27 +781,23 @@ class Model_Eval(akasha.atman):
                     response
                 )  # transform simplified chinese to traditional chinese
                 if not self._process_response(response, doc_text, choice_num):
-                    raise Exception("Question Format Error")
+                    raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
                     self.language, docs)
                 self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
                 self.docs.extend(docs)
 
-            except:
+            except Exception as e:
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
                     progress.update(-1)
-                    print(
-                        "Question Format Error while generating questions. Regenerate\n"
-                    )
+                    logging.warning(f"{e}.\n\n Regenerate\n")
                     continue
                 else:
-                    print(
-                        "Question Format Error while generating questions. Stop\n"
-                    )
-                    break
+                    logging.error(f"{e}.\n\n Stop\n")
+                    raise e
 
             new_table = akasha.format.handle_table(self.question[-1], docs,
                                                    self.answer[-1])
@@ -844,10 +867,10 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
         if not self._check_db():
@@ -855,10 +878,10 @@ class Model_Eval(akasha.atman):
 
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
         self.doc_tokens, self.doc_length = 0, 0
         self.question, self.answer, self.docs = [], [], []
+        search_dict = {}
         if self.question_style.lower() == "essay":
             self.score = {"bert": [], "rouge": [], "llm_score": []}
         else:
@@ -871,17 +894,19 @@ class Model_Eval(akasha.atman):
         progress = tqdm(total=self.question,
                         desc=f"Run Eval({self.question_style})")
         ## add logs ##
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "auto_evaluation")
+            self.logs[timestamp]["questionset_path"] = questionset_file
+            self.logs[timestamp]["question_num"] = self.question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["search_type"] = self.search_type_str
 
-        self._add_basic_log(timestamp, "auto_evaluation")
-        self.logs[timestamp]["questionset_path"] = questionset_file
-        self.logs[timestamp]["question_num"] = self.question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["search_type"] = self.search_type_str
         ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
         retrivers_list = akasha.search.get_retrivers(
             self.db, self.embeddings_obj, self.use_rerank, self.threshold,
-            self.search_type, self.logs[timestamp])
+            self.search_type, search_dict)
 
         for i in range(self.question_num):
             progress.update(1)
@@ -900,8 +925,11 @@ class Model_Eval(akasha.atman):
         self.docs = total_docs
         ### record logs ###
         end_time = time.time()
-        self._add_result_log(timestamp, end_time - start_time)
-        self.logs[timestamp]["response"] = self.response
+        if self.keep_logs == True:
+            self._add_result_log(timestamp, end_time - start_time)
+            self.logs[timestamp]["response"] = self.response
+            for k, v in search_dict.items():
+                self.logs[timestamp][k] = v
 
         if self.question_style.lower() == "essay":
             avg_bert = round(
@@ -910,9 +938,10 @@ class Model_Eval(akasha.atman):
                 sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(
                 sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3)
-            self.logs[timestamp]["bert"] = self.score["bert"]
-            self.logs[timestamp]["rouge"] = self.score["rouge"]
-            self.logs[timestamp]["llm_score"] = self.score["llm_score"]
+            if self.keep_logs == True:
+                self.logs[timestamp]["bert"] = self.score["bert"]
+                self.logs[timestamp]["rouge"] = self.score["rouge"]
+                self.logs[timestamp]["llm_score"] = self.score["llm_score"]
             if self.record_exp != "":
                 params = akasha.format.handle_params(
                     self.model,
@@ -934,8 +963,10 @@ class Model_Eval(akasha.atman):
             return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
 
         else:
-            self.logs[timestamp]["correct_rate"] = (
-                self.score["correct_count"] / self.question_num)
+            correct_rate = (self.score["correct_count"] / self.question_num)
+            if self.keep_logs == True:
+                self.logs[timestamp]["correct_rate"] = correct_rate
+
             if self.record_exp != "":
                 params = akasha.format.handle_params(
                     self.model,
@@ -953,7 +984,7 @@ class Model_Eval(akasha.atman):
                                            self.question_num)
                 akasha.aiido_upload(self.record_exp, params, metrics, table)
 
-            return self.logs[timestamp]["correct_rate"], self.doc_tokens
+            return correct_rate, self.doc_tokens
 
     def optimum_combination(
         self,
@@ -1125,10 +1156,10 @@ class Model_Eval(akasha.atman):
 
         ## check db ##
         if self.use_chroma:
-            self.db, db_path_names = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, db_path_names = akasha.db.processMultiDB(
+            self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
         if not self._check_db():
@@ -1145,15 +1176,16 @@ class Model_Eval(akasha.atman):
 
         ## add logs ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
         start_time = time.time()
-        self._add_basic_log(timestamp, "related_questionset")
-        self.logs[timestamp]["doc_range"] = doc_range
-        self.logs[timestamp]["question_num"] = question_num
-        self.logs[timestamp]["question_type"] = self.question_type
-        self.logs[timestamp]["question_style"] = self.question_style
-        self.logs[timestamp]["choice_num"] = choice_num
-        self.logs[timestamp]["topic"] = topic
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "related_questionset")
+            self.logs[timestamp]["doc_range"] = doc_range
+            self.logs[timestamp]["question_num"] = question_num
+            self.logs[timestamp]["question_type"] = self.question_type
+            self.logs[timestamp]["question_style"] = self.question_style
+            self.logs[timestamp]["choice_num"] = choice_num
+            self.logs[timestamp]["topic"] = topic
 
         ## search related documents ##
         self.docs, docs_len, docs_token = akasha.search.get_docs(
@@ -1201,27 +1233,23 @@ class Model_Eval(akasha.atman):
                     response
                 )  # transform simplified chinese to traditional chinese
                 if not self._process_response(response, doc_text, choice_num):
-                    raise Exception("Question Format Error")
+                    raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
                     self.language, docs)
                 self.doc_tokens += self.model_obj.get_num_tokens(doc_text)
                 self.docs.extend(docs)
 
-            except:
+            except Exception as e:
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
                     progress.update(-1)
-                    print(
-                        "Question Format Error while generating questions. Regenerate\n"
-                    )
+                    logging.warning(f"{e}.\n\n Regenerate\n")
                     continue
                 else:
-                    print(
-                        "Question Format Error while generating questions. Stop\n"
-                    )
-                    break
+                    logging.error(f"{e}.\n\n Stop\n")
+                    raise e
 
             new_table = akasha.format.handle_table(self.question[-1], docs,
                                                    self.answer[-1])

@@ -10,7 +10,7 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.utils import print_text
 from typing import TYPE_CHECKING, Any, Dict, Optional
 from langchain_core.agents import AgentAction, AgentFinish
-import traceback, warnings, datetime, time
+import traceback, warnings, datetime, time, logging
 from langchain.llms.base import LLM
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -28,7 +28,7 @@ def _get_agent_type(agent_type: str) -> AgentType:
     try:
         agent_t = getattr(AgentType, agent_type)
     except Exception as e:
-        print(f"Cannot find the agent type, use default instead\n\n")
+        logging.warning(f"Cannot find the agent type, use default instead\n\n")
         agent_t = AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION
     return agent_t
 
@@ -129,6 +129,7 @@ class agent:
         verbose: bool = False,
         language: str = "ch",
         temperature: float = 0.0,
+        keep_logs: bool = False,
     ):
         """initials of agent class
 
@@ -138,6 +139,7 @@ class agent:
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.\n
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
+            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
         """
 
         self.verbose = verbose
@@ -145,6 +147,7 @@ class agent:
         self.temperature = temperature
         self.timestamp_list = []
         self.logs = {}
+        self.keep_logs = keep_logs
         self.agent_type = _get_agent_type(agent_type)
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature)
@@ -209,6 +212,8 @@ class agent:
             timestamp (str): timestamp of this run
             fn_type (str): function type of this run
         """
+        if self.keep_logs == False:
+            return
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
         self.logs[timestamp]["fn_type"] = fn_type
@@ -224,6 +229,10 @@ class agent:
             timestamp (str): timestamp of this run
             time (float): spent time of this run
         """
+
+        if self.keep_logs == False:
+            return
+
         tool_list = []
         for tool in self.tools:
             tool_list.append(tool.name)
@@ -320,18 +329,21 @@ class agent:
             self.new_agent_flag = False
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self.timestamp_list.append(timestamp)
-        self._add_basic_log(timestamp, "agent")
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "agent")
 
         # ask question #
         try:
             self.response = self.agent_obj(self.question)
             self.response = self.response['output']
+
         except Exception as e:
-            self.response = traceback.format_exc(
+            trace_text = traceback.format_exc(
             ) + "\n\n" + "Error: agent get response failed.\n" + e.__str__(
             ) + "\n\n"
-            print(self.response)
+            logging.error(e + trace_text)
+            raise e
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
@@ -361,9 +373,9 @@ def create_tool(tool_name: str, tool_description: str,
                 return func(*args, **kwargs)
 
     except Exception as e:
-        print(f"Cannot create tool correctly, {e}\n\n")
 
-        return None
+        logging.error(f"Cannot create tool correctly, {e}\n\n")
+        raise e
 
     return custom_tool(name=tool_name, description=tool_description)
 
