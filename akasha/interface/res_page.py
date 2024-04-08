@@ -72,6 +72,7 @@ def response_page():
                         system_prompt=st.session_state.sys_prompt,
                         max_doc_len=st.session_state.max_doc_len,
                         temperature=st.session_state.temperature,
+                        keep_logs=True,
                     )
                     st.session_state.prompt_list.append(prompt)
                     st.session_state.response_list.append(ans)

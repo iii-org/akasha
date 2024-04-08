@@ -128,10 +128,10 @@ def setting_page():
         mt = st.number_input(
             "Max Doc Length",
             value=st.session_state.max_doc_len,
-            min_value=100,
+            min_value=500,
             step=10,
             help=
-            "The maximum number of tokens in the reference documents that will be used as input for the LLM model.",
+            "The maximum number of texts in the reference documents that will be used as input for the LLM model.",
         )
 
         if mt != st.session_state.max_doc_len:

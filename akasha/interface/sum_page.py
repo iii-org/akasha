@@ -87,6 +87,7 @@ def summary_page():
                             chunk_size=st.session_state.chunksize,
                             max_doc_len=st.session_state.max_doc_len,
                             temperature=st.session_state.temperature,
+                            keep_logs=True,
                         )
 
                         st.session_state.prompt_list.append("summary of " +
