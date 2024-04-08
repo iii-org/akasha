@@ -3,7 +3,6 @@ from langchain.llms.base import LLM
 import torch, sys
 from transformers import AutoTokenizer, TextStreamer
 from peft import AutoPeftModelForCausalLM
-from langchain_community.llms.llamacpp import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
@@ -21,7 +20,7 @@ def get_llama_cpp_model(model_type: str,
         _type_: llm model
     """
     callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
-
+    from langchain_community.llms.llamacpp import LlamaCpp
     if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
         model = LlamaCpp(
             n_ctx=4096,

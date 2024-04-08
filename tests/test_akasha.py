@@ -1,6 +1,31 @@
 import pytest
 import akasha
 
+install_requires = [
+    "pypdf",
+    "langchain>=0.1.0",
+    "chromadb==0.4.14",
+    "openai==0.27",
+    "tiktoken",
+    "lark==1.1.7",
+    "scikit-learn<1.3.0",
+    "jieba==0.42.1",
+    "sentence-transformers==2.2.2",
+    "torch==2.0.1",
+    "transformers>=4.33.4",  #==4.31.0
+    "llama-cpp-python==0.2.6",
+    "auto-gptq==0.3.1",
+    "tqdm==4.65.0",
+    "docx2txt==0.8",
+    "rouge==1.0.1",
+    "rouge-chinese==1.0.3",
+    "bert-score==0.3.13",
+    "click",
+    "tokenizers>=0.13.3",
+    "streamlit==1.28.2",
+    "streamlit_option_menu==0.3.6",
+]
+
 
 def base_search(query_embeds, docs_embeds, k: int, relevancy_threshold: float,
                 logs: dict):
@@ -163,7 +188,7 @@ def test_ask_whole_file(base_line):
         file_path="./docs/mic/20230726_工業4_0發展重點與案例分析，以西門子、鴻海為例.pdf",
         search_type="knn",
         prompt="西門子自有工廠如何朝工業4.0 發展",
-        model="openai:gpt-3.5-turbo",
+        model="openai:gpt-4",
         max_doc_len=2000)
 
     assert type(response) == str
@@ -175,7 +200,7 @@ def test_ask_whole_file(base_line):
 def test_ask_self(base_line):
     ak = base_line
 
-    response = ak.ask_self(prompt="langchain的套件版本?", info=akasha.__version__)
+    response = ak.ask_self(prompt="langchain的套件版本?", info=install_requires)
 
     assert type(response) == str
 
