@@ -540,7 +540,7 @@ def call_model(model: LLM, prompt: str) -> str:
             # for chunk in model.stream(prompt):
             #     print(chunk.content, end='', flush=True)
             #     response += chunk.content
-            # print_flag = False
+            print_flag = False
         else:
             try:
                 response = model._call(prompt)
@@ -662,5 +662,4 @@ def call_JSON_formatter(
         sys_prompt, "", prompt_format_type)
 
     response = call_model(model_obj, prod_sys_prompt + "TEXTS: " + texts)
-    print(response)
     return extract_json(response)

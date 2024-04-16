@@ -207,32 +207,16 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
 
 ### JSON FORMATTER ###
 def JSON():
-    formatter1 = [
-        prompts.OutputSchema(name="學歷", description="受試者的就讀大學", type="str"),
-        prompts.OutputSchema(name="經驗", description="受試者的工作經驗", type="str"),
-        prompts.OutputSchema(name="專長", description="受試者的專長能力", type="list"),
-        prompts.OutputSchema(name="年資", description="受試者的總工作年數", type="int")
-    ]
-    formatter2 = prompts.JSON_formatter_list(names=["學歷","經驗","專長","年資"], types=["str","str","list","int"],\
-        descriptions=["受試者的就讀大學","受試者的工作經驗","受試者的專長能力","受試者的總工作年數"])
-
-    formatter3 = prompts.JSON_formatter_dict([{ "name": "學歷", "description": "受試者的就讀大學", "type": "str" },\
-        { "name": "經驗", "description": "受試者的工作經驗", "type": "str" },\
-            { "name": "專長", "description": "受試者的專長能力", "type": "list" },\
-                { "name": "年資", "description": "受試者的總工作年數", "type": "int" }])
     ak = akasha.Doc_QA(
-        topK=10,
         threshold=0.0,
         verbose=True,
     )
 
     response = ak.ask_whole_file(file_path="docs/resume_pool/A.docx",
-                                 system_prompt="用中文回答" +
-                                 prompts.JSON_formatter(formatter1),
                                  prompt=f'''以上是受試者的履歷，請回答該受試者的學歷、經驗、專長、年資''')
 
-    parse_json = akasha.helper.extract_json(response)
-    print(parse_json, type(parse_json))
+    formatted_response = akasha.helper.call_JSON_formatter(
+        ak.model_obj, response, keys=["學歷", "經驗", "專長", "年資"])
 
 
 ### agent ###

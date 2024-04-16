@@ -1174,7 +1174,10 @@ class Model_Eval(akasha.atman):
         self.doc_tokens, self.doc_length = 0, 0
         self.question, self.answer, self.docs = [], [], []
         table = {}
-
+        search_dict = {}
+        retrivers_list = akasha.search.get_retrivers(
+            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
+            self.search_type, search_dict)
         ## add logs ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         start_time = time.time()
@@ -1192,9 +1195,9 @@ class Model_Eval(akasha.atman):
         self.docs, docs_len, docs_token = akasha.search.get_docs(
             self.db,
             self.embeddings_obj,
+            retrivers_list,
             topic,
             self.use_rerank,
-            self.threshold,
             self.language,
             self.search_type,
             self.verbose,
