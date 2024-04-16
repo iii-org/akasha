@@ -443,9 +443,6 @@ class atman:
                 Please check your model.\n\n")
             raise e
 
-        if self.verbose:
-            print("llm response:", "\n\n" + response)
-
         return response
 
 

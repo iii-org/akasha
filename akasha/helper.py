@@ -4,6 +4,7 @@ import json, re
 from pathlib import Path
 import opencc
 from typing import Callable, Union, Tuple
+from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model
@@ -259,6 +260,8 @@ def handle_model(model_name: Union[str, Callable],
                 api_key=api_key,
                 api_version=api_version,
                 validate_base_url=False,
+                streaming=True,
+                callbacks=[StreamingStdOutCallbackHandler()],
             )
         else:
             openai.api_type = "open_ai"
@@ -266,6 +269,8 @@ def handle_model(model_name: Union[str, Callable],
                 model=model_name,
                 temperature=temperature,
                 api_key=os.environ["OPENAI_API_KEY"],
+                streaming=True,
+                callbacks=[StreamingStdOutCallbackHandler()],
             )
         info = f"selected openai model {model_name}.\n"
     if verbose:
@@ -515,21 +520,27 @@ def call_model(model: LLM, prompt: str) -> str:
     Returns:
         str: llm response
     """
+    response = ""
+    print_flag = True
     try:
         try:
             model_type = model._llm_type
         except:
+            print_flag = False
             try:
-                ### try call openai llm model
-                response = model.invoke(prompt)
+                response = model._call(prompt)
             except:
-                try:
-                    response = model._call(prompt)
-                except:
-                    response = model._generate(prompt)
+                response = model._generate(prompt)
 
         if "openai" in model_type:
+            ## normal call ##
             response = model.invoke(prompt)
+            ## stream call ##
+            # print("llm response: \n\n")
+            # for chunk in model.stream(prompt):
+            #     print(chunk.content, end='', flush=True)
+            #     response += chunk.content
+            # print_flag = False
         else:
             try:
                 response = model._call(prompt)
@@ -543,7 +554,11 @@ def call_model(model: LLM, prompt: str) -> str:
             if isinstance(response, list):
                 response = '\n'.join(response)
 
+        if "huggingface" in model_type:
+            print_flag = False
+
         if response is None or response == "":
+            print_flag = False
             raise Exception("LLM response is empty.")
 
     except Exception as e:
@@ -551,6 +566,10 @@ def call_model(model: LLM, prompt: str) -> str:
         logging.error(trace_text + "\n\nText generation encountered an error.\
             Please check your model setting.\n\n")
         raise e
+
+    if print_flag:
+        print("llm response:", "\n\n" + response)
+
     return response
 
 

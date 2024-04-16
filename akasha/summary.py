@@ -548,7 +548,7 @@ class Summary(akasha.atman):
         ## change sim to trad if target language is traditional chinese ##
         if afr.language_dict[self.language] == "traditional chinese":
             self.summary = akasha.helper.sim_to_trad(self.summary)
-            self.summary = self.summary.replace("。", "。\n\n")
+            # self.summary = self.summary.replace("。", "。\n\n")
 
         print(self.summary, "\n\n\n\n")
 
