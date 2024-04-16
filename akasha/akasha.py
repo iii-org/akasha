@@ -779,8 +779,9 @@ class Doc_QA(atman):
         self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
 
         if self.docs is None:
-            print("\n\nNo Relevant Documents.\n\n")
-            return ""
+            logging.error("No Relevant Documents.")
+            raise AttributeError("No Relevant Documents.")
+
         self.doc_length = helper.get_docs_length(self.language, self.docs)
 
         ## format prompt ##

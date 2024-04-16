@@ -5,6 +5,52 @@ import time, datetime
 import akasha.db
 from typing import Union, List
 import akasha.format as afr
+from tqdm import tqdm
+import math
+import logging
+
+
+def calculate_approx_sum_times(chunks: int, per_sum_chunks: int) -> int:
+    """approximate the total times of summarizing we need to do in reduce_summary method
+
+    Args:
+        chunks (int): number of chunks
+        per_sum_chunks (int): number of chunks we can summarize in one time
+
+    Returns:
+        int: the total times of summarizing we need to do
+    """
+    times = 0
+    while chunks > 1:
+        chunks = math.ceil(chunks / per_sum_chunks)
+        times += chunks
+    return times
+
+
+def calculate_per_summary_chunks(language: str, max_doc_len: int,
+                                 summary_len: int, chunk_size: int) -> int:
+    """calculate the estimation of chunks that can fit into llm each time
+
+    Args:
+        language (str): texts language
+        max_doc_len (int): the max doc length we want to fit into llm model at one time
+        summary_len (int): the length of summary
+        chunk_size (int): the chunk size of texts we want to summarize
+
+    Returns:
+        int: the estimation of chunks that can fit into llm each time
+    """
+
+    ret = 2
+
+    if "chinese" in afr.language_dict[language]:
+        token_to_text = 2
+    else:
+        token_to_text = 1
+
+    ret = max(ret, token_to_text * (max_doc_len - summary_len) // chunk_size)
+
+    return ret
 
 
 class Summary(akasha.atman):
@@ -26,6 +72,7 @@ class Summary(akasha.atman):
         keep_logs: bool = False,
         auto_translate: bool = False,
         prompt_format_type: str = "gpt",
+        consecutive_merge_failures: int = 5,
     ):
         """initials of Summary class
 
@@ -47,6 +94,7 @@ class Summary(akasha.atman):
             **auto_translate (bool, optional)**: auto translate the summary to target language since LLM may generate different language. 
             Defaults to False.\n
             **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
+            **consecutive_merge_failures (int, optional)**: the number of consecutive merge failures before returning the current response list as the summary. Defaults to 5.
         """
 
         ### set argruments ###
@@ -63,6 +111,7 @@ class Summary(akasha.atman):
         self.auto_translate = auto_translate
         self.prompt_format_type = prompt_format_type
         self.keep_logs = keep_logs
+        self.consecutive_merge_failures = consecutive_merge_failures
         ### set variables ###
         self.file_name = ""
         self.summary_type = ""
@@ -142,7 +191,9 @@ class Summary(akasha.atman):
             f.write(self.summary)
         print("summarization saved in ", output_file_path, "\n\n")
 
-    def _reduce_summary(self, texts: list, tokens: int, total_list: list):
+    def _reduce_summary(self, texts: list, tokens: int, total_list: list,
+                        progress: tqdm, pre_response_list_len: int,
+                        consecutive_merge_fail: int):
         """Summarize each chunk and merge them until the combined chunks are smaller than the maximum token limit.
         Then, generate the final summary. This method is faster and requires fewer tokens than the refine method.
 
@@ -162,6 +213,8 @@ class Summary(akasha.atman):
             token, cur_text, newi = akasha.helper._get_text(
                 texts, "", i, self.max_doc_len, self.language)
             tokens += token
+
+            progress.update(1)
 
             ### do the final summary if all chunks can be fits into llm model ###
             if i == 0 and newi == len(texts):
@@ -187,6 +240,7 @@ class Summary(akasha.atman):
                 self.model_obj, prod_sys_prompt + "\n" + prompt)
 
             i = newi
+
             if self.verbose:
                 print("prompt: \n", self.system_prompt + prompt)
                 print("\n\n")
@@ -194,7 +248,25 @@ class Summary(akasha.atman):
                 print("\n\n\n\n\n\n")
             response_list.append(response)
             total_list.append(response)
-        return self._reduce_summary(response_list, tokens, total_list)
+
+        ### handle merge fail ###
+        if pre_response_list_len == len(response_list):
+            consecutive_merge_fail += 1
+            # if consecutive_merge_fail >= self.consecutive_merge_failures: return current response_list as summary #
+            if consecutive_merge_fail >= self.consecutive_merge_failures:
+                logging.warning(
+                    "Cannot summarize due to texts too long, return current response_list as summary."
+                )
+                total_list.append('\n\n'.join(response_list))
+                return total_list, tokens
+        else:
+            consecutive_merge_fail = 0
+
+        pre_response_list_len = len(response_list)
+
+        return self._reduce_summary(response_list, tokens, total_list,
+                                    progress, pre_response_list_len,
+                                    consecutive_merge_fail)
 
     def _refine_summary(self, texts: list) -> Union[list, int]:
         """refine summary summarizing a chunk at a time and using the previous summary as a prompt for
@@ -215,7 +287,13 @@ class Summary(akasha.atman):
             self.system_prompt, "", self.prompt_format_type)
         ###
 
+        ### get tqdm progress bar and handle merge fail###
+        progress = tqdm(total=len(texts), desc="Refine Summary")
+        consecutive_merge_fail = 0
+        fnsh_sum_list = []
+
         while i < len(texts):
+            prei = i
             token, cur_text, i = akasha.helper._get_text(
                 texts, previous_summary, i, self.max_doc_len, self.language)
 
@@ -237,6 +315,27 @@ class Summary(akasha.atman):
                 print("\n\n\n\n\n\n")
             response_list.append(response)
             previous_summary = response
+            progress.update(i - prei)
+
+            ### handle merge fail ###
+            if prei == i:
+                consecutive_merge_fail += 1
+                if consecutive_merge_fail >= self.consecutive_merge_failures:
+                    logging.warning(
+                        "Cannot summarize current chunk due to texts too long, skip summarize current chunk."
+                    )
+                    fnsh_sum_list.append(response)
+                    consecutive_merge_fail = 0
+                    previous_summary = ""
+
+            else:
+                consecutive_merge_fail = 0
+
+        progress.close()
+        ## merge the failed summaries ##
+        if len(fnsh_sum_list) > 0:
+            response_list[-1] = '\n\n'.join(
+                fnsh_sum_list) + '\n\n' + response_list[-1]
 
         return response_list, tokens
 
@@ -295,7 +394,20 @@ class Summary(akasha.atman):
             response_list, self.doc_tokens = self._refine_summary(texts)
 
         else:
-            response_list, self.doc_tokens = self._reduce_summary(texts, 0, [])
+            per_sum_chunks = calculate_per_summary_chunks(
+                self.language, self.max_doc_len, self.summary_len,
+                self.chunk_size)
+            approx_sum_times = calculate_approx_sum_times(
+                len(texts), per_sum_chunks)
+
+            response_list_len = len(texts)
+            consecutive_merge_fail = 0
+
+            progress = tqdm(total=approx_sum_times, desc="Reduce_map Summary")
+            response_list, self.doc_tokens = self._reduce_summary(
+                texts, 0, [], progress, response_list_len,
+                consecutive_merge_fail)
+            progress.close()
 
         self.summary = response_list[-1]
         p = akasha.prompts.format_refine_summary_prompt(
@@ -319,7 +431,7 @@ class Summary(akasha.atman):
         ## change sim to trad if target language is traditional chinese ##
         if afr.language_dict[self.language] == "traditional chinese":
             self.summary = akasha.helper.sim_to_trad(self.summary)
-            self.summary = self.summary.replace("。", "。\n\n")
+            #self.summary = self.summary.replace("。", "。\n\n")
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -399,7 +511,20 @@ class Summary(akasha.atman):
             response_list, self.doc_tokens = self._refine_summary(texts)
 
         else:
-            response_list, self.doc_tokens = self._reduce_summary(texts, 0, [])
+            per_sum_chunks = calculate_per_summary_chunks(
+                self.language, self.max_doc_len, self.summary_len,
+                self.chunk_size)
+            approx_sum_times = calculate_approx_sum_times(
+                len(texts), per_sum_chunks)
+
+            response_list_len = len(texts)
+            consecutive_merge_fail = 0
+
+            progress = tqdm(total=approx_sum_times, desc="Reduce_map Summary")
+            response_list, self.doc_tokens = self._reduce_summary(
+                texts, 0, [], progress, response_list_len,
+                consecutive_merge_fail)
+            progress.close()
 
         self.summary = response_list[-1]
         p = akasha.prompts.format_refine_summary_prompt(

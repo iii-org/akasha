@@ -303,7 +303,7 @@ def get_hf_model(model_name, temperature: float = 0.0):
             pipe = pipeline(
                 "text-generation",
                 model=model_name,
-                use_auth_token=hf_token,
+                token=hf_token,
                 max_new_tokens=512,
                 model_kwargs={
                     "temperature": temperature,
@@ -320,7 +320,7 @@ def get_hf_model(model_name, temperature: float = 0.0):
                 pipe = pipeline(
                     "question-answering",
                     model=model_name,
-                    use_auth_token=hf_token,
+                    token=hf_token,
                     max_new_tokens=512,
                     model_kwargs={
                         "temperature": temperature,

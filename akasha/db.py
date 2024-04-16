@@ -148,10 +148,10 @@ def _load_file(file_path: str, extension: str):
             trace_text = traceback.format_exc()
 
             logging.warning("\nLoad " + file_path + " failed, ignored.\n" +
-                            trace_text + "\n\n" + err)
+                            trace_text + "\n\n" + str(err))
         except:
             logging.warning("\nLoad file" + " failed, ignored.\n" +
-                            trace_text + "\n\n" + err)
+                            trace_text + "\n\n")
         return ""
 
 
