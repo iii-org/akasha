@@ -232,7 +232,7 @@ class Model_Eval(akasha.atman):
         try:
             process = "".join(response.split("問題：")).split("答案：")
             if len(process) < 2:
-                raise ("Question Format Error")
+                raise SyntaxError("Question Format Error")
         except:
             process = "".join(response.split("問題:")).split("答案:")
             if len(process) < 2:
@@ -273,7 +273,7 @@ class Model_Eval(akasha.atman):
         try:
             process = response.split("答案：")
             if len(process) < 2:
-                raise ("Question Format Error")
+                raise SyntaxError("Question Format Error")
         except:
             process = response.split("答案:")
             if len(process) < 2:
@@ -579,7 +579,8 @@ class Model_Eval(akasha.atman):
             new_table = akasha.format.handle_table(query + "\nAnswer:  " + ans,
                                                    self.docs, response)
             result = akasha.helper.extract_result(response)
-            if str(result) == str(ans):
+
+            if str(ans).replace(' ', '') in str(result):
                 self.score["correct_count"] += 1
 
         return new_table

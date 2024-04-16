@@ -247,7 +247,6 @@ def handle_model(model_name: Union[str, Callable],
             model_name = "gpt-3.5-turbo"
             print(info)
         import openai
-
         if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
                 == "azure") or ("OPENAI_API_TYPE" in os.environ
                                 and os.environ["OPENAI_API_TYPE"] == "azure"):
@@ -371,8 +370,11 @@ def extract_result(response: str):
         int: digit of answer
     """
     try:
-        res = str(json.loads(response)["ans"]).replace(" ", "")
-
+        res = extract_json(response)
+        #res = str(json.loads(response)["ans"]).replace(" ", "")
+        if res == None:
+            raise Exception("can not find the json format in the response")
+        res = res["ans"]
     except:
         res = -1
         for c in response:
@@ -609,3 +611,37 @@ def call_translator(model_obj: LLM,
     response = call_model(model_obj, prod_sys_prompt + "\n" + texts)
 
     return response
+
+
+def call_JSON_formatter(
+    model_obj: LLM,
+    texts: str,
+    keys: Union[str, list] = "",
+    prompt_format_type: str = "gpt",
+) -> Union[dict, None]:
+    """use LLM to transfer texts into JSON format
+
+    Args:
+        model_obj (LLM): LLM that used to transfer
+        texts (str): texts that need to be transferred
+        keys (Union[str, list], optional): keys name of output dictionary. Defaults to "".
+        prompt_format_type (str, optional): system prompt format. Defaults to "gpt". Defaults to "gpt".
+
+    Returns:
+        Union[dict, None]: return the JSON part of the string, if not found return None
+    """
+
+    if keys == "":
+        sys_prompt = "Format the following TEXTS into a single JSON instance that conforms to the JSON schema."
+    elif isinstance(keys, str):
+        keys = [keys]
+
+    if keys != "":
+        sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
+
+    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+        sys_prompt, "", prompt_format_type)
+
+    response = call_model(model_obj, prod_sys_prompt + "TEXTS: " + texts)
+    print(response)
+    return extract_json(response)
