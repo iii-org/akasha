@@ -156,7 +156,7 @@ class custom_model(LLM):
         self.func = func
         self.temperature = temperature
         if self.temperature == 0.0:
-            self.temperature = 0.001
+            self.temperature = 0.01
 
     @property
     def _llm_type(self) -> str:
