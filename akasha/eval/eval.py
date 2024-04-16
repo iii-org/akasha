@@ -232,7 +232,7 @@ class Model_Eval(akasha.atman):
         try:
             process = "".join(response.split("問題：")).split("答案：")
             if len(process) < 2:
-                raise ("Question Format Error")
+                raise SyntaxError("Question Format Error")
         except:
             process = "".join(response.split("問題:")).split("答案:")
             if len(process) < 2:
@@ -273,7 +273,7 @@ class Model_Eval(akasha.atman):
         try:
             process = response.split("答案：")
             if len(process) < 2:
-                raise ("Question Format Error")
+                raise SyntaxError("Question Format Error")
         except:
             process = response.split("答案:")
             if len(process) < 2:
@@ -579,7 +579,8 @@ class Model_Eval(akasha.atman):
             new_table = akasha.format.handle_table(query + "\nAnswer:  " + ans,
                                                    self.docs, response)
             result = akasha.helper.extract_result(response)
-            if str(result) == str(ans):
+
+            if str(ans).replace(' ', '') in str(result):
                 self.score["correct_count"] += 1
 
         return new_table
@@ -1173,7 +1174,10 @@ class Model_Eval(akasha.atman):
         self.doc_tokens, self.doc_length = 0, 0
         self.question, self.answer, self.docs = [], [], []
         table = {}
-
+        search_dict = {}
+        retrivers_list = akasha.search.get_retrivers(
+            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
+            self.search_type, search_dict)
         ## add logs ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         start_time = time.time()
@@ -1191,9 +1195,9 @@ class Model_Eval(akasha.atman):
         self.docs, docs_len, docs_token = akasha.search.get_docs(
             self.db,
             self.embeddings_obj,
+            retrivers_list,
             topic,
             self.use_rerank,
-            self.threshold,
             self.language,
             self.search_type,
             self.verbose,

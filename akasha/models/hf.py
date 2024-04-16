@@ -2,7 +2,7 @@ from typing import Dict, List, Any, Optional, Callable
 from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, TextStreamer
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from transformers import pipeline
 import torch
@@ -296,21 +296,36 @@ def get_hf_model(model_name, temperature: float = 0.0):
     Returns:
         _type_: llm model
     """
+    """try different methods to define huggingface model, first use pipline and then use llama2.
+
+    Args:
+        model_name (str): huggingface model name\n
+
+    Returns:
+        _type_: llm model
+    """
     with warnings.catch_warnings():
         warnings.simplefilter(action="ignore", category=FutureWarning)
-        hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        hf_token = os.environ.get("HF_TOKEN")
+        if hf_token is None:
+            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        streamer = TextStreamer(tokenizer)
         try:
             pipe = pipeline(
                 "text-generation",
                 model=model_name,
-                use_auth_token=hf_token,
-                max_new_tokens=512,
+                token=hf_token,
+                max_new_tokens=1024,
+                tokenizer=tokenizer,
+                streamer=streamer,
                 model_kwargs={
                     "temperature": temperature,
                     "repetition_penalty": 1.2,
                 },
                 device_map="auto",
-                batch_size=1,
+                batch_size=8,
                 torch_dtype=torch.float16,
             )
             model = hf_model(pipe=pipe)
@@ -320,14 +335,16 @@ def get_hf_model(model_name, temperature: float = 0.0):
                 pipe = pipeline(
                     "question-answering",
                     model=model_name,
-                    use_auth_token=hf_token,
-                    max_new_tokens=512,
+                    token=hf_token,
+                    max_new_tokens=1024,
+                    tokenizer=tokenizer,
+                    streamer=streamer,
                     model_kwargs={
                         "temperature": temperature,
                         "repetition_penalty": 1.2,
                     },
                     device_map="auto",
-                    batch_size=1,
+                    batch_size=8,
                     torch_dtype=torch.float16,
                 )
                 model = hf_model(pipe=pipe)

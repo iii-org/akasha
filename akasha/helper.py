@@ -4,6 +4,7 @@ import json, re
 from pathlib import Path
 import opencc
 from typing import Callable, Union, Tuple
+from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model
@@ -247,7 +248,6 @@ def handle_model(model_name: Union[str, Callable],
             model_name = "gpt-3.5-turbo"
             print(info)
         import openai
-
         if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
                 == "azure") or ("OPENAI_API_TYPE" in os.environ
                                 and os.environ["OPENAI_API_TYPE"] == "azure"):
@@ -260,6 +260,8 @@ def handle_model(model_name: Union[str, Callable],
                 api_key=api_key,
                 api_version=api_version,
                 validate_base_url=False,
+                streaming=True,
+                callbacks=[StreamingStdOutCallbackHandler()],
             )
         else:
             openai.api_type = "open_ai"
@@ -267,6 +269,8 @@ def handle_model(model_name: Union[str, Callable],
                 model=model_name,
                 temperature=temperature,
                 api_key=os.environ["OPENAI_API_KEY"],
+                streaming=True,
+                callbacks=[StreamingStdOutCallbackHandler()],
             )
         info = f"selected openai model {model_name}.\n"
     if verbose:
@@ -371,8 +375,11 @@ def extract_result(response: str):
         int: digit of answer
     """
     try:
-        res = str(json.loads(response)["ans"]).replace(" ", "")
-
+        res = extract_json(response)
+        #res = str(json.loads(response)["ans"]).replace(" ", "")
+        if res == None:
+            raise Exception("can not find the json format in the response")
+        res = res["ans"]
     except:
         res = -1
         for c in response:
@@ -513,21 +520,27 @@ def call_model(model: LLM, prompt: str) -> str:
     Returns:
         str: llm response
     """
+    response = ""
+    print_flag = True
     try:
         try:
             model_type = model._llm_type
         except:
+            print_flag = False
             try:
-                ### try call openai llm model
-                response = model.invoke(prompt)
+                response = model._call(prompt)
             except:
-                try:
-                    response = model._call(prompt)
-                except:
-                    response = model._generate(prompt)
+                response = model._generate(prompt)
 
         if "openai" in model_type:
+            ## normal call ##
             response = model.invoke(prompt)
+            ## stream call ##
+            # print("llm response: \n\n")
+            # for chunk in model.stream(prompt):
+            #     print(chunk.content, end='', flush=True)
+            #     response += chunk.content
+            print_flag = False
         else:
             try:
                 response = model._call(prompt)
@@ -541,7 +554,11 @@ def call_model(model: LLM, prompt: str) -> str:
             if isinstance(response, list):
                 response = '\n'.join(response)
 
+        if "huggingface" in model_type:
+            print_flag = False
+
         if response is None or response == "":
+            print_flag = False
             raise Exception("LLM response is empty.")
 
     except Exception as e:
@@ -549,6 +566,10 @@ def call_model(model: LLM, prompt: str) -> str:
         logging.error(trace_text + "\n\nText generation encountered an error.\
             Please check your model setting.\n\n")
         raise e
+
+    if print_flag:
+        print("llm response:", "\n\n" + response)
+
     return response
 
 
@@ -609,3 +630,36 @@ def call_translator(model_obj: LLM,
     response = call_model(model_obj, prod_sys_prompt + "\n" + texts)
 
     return response
+
+
+def call_JSON_formatter(
+    model_obj: LLM,
+    texts: str,
+    keys: Union[str, list] = "",
+    prompt_format_type: str = "gpt",
+) -> Union[dict, None]:
+    """use LLM to transfer texts into JSON format
+
+    Args:
+        model_obj (LLM): LLM that used to transfer
+        texts (str): texts that need to be transferred
+        keys (Union[str, list], optional): keys name of output dictionary. Defaults to "".
+        prompt_format_type (str, optional): system prompt format. Defaults to "gpt". Defaults to "gpt".
+
+    Returns:
+        Union[dict, None]: return the JSON part of the string, if not found return None
+    """
+
+    if keys == "":
+        sys_prompt = "Format the following TEXTS into a single JSON instance that conforms to the JSON schema."
+    elif isinstance(keys, str):
+        keys = [keys]
+
+    if keys != "":
+        sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
+
+    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+        sys_prompt, "", prompt_format_type)
+
+    response = call_model(model_obj, prod_sys_prompt + "TEXTS: " + texts)
+    return extract_json(response)
