@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.25](https://img.shields.io/badge/pypi%20package-0.8.25-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.26](https://img.shields.io/badge/pypi%20package-0.8.26-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -246,6 +246,13 @@ ak.get_response(dir_path, prompt,  model="remote:http://140.92.60.189:8081")
 
 ```
 
+### 5. gptq quantized model
+If you download gptq quantized model you can use **gptq:{model_name}** to call the model.
+``` python
+ak = akasha.Doc_QA()
+ak.get_response(dir_path, prompt,  model="gptq:FlagAlpha/Llama2-Chinese-13b-Chat-4bit")
+
+```
 
 <br/>
 <br/>
@@ -285,8 +292,8 @@ Please note that for OpenAI models, you need to set the environment variable 'OP
 ```python
 openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY"
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
-quantized_ch_llama_model = "hf:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
-taiwan_llama_gptq = "hf:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
+quantized_ch_llama_model = "gptq:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
+taiwan_llama_gptq = "gptq:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
 mistral = "hf:Mistral-7B-Instruct-v0.2" 
 mediatek_Breeze = "hf:MediaTek-Research/Breeze-7B-Instruct-64k-v0.1"
 ### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 

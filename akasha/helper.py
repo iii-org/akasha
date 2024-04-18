@@ -7,8 +7,8 @@ from typing import Callable, Union, Tuple
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model
-from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model
+from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model, gptq
+from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
 import os, traceback, logging
 import shutil
 from langchain.llms.base import LLM
@@ -242,6 +242,20 @@ def handle_model(model_name: Union[str, Callable],
         model = peft_Llama2(model_name_or_path=model_name,
                             temperature=temperature)
         info = f"selected peft model {model_name}.\n"
+
+    elif model_type in ["gptq"]:
+        if model_name.lower().find("taiwan-llama") != -1:
+            model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
+                                    temperature=temperature)
+
+        else:
+            model = gptq(
+                model_name_or_path=model_name,
+                temperature=temperature,
+                bit4=True,
+                max_token=4096,
+            )
+        info = f"selected gptq model {model_name}.\n"
     else:
         if model_type not in ["openai", "gpt-3.5", "gpt"]:
             info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
@@ -533,14 +547,11 @@ def call_model(model: LLM, prompt: str) -> str:
                 response = model._generate(prompt)
 
         if "openai" in model_type:
-            ## normal call ##
             response = model.invoke(prompt)
-            ## stream call ##
-            # print("llm response: \n\n")
-            # for chunk in model.stream(prompt):
-            #     print(chunk.content, end='', flush=True)
-            #     response += chunk.content
+
+        elif "remote" in model_type:
             print_flag = False
+            response = model._call(prompt)
         else:
             try:
                 response = model._call(prompt)

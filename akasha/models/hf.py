@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Generator
 from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
@@ -8,8 +8,9 @@ from transformers import pipeline
 import torch
 import numpy
 import warnings, os, logging
-from akasha.models.llama2 import Llama2, TaiwanLLaMaGPTQ
 import requests
+import sys
+from huggingface_hub import InferenceClient
 
 
 class chatGLM(LLM):
@@ -61,6 +62,89 @@ class chatGLM(LLM):
         self.model = self.model.eval()
         response, history = self.model.chat(self.tokenizer, prompt, history=[])
         return response
+
+
+class gptq(LLM):
+    """define initials and _call function for gptq model
+
+    Args:
+        LLM (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    max_token: int = 4096
+    temperature: float = 0.01
+    top_p: float = 0.95
+    tokenizer: Any
+    model: Any
+
+    def __init__(
+        self,
+        model_name_or_path: str,
+        temperature: float = 0.01,
+        bit4: bool = True,
+        max_token: int = 4096,
+    ):
+        super().__init__()
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
+                                                       use_fast=False,
+                                                       max_length=max_token,
+                                                       truncation=True)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.max_token = max_token
+        self.temperature = temperature
+        if self.temperature == 0.0:
+            self.temperature = 0.01
+        if bit4 == False:
+            from transformers import AutoModelForCausalLM
+
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name_or_path,
+                device_map="auto",
+                torch_dtype=torch.float16,
+                load_in_8bit=True,
+            )
+            self.model.eval()
+        else:
+            from auto_gptq import AutoGPTQForCausalLM
+
+            self.model = AutoGPTQForCausalLM.from_quantized(
+                model_name_or_path,
+                low_cpu_mem_usage=True,
+                device="cuda:0",
+                use_triton=False,
+                inject_fused_attention=False,
+                inject_fused_mlp=False,
+            )
+
+        if torch.__version__ >= "2" and sys.platform != "win32":
+            self.model = torch.compile(self.model)
+
+    @property
+    def _llm_type(self) -> str:
+        return "gptq model"
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        input_ids = self.tokenizer(
+            prompt, return_tensors="pt",
+            add_special_tokens=False).input_ids.to("cuda")
+        generate_input = {
+            "input_ids": input_ids,
+            "max_new_tokens": 1024,
+            "do_sample": True,
+            "top_k": 50,
+            "top_p": self.top_p,
+            "temperature": self.temperature,
+            "repetition_penalty": 1.2,
+            "eos_token_id": self.tokenizer.eos_token_id,
+            "bos_token_id": self.tokenizer.bos_token_id,
+            "pad_token_id": self.tokenizer.pad_token_id,
+        }
+        generate_ids = self.model.generate(**generate_input)
+        text = self.tokenizer.decode(generate_ids[0])
+        return text
 
 
 class custom_embed(BaseModel, Embeddings):
@@ -212,6 +296,30 @@ class remote_model(LLM):
         """
         return "remote api"
 
+    def stream(self, prompt: str) -> Generator:
+        """run llm and get the stream generator
+
+        Args:
+            prompt (str): _description_
+
+        Yields:
+            Generator: _description_
+        """
+        try:
+            client = InferenceClient(self.url)
+
+            yield from client.text_generation(prompt,
+                                              max_new_tokens=1024,
+                                              do_sample=True,
+                                              top_k=10,
+                                              top_p=0.95,
+                                              stream=True)
+
+        except Exception as e:
+            info = "call remote model failed\n\n"
+            logging.error(info, e.__str__())
+            yield info + e.__str__()
+
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         """run llm and get the response
 
@@ -222,26 +330,37 @@ class remote_model(LLM):
         Returns:
             str: llm response
         """
-        data = {
-            "inputs": prompt,
-            "parameters": {
-                'temperature': self.temperature,
-                'max_new_tokens': 1024,
-                'do_sample': True,
-                'top_k': 10,
-                'top_p': 0.95,
-            }
-        }
-        headers = {"Content-Type": "application/json"}
-
         try:
-            response = requests.post(self.url + "/generate",
-                                     json=data,
-                                     headers=headers).json()
+            client = InferenceClient(self.url)
+            response = ""
+            for token in client.text_generation(prompt,
+                                                max_new_tokens=1024,
+                                                do_sample=True,
+                                                top_k=10,
+                                                top_p=0.95,
+                                                stream=True):
+                print(token, end='', flush=True)
+                response += token
+            # data = {
+            #     "inputs": prompt,
+            #     "parameters": {
+            #         'temperature': self.temperature,
+            #         'max_new_tokens': 1024,
+            #         'do_sample': True,
+            #         'top_k': 10,
+            #         'top_p': 0.95,
+            #     }
+            # }
+            # headers = {"Content-Type": "application/json"}
+
+            # try:
+            #     response = requests.post(self.url + "/generate",
+            #                              json=data,
+            #                              headers=headers).json()
         except Exception as e:
             logging.error("call remote model failed\n\n", e.__str__())
             raise e
-        return response["generated_text"]
+        return response  # response["generated_text"]
 
 
 class hf_model(LLM):
@@ -331,34 +450,21 @@ def get_hf_model(model_name, temperature: float = 0.0):
             model = hf_model(pipe=pipe)
 
         except Exception as e:
-            try:
-                pipe = pipeline(
-                    "question-answering",
-                    model=model_name,
-                    token=hf_token,
-                    max_new_tokens=1024,
-                    tokenizer=tokenizer,
-                    streamer=streamer,
-                    model_kwargs={
-                        "temperature": temperature,
-                        "repetition_penalty": 1.2,
-                    },
-                    device_map="auto",
-                    batch_size=8,
-                    torch_dtype=torch.float16,
-                )
-                model = hf_model(pipe=pipe)
-
-            except Exception as e:
-                if model_name.lower().find("taiwan-llama") != -1:
-                    model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
-                                            temperature=temperature)
-                else:
-                    model = Llama2(
-                        model_name_or_path=model_name,
-                        temperature=temperature,
-                        bit4=True,
-                        max_token=4096,
-                    )
+            pipe = pipeline(
+                "question-answering",
+                model=model_name,
+                token=hf_token,
+                max_new_tokens=1024,
+                tokenizer=tokenizer,
+                streamer=streamer,
+                model_kwargs={
+                    "temperature": temperature,
+                    "repetition_penalty": 1.2,
+                },
+                device_map="auto",
+                batch_size=8,
+                torch_dtype=torch.float16,
+            )
+            model = hf_model(pipe=pipe)
 
     return model
