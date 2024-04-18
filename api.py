@@ -7,7 +7,7 @@ from routers import datasets, experts
 import akasha.helper
 import akasha.db
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Generator
 from pathlib import Path
 import json, os
 import api_utils as apu
@@ -15,6 +15,8 @@ import gc, torch
 import yaml
 import logging, sys
 from logging.handlers import TimedRotatingFileHandler
+from fastapi.responses import StreamingResponse, Response
+from langchain.llms.base import LLM
 ## if default_key.json exist, create a thread to keep checking if the key is valid
 if Path("./config/default_key.json").exists():
     thread = threading.Thread(target=start_observer)
@@ -208,6 +210,75 @@ def regular_consult(user_input: ConsultModel):
     del qa
     clean()
     return user_output
+
+
+def run_llm(question: str, model_obj: LLM) -> Generator:
+    try:
+        response_iter = model_obj.stream(question)
+        for response in response_iter:
+            yield f"{response.content}"
+        del model_obj
+        gc.collect()
+        torch.cuda.empty_cache()
+    except Exception as e:
+        yield f"Error: {e}"
+
+
+@app.post("/regular_consult_stream")
+def regular_consult_stream(user_input: ConsultModel):
+    """load openai config and run get_response in akasha.Doc_QA
+
+    Args:
+        user_input (ConsultModel): data input class used in regular_consult and deep_consult
+        data_path: Union[str, List[str]]
+        prompt: Union[str, List[str]]
+        chunk_size:Optional[int]=1000
+        model:Optional[str] = "openai:gpt-3.5-turbo"
+        topK:Optional[int] = 3 
+        threshold:Optional[float] = 0.2
+        search_type:Optional[str] = 'svm'
+        system_prompt:Optional[str] = ""
+        max_doc_len:Optional[int]=1500
+        temperature:Optional[float]=0.0
+        use_chroma:Optional[bool]=True
+        openai_config:Optional[Dict[str, Any]] = {}
+
+
+    Returns:
+        dict: status, response, logs
+    """
+    if user_input.model.split(
+            ':')[0] == "openai" or user_input.embedding_model.split(
+                ':')[0] == "openai":
+        if not apu.load_openai(config=user_input.openai_config):
+            return Response(
+                "load openai config failed.\n\n",
+                status_code=500,
+                media_type="text/event-plain",
+            )
+
+    #ask_question_stream
+    try:
+        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
+
+        inputs = qa.search_docs(doc_path=user_input.data_path,
+                                prompt=user_input.prompt)
+        # response = qa.get_response(doc_path=user_input.data_path,
+        #                            prompt=user_input.prompt,
+        #                            keep_logs=True)
+
+        return StreamingResponse(
+            content=run_llm(inputs, qa.model_obj),
+            media_type="text/event-stream",
+        )
+
+    except Exception as e:
+        return Response(
+            f"text generation encounter errors, {e.__str__()}\n",
+            status_code=500,
+        )
 
 
 @app.post("/deep_consult")

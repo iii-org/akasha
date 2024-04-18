@@ -8,7 +8,10 @@ import api_utils as apu
 import akasha.db
 import subprocess
 import time
+import traceback
+import opencc
 
+cc = opencc.OpenCC("s2t.json")
 CHUNKSIZE = 3000
 SPINNER_MESSAGE = "Wait for api response..."
 HOST = os.getenv("API_HOST", "http://127.0.0.1")
@@ -49,6 +52,7 @@ api_urls = {
     "get_md5_name": f"{HOST}:{PORT}/dataset/get_md5",
     "regular_consult": f"{HOST}:{PORT}/regular_consult",
     "deep_consult": f"{HOST}:{PORT}/deep_consult",
+    "regular_consult_stream": f"{HOST}:{PORT}/regular_consult_stream",
     "get_summary": f"{HOST}:{PORT}/get_summary",
     "get_nickname": f"{HOST}:{PORT}/get_nickname",
     "get_nicknames": f"{HOST}:{PORT}/get_all_nicknames",
@@ -136,7 +140,7 @@ def ask_question(
     expert_owner: str,
     expert_name: str,
     advanced_params: dict,
-    auto_clean: bool = False,
+    col_answer: st.columns = None,
 ):
     """ask question and get response from akasha, the question and resposne will be saved in session_state['que'] and session_state['ans'].
     first check if prompt empty or not, then add openai config if needed.
@@ -192,24 +196,35 @@ def ask_question(
     }
     try:
         with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["regular_consult"],
-                                     json=data).json()
-            if len(response["warnings"]) > 0:
-                for w in response["warnings"]:
-                    st.warning(
-                        f"Encountered issues while reading the file: {w} ")
+            # akasha: get response from expert
+            if "openai" in advanced_params["model"]:
+                with col_answer.chat_message("assistant"):
+                    placeholder = st.empty()
+                    response = placeholder.write_stream(
+                        requests.post(api_urls["regular_consult_stream"],
+                                      json=data,
+                                      stream=True).iter_content(1, True))
+                    st.session_state["que"] = prompt
+                    st.session_state["ans"] = cc.convert(response)
+                    placeholder.empty()
+                    placeholder.markdown(st.session_state["ans"])
 
-            if response["status"] != "success":
-                api_fail(response["response"])
-                return False
+            else:
+                response = requests.post(api_urls["regular_consult"],
+                                         json=data).json()
+                st.session_state["que"] = prompt
+                st.session_state["ans"] = response["response"]
+                with col_answer.chat_message("assistant"):
+                    st.markdown(response["response"])
+                st.session_state.logs[response["timestamp"]] = response["logs"]
 
-        # akasha: get response from expert
+        # if len(response["warnings"]) > 0:
+        #     for w in response["warnings"]:
+        #         st.warning(f"Encountered issues while reading the file: {w} ")
 
-        if auto_clean:
-            st.session_state["question"] = ""
-        st.session_state["que"] = prompt
-        st.session_state["ans"] = response["response"]
-        st.session_state.logs[response["timestamp"]] = response["logs"]
+        # if response["status"] != "success":
+        #     api_fail(response["response"])
+        #     return False
 
         # save last consult config for expert if is the owner of expert
         if username == expert_owner:

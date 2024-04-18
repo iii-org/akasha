@@ -5,6 +5,8 @@ import shutil
 import time
 import json
 import hashlib
+import akasha, akasha.db
+from typing import Generator, Union, List, Callable
 
 HOST = os.getenv("API_HOST", "127.0.0.1")
 PORT = os.getenv("API_PORT", "8000")
@@ -534,3 +536,130 @@ def load_openai(config: dict) -> bool:
         return True
 
     return False
+
+
+class Doc_QA_stream(akasha.atman):
+    """class for implement search db based on user prompt and generate response from llm model, include get_response and chain_of_thoughts."""
+
+    def __init__(
+        self,
+        embeddings: str = "openai:text-embedding-ada-002",
+        chunk_size: int = 1000,
+        model: str = "openai:gpt-3.5-turbo",
+        verbose: bool = False,
+        topK: int = -1,
+        threshold: float = 0.2,
+        language: str = "ch",
+        search_type: Union[str, Callable] = "svm",
+        system_prompt: str = "",
+        prompt_format_type: str = "gpt",
+        max_doc_len: int = 1500,
+        temperature: float = 0.0,
+        use_chroma: bool = False,
+        use_rerank: bool = False,
+        ignore_check: bool = False,
+    ):
+        """initials of Doc_QA_stream class
+
+        Args:
+            embeddings (_type_, optional): embedding model, including two types(openai and huggingface). Defaults to "openai:text-embedding-ada-002".
+            chunk_size (int, optional): the max length of each text segments. Defaults to 1000.
+            model (_type_, optional): language model. Defaults to "openai:gpt-3.5-turbo".
+            verbose (bool, optional): print the processing text or not. Defaults to False.
+            topK (int, optional): the number of documents to be selected. Defaults to 2.
+            threshold (float, optional): threshold of similarity for searching relavant documents. Defaults to 0.2.
+            language (str, optional): "ch" chinese or "en" english. Defaults to "ch".
+            search_type (Union[str, Callable], optional): _description_. Defaults to "svm".
+            system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
+            prompt_format_type (str, optional): the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
+            max_doc_len (int, optional): max total length of selected documents. Defaults to 1500.
+            temperature (float, optional): temperature for language model. Defaults to 0.0.
+            compression (bool, optional): compress the selected documents or not. Defaults to False.
+            use_chroma (bool, optional): use chroma db name instead of documents path to load data or not. Defaults to False.
+            use_rerank (bool, optional): use rerank model to re-rank the selected documents or not. Defaults to False.
+            ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
+        """
+
+        super().__init__(chunk_size, model, verbose, topK, threshold, language,
+                         search_type, "", system_prompt, max_doc_len,
+                         temperature)
+
+        ### set argruments ###
+        self.doc_path = ""
+        self.compression = False
+        self.use_chroma = use_chroma
+        self.ignore_check = ignore_check
+        self.use_rerank = use_rerank
+        self.prompt_format_type = prompt_format_type
+        ### set variables ###
+        self.logs = {}
+        self.model_obj = akasha.helper.handle_model(model, self.verbose,
+                                                    self.temperature)
+        self.embeddings_obj = akasha.helper.handle_embeddings(
+            embeddings, self.verbose)
+        self.embeddings = akasha.helper.handle_search_type(embeddings)
+        self.model = akasha.helper.handle_search_type(model)
+        self.search_type = search_type
+        self.db = None
+        self.docs = []
+        self.doc_tokens = 0
+        self.doc_length = 0
+        self.response = ""
+        self.prompt = ""
+        self.ignored_files = []
+
+    def search_docs(self, doc_path: Union[List[str], str], prompt: str,
+                    **kwargs):
+
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.doc_path = doc_path
+        self.prompt = prompt
+        search_dict = {}
+        if self.use_chroma:
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
+                self.doc_path, self.embeddings)
+        else:
+            self.db, self.ignored_files = akasha.db.processMultiDB(
+                self.doc_path, self.verbose, self.embeddings_obj,
+                self.embeddings, self.chunk_size, self.ignore_check)
+
+        #start_time = time.time()
+        #self._check_db()
+
+        ### start to get response ###
+        retrivers_list = akasha.search.get_retrivers(
+            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
+            self.search_type, search_dict)
+        self.docs, self.doc_length, self.doc_tokens = akasha.search.get_docs(
+            self.db,
+            self.embeddings_obj,
+            retrivers_list,
+            self.prompt,
+            self.use_rerank,
+            self.language,
+            self.search_type,
+            self.verbose,
+            self.model_obj,
+            self.max_doc_len,
+            compression=self.compression,
+        )
+
+        #end_time = time.time()
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = akasha.prompts.default_doc_ask_prompt()
+        prod_sys_prompt, prod_prompt = akasha.prompts.format_sys_prompt(
+            self.system_prompt, self.prompt, self.prompt_format_type)
+
+        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
+
+        splitter = '\n----------------\n'
+
+
+        text_input = self.system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
+            splitter + prompt
+
+        if self.verbose:
+            print("Prompt after formatting:", "\n\n" + text_input)
+
+        return text_input

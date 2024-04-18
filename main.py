@@ -59,7 +59,7 @@ authenticator = Authenticate(config['credentials'], config['cookie']['name'],
                              config['preauthorized'])
 
 # get params from browser url
-url_params = st.experimental_get_query_params()
+url_params = st.query_params.to_dict()
 
 _, col_title, _ = st.columns([2, 6, 1])
 placeholder_title = col_title.empty()

@@ -77,14 +77,24 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
 
             prompt = st.chat_input("Ask your question here")
             if prompt:
-                ask_question(username, prompt, expert_owner, expert_name,
-                             advanced_params)
-
-            if st.session_state['que'] != '' and st.session_state['ans'] != '':
                 with col_answer.chat_message("user"):
-                    st.markdown(st.session_state['que'])
-                with col_answer.chat_message("assistant"):
-                    st.markdown(st.session_state['ans'])
+                    st.markdown(prompt)
+                    st.session_state['ans'] = ''
+
+                response = ask_question(username, prompt, expert_owner,
+                                        expert_name, advanced_params,
+                                        col_answer)
+                # with col_answer.chat_message("assistant"):
+                #     placeholder = st.empty()
+                #     for chunk in response.iter_content(chunk_size=16):
+                #         st.session_state['ans'] += chunk.decode(
+                #             'utf-8', 'ignore')
+                #         placeholder.markdown(st.session_state['ans'])
+            # if st.session_state['que'] != '' and st.session_state['ans'] != '':
+            #     with col_answer.chat_message("user"):
+            #         st.markdown(st.session_state['que'])
+            #     with col_answer.chat_message("assistant"):
+            #         st.markdown(st.session_state['ans'])
 
 
 def _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
