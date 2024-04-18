@@ -197,7 +197,7 @@ def ask_question(
     try:
         with st.spinner(SPINNER_MESSAGE):
             # akasha: get response from expert
-            if "openai" in advanced_params["model"]:
+            if "openai" in advanced_params["model"] or "hf:" in advanced_params["model"] or "huggingface" in advanced_params["model"]:
                 with col_answer.chat_message("assistant"):
                     placeholder = st.empty()
                     response = placeholder.write_stream(

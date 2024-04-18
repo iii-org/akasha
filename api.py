@@ -212,17 +212,43 @@ def regular_consult(user_input: ConsultModel):
     return user_output
 
 
-def run_llm(question: str, model_obj: LLM) -> Generator:
+def run_llm(user_input: ConsultModel) -> Generator:
+    
+    mdl = user_input.model
+    
+    if "openai" in mdl:
+        prompt_format_type = "gpt"
+    else:
+        prompt_format_type = "llama"
+  
+    
     try:
-        response_iter = model_obj.stream(question)
-        for response in response_iter:
-            yield f"{response.content}"
-        del model_obj
+        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
+                 prompt_format_type = prompt_format_type,)
+
+        inputs = qa.search_docs(doc_path=user_input.data_path,
+                                prompt=user_input.prompt)
+        
+        
+        response_iter = qa.model_obj.stream(inputs)
+        
+        if "openai" in qa.model_obj._llm_type:
+            for response in response_iter:
+                yield f"{response.content}"
+        else:
+            for response in response_iter:
+                yield response
+        
+        del qa.model_obj
+        del qa
         gc.collect()
         torch.cuda.empty_cache()
     except Exception as e:
         yield f"Error: {e}"
-
+        gc.collect()
+        torch.cuda.empty_cache()
 
 @app.post("/regular_consult_stream")
 def regular_consult_stream(user_input: ConsultModel):
@@ -256,21 +282,11 @@ def regular_consult_stream(user_input: ConsultModel):
                 status_code=500,
                 media_type="text/event-plain",
             )
-
-    #ask_question_stream
+    
     try:
-        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
-            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
-
-        inputs = qa.search_docs(doc_path=user_input.data_path,
-                                prompt=user_input.prompt)
-        # response = qa.get_response(doc_path=user_input.data_path,
-        #                            prompt=user_input.prompt,
-        #                            keep_logs=True)
-
+        
         return StreamingResponse(
-            content=run_llm(inputs, qa.model_obj),
+            content=run_llm(user_input),
             media_type="text/event-stream",
         )
 

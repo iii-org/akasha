@@ -6,7 +6,17 @@ import time
 import json
 import hashlib
 import akasha, akasha.db
-from typing import Generator, Union, List, Callable
+from typing import Generator, Union, List, Callable, Optional, Any
+import warnings
+warnings.filterwarnings("ignore")
+
+from transformers import pipeline, AutoTokenizer, TextStreamer, AutoModelForCausalLM, TextIteratorStreamer
+import torch
+from langchain.llms.base import LLM
+from threading import Thread
+import openai
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
+
 
 HOST = os.getenv("API_HOST", "127.0.0.1")
 PORT = os.getenv("API_PORT", "8000")
@@ -538,6 +548,127 @@ def load_openai(config: dict) -> bool:
     return False
 
 
+
+class hf_model(LLM):
+    
+    
+    max_token: int = 4096
+    tokenizer: Any
+    model: Any
+    streamer : Any
+    device: Any
+
+    def __init__(self, model_name:str, temperature:float, **kwargs):
+        """define custom model, input func and temperature
+
+        Args:
+            **func (Callable)**: the function return response from llm\n
+        """
+        hf_token = os.environ.get("HF_TOKEN")
+        if hf_token is None:
+            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        
+        super().__init__()
+  
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        hf_token = os.environ.get("HF_TOKEN")
+        if hf_token is None:
+            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        if temperature == 0.0:
+            temperature = 0.01
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.streamer = TextIteratorStreamer(self.tokenizer,skip_prompt=True)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, token = hf_token, temperature = temperature, repetition_penalty=1.2, top_p=0.95, torch_dtype=torch.float16,device_map="auto").to(self.device)
+        
+
+    @property
+    def _llm_type(self) -> str:
+        """return llm type
+
+        Returns:
+            str: llm type
+        """
+        return "huggingface text generation model"
+    
+    def stream(self, prompt:str, stop: Optional[List[str]] = None) -> Generator[str, None, None]:
+        
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        gerneration_kwargs = dict(inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True, min_new_tokens=10)
+        #self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
+        
+        thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
+        thread.start()
+        # for text in self.streamer:
+        #     yield text
+        yield from self.streamer
+        
+        
+    
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        gerneration_kwargs = dict(inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True,)
+        thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
+        thread.start()
+        generated_text = ""
+        for new_text in self.streamer:
+            generated_text += new_text
+        return generated_text
+
+    def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+       
+        return self._call(prompt, stop)
+    
+    
+def _handle_stream_model(model_name: str, verbose: bool, temperature: float)->LLM:
+    model_type, model_name = _separate_name(model_name)
+    
+    if model_type in ["openai", "gpt-3.5", "gpt"]:
+
+        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in os.environ
+                                and os.environ["OPENAI_API_TYPE"] == "azure"):
+            model_name = model_name.replace(".", "")
+            api_base, api_key, api_version = akasha.helper._handle_azure_env()
+            model = AzureChatOpenAI(
+                deployment_name=model_name,
+                temperature=temperature,
+                azure_endpoint=api_base,
+                api_key=api_key,
+                api_version=api_version,
+                validate_base_url=False,
+                streaming=True,
+            )
+        else:
+            openai.api_type = "open_ai"
+            model = ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                api_key=os.environ["OPENAI_API_KEY"],
+                streaming=True,
+            )
+        info = f"selected openai model {model_name}.\n"
+    
+    else:          
+        model = hf_model(model_name = model_name, temperature=temperature)
+        info = f"selected huggingface model {model_name}.\n"
+        
+        
+    if verbose:
+        print(info)
+        
+    return model
+            
+
 class Doc_QA_stream(akasha.atman):
     """class for implement search db based on user prompt and generate response from llm model, include get_response and chain_of_thoughts."""
 
@@ -593,7 +724,7 @@ class Doc_QA_stream(akasha.atman):
         self.prompt_format_type = prompt_format_type
         ### set variables ###
         self.logs = {}
-        self.model_obj = akasha.helper.handle_model(model, self.verbose,
+        self.model_obj = _handle_stream_model(model, self.verbose,
                                                     self.temperature)
         self.embeddings_obj = akasha.helper.handle_embeddings(
             embeddings, self.verbose)
@@ -608,6 +739,29 @@ class Doc_QA_stream(akasha.atman):
         self.prompt = ""
         self.ignored_files = []
 
+    def _set_model(self, **kwargs):
+        """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
+        ## check if we need to change db, model_obj or embeddings_obj ##
+        if "search_type" in kwargs:
+            self.search_type_str = akasha.helper.handle_search_type(
+                kwargs["search_type"], self.verbose)
+
+        if "embeddings" in kwargs:
+            self.embeddings_obj = akasha.helper.handle_embeddings(
+                kwargs["embeddings"], self.verbose)
+
+        if "model" in kwargs or "temperature" in kwargs:
+            new_temp = self.temperature
+            new_model = self.model
+            if "temperature" in kwargs:
+                new_temp = kwargs["temperature"]
+            if "model" in kwargs:
+                new_model = kwargs["model"]
+            if new_model != self.model or new_temp != self.temperature:
+                self.model_obj = _handle_stream_model(new_model, self.verbose,
+                                                     new_temp)
+    
+    
     def search_docs(self, doc_path: Union[List[str], str], prompt: str,
                     **kwargs):
 
@@ -663,3 +817,13 @@ class Doc_QA_stream(akasha.atman):
             print("Prompt after formatting:", "\n\n" + text_input)
 
         return text_input
+
+
+# mml = _handle_stream_model("hf:model/Breeze-7B-Instruct-64k-v0_1", True, 0.0)
+# for txt in mml.stream("hi how are you?"):
+#     print(txt)
+
+# del mml
+# import gc    
+# gc.collect()
+# torch.cuda.empty_cache()
