@@ -8,11 +8,13 @@ import akasha.db
 import os
 import json
 import api_utils as apu
+import subprocess
 
 DATASET_CONFIG_PATH = apu.get_dataset_config_path()
 DOCS_PATH = apu.get_docs_path()
 CONFIG_PATH = apu.get_config_path()
 MODEL_PATH = apu.get_model_path()
+MODEL_NAME_PATH = apu.get_model_name_path()
 
 
 class UserID(BaseModel):
@@ -62,7 +64,52 @@ def get_docs_path():
 
 @router.get("/get_model_path")
 def get_model_path():
-    return {'status': 'success', 'response': MODEL_PATH}
+
+    ### get base models
+    if not Path(MODEL_NAME_PATH).exists():
+        ## create a txt file to store default model names
+        base = [
+            "openai:gpt-3.5-turbo", "openai:gpt-3.5-turbo-16k", "openai:gpt-4",
+            "openai:gpt-4-32k"
+        ]
+        with open(MODEL_NAME_PATH, 'w') as f:
+            for model in base:
+                f.write(model + '\n')
+    else:
+        with open(MODEL_NAME_PATH, 'r') as f:
+            base = f.readlines()
+        base = [model_name.strip().strip('\n') for model_name in base]
+
+    vis = set(base)
+
+    try:
+        modes_dir = MODEL_PATH
+        for dir_path in Path(modes_dir).iterdir():
+            if dir_path.is_dir():
+                if ("gptq" in dir_path.name) or ("GPTQ" in dir_path.name):
+                    mdl_whole_name = "gptq:" + (Path(modes_dir) /
+                                                dir_path.name).__str__()
+                    if mdl_whole_name not in vis:
+                        base.append(mdl_whole_name)
+                        vis.add(mdl_whole_name)
+                else:
+                    mdl_whole_name = "hf:" + (Path(modes_dir) /
+                                              dir_path.name).__str__()
+                    if mdl_whole_name not in vis:
+                        base.append(mdl_whole_name)
+                        vis.add(mdl_whole_name)
+
+            elif dir_path.suffix == ".gguf":
+                mdl_whole_name = "llama-gpu:" + (Path(modes_dir) /
+                                                 dir_path.name).__str__()
+                if mdl_whole_name not in vis:
+                    base.append(mdl_whole_name)
+                    vis.add(mdl_whole_name)
+    except:
+        print("can not find model folder!\n\n")
+        # create model folder
+        subprocess.run(["mkdir", "-p", modes_dir])
+    return {'status': 'success', 'response': base}
 
 
 @router.post("/dataset/create")

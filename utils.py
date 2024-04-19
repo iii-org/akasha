@@ -197,7 +197,9 @@ def ask_question(
     try:
         with st.spinner(SPINNER_MESSAGE):
             # akasha: get response from expert
-            if "openai" in advanced_params["model"] or "hf:" in advanced_params["model"] or "huggingface" in advanced_params["model"]:
+            if "openai" in advanced_params["model"] or "hf:" in advanced_params[
+                    "model"] or "huggingface" in advanced_params[
+                        "model"] or "remote:" in advanced_params["model"]:
                 with col_answer.chat_message("assistant"):
                     placeholder = st.empty()
                     response = placeholder.write_stream(
@@ -212,19 +214,21 @@ def ask_question(
             else:
                 response = requests.post(api_urls["regular_consult"],
                                          json=data).json()
+
+                if len(response["warnings"]) > 0:
+                    for w in response["warnings"]:
+                        st.warning(
+                            f"Encountered issues while reading the file: {w} ")
+
+                if response["status"] != "success":
+                    api_fail(response["response"])
+                    return False
+
                 st.session_state["que"] = prompt
                 st.session_state["ans"] = response["response"]
                 with col_answer.chat_message("assistant"):
                     st.markdown(response["response"])
                 st.session_state.logs[response["timestamp"]] = response["logs"]
-
-        # if len(response["warnings"]) > 0:
-        #     for w in response["warnings"]:
-        #         st.warning(f"Encountered issues while reading the file: {w} ")
-
-        # if response["status"] != "success":
-        #     api_fail(response["response"])
-        #     return False
 
         # save last consult config for expert if is the owner of expert
         if username == expert_owner:
@@ -447,21 +451,13 @@ def list_models() -> list:
         "openai:gpt-4-32k"
     ]
     try:
-        with st.spinner(SPINNER_MESSAGE):
-            modes_dir = requests.get(
-                api_urls["get_model_path"]).json()["response"]
+        response = requests.get(api_urls["get_model_path"]).json()
+        if response["status"] != "success":
+            raise Exception(response["response"])
+        base = response["response"]
+    except Exception as e:
+        api_fail(e.__str__())
 
-        for dir_path in Path(modes_dir).iterdir():
-            if dir_path.is_dir():
-                base.append("hf:" +
-                            (Path(modes_dir) / dir_path.name).__str__())
-            elif dir_path.suffix == ".gguf":
-                base.append("llama-gpu:" +
-                            (Path(modes_dir) / dir_path.name).__str__())
-    except:
-        print("can not find model folder!\n\n")
-        # create model folder
-        subprocess.run(["mkdir", "-p", modes_dir])
     return base
 
 
