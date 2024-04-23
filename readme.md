@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.26](https://img.shields.io/badge/pypi%20package-0.8.26-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.27](https://img.shields.io/badge/pypi%20package-0.8.27-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -262,7 +262,7 @@ ak.get_response(dir_path, prompt,  model="gptq:FlagAlpha/Llama2-Chinese-13b-Chat
 
 ## Select different search type
 Using parameter **"search_type"**, you can choose different search methods to find similar documents , default is **merge**, which is
-the combination of mmr, svm and tfidf.**auto** is another strategy combine bm25/tfidf with svm and reranking. Currently you can select merge, mmr, svm and tfidf, bm25, auto.
+the combination of mmr, svm and tfidf.**auto** is another strategy combine bm25/tfidf with svm . Currently you can select merge, mmr, svm and tfidf, bm25, auto, auto_rerank.
 
 **Max Marginal Relevance(mmr)** select similar documents by cosine similarity, but it also consider diversity, so it will also penalize document for closeness to already selected documents.
 

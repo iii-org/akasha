@@ -83,8 +83,10 @@ def _handle_azure_env() -> Tuple[str, str, str]:
                     os.environ.pop("OPENAI_API_BASE", None)
             elif f"OPENAI_API_{check}" in os.environ:
                 ret[count] = os.environ[f"OPENAI_API_{check}"]
-                os.environ["AZURE_API_BASE"] = os.environ["OPENAI_API_BASE"]
-                os.environ.pop("OPENAI_API_BASE", None)
+                if check == "BASE":
+                    os.environ["AZURE_API_BASE"] = os.environ[
+                        "OPENAI_API_BASE"]
+                    os.environ.pop("OPENAI_API_BASE", None)
             else:
                 if check == "VERSION":
                     ret[count] = "2023-05-15"
@@ -547,6 +549,7 @@ def call_model(model: LLM, prompt: str) -> str:
                 response = model._generate(prompt)
 
         if "openai" in model_type:
+            print_flag = False
             response = model.invoke(prompt)
 
         elif "remote" in model_type:
