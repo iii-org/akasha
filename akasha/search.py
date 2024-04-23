@@ -113,6 +113,82 @@ def _get_relevant_doc_auto(
                 break
         final_docs.extend(docs_bm25[:idx])
 
+    final_docs.extend(backup_docs)
+
+    return final_docs
+
+
+def _get_relevant_doc_auto_rerank(
+    retriver_list: list,
+    docs_list: list,
+    query: str,
+    k: int,
+    times: int,
+    verbose: bool = False,
+) -> list:
+    """try every solution to get  to search relevant documents.
+
+    Args:
+        **db (Chromadb)**: chroma db\n
+        **query (str)**: the query str used to search similar documents\n
+        **k (int)**: for each search type, return first k documents\n
+        **times (int)**: the magnification of max embeddings(?)\n
+
+    Returns:
+        list: list of selected relevant Documents
+    """
+    rate = 1.0
+    if times != 1:
+        rate = 0.3
+
+    ### svm ###
+    svmR = retriver_list[0]
+    docs_svm, svm_scores = svmR._gs(query)
+    #print("SVM: ", svm_scores, docs_svm[0], "\n\n")
+
+    # ### tfidf ###
+
+    tfretriever = retriver_list[1]
+    docs_tf, tf_scores = tfretriever._gs(query)
+    #print("TFIDF", tf_scores, docs_tf[0], "\n\n")
+
+    ### bm25 ###
+    bm25R = retriver_list[2]
+    docs_bm25, bm25_scores = bm25R._gs(query)
+    #print("BM25: ", bm25_scores[:10], len(bm25_scores), "\n\n")
+
+    ### decide which to use ###
+    backup_docs = []
+    final_docs = []  #docs_mmr[0]
+    del svmR, bm25R
+    ## backup_docs is all documents from docs_svm that svm_scores>0.2 ##
+
+    for i in range(len(svm_scores)):
+        if svm_scores[i] >= 0.2 * rate:
+            backup_docs.append(docs_svm[i])
+        else:
+            break
+
+    if tf_scores[0] >= 0.1:
+        idx = 0
+        for i in range(len(tf_scores)):
+            if tf_scores[i] < 0.1 or i >= 2:
+                idx = i
+                break
+        final_docs.extend(docs_tf[:idx])
+
+    elif bm25_scores[0] >= 80:
+        if verbose:
+            print("<<search>>go to bm25\n\n")
+
+        ## find out the idx that the sorted tf_scores is not 0
+        idx = 0
+        for i in range(len(bm25_scores)):
+            if bm25_scores[i] < 80 or i >= 2:
+                idx = i
+                break
+        final_docs.extend(docs_bm25[:idx])
+
     if svm_scores[0] >= 0.35 * rate:
         if verbose:
             print("<<search>>go to svm\n\n")
@@ -226,24 +302,24 @@ def get_retrivers(
     else:
         search_type = search_type.lower()
 
-        if search_type == "merge" or "tfidf" or "auto":
+        if search_type in ["merge", "tfidf", "auto", "auto_rerank"]:
             docs_list = db.get_Documents()
 
-        if search_type == "mmr" or search_type == "merge":
+        if search_type in ["mmr", "merge"]:
             mmr_retriver = myMMRRetriever.from_db(db, embeddings, topK,
                                                   threshold)
             retriver_list.append(mmr_retriver)
 
-        if search_type == "svm" or search_type == "merge" or search_type == "auto":
+        if search_type in ["svm", "merge", "auto", "auto_rerank"]:
             svm_retriver = mySVMRetriever.from_db(db, embeddings, topK,
                                                   threshold)
             retriver_list.append(svm_retriver)
 
-        if search_type == "tfidf" or search_type == "merge" or search_type == "auto":
+        if search_type in ["tfidf", "merge", "auto", "auto_rerank"]:
             tfidf_retriver = myTFIDFRetriever.from_documents(docs_list, k=topK)
             retriver_list.append(tfidf_retriver)
 
-        if search_type == "bm25" or search_type == "auto":
+        if search_type in ["bm25", "auto", "auto_rerank"]:
             bm25_retriver = myBM25Retriever.from_documents(
                 docs_list, topK, threshold)
             retriver_list.append(bm25_retriver)
@@ -316,6 +392,14 @@ def get_docs(
             times = _get_threshold_times(db)
             docs = _get_relevant_doc_auto(retriver_list, docs_list, query,
                                           topK, times, verbose)
+            docs, docs_len, tokens = _merge_docs([docs], topK, language,
+                                                 verbose, max_doc_len, model)
+            return docs, docs_len, tokens
+        elif search_type == "auto_rerank":
+            docs_list = db.get_Documents()
+            times = _get_threshold_times(db)
+            docs = _get_relevant_doc_auto_rerank(retriver_list, docs_list,
+                                                 query, topK, times, verbose)
             docs, docs_len, tokens = _merge_docs([docs], topK, language,
                                                  verbose, max_doc_len, model)
             return docs, docs_len, tokens

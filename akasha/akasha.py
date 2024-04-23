@@ -12,6 +12,7 @@ import akasha.prompts as prompts
 import akasha.db
 import datetime, traceback
 import warnings, logging
+import os
 from dotenv import load_dotenv
 
 load_dotenv(pathlib.Path().cwd() / ".env")
@@ -536,6 +537,28 @@ class Doc_QA(atman):
             Returns:
                 response (str): the response from llm model.
         """
+
+        # Check if doc_path is a list
+        if isinstance(doc_path, list):
+            # Check if the first item in the list is a directory
+            if os.path.isdir(doc_path[0]):
+                # first item is a directory, so run get_response
+                pass
+            else:
+                # first item is not a directory, so run ask_self
+                return self.ask_self(prompt, info=doc_path, **kwargs)
+        else:
+            # Check if doc_path is a directory
+            if os.path.isdir(doc_path):
+                # the doc_path is a directory, so run get_response
+                pass
+            elif os.path.isfile(doc_path):
+                # the doc_path is a file, so run ask_whole_file
+                return self.ask_whole_file(doc_path, prompt, **kwargs)
+            else:
+                # Process as string
+                return self.ask_self(prompt, info=doc_path, **kwargs)
+
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.doc_path = doc_path
@@ -941,14 +964,15 @@ class Doc_QA(atman):
 
         if parse_json is None or int(parse_json["need"]) == 0:
 
-            return self.get_response(doc_path, prompt, search_type="auto")
+            return self.get_response(doc_path, prompt)
 
         for follow_up in parse_json["follow_up"]:
             #ret = self.ask_self(prompt=follow_up, system_prompt=self.system_prompt)
             follow_up = '\n'.join(self.intermediate_ans) + "\n" + follow_up
-            follow_up_response = self.get_response(doc_path,
-                                                   follow_up,
-                                                   search_type="auto")
+            follow_up_response = self.get_response(
+                doc_path,
+                follow_up,
+            )
 
             check = self.ask_self(
                 prompt=

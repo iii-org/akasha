@@ -14,7 +14,6 @@ install_requires = [
     "chromadb==0.4.14",
     "openai>=0.27",
     "tiktoken",
-    "lark==1.1.7",
     "scikit-learn<1.3.0",
     "jieba>=0.42.1",
     "sentence-transformers==2.2.2",
@@ -42,7 +41,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.26",
+    version="0.8.27",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
