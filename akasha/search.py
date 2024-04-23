@@ -302,7 +302,7 @@ def get_retrivers(
     else:
         search_type = search_type.lower()
 
-        if search_type in ["merge", "tfidf", "auto", "auto_rerank"]:
+        if search_type in ["merge", "tfidf", "auto", "auto_rerank", "bm25"]:
             docs_list = db.get_Documents()
 
         if search_type in ["mmr", "merge"]:
