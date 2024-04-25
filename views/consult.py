@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import add_question_layer, ask_question, ask_question_deep, get_expert_info, check_consultable
+from utils import add_question_layer, ask_question, ask_question_deep, get_expert_info, check_consultable, ask_chat
 from utils import check_expert_is_shared, get_last_consult_for_expert, save_tmp_file, check_dataset_is_shared
 from utils import get_dataset_info, get_doc_file_path, ask_summary
 import os
@@ -8,13 +8,15 @@ import os
 def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
     st.title('Consult Knowledge')
     consult_strategy = st.radio(
-        'Consult Strategy', ['Regular', 'Deep', 'Summary'],
+        'Consult Strategy', ['Chat', 'Regular', 'Deep', 'Summary'],
         index=0,
         help='Choose strategy when consulting Knowledge',
         horizontal=True,
         label_visibility='collapsed')
 
-    if consult_strategy == 'Regular':
+    if consult_strategy == 'Chat':
+        _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
+    elif consult_strategy == 'Regular':
         _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
     elif consult_strategy == 'Deep':
         _deep_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
@@ -23,10 +25,66 @@ def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                      divider='rainbow',
                      help='choose a document file to summarize')
         _summary(DATASETS, LANGUAGE_MODELS, username)
-    # with st.sidebar:
-    #     with placeholder_hint:
-    #         with st.expander('Hint', expanded=False):
-    #             sys_prompt = st.text_area('System Prompt', help='Special instruction/hint to lead answering direction.')
+
+
+def _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
+    st.subheader('Chat', divider='rainbow', help='Single Question at a time')
+    col_answer, col_question = st.columns([3, 1])
+    shared = col_question.toggle('Shared Knowledges',
+                                 value=False,
+                                 key='use-shared-experts',
+                                 help='Use Shared Knowledges')
+    if col_question.button(
+            'Clear History',
+            type='primary',
+    ):
+        st.session_state.history_messages = []
+    if not shared:
+        EXPERTS = [e for e in EXPERTS if not check_expert_is_shared(e)]
+    if EXPERTS == []:
+        col_question.error(
+            'No Knowledges available, create one or use shared Knowledges')
+    else:
+        expert_name = col_question.selectbox('Choose Knowledge', EXPERTS)
+        if check_expert_is_shared(expert_name):
+            expert_name, expert_owner = expert_name.split('@')
+        else:
+            expert_owner = username
+
+        datasets, embeddings_model, chunk_size, _ = get_expert_info(
+            expert_owner, expert_name)
+        chunk_size = int(chunk_size)
+        consultable, reason = check_consultable(datasets, embeddings_model,
+                                                chunk_size)
+        if not consultable:
+            enable_msg = 'Please contact the owner of this Knowledge to enable consultation.' if expert_owner != username else 'Please enable consultation in "Knowledges" settings.'
+            col_question.warning(
+                f'Knowledge="{expert_name}" is currently not consultable since {reason}{enable_msg}'
+            )
+        else:
+            last_consult_config_for_expert = get_last_consult_for_expert(
+                expert_owner, expert_name)
+
+            ### use default advanced param if shared expert, else can be modified ##
+            if (expert_owner == username):
+                with col_question.expander('Advanced'):
+                    advanced_params = get_advance_param(
+                        True, last_consult_config_for_expert, LANGUAGE_MODELS,
+                        SEARCH_TYPES, datasets, chunk_size, embeddings_model)
+            else:
+                advanced_params = get_advance_param(
+                    False, last_consult_config_for_expert, LANGUAGE_MODELS,
+                    SEARCH_TYPES, datasets, chunk_size, embeddings_model)
+
+            for message in st.session_state.history_messages:
+                with col_answer.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            prompt = st.chat_input("Ask your question here")
+            if prompt:
+
+                response = ask_chat(username, prompt, expert_owner,
+                                    expert_name, advanced_params, col_answer)
 
 
 def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):

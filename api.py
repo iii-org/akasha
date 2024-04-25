@@ -110,6 +110,10 @@ class ConsultModel(BaseModel):
     openai_config: Optional[Dict[str, Any]] = {}
 
 
+class ChatModel(ConsultModel):
+    history_messages: Optional[List[Dict]] = []
+
+
 class ConsultModelReturn(BaseModel):
     response: Union[str, List[str]]
     status: str
@@ -213,34 +217,32 @@ def regular_consult(user_input: ConsultModel):
 
 
 def run_llm(user_input: ConsultModel) -> Generator:
-    
+
     mdl = user_input.model
-    
+
     if "openai" in mdl:
         prompt_format_type = "gpt"
     else:
         prompt_format_type = "llama"
-  
-    
+
     try:
         qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
                  prompt_format_type = prompt_format_type,)
 
-        inputs = qa.search_docs(doc_path=user_input.data_path,
-                                prompt=user_input.prompt)
-        
-        
-        response_iter = qa.model_obj.stream(inputs)
-        
+        inputs, prod_prompt = qa.search_docs(doc_path=user_input.data_path,
+                                             prompt=user_input.prompt)
+
+        response_iter = qa.model_obj.stream(inputs + prod_prompt)
+
         if "openai" in qa.model_obj._llm_type:
             for response in response_iter:
                 yield f"{response.content}"
         else:
             for response in response_iter:
                 yield response
-        
+
         del qa.model_obj
         del qa
         gc.collect()
@@ -249,6 +251,50 @@ def run_llm(user_input: ConsultModel) -> Generator:
         yield f"Error: {e}"
         gc.collect()
         torch.cuda.empty_cache()
+
+
+def run_llm_chat(user_input: ChatModel) -> Generator:
+
+    mdl = user_input.model
+
+    if "openai" in mdl:
+        prompt_format_type = "gpt"
+    else:
+        prompt_format_type = "llama"
+
+    try:
+        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
+                 prompt_format_type = prompt_format_type,)
+
+        message, chat_history_len = apu.retri_history_messages(
+            user_input.history_messages,
+            max_doc_len=user_input.max_doc_len // 2)
+
+        inputs, prod_prompt = qa.search_docs(
+            doc_path=user_input.data_path,
+            prompt=user_input.prompt,
+            max_doc_len=user_input.max_doc_len - chat_history_len)
+
+        response_iter = qa.model_obj.stream(inputs + message + prod_prompt)
+
+        if "openai" in qa.model_obj._llm_type:
+            for response in response_iter:
+                yield f"{response.content}"
+        else:
+            for response in response_iter:
+                yield response
+
+        del qa.model_obj
+        del qa
+        gc.collect()
+        torch.cuda.empty_cache()
+    except Exception as e:
+        yield f"Error: {e}"
+        gc.collect()
+        torch.cuda.empty_cache()
+
 
 @app.post("/regular_consult_stream")
 def regular_consult_stream(user_input: ConsultModel):
@@ -282,9 +328,9 @@ def regular_consult_stream(user_input: ConsultModel):
                 status_code=500,
                 media_type="text/event-plain",
             )
-    
+
     try:
-        
+
         return StreamingResponse(
             content=run_llm(user_input),
             media_type="text/event-stream",
@@ -295,6 +341,121 @@ def regular_consult_stream(user_input: ConsultModel):
             f"text generation encounter errors, {e.__str__()}\n",
             status_code=500,
         )
+
+
+@app.post("/chat_stream")
+def chat_stream(user_input: ChatModel):
+    """user ask a question and use both history messages and documents to get response
+
+    Args:
+        user_input (ChatModel): data input class used in chat_stream and chat
+
+    Returns:
+        StreamingResponse: return the generator of response
+    """
+
+    if user_input.model.split(
+            ':')[0] == "openai" or user_input.embedding_model.split(
+                ':')[0] == "openai":
+        if not apu.load_openai(config=user_input.openai_config):
+            return {
+                'status': 'fail',
+                'response': 'load openai config failed.\n\n'
+            }
+
+    try:
+
+        return StreamingResponse(
+            content=run_llm_chat(user_input),
+            media_type="text/event-stream",
+        )
+
+    except Exception as e:
+        return Response(
+            f"text generation encounter errors, {e.__str__()}\n",
+            status_code=500,
+        )
+
+
+@app.post("/chat")
+def chat(user_input: ChatModel):
+    """user ask a question and use both history messages and documents to get response
+
+    Args:
+        user_input (ChatModel): data input class used in chat_stream and chat
+
+    Returns:
+        dict: status, response, logs
+    """
+
+    if user_input.model.split(
+            ':')[0] == "openai" or user_input.embedding_model.split(
+                ':')[0] == "openai":
+        if not apu.load_openai(config=user_input.openai_config):
+            return {
+                'status': 'fail',
+                'response': 'load openai config failed.\n\n'
+            }
+
+    if "openai" in user_input.model:
+        prompt_format_type = "gpt"
+    else:
+        prompt_format_type = "llama"
+
+    try:
+        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
+                 prompt_format_type = prompt_format_type,)
+
+        message, chat_history_len = apu.retri_history_messages(
+            user_input.history_messages,
+            max_doc_len=user_input.max_doc_len // 2)
+
+        inputs, prod_prompt = qa.search_docs(
+            doc_path=user_input.data_path,
+            prompt=user_input.prompt,
+            max_doc_len=user_input.max_doc_len - chat_history_len)
+
+        response = akasha.helper.call_model(qa.model_obj,
+                                            inputs + message + prod_prompt)
+
+    except Exception as e:
+        err_message = e.__str__()
+        response = None
+
+    try:
+        ig_files = qa.ignored_files
+    except:
+        ig_files = []
+
+    ## get logs
+    timesp = ''
+    if len(qa.timestamp_list) == 0:
+        logs = {}
+    else:
+        timesp = qa.timestamp_list[-1]
+        if timesp in qa.logs:
+            logs = qa.logs[timesp]
+
+    if response == None:
+        user_output = ConsultModelReturn(
+            response=f"text generation encounter errors, {err_message}\n",
+            status="fail",
+            logs=logs,
+            timestamp=timesp,
+            warnings=ig_files)
+    else:
+        user_output = ConsultModelReturn(response=response,
+                                         status="success",
+                                         logs=logs,
+                                         timestamp=timesp,
+                                         warnings=ig_files)
+
+    del qa.model_obj
+    del qa
+    clean()
+    return user_output
 
 
 @app.post("/deep_consult")

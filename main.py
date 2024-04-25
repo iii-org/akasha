@@ -15,7 +15,7 @@ from views.forgetpwd import forgetpwd_page
 from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command
 
 # info
-VERSION = '0.7'
+VERSION = '0.8'
 
 # get host ip
 if 'host_ip' not in st.session_state:
@@ -41,6 +41,9 @@ if 'que' not in st.session_state:
 
 if 'ans' not in st.session_state:
     st.session_state['ans'] = ''
+
+if 'history_messages' not in st.session_state:
+    st.session_state['history_messages'] = []
 
 # page config
 st.set_page_config(
@@ -112,7 +115,7 @@ if url_params == {}:
             include_shared=True)  # may filtered by logged-in user
         EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', \
             'hf:shibing624/text2vec-base-multilingual',"hf:BAAI/bge-large-en-v1.5", "hf:BAAI/bge-large-zh-v1.5"]
-        SEARCH_TYPES = ['merge', 'svm', 'tfidf', 'mmr']
+        SEARCH_TYPES = ['merge', 'svm', 'auto', 'tfidf', 'mmr', 'bm25']
         LANGUAGE_MODELS = list_models()
 
         # layout after successfully login

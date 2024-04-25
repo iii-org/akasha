@@ -6,7 +6,7 @@ import time
 import json
 import hashlib
 import akasha, akasha.db
-from typing import Generator, Union, List, Callable, Optional, Any
+from typing import Generator, Union, List, Callable, Optional, Any, Tuple
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -557,6 +557,53 @@ def load_openai(config: dict) -> bool:
     return False
 
 
+def retri_history_messages(messages: list,
+                           pairs: int = 10,
+                           max_doc_len: int = 750,
+                           language: str = "ch") -> Tuple[str, int]:
+    """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_doc_len and pairs, and return the text with total length
+
+    Args:
+        messages (list): history messages list, each index is a dict with keys: role("user", "assistant"), content(content of message)
+        pairs (int, optional): the maximum number of messages. Defaults to 10.
+        max_doc_len (int, optional): the maximum number of messages length. Defaults to 750.
+        language (str, optional): message language. Defaults to "ch".
+
+    Returns:
+        Tuple[str, int]: return the text with total length.
+    """
+    cur_len = 0
+    count = 0
+    ret = []
+    splitter = '\n----------------\n'
+
+    for i in range(len(messages) - 1, -1, -2):
+        if count >= pairs:
+            break
+        if (messages[i]["role"] != "assistant") or (messages[i - 1]["role"]
+                                                    != "user"):
+            i += 1
+            continue
+        texta = "Assistant: " + messages[i]["content"] + "\n"
+        textq = "User: " + messages[i - 1]["content"] + "\n"
+        temp = akasha.helper.get_doc_length(language, textq + texta)
+        if cur_len + temp > max_doc_len:
+            break
+        cur_len += temp
+        ret.append(texta)
+        ret.append(textq)
+        count += 1
+
+    if count == 0:
+        return "", 0
+
+    ret.reverse()
+    ret_str = splitter + "chat history: \n\n" + ''.join(ret) + splitter
+    print(ret_str)
+
+    return ret_str, cur_len
+
+
 class hf_model(LLM):
 
     max_token: int = 4096
@@ -653,6 +700,17 @@ class hf_model(LLM):
 
 def _handle_stream_model(model_name: str, verbose: bool,
                          temperature: float) -> LLM:
+    """handle each model type, including openai, remote, llama, chatglm, lora, gptq, huggingface, and return the model object
+    for remote, gpt and huggingface models, we are using streaming mode; for others, we are using non-streaming mode.
+
+    Args:
+        model_name (str): {model_type}:{model_name)
+        verbose (bool): print the processing text or not
+        temperature (float): temperature for language model
+
+    Returns:
+        LLM: model object
+    """
     model_type, model_name = _separate_name(model_name)
 
     if model_type in ["openai", "gpt-3.5", "gpt"]:
@@ -686,6 +744,37 @@ def _handle_stream_model(model_name: str, verbose: bool,
     ]:
         model = remote_model(model_name, temperature=temperature)
         info = f"selected remote model {model_name}.\n"
+
+    elif (model_type
+          in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
+          and model_name != ""):
+        model = akasha.helper.get_llama_cpp_model(model_type, model_name,
+                                                  temperature)
+        info = "selected llama-cpp model\n"
+
+    elif model_type in ["chatglm", "chatglm2", "glm"]:
+        model = akasha.helper.chatGLM(model_name=model_name,
+                                      temperature=temperature)
+        info = f"selected chatglm model {model_name}.\n"
+
+    elif model_type in ["lora", "peft"]:
+        model = akasha.helper.peft_Llama2(model_name_or_path=model_name,
+                                          temperature=temperature)
+        info = f"selected peft model {model_name}.\n"
+
+    elif model_type in ["gptq"]:
+        if model_name.lower().find("taiwan-llama") != -1:
+            model = akasha.helper.TaiwanLLaMaGPTQ(
+                model_name_or_path=model_name, temperature=temperature)
+
+        else:
+            model = akasha.helper.gptq(
+                model_name_or_path=model_name,
+                temperature=temperature,
+                bit4=True,
+                max_token=4096,
+            )
+        info = f"selected gptq model {model_name}.\n"
 
     else:
         model = hf_model(model_name=model_name, temperature=temperature)
@@ -790,7 +879,7 @@ class Doc_QA_stream(akasha.atman):
                                                       new_temp)
 
     def search_docs(self, doc_path: Union[List[str], str], prompt: str,
-                    **kwargs):
+                    **kwargs) -> Tuple[str, str]:
 
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
@@ -804,9 +893,6 @@ class Doc_QA_stream(akasha.atman):
             self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
-
-        #start_time = time.time()
-        #self._check_db()
 
         ### start to get response ###
         retrivers_list = akasha.search.get_retrivers(
@@ -832,15 +918,13 @@ class Doc_QA_stream(akasha.atman):
         prod_sys_prompt, prod_prompt = akasha.prompts.format_sys_prompt(
             self.system_prompt, self.prompt, self.prompt_format_type)
 
-        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
-
         splitter = '\n----------------\n'
 
 
-        text_input = self.system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
-            splitter + prompt
+        text_input = prod_sys_prompt + "\n----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
+            splitter
 
         if self.verbose:
             print("Prompt after formatting:", "\n\n" + text_input)
 
-        return text_input
+        return text_input, prod_prompt

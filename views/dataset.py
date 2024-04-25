@@ -59,7 +59,13 @@ def _my_datasets(DATASETS, username, all_users):
             dataset_owner, dataset_name)
 
         col_description.markdown(dataset_description)
-        col_filelist.text('\n'.join(dataset_filelist))
+        # if dataset_filelist is too long, show the first 1 and expand the rest #
+        if len(dataset_filelist) >= 8:
+            with col_filelist.expander(dataset_filelist[0][:15] + "..."):
+                st.text('\n'.join(dataset_filelist))
+        else:
+            col_filelist.text('\n'.join(dataset_filelist))
+
         col_lastupdate.markdown(dataset_lastupdate)
         # col_share_option.toggle('', key=f'share-dataset-{dataset}',
         #                         disabled=len(other_users) == 0, value=False)

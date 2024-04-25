@@ -54,6 +54,8 @@ api_urls = {
     "deep_consult": f"{HOST}:{PORT}/deep_consult",
     "regular_consult_stream": f"{HOST}:{PORT}/regular_consult_stream",
     "get_summary": f"{HOST}:{PORT}/get_summary",
+    "chat": f"{HOST}:{PORT}/chat",
+    "chat_stream": f"{HOST}:{PORT}/chat_stream",
     "get_nickname": f"{HOST}:{PORT}/get_nickname",
     "get_nicknames": f"{HOST}:{PORT}/get_all_nicknames",
 }
@@ -132,6 +134,160 @@ def add_question_layer(buttons: st.columns) -> list:
             # layers[i] = st.data_editor(df, key=f'question-layer-{i}', num_rows='dynamic', use_container_width=True)
 
     return layers
+
+
+def ask_chat(
+    username: str,
+    prompt: str,
+    expert_owner: str,
+    expert_name: str,
+    advanced_params: dict,
+    col_answer: st.columns = None,
+):
+    """ask chat and get response from akasha, the question and resposne will be saved in st.session_state['history_messages'].
+    first check if prompt empty or not, then add openai config if needed.
+    second, call get_data_path function to get all chromadb path and format all data into a dict and pass to regular consult api.
+    if auto_clean is True, clean question area after ask question; if username is the owner of expert, save last consult config for expert.
+
+    Args:
+        username (str): the current user account name, used to check if the user is the owner of expert.
+        sys_prompt (str): system prompt of the question.
+        prompt (str): question.
+        expert_owner (str): the owner of expert.
+        expert_name (str): the name of expert.
+        advanced_params (dict): advanced parameters of expert, include 'datasets', 'model', 'search_type', 'topK','threshold',
+            'max_doc_len', 'temperature', 'use_compression', 'chunk_size', 'embedding_model', 'compression_language_model'.
+        auto_clean (bool, optional): if True, clean the question area after ask question. Defaults to False.
+
+    Returns:
+        bool: return True if ask question successfully, else return False.
+    """
+
+    if not prompt or prompt == "":
+        st.error("❌ Please input question")
+        time.sleep(3)
+        return False
+
+    if (advanced_params["embedding_model"].split(":")[0] == "openai"
+            or advanced_params["model"].split(":")[0] == "openai"):
+        openai_config = get_openai_config(username)
+    else:
+        openai_config = {}
+
+    ## get all chromadb path and format all data into a dict ##
+    data_path = get_data_path(
+        username,
+        advanced_params["datasets"],
+        advanced_params["embedding_model"],
+        advanced_params["chunk_size"],
+    )
+
+    data = {
+        "data_path": data_path,
+        "prompt": prompt,
+        "system_prompt": advanced_params["system_prompt"],
+        "embedding_model": advanced_params["embedding_model"],
+        "chunk_size": advanced_params["chunk_size"],
+        "model": advanced_params["model"],
+        "temperature": advanced_params["temperature"],
+        "topK": advanced_params["topK"],
+        "threshold": advanced_params["threshold"],
+        "search_type": advanced_params["search_type"],
+        "max_doc_len": advanced_params["max_doc_len"],
+        "openai_config": openai_config,
+        "history_messages": st.session_state.history_messages,
+    }
+    try:
+        with st.spinner(SPINNER_MESSAGE):
+            # using streaming mode #
+            if "openai" in advanced_params["model"] or "hf:" in advanced_params[
+                    "model"] or "huggingface" in advanced_params[
+                        "model"] or "remote:" in advanced_params["model"]:
+                with col_answer.chat_message("user"):
+                    st.markdown(prompt)
+                with col_answer.chat_message("assistant"):
+                    placeholder = st.empty()
+                    response = placeholder.write_stream(
+                        requests.post(api_urls["chat_stream"],
+                                      json=data,
+                                      stream=True).iter_content(1, True))
+                    trans_result = cc.convert(response)
+                    st.session_state.history_messages.append({
+                        "role": "user",
+                        "content": prompt
+                    })
+                    st.session_state.history_messages.append({
+                        "role":
+                        "assistant",
+                        "content":
+                        trans_result
+                    })
+                    placeholder.empty()
+                    placeholder.markdown(trans_result)
+
+            else:
+                with col_answer.chat_message("user"):
+                    st.markdown(prompt)
+
+                response = requests.post(api_urls["chat"], json=data).json()
+
+                if len(response["warnings"]) > 0:
+                    for w in response["warnings"]:
+                        st.warning(
+                            f"Encountered issues while reading the file: {w} ")
+
+                if response["status"] != "success":
+                    api_fail(response["response"])
+                    return False
+
+                st.session_state.history_messages.append({
+                    "role": "user",
+                    "content": prompt
+                })
+
+                st.session_state.history_messages.append({
+                    "role":
+                    "assistant",
+                    "content":
+                    response["response"]
+                })
+                with col_answer.chat_message("assistant"):
+                    st.markdown(response["response"])
+                st.session_state.logs[response["timestamp"]] = response["logs"]
+
+        # save last consult config for expert if is the owner of expert
+        if username == expert_owner:
+            data = {
+                "system_prompt":
+                advanced_params["system_prompt"],
+                "language_model":
+                advanced_params["model"],
+                "search_type":
+                advanced_params["search_type"],
+                "top_k":
+                advanced_params["topK"],
+                "threshold":
+                advanced_params["threshold"],
+                "max_doc_len":
+                advanced_params["max_doc_len"],
+                "temperature":
+                advanced_params["temperature"],
+                "use_compression":
+                advanced_params["use_compression"],
+                "compression_language_model":
+                advanced_params["compression_language_model"],
+            }
+            data["owner"] = expert_owner
+            data["expert_name"] = expert_name
+            with st.spinner(SPINNER_MESSAGE):
+                response = requests.post(api_urls["save_consult"],
+                                         json=data).json()
+            if response["status"] != "success":
+                st.warning("cannot save last consult config for expert")
+
+    except Exception as e:
+        api_fail(e.__str__())
+    return True
 
 
 def ask_question(
