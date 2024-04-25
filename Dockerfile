@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.9-slim
 LABEL chih-chuan chang<ccchang@iii.org.tw>
 
 WORKDIR /app
