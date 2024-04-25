@@ -8,6 +8,7 @@ import api_utils as apu
 import akasha.db
 import subprocess
 import time
+import datetime
 import traceback
 import opencc
 
@@ -225,6 +226,8 @@ def ask_chat(
                     placeholder.empty()
                     placeholder.markdown(trans_result)
 
+                collect_logs(data, trans_result, "chat")
+
             else:
                 with col_answer.chat_message("user"):
                     st.markdown(prompt)
@@ -366,7 +369,7 @@ def ask_question(
                     st.session_state["ans"] = cc.convert(response)
                     placeholder.empty()
                     placeholder.markdown(st.session_state["ans"])
-
+                collect_logs(data, st.session_state["ans"], "get_response")
             else:
                 response = requests.post(api_urls["regular_consult"],
                                          json=data).json()
@@ -2073,3 +2076,22 @@ def ask_summary(system_prompt: str, username: str, tmp_file_name: str,
         api_fail(e.__str__())
 
     return True
+
+
+def collect_logs(data: dict, response: str, fn_type: str):
+    """since streaming can not get log from akasha, collect log from response and data.
+
+    Args:
+        data (dict): data dictionary of the request
+        response (str): LLM response(after streaming)
+    """
+
+    cur_time = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+    log = data.copy()
+    log['response'] = response
+    log['fn_type'] = fn_type
+    if "openai_config" in log:
+        log.pop("openai_config")
+    st.session_state.logs[cur_time] = log
+
+    return
