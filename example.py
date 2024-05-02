@@ -250,3 +250,20 @@ def agent_example2():
     ], )
     print(ao("請用中文回答李遠哲跟馬英九誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json"))
     ao.save_logs("ao2.json")
+
+
+def ask_agent():
+    ak = akasha.Doc_QA(verbose=True, search_type="auto")
+
+    ak.ask_agent(doc_path="./docs/mic/", prompt="LPWAN和5G的區別是什麼?")
+
+    print("follow_up: \n\n", ak.follow_up, ak.intermediate_ans)
+    response, new_follow_ups, new_intermediate_ans = ak.rerun_ask_agent(
+        doc_path="./docs/mic/",
+        prompt="LPWAN和5G的區別是什麼?",
+        follow_up=['LPWAN是什麼?', '5G是什麼?', '物聯網環境的無線通訊技術有哪些?'])
+
+    print(response, new_follow_ups, new_intermediate_ans)
+
+
+ask_agent()

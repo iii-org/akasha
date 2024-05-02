@@ -308,12 +308,16 @@ class remote_model(LLM):
         try:
             client = InferenceClient(self.url)
 
-            yield from client.text_generation(prompt,
-                                              max_new_tokens=1024,
-                                              do_sample=True,
-                                              top_k=10,
-                                              top_p=0.95,
-                                              stream=True)
+            yield from client.text_generation(
+                prompt,
+                max_new_tokens=1024,
+                do_sample=True,
+                top_k=10,
+                top_p=0.95,
+                stream=True,
+                repetition_penalty=1.2,
+                stop_sequences=["<|eot_id|>", "<|end_header_id|>"],
+            )
 
         except Exception as e:
             info = "call remote model failed\n\n"
@@ -333,12 +337,16 @@ class remote_model(LLM):
         try:
             client = InferenceClient(self.url)
             response = ""
-            for token in client.text_generation(prompt,
-                                                max_new_tokens=1024,
-                                                do_sample=True,
-                                                top_k=10,
-                                                top_p=0.95,
-                                                stream=True):
+            for token in client.text_generation(
+                    prompt,
+                    max_new_tokens=1024,
+                    do_sample=True,
+                    top_k=10,
+                    top_p=0.95,
+                    stream=True,
+                    repetition_penalty=1.2,
+                    stop_sequences=["<|eot_id|>", "<|end_header_id|>"],
+            ):
                 print(token, end='', flush=True)
                 response += token
             # data = {

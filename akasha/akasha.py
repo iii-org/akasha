@@ -1,7 +1,7 @@
 import pathlib
 import time
 from tqdm import tqdm
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Tuple
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
@@ -274,7 +274,8 @@ class atman:
                         != value):  # check if variable value is different
                     self.__dict__[key] = value
             else:
-                logging.warning(f"argument {key} not exist")
+                if key != "dbs":
+                    logging.warning(f"argument {key} not exist")
 
         return
 
@@ -564,7 +565,11 @@ class Doc_QA(atman):
         self.doc_path = doc_path
         self.prompt = prompt
         search_dict = {}
-        if self.use_chroma:
+
+        if 'dbs' in kwargs:
+            self.db = kwargs['dbs']
+            self.ignored_files = []
+        elif self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
@@ -927,6 +932,7 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         self.doc_path = doc_path
         self.prompt = prompt
+        self.follow_up = []
         self.intermediate_ans = []
         original_sys_prompt = self.system_prompt
 
@@ -966,31 +972,13 @@ class Doc_QA(atman):
 
             return self.get_response(doc_path, prompt)
 
-        for follow_up in parse_json["follow_up"]:
-            #ret = self.ask_self(prompt=follow_up, system_prompt=self.system_prompt)
-            follow_up = '\n'.join(self.intermediate_ans) + "\n" + follow_up
-            follow_up_response = self.get_response(
-                doc_path,
-                follow_up,
-            )
+        self.follow_up = parse_json["follow_up"]
 
-            check = self.ask_self(
-                prompt=
-                f"help me check if the below Response answer the Question or not, return 1 if yes, 0 if no.\
-            \nQuestion: {follow_up}\n\nResponse: " + follow_up_response,
-                system_prompt="return 1 or 0 only")
-            self.system_prompt = original_sys_prompt  # reset system prompt back, since the self-ask is done
-            if int(check) == 1:
-                self.intermediate_ans.append(follow_up_response)
-            else:
-                # agent = get_agent_buildin_tool(self.model_obj)
-                # self.intermediate_ans.append(agent(follow_up)['output'])
-                pass
-
-        self.response = self.get_response(
-            doc_path, prompt='\n'.join(self.intermediate_ans) + "\n" + prompt)
+        self.rerun_ask_agent(doc_path, prompt, self.follow_up)
 
         end_time = time.time()
+        self.prompt = prompt
+
         if self.keep_logs == True:
             self.timestamp_list.append(timestamp)
             self._add_basic_log(timestamp, "ask_agent")
@@ -1000,6 +988,8 @@ class Doc_QA(atman):
             self._add_result_log(timestamp, end_time - start_time)
             self.logs[timestamp]["prompt"] = prompt
             self.logs[timestamp]["response"] = self.response
+            self.logs[timestamp]["follow_up"] = self.follow_up
+            self.logs[timestamp["intermediate_ans"]] = self.intermediate_ans
 
         if self.record_exp != "":
             params = format.handle_params(
@@ -1017,3 +1007,52 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
 
         return self.response
+
+    def rerun_ask_agent(self, doc_path: Union[List[str], str], prompt: str,
+                        follow_up: list, **kwargs) -> Tuple[str, list, list]:
+
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.doc_path = doc_path
+        self.prompt = prompt
+        self.follow_up = follow_up
+        self.intermediate_ans = []
+        original_sys_prompt = self.system_prompt
+
+        if self.use_chroma:
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
+                self.doc_path, self.embeddings)
+        else:
+            self.db, self.ignored_files = akasha.db.processMultiDB(
+                self.doc_path, self.verbose, self.embeddings_obj,
+                self.embeddings, self.chunk_size, self.ignore_check)
+
+        for each_follow_up in self.follow_up:
+            #ret = self.ask_self(prompt=follow_up, system_prompt=self.system_prompt)
+            each_follow_up = '\n'.join(
+                self.intermediate_ans) + "\n" + each_follow_up
+            follow_up_response = self.get_response(
+                doc_path,
+                each_follow_up,
+                dbs=self.db,
+            )
+
+            check = self.ask_self(
+                prompt=
+                f"help me check if the below Response answer the Question or not, return 1 if yes, 0 if no.\
+            \nQuestion: {each_follow_up}\n\nResponse: " + follow_up_response,
+                system_prompt="return 1 or 0 only")
+            self.system_prompt = original_sys_prompt  # reset system prompt back, since the self-ask is done
+            if int(check) == 1:
+                self.intermediate_ans.append(follow_up_response)
+            else:
+                # agent = get_agent_buildin_tool(self.model_obj)
+                # self.intermediate_ans.append(agent(follow_up)['output'])
+                pass
+
+        self.response = self.get_response(
+            doc_path,
+            prompt='\n'.join(self.intermediate_ans) + "\n" + prompt,
+            dbs=self.db)
+
+        return self.response, self.follow_up, self.intermediate_ans

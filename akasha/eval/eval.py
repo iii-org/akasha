@@ -740,6 +740,7 @@ class Model_Eval(akasha.atman):
         doc_range = (
             1999 + self.chunk_size
         ) // self.chunk_size  # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
+
         vis_doc_range = set()
         self.doc_tokens, self.doc_length = 0, 0
         self.question, self.answer, self.docs = [], [], []
@@ -756,6 +757,9 @@ class Model_Eval(akasha.atman):
 
         texts = [doc.page_content for doc in self.db]
         metadata = [doc.metadata for doc in self.db]
+
+        ## prevent doc_range - len of texts <= 0 ##
+        doc_range = min(doc_range, len(texts) - 1)
 
         progress = tqdm(total=question_num,
                         desc=f"Create Q({self.question_type})")
@@ -1315,7 +1319,7 @@ def check_essay_system_prompt(question_style: str, language: str,
     ## check question_style and language, if question_style is essay and language is chinese, add prompt ##
     if question_style.lower() == "essay" and language.lower(
     ) == "ch" and "用中文回答" not in system_prompt:
-        return " 用中文回答 "
+        return " 用中文回答"
 
     return ""
 
