@@ -257,13 +257,14 @@ def ask_agent():
 
     ak.ask_agent(doc_path="./docs/mic/", prompt="LPWAN和5G的區別是什麼?")
 
-    print("follow_up: \n\n", ak.follow_up, ak.intermediate_ans)
-    response, new_follow_ups, new_intermediate_ans = ak.rerun_ask_agent(
+    print("follow_up: \n\n", ak.follow_up,
+          ak.intermediate_ans)  ## follow_up = ['LPWAN是什麼?', '5G是什麼?']
+    response, new_follow_up, new_intermediate_ans = ak.rerun_ask_agent(
         doc_path="./docs/mic/",
         prompt="LPWAN和5G的區別是什麼?",
         follow_up=['LPWAN是什麼?', '5G是什麼?', '物聯網環境的無線通訊技術有哪些?'])
 
-    print(response, new_follow_ups, new_intermediate_ans)
+    print(response, new_follow_up, new_intermediate_ans)
 
 
 ask_agent()
