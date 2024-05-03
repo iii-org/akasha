@@ -2005,17 +2005,26 @@ def get_other_users_names(username: str, all_users: list):
     return other_users_nicknames, users_mapping
 
 
-def save_tmp_file(uploaded_file: vars) -> str:
-    """check the upload file and save it to the tmp directory.
+def save_tmp_file(uploaded_file: vars, username: str) -> str:
+    """check the upload file and save it to the .uploaded directory in the user doc directory.
 
     Args:
-        uploaded_file (vars): _description_
+        uploaded_file (vars): user uploaded file
 
     Returns:
         str: saved path of the file
     """
-    save_path = "./tmp/"
+    try:
+        save_path = requests.get(api_urls["get_docs_path"]).json()["response"]
+    except Exception as e:
+        save_path = "./docs/"
+        api_fail("can not get docs path" + e.__str__())
+
+    uploaded_path = save_path + f"/{username}/" + "/.uploaded/"
+    ## check save_path exist or create the directory, and create the user directory
     os.makedirs(save_path, exist_ok=True)
+    os.makedirs(save_path + f"/{username}/", exist_ok=True)
+    os.makedirs(uploaded_path, exist_ok=True)
     bytes_data = uploaded_file.read()
 
     if len(bytes_data) == 0:
@@ -2024,11 +2033,31 @@ def save_tmp_file(uploaded_file: vars) -> str:
     if len(bytes_data) > 100000000:
         st.error(f"File={uploaded_file.name} is too large")
         return ""
-    file_path = save_path + (uploaded_file.name)
+    file_path = uploaded_path + (uploaded_file.name)
     with open(Path(file_path), "wb") as f:
         f.write(bytes_data)
 
+    delete_outdated_files(uploaded_path, 60 * 60 * 24 * 7)
     return file_path
+
+
+def delete_outdated_files(directory: str, second_threshold: int):
+    """Delete all files in the directory that were last modified more than `time` seconds ago.
+
+    Args:
+        directory (str): The directory to delete files from.
+        time (int): The maximum file age in seconds.
+    """
+    now = time.time()
+
+    for filename in os.listdir(directory):
+        file_path = Path(directory) / filename
+        if file_path.is_file():
+            last_update = file_path.stat().st_mtime
+            if now - last_update > second_threshold:
+                file_path.unlink()
+
+    return
 
 
 def get_doc_file_path(dataset_owner, dataset_name, file_name) -> str:
@@ -2101,6 +2130,9 @@ def collect_logs(data: dict, response: str, fn_type: str):
 
 
 def clean():
-    gc.collect()
-    torch.cuda.ipc_collect()
-    torch.cuda.empty_cache()
+    try:
+        gc.collect()
+        torch.cuda.ipc_collect()
+        torch.cuda.empty_cache()
+    except:
+        pass

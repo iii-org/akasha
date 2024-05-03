@@ -341,10 +341,13 @@ def _summary(DATASETS, LANGUAGE_MODELS, username):
                 help=
                 "The length of the output summary you want LLM to generate.",
             )
+        if len(DATASETS) == 0:
+            st.session_state.sum_dataset_on = False
 
         tmp_dataset_on = st.toggle(
             'Use Dataset File',
             value=st.session_state.sum_dataset_on,
+            disabled=len(DATASETS) == 0,
         )
         if tmp_dataset_on != st.session_state.sum_dataset_on:
             st.session_state.sum_dataset_on = tmp_dataset_on
@@ -357,7 +360,7 @@ def _summary(DATASETS, LANGUAGE_MODELS, username):
                 "Upload a file", type=["txt", "pdf", "docx", "md", "csv"])
 
             if uploaded_file is not None:
-                tmp_file_name = save_tmp_file(uploaded_file)
+                tmp_file_name = save_tmp_file(uploaded_file, username)
 
     system_prompt = st.chat_input("Type instruction here (ex. 用中文回答)")
     if system_prompt and tmp_file_name == "":
@@ -366,8 +369,8 @@ def _summary(DATASETS, LANGUAGE_MODELS, username):
         ask_summary(system_prompt, username, tmp_file_name, language_model,
                     summary_type, summary_len)
         ### delete tmp file is using uploaded file ###
-        if not st.session_state.sum_dataset_on:
-            os.remove(tmp_file_name)
+        # if not st.session_state.sum_dataset_on:
+        #     os.remove(tmp_file_name)
 
     if st.session_state['que'] != '' and st.session_state['ans'] != '':
         with col_answer.chat_message("user"):

@@ -85,9 +85,12 @@ OPENAI_CONFIG_PATH = "./config/openai/"
 
 
 def clean():
-    gc.collect()
-    torch.cuda.ipc_collect()
-    torch.cuda.empty_cache()
+    try:
+        gc.collect()
+        torch.cuda.ipc_collect()
+        torch.cuda.empty_cache()
+    except:
+        pass
 
 
 ### data class ###
@@ -578,6 +581,7 @@ def get_summary(user_input: SummaryModel):
     except Exception as e:
         err_message = e.__str__()
         response = None
+        logging.error(err_message)
 
     ## get logs
     timesp = ''
