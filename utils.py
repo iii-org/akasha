@@ -11,6 +11,7 @@ import time
 import datetime
 import traceback
 import opencc
+import gc, torch
 
 cc = opencc.OpenCC("s2t.json")
 CHUNKSIZE = 3000
@@ -257,6 +258,7 @@ def ask_chat(
                 with col_answer.chat_message("assistant"):
                     st.markdown(response["response"])
                 st.session_state.logs[response["timestamp"]] = response["logs"]
+        clean()
 
         # save last consult config for expert if is the owner of expert
         if username == expert_owner:
@@ -388,6 +390,7 @@ def ask_question(
                 with col_answer.chat_message("assistant"):
                     st.markdown(response["response"])
                 st.session_state.logs[response["timestamp"]] = response["logs"]
+        clean()
 
         # save last consult config for expert if is the owner of expert
         if username == expert_owner:
@@ -2095,3 +2098,9 @@ def collect_logs(data: dict, response: str, fn_type: str):
     st.session_state.logs[cur_time] = log
 
     return
+
+
+def clean():
+    gc.collect()
+    torch.cuda.ipc_collect()
+    torch.cuda.empty_cache()

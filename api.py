@@ -86,6 +86,7 @@ OPENAI_CONFIG_PATH = "./config/openai/"
 
 def clean():
     gc.collect()
+    torch.cuda.ipc_collect()
     torch.cuda.empty_cache()
 
 
@@ -170,6 +171,7 @@ def regular_consult(user_input: ConsultModel):
                 'response': 'load openai config failed.\n\n'
             }
     try:
+        clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
@@ -226,6 +228,7 @@ def run_llm(user_input: ConsultModel) -> Generator:
         prompt_format_type = "llama"
 
     try:
+        clean()
         qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
@@ -263,6 +266,7 @@ def run_llm_chat(user_input: ChatModel) -> Generator:
         prompt_format_type = "llama"
 
     try:
+        clean()
         qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
@@ -403,6 +407,7 @@ def chat(user_input: ChatModel):
         prompt_format_type = "llama"
 
     try:
+        clean()
         qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
@@ -491,6 +496,7 @@ def deep_consult(user_input: ConsultModel):
             }
 
     try:
+        clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
@@ -554,6 +560,7 @@ def get_summary(user_input: SummaryModel):
                 'response': 'load openai config failed.\n\n'
             }
     try:
+        clean()
         sum = summary.Summary(
             chunk_size=500,
             chunk_overlap=50,
