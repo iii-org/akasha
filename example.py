@@ -205,6 +205,17 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
 # print(ret)
 
 
+### CALL TRANSLATOR ###
+def TRANSLATOR():
+    ak = akasha.Doc_QA(verbose=False, search_type="auto")
+
+    response = ak.get_response(doc_path="docs/mic/", prompt="五軸是什麼?")
+
+    translated_response = akasha.helper.call_translator(ak.model_obj,
+                                                        response,
+                                                        language="en")
+
+
 ### JSON FORMATTER ###
 def JSON():
     ak = akasha.Doc_QA(
@@ -217,6 +228,7 @@ def JSON():
 
     formatted_response = akasha.helper.call_JSON_formatter(
         ak.model_obj, response, keys=["學歷", "經驗", "專長", "年資"])
+    print(formatted_response, type(formatted_response))
 
 
 ### agent ###
@@ -265,6 +277,3 @@ def ask_agent():
         follow_up=['LPWAN是什麼?', '5G是什麼?', '物聯網環境的無線通訊技術有哪些?'])
 
     print(response, new_follow_up, new_intermediate_ans)
-
-
-ask_agent()

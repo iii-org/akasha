@@ -364,7 +364,15 @@ def get_question_from_file(path: str, question_style: str):
         for i in range(len(content)):
             if content[i] == "":
                 continue
-            process = "".join(content[i].split("問題：")).split("答案：")
+
+            try:
+                process = "".join(content[i].split("問題：")).split("答案：")
+                if len(process) < 2:
+                    raise SyntaxError("Question Format Error")
+            except:
+                process = "".join(content[i].split("問題:")).split("答案:")
+                if len(process) < 2:
+                    continue
 
             questions.append(process[0])
             answers.append(process[1])

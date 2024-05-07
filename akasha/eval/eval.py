@@ -216,8 +216,11 @@ class Model_Eval(akasha.atman):
 
         return
 
-    def _process_fact(self, response: str, doc_text: str,
-                      choice_num: int) -> bool:
+    def _process_fact(self,
+                      response: str,
+                      doc_text: str,
+                      choice_num: int,
+                      source_file_name: str = "") -> bool:
         """parse the question and answer from the llm response, and save it into question and answer list. 
         if can not parse the response, return False
 
@@ -238,7 +241,8 @@ class Model_Eval(akasha.atman):
             if len(process) < 2:
                 return False
 
-        self.question.append("問題： " + process[0])
+        process[0] = process[0].replace("根據文件", "")
+        self.question.append("問題： " + source_file_name + process[0])
         if self.question_style == "essay":
             self.answer.append("答案： " + process[1])
 
@@ -253,9 +257,6 @@ class Model_Eval(akasha.atman):
             )
             self.answer.append(anss)
             response = process[0] + "\n" + "選項:\n" + anss + "\n\n"
-
-        if self.verbose:
-            print(response)
 
         return True
 
@@ -281,8 +282,7 @@ class Model_Eval(akasha.atman):
 
         self.question.append("問題：  " + doc_text.replace("\n", "") + "\n")
         self.answer.append("答案： " + process[-1].replace("\n", ""))
-        if self.verbose:
-            print(response)
+
         return True
 
     def _process_irrelevant(self, response, doc_text: str,
@@ -329,14 +329,19 @@ class Model_Eval(akasha.atman):
 
         return True
 
-    def _process_response(self, response: str, doc_text: str, choice_num: int):
+    def _process_response(self,
+                          response: str,
+                          doc_text: str,
+                          choice_num: int,
+                          source_file_name: str = ""):
         """process the response from llm model, and generate question and answer pair
             based on the question type and question style
         """
         if self.question_type.lower() in ["fact", "facts", "factoid", "factoids", "事實"] or \
             self.question_type.lower() in ["irre", "irrelevant", "irrelevance", "無關"] or \
                 self.question_type.lower() in ["compared", "compare", "comparison", "comparisons", "比較"]:
-            return self._process_fact(response, doc_text, choice_num)
+            return self._process_fact(response, doc_text, choice_num,
+                                      source_file_name)
 
         elif self.question_type.lower() in [
                 "summary", "sum", "summarization", "summarize", "summaries",
@@ -344,7 +349,8 @@ class Model_Eval(akasha.atman):
         ]:
             return self._process_summary(response, doc_text)
 
-        return self._process_fact(response, doc_text, choice_num)
+        return self._process_fact(response, doc_text, choice_num,
+                                  source_file_name)
 
     def _create_compare_questionset(self, choice_num: int,
                                     output_file_path: str):
@@ -383,12 +389,15 @@ class Model_Eval(akasha.atman):
 
         progress = tqdm(total=self.question_num,
                         desc=f"Create Q({self.question_type})")
+        print("\n")
         regenerate_limit = self.question_num
         category = defaultdict(list)
         set_category = defaultdict(set)
         for i in range(self.question_num):
             docs = []
+            print(" ")
             progress.update(1)
+            print("\n")
 
             ### start to random choose text, and use text to add different category things into dictionary,###
             ### if the value of any category large than category threshold, then we can use the category to create compare question ###
@@ -435,8 +444,8 @@ class Model_Eval(akasha.atman):
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
                 response = akasha.helper.sim_to_trad(response)
 
-                if not self._process_response(response, used_texts,
-                                              choice_num):
+                if not self._process_response(response, used_texts, choice_num,
+                                              ""):
                     raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
@@ -766,8 +775,9 @@ class Model_Eval(akasha.atman):
         regenerate_limit = question_num
         ### random select a range of documents from the documents , and use llm model to generate a question and answer pair ###
         for i in range(question_num):
+            print(" ")
             progress.update(1)
-
+            print("\n")
             random_index = akasha.helper.get_non_repeat_rand_int(
                 vis_doc_range,
                 len(texts) - doc_range, doc_range)
@@ -777,15 +787,16 @@ class Model_Eval(akasha.atman):
                 Document(page_content=texts[k], metadata=metadata[k])
                 for k in range(random_index, random_index + doc_range)
             ]
-
+            source_files_name = get_source_files(metadata, random_index,
+                                                 doc_range, self.language)
             try:
                 q_prompt = akasha.prompts.format_create_question_prompt(
                     doc_text, self.question_type, self.question_style)
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
-                response = akasha.helper.sim_to_trad(
-                    response
-                )  # transform simplified chinese to traditional chinese
-                if not self._process_response(response, doc_text, choice_num):
+                response = akasha.helper.sim_to_trad(response)
+
+                if not self._process_response(response, doc_text, choice_num,
+                                              source_files_name):
                     raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
@@ -914,7 +925,9 @@ class Model_Eval(akasha.atman):
             self.search_type, search_dict)
 
         for i in range(self.question_num):
+            print(" ")
             progress.update(1)
+            print("\n")
 
             new_table = self._eval_get_res(question[i], answer[i], timestamp,
                                            retrivers_list)
@@ -1213,15 +1226,16 @@ class Model_Eval(akasha.atman):
         texts = [doc.page_content for doc in self.docs]
         metadata = [doc.metadata for doc in self.docs]
 
-        doc_range = min(doc_range, len(texts))
+        doc_range = min(doc_range, len(texts) - 1)
 
         progress = tqdm(total=question_num,
                         desc=f"Create Q({self.question_type})")
         regenerate_limit = question_num
         ### random select a range of documents from the documents , and use llm model to generate a question and answer pair ###
         for i in range(question_num):
+            print(" ")
             progress.update(1)
-
+            print("\n")
             random_index = akasha.helper.get_non_repeat_rand_int(
                 vis_doc_range,
                 len(texts) - doc_range, doc_range)
@@ -1231,6 +1245,8 @@ class Model_Eval(akasha.atman):
                 Document(page_content=texts[k], metadata=metadata[k])
                 for k in range(random_index, random_index + doc_range)
             ]
+            source_files_name = get_source_files(metadata, random_index,
+                                                 doc_range, self.language)
 
             try:
                 q_prompt = akasha.prompts.format_create_question_prompt(
@@ -1240,7 +1256,8 @@ class Model_Eval(akasha.atman):
                 response = akasha.helper.sim_to_trad(
                     response
                 )  # transform simplified chinese to traditional chinese
-                if not self._process_response(response, doc_text, choice_num):
+                if not self._process_response(response, doc_text, choice_num,
+                                              source_files_name):
                     raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length += akasha.helper.get_docs_length(
@@ -1346,3 +1363,37 @@ def find_same_category(
             ]
             return res
     return False
+
+
+def get_source_files(metadata: list,
+                     random_index: int,
+                     doc_range: int,
+                     language: str = "ch") -> str:
+    """from metadata of selected document chunks, get the non repeated source file name
+
+    Args:
+        metadata (list): list of metadata dict of document chunks
+        random_index (int): selected document chunks start index
+        doc_range (int): selected document chunks range
+
+    Returns:
+        str: source file name
+    """
+    file_sources = set()
+
+    for i in range(random_index, random_index + doc_range):
+        try:
+            if metadata[i]["source"] != "":
+                file_name = ''.join(
+                    (metadata[i]["source"].split('/')[-1]).split('.')[:-1])
+                file_sources.add(file_name)
+        except:
+            continue
+
+    if len(file_sources) == 0:
+        return ""
+
+    if "chinese" in akasha.format.language_dict[language]:
+        return "根據文件\"" + "、".join(list(file_sources)) + "\"，"
+
+    return "based on file \"" + "、".join(list(file_sources)) + "\","
