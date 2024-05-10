@@ -779,7 +779,7 @@ def edit_expert(
         st.warning(f"❌ Chunksize should be less than {CHUNKSIZE}")
         return False
     ## new_expert_datasets is valid: not empty
-    if len(expert_used_dataset_files_dict) == []:
+    if len(expert_used_dataset_files_dict) == 0:
         st.error(f"❌ Expert should use at least one dataset")
         return False
     ## at least one file is selected among all datasets
