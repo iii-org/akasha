@@ -525,11 +525,13 @@ def auto_evaluation(
 
 @click.command("ui", short_help="simple ui for akasha")
 def ui():
-    import os
-    import site
-    import streamlit.web.bootstrap
-    import shutil
 
+    import os, sys
+    import site
+    #import streamlit.web.bootstrap
+    #import shutil
+    from streamlit import config as _config
+    from streamlit.web import cli as stcli
     # make a folder `docs/Default`
     if not os.path.exists("docs") or not os.path.exists(
             os.path.join("docs", "Default")):
@@ -558,8 +560,12 @@ def ui():
             target_dir = "."
 
     # run streamlit web service by ui.py
+    _config.set_option("server.headless", True)
+
     ui_py_file = os.path.join(target_dir, "akasha", "ui.py")
-    streamlit.web.bootstrap.run(ui_py_file, "", [], [])
+    #streamlit.web.bootstrap.run(ui_py_file, "", [], [])
+    sys.argv = ["streamlit", "run", ui_py_file]
+    sys.exit(stcli.main())
 
 
 akasha.add_command(keep_responsing)
