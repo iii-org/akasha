@@ -399,10 +399,11 @@ def default_translate_prompt(language: str):
     target_language = afr.language_dict[language]
 
     if "chinese" in target_language:
-        prompt = f"如果以下文字的語言不是{target_language}，則將文字翻譯成{target_language}，否則返回整個文字內容。一步一步來，如果你做得好，我會給你100美元小費。\n"
+        prompt = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: 請將以下句子從英文翻譯成中文: "
     else:
-        prompt = f"If the language of the below texts is not {target_language}, translate them to {target_language}, else return \
-        the whole texts. Do it step by step and I will tip you 100 bucks if you are doing well.\n"
+        prompt = f"A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: translate the below texts to {target_language}: "
+        # prompt = f"If the language of the below texts is not {target_language}, translate them to {target_language}, else return \
+        # the whole texts. Do it step by step and I will tip you 100 bucks if you are doing well.\n"
 
     return prompt
 
