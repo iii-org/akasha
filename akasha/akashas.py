@@ -14,6 +14,7 @@ import warnings, logging
 import os
 from dotenv import load_dotenv
 
+DEFAULT_MODEL = "openai:gpt-3.5-turbo"
 load_dotenv(pathlib.Path().cwd() / ".env")
 
 
@@ -50,14 +51,12 @@ def aiido_upload(
     if len(table) > 0:
         aiido.mlflow.log_table(table, "table.json")
     aiido.mlflow.end_run()
-    return
 
 
 def detect_exploitation(
     texts: str,
-    model: str = "openai:gpt-3.5-turbo",
+    model: str = DEFAULT_MODEL,
     verbose: bool = False,
-    record_exp: str = "",
 ):
     """check the given texts have harmful or sensitive information
 
@@ -65,15 +64,13 @@ def detect_exploitation(
         **texts (str)**: texts that we want llm to check.\n
         **model (str, optional)**: llm model name. Defaults to "openai:gpt-3.5-turbo".\n
         **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
-        **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set
-            record_exp as experiment name.  default ''.\n
 
     Returns:
         str: response from llm
     """
 
     logs = []
-    model = helper.handle_model(model, logs, verbose)
+    model = helper.handle_model(model, verbose, 0.0)
     sys_b, sys_e = "<<SYS>>\n", "\n<</SYS>>\n\n"
     system_prompt = (
         "[INST]" + sys_b +
@@ -180,7 +177,7 @@ class atman:
     def __init__(
         self,
         chunk_size: int = 1000,
-        model: str = "openai:gpt-3.5-turbo",
+        model: str = DEFAULT_MODEL,
         verbose: bool = False,
         topK: int = -1,
         threshold: float = 0.2,
@@ -276,9 +273,7 @@ class atman:
                 if key != "dbs":
                     logging.warning(f"argument {key} not exist")
 
-        return
-
-    def _check_db(self):
+    def _check_db(self) -> bool:
         """check if user input doc_path is exist or not
 
         Returns:
@@ -286,7 +281,7 @@ class atman:
         """
         if self.db is None:
             info = "document path not exist or don't have any file.\n"
-            raise Exception(info)
+            raise OSError(info)
 
         return True
 
@@ -311,8 +306,6 @@ class atman:
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_doc_len"] = self.max_doc_len
         self.logs[timestamp]["doc_path"] = self.doc_path
-
-        return
 
     def _add_result_log(self, timestamp: str, time: float):
         """add post-process log to self.logs
@@ -345,8 +338,6 @@ class atman:
                 self.logs[timestamp]["docs"] = "\n\n".join(
                     [doc.page_content for doc in self.docs])
         self.logs[timestamp]["system_prompt"] = self.system_prompt
-
-        return
 
     def save_logs(self, file_name: str = "", file_type: str = "json"):
         """save logs into json or txt file
@@ -454,7 +445,7 @@ class Doc_QA(atman):
         self,
         embeddings: str = "openai:text-embedding-ada-002",
         chunk_size: int = 1000,
-        model: str = "openai:gpt-3.5-turbo",
+        model: str = DEFAULT_MODEL,
         verbose: bool = False,
         topK: int = -1,
         threshold: float = 0.2,
