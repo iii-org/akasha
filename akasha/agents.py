@@ -28,7 +28,9 @@ def _get_agent_type(agent_type: str) -> AgentType:
     try:
         agent_t = getattr(AgentType, agent_type)
     except Exception as e:
-        logging.warning(f"Cannot find the agent type, use default instead\n\n")
+        logging.warning(
+            f"{e.__str__()}\nCannot find the agent type, use default instead\n\n"
+        )
         agent_t = AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION
     return agent_t
 
@@ -47,25 +49,16 @@ class MyCallbackHandler(BaseCallbackHandler):
         self.log['action'] = []
         self.log['observation'] = []
         self.log['llm-prefix'] = []
-        # class_name = serialized.get("name",
-        #                             serialized.get("id", ["<unknown>"])[-1])
-        # print(f"\n\n\033[1m> Entering new {class_name} chain...\033[0m"
-        #       )  # noqa: T201
-        pass
 
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
         """Print out that we finished a chain."""
-
-        # print("\n\033[1m> Finished chain.\033[0m")  # noqa: T201
-        pass
 
     def on_agent_action(self,
                         action: AgentAction,
                         color: Optional[str] = None,
                         **kwargs: Any) -> Any:
         """Run on agent action."""
-        # print_text("on_agent_action:\n" + action.log,
-        #            color=color or self.color)
+
         self.log['action'].append(action.log)
 
     def on_tool_end(
@@ -96,18 +89,12 @@ class MyCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Run when agent ends."""
-        #print_text( text, color=color or self.color, end=end)
-        pass
 
     def on_agent_finish(self,
                         finish: AgentFinish,
                         color: Optional[str] = None,
                         **kwargs: Any) -> None:
         """Run on agent end."""
-        # print_text( finish.log,
-        #            color=color or self.color,
-        #            end="\n")
-        pass
 
     def get_log(self) -> Dict[str, Any]:
         """return log of this callback handler
