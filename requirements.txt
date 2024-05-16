@@ -17,7 +17,7 @@ rouge-chinese==1.0.3
 bert-score==0.3.13
 click
 tokenizers>=0.13.3
-streamlit==1.29.0
+streamlit>=1.33.0
 streamlit_option_menu>=0.3.6
 rank_bm25
 unstructured
