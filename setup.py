@@ -9,7 +9,7 @@ long_description = "n"  #(this_directory / "read.md").read_text(encoding="utf-8"
 
 install_requires = [
     "pypdf",
-    "langchain>=0.1.0,<=0.1.17",
+    "langchain>=0.1.0,<=0.1.16",
     "langchain_openai>=0.1.0",
     "chromadb==0.4.14",
     "openai>=0.27",
