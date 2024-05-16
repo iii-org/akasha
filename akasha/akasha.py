@@ -1,15 +1,15 @@
 import pathlib
 import time
-from tqdm import tqdm
 from typing import Callable, Union, List, Tuple
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
-import akasha.helper as helper
-import akasha.search as search
-import akasha.format as format
-import akasha.prompts as prompts
-import akasha.db
+import akasha
+import helper
+import search
+import format
+import prompts
+import db
 import datetime, traceback
 import warnings, logging
 import os
@@ -91,88 +91,6 @@ def detect_exploitation(
     response = LLMChain(prompt=prompt, llm=model).run(texts)
     print(response)
     return response
-
-
-def openai_vision(
-    pic_path: Union[str, List[str]],
-    prompt: str,
-    model: str = "gpt-4-vision-preview",
-    max_token: int = 3000,
-    verbose: bool = False,
-    record_exp: str = "",
-):
-    start_time = time.time()
-
-    ### process input message ###
-    base64_pic = []
-    pic_message = []
-    if isinstance(pic_path, str):
-        pic_path = [pic_path]
-
-    for path in pic_path:
-        if not pathlib.Path(path).exists():
-            print(f"image path {path} not exist")
-        else:
-            base64_pic.append(helper.image_to_base64(path))
-
-    for pic in base64_pic:
-        pic_message.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{pic}",
-                "detail": "auto",
-            },
-        })
-    content = [{"type": "text", "text": prompt}]
-    content.extend(pic_message)
-
-    ### call model ###
-    import os
-    from langchain_openai import ChatOpenAI, AzureChatOpenAI
-    from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
-    from langchain.schema.messages import HumanMessage, SystemMessage
-    from langchain.callbacks import get_openai_callback
-
-    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
-            == "azure") or ("OPENAI_API_TYPE" in os.environ
-                            and os.environ["OPENAI_API_TYPE"] == "azure"):
-        modeln = model.replace(".", "")
-        api_base, api_key, api_version = helper._handle_azure_env()
-        chat = AzureChatOpenAI(
-            deployment_name=modeln,
-            temperature=0.0,
-            base_url=api_base,
-            api_key=api_key,
-            api_version=api_version,
-            max_tokens=max_token,
-        )
-    else:
-        chat = ChatOpenAI(model=model,
-                          max_tokens=max_token,
-                          temperature=0.0,
-                          verbose=verbose)
-    input_message = [HumanMessage(content=content)]
-
-    with get_openai_callback() as cb:
-        try:
-            ret = chat.invoke(input_message).content
-        except Exception as e:
-            chat = ChatOpenAI(model="gpt-4-vision-preview",
-                              max_tokens=max_token,
-                              temperature=0.0)
-            ret = chat.invoke(input_message).content
-
-        tokens, prices = cb.total_tokens, cb.total_cost
-
-    end_time = time.time()
-    if record_exp != "":
-        params = format.handle_params(model, "", "", "", "", "", "ch")
-        metrics = format.handle_metrics(0, end_time - start_time, tokens)
-        table = format.handle_table(prompt, "\n".join(pic_path), ret)
-        aiido_upload(record_exp, params, metrics, table)
-    print("\n\n\ncost:", round(prices, 3))
-
-    return ret
 
 
 class atman:
@@ -570,10 +488,10 @@ class Doc_QA(atman):
             self.db = kwargs['dbs']
             self.ignored_files = []
         elif self.use_chroma:
-            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, self.ignored_files = akasha.db.processMultiDB(
+            self.db, self.ignored_files = db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 
@@ -673,10 +591,10 @@ class Doc_QA(atman):
         table = {}
         search_dict = {}
         if self.use_chroma:
-            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, self.ignored_files = akasha.db.processMultiDB(
+            self.db, self.ignored_files = db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 
@@ -789,7 +707,7 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         self.prompt = prompt
         self.file_path = file_path
-        self.docs = akasha.db._load_file(file_path, file_path.split('.')[-1])
+        self.docs = db._load_file(file_path, file_path.split('.')[-1])
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         start_time = time.time()
@@ -1020,10 +938,10 @@ class Doc_QA(atman):
         original_sys_prompt = self.system_prompt
 
         if self.use_chroma:
-            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
+            self.db, self.ignored_files = db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
-            self.db, self.ignored_files = akasha.db.processMultiDB(
+            self.db, self.ignored_files = db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
                 self.embeddings, self.chunk_size, self.ignore_check)
 

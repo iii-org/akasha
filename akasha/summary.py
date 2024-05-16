@@ -2,9 +2,9 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import akasha
 from pathlib import Path
 import time, datetime
-import akasha.db
+import db
 from typing import Union, List
-import akasha.format as afr
+import format as afr
 from tqdm import tqdm
 import math
 import logging
@@ -379,8 +379,8 @@ class Summary(akasha.atman):
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
 
         # Split the documents into sentences
-        documents = akasha.db._load_file(self.file_name,
-                                         self.file_name.split(".")[-1])
+        documents = db._load_file(self.file_name,
+                                  self.file_name.split(".")[-1])
         text_splitter = RecursiveCharacterTextSplitter(
             separators=["\n", " ", ",", ".", "。", "!"],
             chunk_size=self.chunk_size,
@@ -483,7 +483,7 @@ class Summary(akasha.atman):
 
         ## set variables ##
         self.articles = self._handle_texts(articles)
-        self.articles_docs = akasha.db.change_text_to_doc(self.articles)
+        self.articles_docs = db.change_text_to_doc(self.articles)
         self.summary_type = summary_type.lower()
         self.summary_len = summary_len
         self._set_model(**kwargs)

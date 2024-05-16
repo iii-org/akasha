@@ -16,9 +16,8 @@ from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
 from typing import Any, List, Optional, Callable, Union, Tuple, Dict, Iterable
 import numpy as np
-import akasha.helper as helper
-import akasha.prompts as prompts
-from akasha.db import dbs
+import helper
+from db import dbs
 import jieba
 
 
