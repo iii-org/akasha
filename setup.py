@@ -9,7 +9,7 @@ long_description = "n"  #(this_directory / "read.md").read_text(encoding="utf-8"
 
 install_requires = [
     "pypdf",
-    "langchain>=0.1.0",
+    "langchain>=0.1.0,<=0.1.17",
     "langchain_openai>=0.1.0",
     "chromadb==0.4.14",
     "openai>=0.27",
@@ -27,7 +27,7 @@ install_requires = [
     "bert-score==0.3.13",
     "click",
     "tokenizers>=0.13.3",
-    "streamlit>=1.33.0",
+    "streamlit==1.29.0",
     "streamlit_option_menu>=0.3.6",
     "rank_bm25",
     "unstructured",
@@ -36,12 +36,14 @@ install_requires = [
 ]
 if platform.system() == "Windows":
     install_requires.append("opencc==1.1.1")
+elif platform.system() == "Darwin":
+    install_requires.append("opencc==0.2")
 else:
     install_requires.append("opencc==1.1.6")
 
 setup(
     name="akasha-terminal",
-    version="0.8.28",
+    version="0.8.29",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
