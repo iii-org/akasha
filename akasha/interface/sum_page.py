@@ -1,10 +1,9 @@
 import streamlit as st
 import sys
-import akasha.summary as summary
+import summary
 from pathlib import Path
 import datetime
 from interface.setting import handle_api_key
-import os
 
 sys.path.append("../")
 

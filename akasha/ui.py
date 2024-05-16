@@ -100,6 +100,9 @@ if "search_list" not in st.session_state:
 
 if "docs_path" not in st.session_state:
     st.session_state.docs_path = "./docs"
+    if not Path(st.session_state.docs_path).exists():
+        Path(st.session_state.docs_path).mkdir(parents=True, exist_ok=True)
+
 if "response_list" not in st.session_state:
     st.session_state.response_list = []
 
@@ -112,6 +115,12 @@ if "docs_list" not in st.session_state:
     for dir_path in docs_dir.iterdir():
         if dir_path.is_dir():
             st.session_state.docs_list.append(dir_path.name)
+
+    if "Default" not in st.session_state.docs_list:
+        st.session_state.docs_list.append("Default")
+        # create default folder
+        Path(st.session_state.docs_path + "/Default").mkdir(parents=True,
+                                                            exist_ok=True)
 
 if "n_text" not in st.session_state:
     st.session_state.n_text = 1

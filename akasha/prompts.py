@@ -1,5 +1,5 @@
 from typing import List, Union, Tuple
-import akasha.format as afr
+import format as afr
 
 sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
