@@ -8,16 +8,13 @@ from rank_bm25 import BM25Okapi
 from langchain_community.utils.math import cosine_similarity
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain.retrievers import ContextualCompressionRetriever
-from langchain.schema.vectorstore import VectorStoreRetriever
-from langchain_community.vectorstores import chroma
-from langchain_community.vectorstores.chroma import Chroma
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.schema import BaseRetriever
 from langchain.embeddings.base import Embeddings
 from typing import Any, List, Optional, Callable, Union, Tuple, Dict, Iterable
 import numpy as np
-import helper
-from db import dbs
+import akasha.helper as helper
+from akasha.db import dbs
 import jieba
 
 

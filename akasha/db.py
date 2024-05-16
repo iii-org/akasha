@@ -8,10 +8,12 @@ from langchain.text_splitter import (
     CharacterTextSplitter,
     RecursiveCharacterTextSplitter,
 )
+from langchain_community.vectorstores import chroma
 from langchain_community.vectorstores.chroma import Chroma
 from langchain.docstore.document import Document
 from pathlib import Path
-import helper, prompts
+import akasha
+import akasha.helper as helper
 
 
 class dbs:
@@ -671,10 +673,10 @@ def add_pic_summary_to_db(db, file_path, chunk_size):
     add_pic = True
 
     file_pics, mid_names, pages = save_pdf_pic(file_path)
-    get_pic_sum_prompt = prompts.format_pic_summary_prompt(chunk_size)
+    get_pic_sum_prompt = akasha.prompts.format_pic_summary_prompt(chunk_size)
     try:
         for i, file_pic in enumerate(file_pics):
-            cur_summary = helper.openai_vision(file_pic, get_pic_sum_prompt)
+            cur_summary = akasha.openai_vision(file_pic, get_pic_sum_prompt)
             db.add_texts(
                 [cur_summary],
                 metadatas=[{

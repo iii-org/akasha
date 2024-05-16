@@ -3,19 +3,17 @@ import jieba
 import json, re
 from pathlib import Path
 import opencc
-from typing import Callable, Union, Tuple, List
+from typing import Callable, Union, Tuple
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain.schema.messages import HumanMessage, SystemMessage
-from langchain_community.callbacks import get_openai_callback
-from models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model, gptq
-from models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
-import os, traceback, logging, time
+from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model, gptq
+from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
+import os, traceback, logging
 import shutil
 from langchain.llms.base import LLM
-import format as afr
-import prompts
+import akasha.format as afr
+import akasha.prompts
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -632,77 +630,6 @@ def image_to_base64(image_path: str) -> str:
     return img_str.decode("utf-8")
 
 
-def openai_vision(pic_path: Union[str, List[str]],
-                  prompt: str,
-                  model: str = "gpt-4-vision-preview",
-                  max_token: int = 3000,
-                  verbose: bool = False,
-                  record_exp: str = ""):
-
-    start_time = time.time()
-
-    ### process input message ###
-    base64_pic = []
-    pic_message = []
-    if isinstance(pic_path, str):
-        pic_path = [pic_path]
-
-    for path in pic_path:
-        if not Path(path).exists():
-            print(f"image path {path} not exist")
-        else:
-            base64_pic.append(image_to_base64(path))
-
-    for pic in base64_pic:
-        pic_message.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{pic}",
-                "detail": "auto",
-            },
-        })
-    content = [{"type": "text", "text": prompt}]
-    content.extend(pic_message)
-
-    ### call model ###
-
-    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
-            == "azure") or ("OPENAI_API_TYPE" in os.environ
-                            and os.environ["OPENAI_API_TYPE"] == "azure"):
-        modeln = model.replace(".", "")
-        api_base, api_key, api_version = _handle_azure_env()
-        chat = AzureChatOpenAI(
-            deployment_name=modeln,
-            temperature=0.0,
-            base_url=api_base,
-            api_key=api_key,
-            api_version=api_version,
-            max_tokens=max_token,
-        )
-    else:
-        chat = ChatOpenAI(model=model,
-                          max_tokens=max_token,
-                          temperature=0.0,
-                          verbose=verbose)
-    input_message = [HumanMessage(content=content)]
-
-    with get_openai_callback() as cb:
-        try:
-            ret = chat.invoke(input_message).content
-        except Exception as e:
-            chat = ChatOpenAI(model="gpt-4-vision-preview",
-                              max_tokens=max_token,
-                              temperature=0.0)
-            ret = chat.invoke(input_message).content
-
-        tokens, prices = cb.total_tokens, cb.total_cost
-
-    end_time = time.time()
-    print("\n\n\ncost:", round(prices, 3))
-
-    return ret
-
-
 def call_translator(model_obj: LLM,
                     texts: str,
                     prompt_format_type: str = "gpt",
@@ -718,9 +645,9 @@ def call_translator(model_obj: LLM,
     Returns:
         str: translated texts
     """
-    sys_prompt = prompts.default_translate_prompt(language)
-    prod_sys_prompt, ___ = prompts.format_sys_prompt(sys_prompt, "",
-                                                     prompt_format_type)
+    sys_prompt = akasha.prompts.default_translate_prompt(language)
+    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+        sys_prompt, "", prompt_format_type)
 
     response = call_model(model_obj, prod_sys_prompt + "\n" + texts)
 
@@ -753,8 +680,8 @@ def call_JSON_formatter(
     if keys != "":
         sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
 
-    prod_sys_prompt, ___ = prompts.format_sys_prompt(sys_prompt, "",
-                                                     prompt_format_type)
+    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+        sys_prompt, "", prompt_format_type)
 
     response = call_model(model_obj, prod_sys_prompt + "TEXTS: " + texts)
     return extract_json(response)
