@@ -69,7 +69,6 @@ def detect_exploitation(
         str: response from llm
     """
 
-    logs = []
     model = helper.handle_model(model, verbose, 0.0)
     sys_b, sys_e = "<<SYS>>\n", "\n<</SYS>>\n\n"
     system_prompt = (
@@ -152,7 +151,7 @@ def openai_vision(
     with get_openai_callback() as cb:
         try:
             ret = chat.invoke(input_message).content
-        except Exception as e:
+        except:
             chat = ChatOpenAI(model="gpt-4-vision-preview",
                               max_tokens=max_token,
                               temperature=0.0)
