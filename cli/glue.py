@@ -533,8 +533,6 @@ def ui():
 
     import os, sys
     import site
-    #import streamlit.web.bootstrap
-    #import shutil
     from streamlit import config as _config
     from streamlit.web import cli as stcli
     # make a folder `docs/Default`
