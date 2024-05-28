@@ -600,7 +600,7 @@ class Doc_QA(atman):
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = prompts.default_doc_ask_prompt()
+            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
             self.system_prompt, self.prompt, self.prompt_format_type)
 
@@ -657,7 +657,7 @@ class Doc_QA(atman):
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = prompts.default_doc_ask_prompt()
+            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
         self.doc_path = doc_path
         table = {}
         search_dict = {}
@@ -800,7 +800,7 @@ class Doc_QA(atman):
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = prompts.default_doc_ask_prompt()
+            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
             self.system_prompt, self.prompt, self.prompt_format_type)
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)
@@ -871,7 +871,7 @@ class Doc_QA(atman):
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = prompts.default_doc_ask_prompt()
+            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
         prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
             self.system_prompt, self.prompt, self.prompt_format_type)
         self.response = self._ask_model(prod_sys_prompt, prod_prompt)

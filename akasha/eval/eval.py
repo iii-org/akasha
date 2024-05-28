@@ -521,7 +521,7 @@ class Model_Eval(akasha.atman):
         if self.question_style.lower() == "essay":
             query = question
             prod_sys = self.system_prompt + akasha.prompts.default_doc_ask_prompt(
-            )
+                self.language)
             prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
                 prod_sys, question, self.prompt_format_type)
         else:
