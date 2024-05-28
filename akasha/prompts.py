@@ -328,11 +328,17 @@ def format_pic_summary_prompt(chunk_size: int = 500):
     return f"please use traditional chinese to describe this picture in details.\n\n"
 
 
-def default_doc_ask_prompt():
+def default_doc_ask_prompt(language: str = "zh"):
 
     prompt = f"""Use the following pieces of context to answer the user's question. 
 If you don't know the answer, just say that you don't know, don't try to make up an answer.\n"""
+    if "chinese" in afr.language_dict[language]:
+        prompt += "用中文回答下列問題：\n"
+
     return prompt
+
+
+DEFAULT_CHINESE_ANS_PROMPT = " A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER:用中文回答問題。"
 
 
 def format_category_prompt(doc_text, language: str):
