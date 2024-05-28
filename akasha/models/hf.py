@@ -2,8 +2,8 @@ from typing import Dict, List, Any, Optional, Callable, Generator
 from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
-from transformers import AutoTokenizer, AutoModel, TextStreamer
-from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from transformers import AutoTokenizer, AutoModel, TextStreamer, AutoModelForCausalLM, TextIteratorStreamer
+#from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from transformers import pipeline
 import torch
 import numpy
@@ -11,6 +11,7 @@ import warnings, os, logging
 import requests
 import sys
 from huggingface_hub import InferenceClient
+from threading import Thread
 
 
 class chatGLM(LLM):
@@ -376,16 +377,38 @@ class hf_model(LLM):
     max_token: int = 4096
     tokenizer: Any
     model: Any
-    pipe_line: Any
+    streamer: Any
+    device: Any
 
-    def __init__(self, pipe: pipeline):
+    def __init__(self, model_name: str, temperature: float, **kwargs):
         """define custom model, input func and temperature
 
         Args:
             **func (Callable)**: the function return response from llm\n
         """
+        hf_token = os.environ.get("HF_TOKEN")
+        if hf_token is None:
+            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
         super().__init__()
-        self.pipe_line = HuggingFacePipeline(pipeline=pipe)
+
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
+        hf_token = os.environ.get("HF_TOKEN")
+        if hf_token is None:
+            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        if temperature == 0.0:
+            temperature = 0.01
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            token=hf_token,
+            temperature=temperature,
+            repetition_penalty=1.2,
+            top_p=0.95,
+            torch_dtype=torch.float16,
+            device_map="auto").to(self.device)
 
     @property
     def _llm_type(self) -> str:
@@ -394,7 +417,25 @@ class hf_model(LLM):
         Returns:
             str: llm type
         """
-        return "huggingface pipeline"
+        return "huggingface text generation model"
+
+    def stream(self,
+               prompt: str,
+               stop: Optional[List[str]] = None) -> Generator[str, None, None]:
+
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        gerneration_kwargs = dict(inputs,
+                                  streamer=self.streamer,
+                                  max_new_tokens=1024,
+                                  do_sample=True,
+                                  min_new_tokens=10)
+        #self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
+
+        thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
+        thread.start()
+        # for text in self.streamer:
+        #     yield text
+        yield from self.streamer
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         """run llm and get the response
@@ -406,74 +447,20 @@ class hf_model(LLM):
         Returns:
             str: llm response
         """
-        response = self.pipe_line._generate([prompt]).generations[0][0]
-        return response.text
+        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        gerneration_kwargs = dict(
+            inputs,
+            streamer=self.streamer,
+            max_new_tokens=1024,
+            do_sample=True,
+        )
+        thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
+        thread.start()
+        generated_text = ""
+        for new_text in self.streamer:
+            generated_text += new_text
+        return generated_text
 
     def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-        response = self.pipe_line._generate([prompt]).generations[0][0]
-        return response.text
 
-
-def get_hf_model(model_name, temperature: float = 0.0):
-    """try different methods to define huggingface model, first use pipline and then use llama2.
-
-    Args:
-        model_name (str): huggingface model name\n
-
-    Returns:
-        _type_: llm model
-    """
-    """try different methods to define huggingface model, first use pipline and then use llama2.
-
-    Args:
-        model_name (str): huggingface model name\n
-
-    Returns:
-        _type_: llm model
-    """
-    with warnings.catch_warnings():
-        warnings.simplefilter(action="ignore", category=FutureWarning)
-        hf_token = os.environ.get("HF_TOKEN")
-        if hf_token is None:
-            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        streamer = TextStreamer(tokenizer)
-        try:
-            pipe = pipeline(
-                "text-generation",
-                model=model_name,
-                token=hf_token,
-                max_new_tokens=1024,
-                tokenizer=tokenizer,
-                streamer=streamer,
-                model_kwargs={
-                    "temperature": temperature,
-                    "repetition_penalty": 1.2,
-                },
-                device_map="auto",
-                batch_size=8,
-                torch_dtype=torch.float16,
-            )
-            pipe.tokenizer.pad_token_id = pipe.model.config.eos_token_id
-            model = hf_model(pipe=pipe)
-
-        except Exception as e:
-            pipe = pipeline(
-                "question-answering",
-                model=model_name,
-                token=hf_token,
-                max_new_tokens=1024,
-                tokenizer=tokenizer,
-                streamer=streamer,
-                model_kwargs={
-                    "temperature": temperature,
-                    "repetition_penalty": 1.2,
-                },
-                device_map="auto",
-                batch_size=8,
-                torch_dtype=torch.float16,
-            )
-            model = hf_model(pipe=pipe)
-
-    return model
+        return self._call(prompt, stop)
