@@ -455,6 +455,7 @@ def get_hf_model(model_name, temperature: float = 0.0):
                 batch_size=8,
                 torch_dtype=torch.float16,
             )
+            pipe.tokenizer.pad_token_id = pipe.model.config.eos_token_id
             model = hf_model(pipe=pipe)
 
         except Exception as e:
