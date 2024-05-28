@@ -436,6 +436,7 @@ class hf_model(LLM):
             do_sample=True,
             min_new_tokens=10,
             stop_strings=stop_list,
+            tokenizer=self.tokenizer,
         )
         #self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
 
@@ -463,6 +464,7 @@ class hf_model(LLM):
             max_new_tokens=1024,
             do_sample=True,
             stop_strings=stop_list,
+            tokenizer=self.tokenizer,
         )
 
         thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
