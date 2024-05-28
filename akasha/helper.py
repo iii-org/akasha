@@ -7,7 +7,7 @@ from typing import Callable, Union, Tuple
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-from akasha.models.hf import chatGLM, get_hf_model, custom_model, custom_embed, remote_model, gptq
+from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
 import os, traceback, logging
 import shutil
@@ -233,7 +233,7 @@ def handle_model(model_name: Union[str, Callable],
             "huggingface-hub",
             "hf",
     ]:
-        model = get_hf_model(model_name, temperature)
+        model = hf_model(model_name=model_name, temperature=temperature)
         info = f"selected huggingface model {model_name}.\n"
 
     elif model_type in ["chatglm", "chatglm2", "glm"]:
