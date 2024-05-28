@@ -297,7 +297,9 @@ class remote_model(LLM):
         """
         return "remote api"
 
-    def stream(self, prompt: str) -> Generator:
+    def stream(self,
+               prompt: str,
+               stop: Optional[List[str]] = None) -> Generator:
         """run llm and get the stream generator
 
         Args:
@@ -306,6 +308,7 @@ class remote_model(LLM):
         Yields:
             Generator: _description_
         """
+        stop_list = get_stop_list(stop)
         try:
             client = InferenceClient(self.url)
 
@@ -317,7 +320,7 @@ class remote_model(LLM):
                 top_p=0.95,
                 stream=True,
                 repetition_penalty=1.2,
-                stop_sequences=["<|eot_id|>", "<|end_header_id|>"],
+                stop_sequences=stop_list,
             )
 
         except Exception as e:
@@ -335,6 +338,7 @@ class remote_model(LLM):
         Returns:
             str: llm response
         """
+        stop_list = get_stop_list(stop)
         try:
             client = InferenceClient(self.url)
             response = ""
@@ -346,7 +350,7 @@ class remote_model(LLM):
                     top_p=0.95,
                     stream=True,
                     repetition_penalty=1.2,
-                    stop_sequences=["<|eot_id|>", "<|end_header_id|>"],
+                    stop_sequences=stop_list,
             ):
                 print(token, end='', flush=True)
                 response += token
@@ -423,12 +427,16 @@ class hf_model(LLM):
                prompt: str,
                stop: Optional[List[str]] = None) -> Generator[str, None, None]:
 
+        stop_list = get_stop_list(stop)
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
-        gerneration_kwargs = dict(inputs,
-                                  streamer=self.streamer,
-                                  max_new_tokens=1024,
-                                  do_sample=True,
-                                  min_new_tokens=10)
+        gerneration_kwargs = dict(
+            inputs,
+            streamer=self.streamer,
+            max_new_tokens=1024,
+            do_sample=True,
+            min_new_tokens=10,
+            stop_strings=stop_list,
+        )
         #self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
 
         thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
@@ -448,19 +456,38 @@ class hf_model(LLM):
             str: llm response
         """
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        stop_list = get_stop_list(stop)
         gerneration_kwargs = dict(
             inputs,
             streamer=self.streamer,
             max_new_tokens=1024,
             do_sample=True,
+            stop_strings=stop_list,
         )
+
         thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
         thread.start()
         generated_text = ""
         for new_text in self.streamer:
+            print(new_text, end='', flush=True)
             generated_text += new_text
         return generated_text
 
     def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
 
         return self._call(prompt, stop)
+
+
+def get_stop_list(stop: Optional[List[str]]) -> List[str]:
+    """get stop list
+
+    Args:
+        stop (Optional[List[str]]): stop list
+
+    Returns:
+        List[str]: stop list
+    """
+    ret = ["<|eot_id|>", "<|end_header_id|>", "</s>"]
+    if stop is not None:
+        ret = stop
+    return ret
