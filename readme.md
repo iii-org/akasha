@@ -1230,6 +1230,63 @@ qa.get_response(doc_path= doc_path, prompt = prompt)
 <br/>
 
 
+## Stream Output
+If you want stream output to your web pages or API, for ***openai***, ***huggingface***, ***remote*** models, you can use model_obj.stream(prompt) to get the generator of LLM response. Below is the example of using streamlit write_stream shows response. 
+
+``` python
+import streamlit as st
+import akasha
+import gc, torch
+
+if "pre" not in st.session_state:
+    st.session_state.pre = ""
+if "model_obj" not in st.session_state:
+    st.session_state.model_obj = None
+    
+def clean():
+    try:
+        gc.collect()
+        torch.cuda.ipc_collect()
+        torch.cuda.empty_cache()
+    except:
+        pass
+
+
+
+def stream_response(prompt:str, model_name:str="openai:gpt-3.5-turbo"):
+    # Mistral-7B-Instruct-v0.3   Llama3-8B-Chinese-Chat
+    mdl_type = model_name.split(':')[0]
+    streaming = st.session_state.model_obj.stream(prompt)
+    for s in streaming:
+        if mdl_type == "openai":
+            yield s.content
+        else:
+            yield s
+
+model = st.selectbox("select model", ["openai:gpt-3.5-turbo","hf:model/Mistral-7B-Instruct-v0.3"])
+prompt = st.chat_input("Say something")
+if st.session_state.pre != model:
+    st.session_state.model_obj = None
+    clean()
+    st.session_state.model_obj = akasha.helper.handle_model(model, False, 0.0)
+    st.session_state.pre = model
+
+if prompt:
+    st.write("question: " + prompt)
+    st.write_stream(stream_response(prompt, model))
+
+```
+
+
+
+<br/>
+<br/>
+<br/>
+<br/>
+
+
+
+
 
 # Command Line Interface
 You can also use akasha in command line, for example, you can use **keep-responsing** to create a document QA model 
