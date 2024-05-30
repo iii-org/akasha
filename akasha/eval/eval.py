@@ -199,7 +199,8 @@ class Model_Eval(akasha.atman):
         with open(output_file_path, "w", encoding="utf-8") as f:
             for w in range(len(self.question)):
                 if self.question_style == "essay":
-                    f.write(self.question[w] + self.answer[w] + "\n\n")
+                    f.write(self.question[w].replace("\n", "") + "\n" +
+                            self.answer[w].replace("\n", "") + "\n\n")
                 else:
                     if w == len(self.question) - 1:
                         f.write(self.question[w].replace("\n", "") +
