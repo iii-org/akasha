@@ -329,7 +329,7 @@ class agent:
             trace_text = traceback.format_exc(
             ) + "\n\n" + "Error: agent get response failed.\n" + e.__str__(
             ) + "\n\n"
-            logging.error(e + trace_text)
+            logging.error(trace_text)
             raise e
 
         end_time = time.time()

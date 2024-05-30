@@ -553,7 +553,7 @@ class Model_Eval(akasha.atman):
             traceback.print_exc()
             #response = ["running model error"]
             torch.cuda.empty_cache()
-            logging.error("running model error\n", e)
+            logging.error(f"running model error\n {e}")
             raise e
 
         if self.question_style.lower() == "essay":
@@ -628,7 +628,7 @@ class Model_Eval(akasha.atman):
             traceback.print_exc()
             #response = ["running model error"]
             torch.cuda.empty_cache()
-            logging.error("running model error\n", e)
+            logging.error(f"running model error\n {e}")
             raise e
 
         if self.verbose:
