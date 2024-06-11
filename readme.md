@@ -44,7 +44,7 @@ To use Docker to run akasha-lab, you can clone the whole project and use Dockerf
     CONFIG=./config # directory that save the dataset, expert configs
     DOCS=./docs # directory that save the document files
     IMAGE_NAME=akasha-lab
-    IMAGE_VERSION=0.8
+    IMAGE_VERSION=0.9
 
     ```
 
@@ -69,7 +69,7 @@ MODEL=./model
 CONFIG=./config 
 DOCS=./docs 
 IMAGE_NAME=akasha-lab
-IMAGE_VERSION=0.8
+IMAGE_VERSION=0.9
 DEFAULT_OPENAI_API_KEY={your openAI key}
 ```
 
@@ -83,7 +83,7 @@ MODEL=./model
 CONFIG=./config 
 DOCS=./docs 
 IMAGE_NAME=akasha-lab
-IMAGE_VERSION=0.8
+IMAGE_VERSION=0.9
 DEFAULT_AZURE_API_KEY={your Azure key}
 DEFAULT_AZURE_API_BASE={your Azure base url}
 ```
@@ -101,8 +101,8 @@ DEFAULT_AZURE_API_BASE={your Azure base url}
 you can download the docker image from docker hub 
 
 ``` bash 
-sudo docker pull ccchang0518/akasha-lab:0.8
-sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 --name akasha-lab ccchang0518/akasha-lab:0.8
+sudo docker pull ccchang0518/akasha-lab:0.9
+sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 --name akasha-lab ccchang0518/akasha-lab:0.9
 
 ```
 

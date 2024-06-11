@@ -182,7 +182,6 @@ def regular_consult(user_input: ConsultModel):
         response = qa.get_response(doc_path=user_input.data_path,
                                    prompt=user_input.prompt,
                                    keep_logs=True)
-
     except Exception as e:
         err_message = e.__str__()
         response = None
@@ -240,8 +239,14 @@ def run_llm(user_input: ConsultModel) -> Generator:
         inputs, prod_prompt = qa.search_docs(doc_path=user_input.data_path,
                                              prompt=user_input.prompt)
 
+        ref_name = set()
+        for doc in qa.docs:
+            ref_name.add(doc.metadata['source'].split("/")[-1])
+        doc_metadata = list(ref_name)
+
         response_iter = qa.model_obj.stream(inputs + prod_prompt)
 
+        yield json.dumps({"doc_metadata": doc_metadata})
         if "openai" in qa.model_obj._llm_type:
             for response in response_iter:
                 yield f"{response.content}"
@@ -284,8 +289,13 @@ def run_llm_chat(user_input: ChatModel) -> Generator:
             prompt=user_input.prompt,
             max_doc_len=user_input.max_doc_len - chat_history_len)
 
-        response_iter = qa.model_obj.stream(inputs + message + prod_prompt)
+        ref_name = set()
+        for doc in qa.docs:
+            ref_name.add(doc.metadata['source'].split("/")[-1])
+        doc_metadata = list(ref_name)
 
+        response_iter = qa.model_obj.stream(inputs + message + prod_prompt)
+        yield json.dumps({"doc_metadata": doc_metadata})
         if "openai" in qa.model_obj._llm_type:
             for response in response_iter:
                 yield f"{response.content}"
@@ -427,6 +437,9 @@ def chat(user_input: ChatModel):
 
         response = akasha.helper.call_model(qa.model_obj,
                                             inputs + message + prod_prompt)
+        ref_name = set()
+        for doc in qa.docs:
+            ref_name.add(doc.metadata['source'].split("/")[-1])
 
     except Exception as e:
         err_message = e.__str__()
@@ -445,6 +458,8 @@ def chat(user_input: ChatModel):
         timesp = qa.timestamp_list[-1]
         if timesp in qa.logs:
             logs = qa.logs[timesp]
+
+    logs['doc_metadata'] = list(ref_name)
 
     if response == None:
         user_output = ConsultModelReturn(
@@ -570,7 +585,7 @@ def get_summary(user_input: SummaryModel):
             model=user_input.model,
             verbose=True,
             system_prompt=user_input.system_prompt,
-            max_doc_len=2000,
+            max_doc_len=1900,
             temperature=0.0,
         )
 

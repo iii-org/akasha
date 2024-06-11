@@ -15,7 +15,7 @@ from views.forgetpwd import forgetpwd_page
 from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command
 
 # info
-VERSION = '0.8'
+VERSION = '0.9'
 
 # get host ip
 if 'host_ip' not in st.session_state:

@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import os
+import os, json
 from typing import List, Union, Dict, Any, Tuple
 import requests
 from pathlib import Path
@@ -53,7 +53,6 @@ api_urls = {
     "get_chromadb_path": f"{HOST}:{PORT}/expert/get_chromadb_path",
     "get_md5_name": f"{HOST}:{PORT}/dataset/get_md5",
     "regular_consult": f"{HOST}:{PORT}/regular_consult",
-    "deep_consult": f"{HOST}:{PORT}/deep_consult",
     "regular_consult_stream": f"{HOST}:{PORT}/regular_consult_stream",
     "get_summary": f"{HOST}:{PORT}/get_summary",
     "chat": f"{HOST}:{PORT}/chat",
@@ -89,53 +88,6 @@ def check_expert_is_shared(expert_name: str) -> bool:
          bool: return True if the expert is a shared expert, else return False.
     """
     return "@" in expert_name
-
-
-def add_question_layer(buttons: st.columns) -> list:
-    """add layer of questions for deep consult, return a list of layers.
-    each layer is a tuple, layer[1]'s a dataframe contains prompt, use list(layer[1].columns)[0] to get the column name "Sub-Questions"
-
-    Args:
-        add_button (st.columns): streamlit columns area for add layer button and layer area.
-
-    Returns:
-        list: list of layers
-    """
-    with buttons:
-        df = pd.DataFrame([{"Sub-Questions": ""}])
-
-        add_button, delete_button = st.columns([1, 1])
-        with add_button:
-            add = st.button(label="➕ Add Layer", use_container_width=True)
-        with delete_button:
-            delete = st.button(label="➖ Delete Layer",
-                               use_container_width=True)
-        if st.session_state.get("question_layers") == None:
-            st.session_state.question_layers = 1
-        if add:
-            st.session_state.question_layers += 1
-
-        if delete:
-            if st.session_state.question_layers > 1:
-                st.session_state.question_layers -= 1
-
-        layers = ["" for _ in range(st.session_state.question_layers)]
-
-        for i in range(st.session_state.question_layers):
-            # col_layer_id, col_layer_data = st.columns([1, 6])
-            layer_name = st.caption(f"Layer {i+1}")
-            layer_content = st.data_editor(
-                df,
-                key=f"question-layer-{i}",
-                num_rows="dynamic",
-                use_container_width=True,
-                hide_index=True,
-            )
-            layers[i] = (layer_name, layer_content
-                         )  # (col_layer_data, col_layer_id)
-            # layers[i] = st.data_editor(df, key=f'question-layer-{i}', num_rows='dynamic', use_container_width=True)
-
-    return layers
 
 
 def ask_chat(
@@ -207,13 +159,28 @@ def ask_chat(
                         "model"] or "remote:" in advanced_params["model"]:
                 with col_answer.chat_message("user"):
                     st.markdown(prompt)
+
                 with col_answer.chat_message("assistant"):
                     placeholder = st.empty()
-                    response = placeholder.write_stream(
-                        requests.post(api_urls["chat_stream"],
-                                      json=data,
-                                      stream=True).iter_content(1, True))
+                    chat_response = requests.post(api_urls["chat_stream"],
+                                                  json=data,
+                                                  stream=True)
+                    metadata = None
+                    response = ""
+                    for chunk in chat_response.iter_content(
+                            chunk_size=1024, decode_unicode=True):
+
+                        try:
+                            # Try to parse the chunk as JSON
+                            metadata = json.loads(chunk)
+                        except json.JSONDecodeError:
+                            # If it's not JSON, write it to the stream
+                            response += chunk
+                            placeholder.write(response)
                     trans_result = cc.convert(response)
+                    if metadata is None:
+                        metadata = {"doc_metadata": []}
+                    doc_metadata = '\n\n'.join(metadata["doc_metadata"])
                     st.session_state.history_messages.append({
                         "role": "user",
                         "content": prompt
@@ -222,10 +189,12 @@ def ask_chat(
                         "role":
                         "assistant",
                         "content":
-                        trans_result
+                        trans_result,
+                        "doc_metadata":
+                        doc_metadata
                     })
                     placeholder.empty()
-                    placeholder.markdown(trans_result)
+                    placeholder.markdown(trans_result, help=doc_metadata)
 
                 collect_logs(data, trans_result, "chat")
 
@@ -243,7 +212,7 @@ def ask_chat(
                 if response["status"] != "success":
                     api_fail(response["response"])
                     return False
-
+                doc_metadata = '\n\n'.join(response["logs"]["doc_metadata"])
                 st.session_state.history_messages.append({
                     "role": "user",
                     "content": prompt
@@ -253,10 +222,12 @@ def ask_chat(
                     "role":
                     "assistant",
                     "content":
-                    response["response"]
+                    response["response"],
+                    "doc_metadata":
+                    doc_metadata
                 })
                 with col_answer.chat_message("assistant"):
-                    st.markdown(response["response"])
+                    st.markdown(response["response"], help=doc_metadata)
                 st.session_state.logs[response["timestamp"]] = response["logs"]
         clean()
 
@@ -357,21 +328,40 @@ def ask_question(
     }
     try:
         with st.spinner(SPINNER_MESSAGE):
-            # akasha: get response from expert
+
             if "openai" in advanced_params["model"] or "hf:" in advanced_params[
                     "model"] or "huggingface" in advanced_params[
                         "model"] or "remote:" in advanced_params["model"]:
+
                 with col_answer.chat_message("assistant"):
                     placeholder = st.empty()
-                    response = placeholder.write_stream(
-                        requests.post(api_urls["regular_consult_stream"],
-                                      json=data,
-                                      stream=True).iter_content(1, True))
+                    chat_response = requests.post(
+                        api_urls["regular_consult_stream"],
+                        json=data,
+                        stream=True)
+                    metadata = None
+                    response = ""
+                    for chunk in chat_response.iter_content(
+                            chunk_size=1024, decode_unicode=True):
+
+                        try:
+                            # Try to parse the chunk as JSON
+                            metadata = json.loads(chunk)
+                        except json.JSONDecodeError:
+                            # If it's not JSON, write it to the stream
+                            response += chunk
+                            placeholder.write(response)
                     st.session_state["que"] = prompt
                     st.session_state["ans"] = cc.convert(response)
+
+                    if metadata is None:
+                        metadata = {"doc_metadata": []}
+                    doc_metadata = '\n\n'.join(metadata["doc_metadata"])
                     placeholder.empty()
-                    placeholder.markdown(st.session_state["ans"])
+                    placeholder.markdown(st.session_state["ans"],
+                                         help=doc_metadata)
                 collect_logs(data, st.session_state["ans"], "get_response")
+
             else:
                 response = requests.post(api_urls["regular_consult"],
                                          json=data).json()
@@ -388,7 +378,8 @@ def ask_question(
                 st.session_state["que"] = prompt
                 st.session_state["ans"] = response["response"]
                 with col_answer.chat_message("assistant"):
-                    st.markdown(response["response"])
+                    st.markdown(response["response"],
+                                help=response["logs"]["doc_metadata"])
                 st.session_state.logs[response["timestamp"]] = response["logs"]
         clean()
 
@@ -425,137 +416,6 @@ def ask_question(
     except Exception as e:
         api_fail(e.__str__())
     return True
-
-
-def ask_question_deep(
-    col: st.columns,
-    layers_list: List[dict],
-    username: str,
-    prompt: str,
-    expert_owner: str,
-    expert_name: str,
-    advanced_params: dict,
-    auto_clean=False,
-):
-    """ask question and get response from akasha, the question and resposne will be saved in session_state['que'] and session_state['ans'].
-    first check if prompt empty or not, then add openai config if needed.
-    second, call get_data_path function to get all chromadb path and format all data into a dict and pass to regular consult api.
-    if auto_clean is True, clean question area after ask question; if username is the owner of expert, save last consult config for expert.
-
-    Args:
-        col (st.columnes): streamlit columns area for add layer button and layer area.
-        layers_list (list): list of layers, may include multiple list of questions ex. [[q1,q2], q3, [q4,q5], prompt], in this case,
-            in first layer [q1, q2], the response of q1 will become ref1 and q2 will take ref1 as document and get resposne. After all layers
-            processed, now the list will become [ref2, ref3, ref5, prompt], prompt will use ref2, ref3 and ref5 as part of documents and get response.
-        username (str): the current user account name, used to check if the user is the owner of expert.
-        sys_prompt (str): system prompt of the question.
-        prompt (str): the final question of deep consult.
-        expert_owner (str): the owner of expert.
-        expert_name (str): the name of expert.
-        advanced_params (dict): advanced parameters of expert, include 'datasets', 'model', 'search_type', 'topK','threshold',
-            'max_doc_len', 'temperature', 'use_compression', 'chunk_size', 'embedding_model', 'compression_language_model'.
-        auto_clean (bool, optional): if True, clean the question area after ask question. Defaults to False.
-
-    Returns:
-        bool: return True if ask question successfully, else return False.
-    """
-
-    if not prompt and prompt == "":
-        col.error("❌ Please input question")
-        return False
-
-    ## generate layers into list of prompts
-    prompt_list = []
-    for layer in layers_list:
-        group_list = []
-        ## layer[1]'s a dataframe contains prompt, use list(layer[1].columns)[0] to get the column name "Sub-Questions" ###
-        for prom in layer[1][list(layer[1].columns)[0]]:
-            if prom != "":
-                group_list.append(prom)
-        if len(group_list) == 1:
-            prompt_list.append(group_list[0])
-        elif len(group_list) > 1:
-            prompt_list.append(group_list)
-    prompt_list.append(prompt)
-
-    if (advanced_params["embedding_model"].split(":")[0] == "openai"
-            or advanced_params["model"].split(":")[0] == "openai"):
-        openai_config = get_openai_config(username)
-    else:
-        openai_config = {}
-
-    data_path = get_data_path(
-        username,
-        advanced_params["datasets"],
-        advanced_params["embedding_model"],
-        advanced_params["chunk_size"],
-    )
-
-    data = {
-        "data_path": data_path,
-        "prompt": prompt_list,
-        "system_prompt": advanced_params["system_prompt"],
-        "embedding_model": advanced_params["embedding_model"],
-        "chunk_size": advanced_params["chunk_size"],
-        "model": advanced_params["model"],
-        "temperature": advanced_params["temperature"],
-        "topK": advanced_params["topK"],
-        "threshold": advanced_params["threshold"],
-        "search_type": advanced_params["search_type"],
-        "max_doc_len": advanced_params["max_doc_len"],
-        "openai_config": openai_config,
-    }
-    try:
-        with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["deep_consult"],
-                                     json=data).json()
-
-    except Exception as e:
-        api_fail(e.__str__())
-
-    if len(response["warnings"]) > 0:
-        for w in response["warnings"]:
-            st.warning(f"Encountered issues while reading the file: {w} ")
-
-    if response["status"] != "success":
-        api_fail(response["response"])
-        return False
-    # akasha: get response from expert
-    if auto_clean:
-        st.session_state["final-question"] = ""
-    st.session_state["que"] = prompt
-    st.session_state["ans"] = response["response"][-1]
-    st.session_state.logs[response["timestamp"]] = response["logs"]
-
-    # save last consult config for expert if is the owner of expert
-    if username == expert_owner:
-        data = {
-            "system_prompt":
-            advanced_params["system_prompt"],
-            "language_model":
-            advanced_params["model"],
-            "search_type":
-            advanced_params["search_type"],
-            "top_k":
-            advanced_params["topK"],
-            "threshold":
-            advanced_params["threshold"],
-            "max_doc_len":
-            advanced_params["max_doc_len"],
-            "temperature":
-            advanced_params["temperature"],
-            "use_compression":
-            advanced_params["use_compression"],
-            "compression_language_model":
-            advanced_params["compression_language_model"],
-        }
-        data["owner"] = expert_owner
-        data["expert_name"] = expert_name
-        with st.spinner(SPINNER_MESSAGE):
-            response = requests.post(api_urls["save_consult"],
-                                     json=data).json()
-        if response["status"] != "success":
-            st.warning("cannot save last consult config for expert")
 
 
 def list_experts(owner: str = None,
