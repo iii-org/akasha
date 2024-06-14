@@ -585,7 +585,7 @@ def get_summary(user_input: SummaryModel):
             model=user_input.model,
             verbose=True,
             system_prompt=user_input.system_prompt,
-            max_doc_len=1900,
+            max_doc_len=1600,
             temperature=0.0,
         )
 

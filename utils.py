@@ -167,6 +167,7 @@ def ask_chat(
                                                   stream=True)
                     metadata = None
                     response = ""
+                    doc_metadata = " "
                     for chunk in chat_response.iter_content(
                             chunk_size=1024, decode_unicode=True):
 
@@ -180,7 +181,14 @@ def ask_chat(
                     trans_result = cc.convert(response)
                     if metadata is None:
                         metadata = {"doc_metadata": []}
-                    doc_metadata = '\n\n'.join(metadata["doc_metadata"])
+
+                    if not isinstance(metadata["doc_metadata"], list):
+                        doc_metadata = str(metadata["doc_metadata"])
+                    elif len(metadata["doc_metadata"]) == 0:
+                        doc_metadata = " "
+                    else:
+                        doc_metadata = '\n\n'.join(metadata["doc_metadata"])
+
                     st.session_state.history_messages.append({
                         "role": "user",
                         "content": prompt
@@ -341,6 +349,7 @@ def ask_question(
                         stream=True)
                     metadata = None
                     response = ""
+                    doc_metadata = " "
                     for chunk in chat_response.iter_content(
                             chunk_size=1024, decode_unicode=True):
 
@@ -356,7 +365,14 @@ def ask_question(
 
                     if metadata is None:
                         metadata = {"doc_metadata": []}
-                    doc_metadata = '\n\n'.join(metadata["doc_metadata"])
+
+                    if not isinstance(metadata["doc_metadata"], list):
+                        doc_metadata = str(metadata["doc_metadata"])
+                    elif len(metadata["doc_metadata"]) == 0:
+                        doc_metadata = " "
+                    else:
+                        doc_metadata = '\n\n'.join(metadata["doc_metadata"])
+
                     placeholder.empty()
                     placeholder.markdown(st.session_state["ans"],
                                          help=doc_metadata)
