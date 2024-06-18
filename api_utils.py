@@ -599,7 +599,6 @@ def retri_history_messages(messages: list,
 
     ret.reverse()
     ret_str = splitter + "chat history: \n\n" + ''.join(ret) + splitter
-    print(ret_str)
 
     return ret_str, cur_len
 
