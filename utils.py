@@ -179,15 +179,13 @@ def ask_chat(
                             response += chunk
                             placeholder.write(response)
                     trans_result = cc.convert(response)
+
                     if metadata is None:
                         metadata = {"doc_metadata": []}
+                    if not isinstance(metadata, dict):
+                        metadata = {"doc_metadata": []}
 
-                    if not isinstance(metadata["doc_metadata"], list):
-                        doc_metadata = str(metadata["doc_metadata"])
-                    elif len(metadata["doc_metadata"]) == 0:
-                        doc_metadata = " "
-                    else:
-                        doc_metadata = '\n\n'.join(metadata["doc_metadata"])
+                    doc_metadata = '\n\n'.join(metadata["doc_metadata"])
 
                     st.session_state.history_messages.append({
                         "role": "user",
@@ -365,14 +363,10 @@ def ask_question(
 
                     if metadata is None:
                         metadata = {"doc_metadata": []}
+                    elif not isinstance(metadata, dict):
+                        metadata = {"doc_metadata": []}
 
-                    if not isinstance(metadata["doc_metadata"], list):
-                        doc_metadata = str(metadata["doc_metadata"])
-                    elif len(metadata["doc_metadata"]) == 0:
-                        doc_metadata = " "
-                    else:
-                        doc_metadata = '\n\n'.join(metadata["doc_metadata"])
-
+                    doc_metadata = '\n\n'.join(metadata["doc_metadata"])
                     placeholder.empty()
                     placeholder.markdown(st.session_state["ans"],
                                          help=doc_metadata)
