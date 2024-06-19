@@ -406,10 +406,10 @@ class atman:
 
         try:
             text_input = system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
-                splitter + prompt
+                splitter
 
             if self.verbose:
-                print("Prompt after formatting:", "\n\n" + text_input)
+                print("Prompt after formatting:", "\n\n" + text_input + prompt)
         except Exception as e:
             #traceback.print_exc()
             trace_text = traceback.format_exc()
@@ -420,7 +420,7 @@ class atman:
             raise e
 
         try:
-            response = helper.call_model(self.model_obj, text_input)
+            response = helper.call_model(self.model_obj, prompt, text_input)
             if response is None or response == "":
                 raise Exception("LLM response is empty.")
             response = helper.sim_to_trad(response)

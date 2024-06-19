@@ -6,6 +6,7 @@ import opencc
 from typing import Callable, Union, Tuple
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
@@ -264,6 +265,10 @@ def handle_model(model_name: Union[str, Callable],
             model_name = "gpt-3.5-turbo"
             print(info)
         import openai
+        if verbose:
+            call_back = [StreamingStdOutCallbackHandler()]
+        else:
+            call_back = None
         if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
                 == "azure") or ("OPENAI_API_TYPE" in os.environ
                                 and os.environ["OPENAI_API_TYPE"] == "azure"):
@@ -277,7 +282,7 @@ def handle_model(model_name: Union[str, Callable],
                 api_version=api_version,
                 validate_base_url=False,
                 streaming=True,
-                callbacks=[StreamingStdOutCallbackHandler()],
+                callbacks=call_back,
             )
         else:
             openai.api_type = "open_ai"
@@ -286,7 +291,7 @@ def handle_model(model_name: Union[str, Callable],
                 temperature=temperature,
                 api_key=os.environ["OPENAI_API_KEY"],
                 streaming=True,
-                callbacks=[StreamingStdOutCallbackHandler()],
+                callbacks=call_back,
             )
         info = f"selected openai model {model_name}.\n"
     if verbose:
@@ -414,7 +419,7 @@ def extract_result(response: str):
     return res
 
 
-def extract_json(s) -> Union[dict, None]:
+def extract_json(s: str) -> Union[dict, None]:
     """parse the JSON part of the string
 
     Args:
@@ -424,19 +429,45 @@ def extract_json(s) -> Union[dict, None]:
         Union[dict, None]: return the JSON part of the string, if not found return None
     """
     # Use a regular expression to find the JSON part of the string
-    match = re.search(r'\{[\s\S]*\}', s)
-    if match:
-        json_part = match.group(0)
-        try:
-            # Try to parse the JSON part of the string
-            return json.loads(json_part)
-        except json.JSONDecodeError:
-            traceback.print_exc()
-            print("The JSON part of the string is not well-formatted")
-            return None
-    else:
-        print("No JSON found in the string")
-        return None
+    match = re.search(r'\{.*\}', s, re.DOTALL)
+    stack = []
+    start = 0
+    s = match.group()
+    for i, c in enumerate(s):
+        if c == '{':
+            stack.append(i)
+        elif c == '}':
+            if stack:
+                start = stack.pop()
+                if not stack:
+                    try:
+                        json_part = s[start:i + 1]
+                        json_part = json_part.replace("\n", "")
+                        # Try to parse the JSON part of the string
+                        return json.loads(json_part)
+                    except json.JSONDecodeError:
+                        traceback.print_exc()
+                        print(s[start:i + 1])
+                        print(
+                            "The JSON part of the string is not well-formatted"
+                        )
+                        return None
+    return None
+
+    # if match:
+    #     json_part = match.group(0).strip()
+    #     json_part = json_part.replace("\n", "")
+    #     try:
+    #         # Try to parse the JSON part of the string
+    #         return json.loads(json_part)
+    #     except json.JSONDecodeError:
+    #         traceback.print_exc()
+    #         print(json_part)
+    #         print("The JSON part of the string is not well-formatted")
+    #         return None
+    # else:
+    #     print("No JSON found in the string")
+    #     return None
 
 
 def get_all_combine(
@@ -534,7 +565,7 @@ def _get_text(texts: list,
     return cur_count, cur_text, i
 
 
-def call_model(model: LLM, prompt: str) -> str:
+def call_model(model: LLM, prompt: str, system_prompt: str = "") -> str:
     """call llm model and return the response
 
     Args:
@@ -544,6 +575,18 @@ def call_model(model: LLM, prompt: str) -> str:
     Returns:
         str: llm response
     """
+
+    ### for openai, change system prompt and prompt into system meg and human meg ###
+    input_text = system_prompt + prompt
+    try:
+        if "openai" in model._llm_type.lower():
+            input_text = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=prompt)
+            ]
+    except:
+        logging.warning("can not find the llm type.")
+
     response = ""
     print_flag = True
     try:
@@ -552,22 +595,22 @@ def call_model(model: LLM, prompt: str) -> str:
         except:
             print_flag = False
             try:
-                response = model._call(prompt)
+                response = model._call(input_text)
             except:
-                response = model._generate(prompt)
+                response = model._generate(input_text)
 
         if "openai" in model_type:
             print_flag = False
-            response = model.invoke(prompt)
+            response = model.invoke(input_text)
 
         elif "remote" in model_type:
             print_flag = False
-            response = model._call(prompt)
+            response = model._call(input_text)
         else:
             try:
-                response = model._call(prompt)
+                response = model._call(input_text)
             except:
-                response = model._generate(prompt)
+                response = model._generate(input_text)
 
         if isinstance(response, AIMessage):
             response = response.content
@@ -649,7 +692,7 @@ def call_translator(model_obj: LLM,
     prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
         sys_prompt, "", prompt_format_type)
 
-    response = call_model(model_obj, prod_sys_prompt + "\n" + texts)
+    response = call_model(model_obj, "\n" + texts, prod_sys_prompt)
 
     return response
 
@@ -683,5 +726,61 @@ def call_JSON_formatter(
     prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
         sys_prompt, "", prompt_format_type)
 
-    response = call_model(model_obj, prod_sys_prompt + "TEXTS: " + texts)
+    response = call_model(model_obj, "TEXTS: " + texts, prod_sys_prompt)
     return extract_json(response)
+
+
+def retri_history_messages(messages: list,
+                           pairs: int = 10,
+                           max_doc_len: int = 750,
+                           role1: str = "User",
+                           role2: str = "Assistant",
+                           language: str = "ch") -> Tuple[str, int]:
+    """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_doc_len and pairs, and return the text with total length
+
+    Args:
+        messages (list): history messages list, each index is a dict with keys: role("user", "assistant"), content(content of message)
+        pairs (int, optional): the maximum number of messages. Defaults to 10.
+        max_doc_len (int, optional): the maximum number of messages length. Defaults to 750.
+        language (str, optional): message language. Defaults to "ch".
+
+    Returns:
+        Tuple[str, int]: return the text with total length.
+    """
+    cur_len = 0
+    count = 0
+    ret = []
+    splitter = '\n----------------\n'
+
+    for i in range(len(messages) - 1, -1, -2):
+        if count >= pairs:
+            break
+        if (messages[i]["role"] != role2) or (messages[i - 1]["role"]
+                                              != role1):
+            i += 1
+            continue
+        texta = f"{role2}: " + messages[i]["content"].replace('\n', '') + "\n"
+        textq = f"{role1}: " + messages[i - 1]["content"].replace(
+            '\n', '')  # {(i+1)//2}.
+        len_texta = akasha.helper.get_doc_length(language, texta)  #)
+        len_textq = akasha.helper.get_doc_length(language, textq)
+
+        if cur_len + len_texta > max_doc_len:
+            break
+        cur_len += len_texta
+        ret.append(texta)
+
+        if cur_len + len_textq > max_doc_len:
+            break
+        cur_len += len_textq
+        ret.append(textq)
+
+        count += 1
+
+    if count == 0:
+        return "", 0
+
+    ret.reverse()
+    ret_str = splitter + ''.join(ret) + splitter
+
+    return ret_str, cur_len

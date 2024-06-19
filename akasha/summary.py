@@ -2,7 +2,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import akasha
 from pathlib import Path
 import time, datetime
-import akasha.db
+import akasha.db as db
 from typing import Union, List
 import akasha.format as afr
 from tqdm import tqdm
@@ -221,8 +221,9 @@ class Summary(akasha.atman):
                 prompt = akasha.prompts.format_reduce_summary_prompt(
                     cur_text, self.summary_len)
 
-                response = akasha.helper.call_model(
-                    self.model_obj, prod_sys_prompt + "\n" + prompt)
+                response = akasha.helper.call_model(self.model_obj,
+                                                    "\n" + prompt,
+                                                    prod_sys_prompt)
 
                 total_list.append(response)
 
@@ -236,8 +237,8 @@ class Summary(akasha.atman):
 
             prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, 0)
 
-            response = akasha.helper.call_model(
-                self.model_obj, prod_sys_prompt + "\n" + prompt)
+            response = akasha.helper.call_model(self.model_obj, "\n" + prompt,
+                                                prod_sys_prompt)
 
             i = newi
 
@@ -305,8 +306,8 @@ class Summary(akasha.atman):
                 prompt = akasha.prompts.format_refine_summary_prompt(
                     cur_text, previous_summary, self.summary_len)
 
-            response = akasha.helper.call_model(
-                self.model_obj, prod_sys_prompt + "\n" + prompt)
+            response = akasha.helper.call_model(self.model_obj, "\n" + prompt,
+                                                prod_sys_prompt)
 
             if self.verbose:
                 print("prompt: \n", self.system_prompt + prompt)
@@ -379,8 +380,8 @@ class Summary(akasha.atman):
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
 
         # Split the documents into sentences
-        documents = akasha.db._load_file(self.file_name,
-                                         self.file_name.split(".")[-1])
+        documents = db._load_file(self.file_name,
+                                  self.file_name.split(".")[-1])
         text_splitter = RecursiveCharacterTextSplitter(
             separators=["\n", " ", ",", ".", "。", "!"],
             chunk_size=self.chunk_size,
@@ -419,7 +420,8 @@ class Summary(akasha.atman):
                 self.format_prompt, "", self.prompt_format_type)
             self.summary = akasha.helper.call_model(
                 self.model_obj,
-                prod_format_prompt + "\n\n" + self.summary,
+                "\n\n" + self.summary,
+                prod_format_prompt,
             )
 
         if self.auto_translate:
@@ -483,7 +485,7 @@ class Summary(akasha.atman):
 
         ## set variables ##
         self.articles = self._handle_texts(articles)
-        self.articles_docs = akasha.db.change_text_to_doc(self.articles)
+        self.articles_docs = db.change_text_to_doc(self.articles)
         self.summary_type = summary_type.lower()
         self.summary_len = summary_len
         self._set_model(**kwargs)
@@ -534,10 +536,9 @@ class Summary(akasha.atman):
         if self.format_prompt != "":
             prod_format_prompt, ___ = akasha.prompts.format_sys_prompt(
                 self.format_prompt, "", self.prompt_format_type)
-            self.summary = akasha.helper.call_model(
-                self.model_obj,
-                prod_format_prompt + "\n\n" + self.summary,
-            )
+            self.summary = akasha.helper.call_model(self.model_obj,
+                                                    "\n\n" + self.summary,
+                                                    prod_format_prompt)
 
         if self.auto_translate:
 

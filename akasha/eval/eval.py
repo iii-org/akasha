@@ -42,7 +42,7 @@ def _generate_single_choice_question(
     random_index = np.random.randint(choice_num)
     q_prompt = akasha.prompts.format_wrong_answer(choice_num - 1, doc_text,
                                                   question, cor_ans)
-    response = akasha.helper.call_model(model, system_prompt + q_prompt)
+    response = akasha.helper.call_model(model, q_prompt, system_prompt)
     response = akasha.helper.sim_to_trad(
         response)  # transform simplified chinese to traditional chinese
 
@@ -199,7 +199,8 @@ class Model_Eval(akasha.atman):
         with open(output_file_path, "w", encoding="utf-8") as f:
             for w in range(len(self.question)):
                 if self.question_style == "essay":
-                    f.write(self.question[w] + self.answer[w] + "\n\n")
+                    f.write(self.question[w].replace("\n", "") + "\n" +
+                            self.answer[w].replace("\n", "") + "\n\n")
                 else:
                     if w == len(self.question) - 1:
                         f.write(self.question[w].replace("\n", "") +
