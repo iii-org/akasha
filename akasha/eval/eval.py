@@ -42,7 +42,7 @@ def _generate_single_choice_question(
     random_index = np.random.randint(choice_num)
     q_prompt = akasha.prompts.format_wrong_answer(choice_num - 1, doc_text,
                                                   question, cor_ans)
-    response = akasha.helper.call_model(model, system_prompt + q_prompt)
+    response = akasha.helper.call_model(model, q_prompt, system_prompt)
     response = akasha.helper.sim_to_trad(
         response)  # transform simplified chinese to traditional chinese
 
