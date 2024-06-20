@@ -581,7 +581,7 @@ def ui():
 @click.option(
     "--host",
     "-h",
-    defaullt="0.0.0,0",
+    default="0.0.0.0",
     help="Host to run the FastAPI server on",
 )
 @click.option(
