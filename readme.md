@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.38](https://img.shields.io/badge/pypi%20package-0.8.36-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.39](https://img.shields.io/badge/pypi%20package-0.8.36-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
