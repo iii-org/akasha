@@ -1,5 +1,5 @@
 import click
-
+import uvicorn
 import akasha as ak
 import akasha.eval.eval as eval
 
@@ -566,12 +566,36 @@ def ui():
     sys.exit(stcli.main())
 
 
+@click.command("api", short_help="simple api for akasha")
+@click.option(
+    "--workers",
+    "-w",
+    default=2,
+    help="Number of workers to use",
+)
+@click.option(
+    "--host",
+    "-h",
+    defaullt="0.0.0,0",
+    help="Host to run the FastAPI server on",
+)
+@click.option(
+    "--port",
+    "-p",
+    default=8000,
+    help="Port to run the FastAPI server on",
+)
+def start_fastapi(workers: int, host: str, port: str):
+    uvicorn.run("akasha.api:app", host=host, port=port, workers=workers)
+
+
 akasha.add_command(keep_responsing)
 akasha.add_command(get_response)
 akasha.add_command(chain_of_thought)
 akasha.add_command(auto_create_questionset)
 akasha.add_command(auto_evaluation)
 akasha.add_command(ui)
+akasha.add_command(start_fastapi)
 
 if __name__ == "__main__":
     akasha()
