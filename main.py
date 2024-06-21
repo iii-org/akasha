@@ -15,7 +15,7 @@ from views.forgetpwd import forgetpwd_page
 from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command
 
 # info
-VERSION = '0.9'
+VERSION = '0.14'
 
 # get host ip
 if 'host_ip' not in st.session_state:
@@ -24,6 +24,8 @@ if 'host_ip' not in st.session_state:
 
 HOST = os.getenv('HOST', st.session_state.host_ip)
 PORT = os.getenv('PORT', '8501')
+USE_PREFIX = os.getenv('USE_PREFIX', False)
+PREFIX = os.getenv('PREFIX', "")
 
 # session state parameters
 if 'openai_on' not in st.session_state:
@@ -85,9 +87,17 @@ if url_params == {}:
     placeholder_signup = col_signup.empty()
     placeholder_forget = col_forgetpwd.empty()
     with placeholder_signup:
-        st.markdown(f'[Sign Up](http://{HOST}:{PORT}/?signup=True)')
+        if (not USE_PREFIX) or USE_PREFIX == "false":
+            st.markdown(f'[Sign Up](http://{HOST}:{PORT}/?signup=True)')
+        else:
+            st.markdown(f'[Sign Up](http://{HOST}/{PREFIX}/?signup=True)')
     with placeholder_forget:
-        st.markdown(f'[Forget Password](http://{HOST}:{PORT}/?forgetpwd=True)')
+        if (not USE_PREFIX) or USE_PREFIX == "false":
+            st.markdown(
+                f'[Forget Password](http://{HOST}:{PORT}/?forgetpwd=True)')
+        else:
+            st.markdown(
+                f'[Forget Password](http://{HOST}/{PREFIX}/?forgetpwd=True)')
 
     # authenticate
     if authentication_status is False:

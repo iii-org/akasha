@@ -1,4 +1,4 @@
-FROM ccchang0518/akasha-lab-builder
+FROM ccchang0518/akasha-lab-builder:0.2
 LABEL chih-chuan chang<ccchang@iii.org.tw>
 
 WORKDIR /app
@@ -11,6 +11,15 @@ COPY utils.py /app
 COPY ./views /app/views
 COPY ./routers /app/routers
 RUN chmod u+x *.sh
-EXPOSE 8501
 EXPOSE 8000
-ENTRYPOINT nohup /bin/bash -c "./start.sh &" && streamlit run main.py --server.maxUploadSize 200000  --server.port 8501
+
+ENV PORT 8501
+ENV PREFIX akasha-lab
+ENV USE_PREFIX false
+EXPOSE $PORT
+CMD if [ "$USE_PREFIX" = "true" ]; then \
+    nohup /bin/bash -c "./start.sh &" && streamlit run main.py --server.maxUploadSize 200000  --server.port 8501 --browser.serverAddress 0.0.0.0 --server.headless true --server.baseUrlPath /${PREFIX}/; \
+else \
+    nohup /bin/bash -c "./start.sh &" && streamlit run main.py --server.maxUploadSize 200000  --server.port 8501 --browser.serverAddress 0.0.0.0 --server.headless true ; \
+fi
+#ENTRYPOINT nohup /bin/bash -c "./start.sh &" && streamlit run main.py --server.maxUploadSize 200000  --server.port 8501 --browser.serverAddress 0.0.0.0 --server.headless true --server.baseUrlPath ${baseUrl}
