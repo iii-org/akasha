@@ -1,7 +1,7 @@
 # akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package : 0.8.39](https://img.shields.io/badge/pypi%20package-0.8.36-blue)](https://pypi.org/project/akasha-terminal/)
+[![pypi package : 0.8.40](https://img.shields.io/badge/pypi%20package-0.8.40-blue)](https://pypi.org/project/akasha-terminal/)
 [![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
@@ -1015,7 +1015,7 @@ input_tool = akasha.create_tool(
     "This is the tool to ask user question, the only one param question is the question string that has not been answered and we want to ask user.",
     func=input_func)
 
-ao = akasha.agent(verbose=True,
+ao = akasha.test_agent(verbose=True,
                     tools=[
                         input_tool,
                         akasha.get_saveJSON_tool(),
@@ -1026,7 +1026,6 @@ print(
         ))
 
 ```
-
 
 ```text
 
@@ -1050,24 +1049,55 @@ I have successfully saved all the questions and answers into the "default.json" 
 
 ```
 
+
 </br>
 </br>
 
-In the example2, we add wikipedia tool enabling the LLM to access the Wikipedia API for retrieving necessary information to respond to the questions posed to it.
+In the example2, we add wikipedia tool enabling the LLM to access the Wikipedia API for retrieving necessary information to respond to the questions posed to it. Since the response from Wiki may contain redundant information, we can use retri_observation to retrieve relevant information.
 
 ```python
 
-ao = akasha.agent(tools=[
-         akasha.get_wiki_tool(),
-        akasha.get_saveJSON_tool(),
-    ], )
-print(ao("請用中文回答李遠哲跟馬英九誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json"))
-ao.save_logs("ao2.json")
+ao = akasha.test_agent(
+        verbose=True,
+        tools=[input_tool,
+               akasha.get_saveJSON_tool(),
+               akasha.get_wiki_tool()],
+        retri_observation=True,
+        model="openai:gpt-3.5-turbo")
+print(ao("請用中文回答李遠哲跟黃仁勳誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json"))
 
 ```
 
 ```text
-根據維基百科的資訊，李遠哲比馬英九年長。我已經將查到的資訊和答案儲存成了一個名為AGE.json的json檔案。
+根據查到的資訊，李遠哲（Yuan T. Lee）比黃仁勳（Jensen Huang）更老。李遠哲於1936年11月19日出生，而黃仁勳的出生日期是1963年2月17日。我已將這些資訊儲存成名為"AGE.json"的
+JSON檔案。
+
+### AGE.json ###
+{
+    "李遠哲": "1936-11-19",
+    "黃仁勳": "1963-02-17",
+    "答案": "李遠哲比黃仁勳更老"
+}
+```
+
+</br>
+</br>
+
+### stream
+If you want to get the llm response in real time, you can use stream function, it will return each round LLM response as a generator.  
+
+```python!
+
+ao = akasha.test_agent(
+        verbose=True,
+        tools=[input_tool,
+               akasha.get_saveJSON_tool(),
+               akasha.get_wiki_tool()],
+        retri_observation=True,
+        model="openai:gpt-3.5-turbo")
+st = ao.stream("請用中文回答李遠哲跟黃仁勳誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json")
+for s in st:
+    print(s)
 ```
 
 

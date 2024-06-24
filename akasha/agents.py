@@ -314,9 +314,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             except:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry.")
-                response = akasha.helper.call_model(self.model_obj,
-                                                    question + retri_messages,
-                                                    self.REACT_PROMPT)
+                response = akasha.helper.call_model(
+                    self.model_obj, "Question: " + question + retri_messages,
+                    self.REACT_PROMPT)
                 round_count -= 1
                 continue
 
@@ -373,9 +373,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             if retri_messages != "":
                 retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
-            response = akasha.helper.call_model(self.model_obj,
-                                                question + retri_messages,
-                                                self.REACT_PROMPT)
+            response = akasha.helper.call_model(
+                self.model_obj, "Question: " + question + retri_messages,
+                self.REACT_PROMPT)
             round_count -= 1
 
         end_time = time.time()
@@ -410,9 +410,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             except:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry.")
-                response = akasha.helper.call_model(self.model_obj,
-                                                    question + retri_messages,
-                                                    self.REACT_PROMPT)
+                response = akasha.helper.call_model(
+                    self.model_obj, "Question: " + question + retri_messages +
+                    self.REACT_PROMPT)
                 round_count -= 1
                 continue
 
@@ -471,9 +471,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             if retri_messages != "":
                 retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
-            response = akasha.helper.call_model(self.model_obj,
-                                                question + retri_messages,
-                                                self.REACT_PROMPT)
+            response = akasha.helper.call_model(
+                self.model_obj, "Question: " + question + retri_messages,
+                self.REACT_PROMPT)
             round_count -= 1
 
         end_time = time.time()
