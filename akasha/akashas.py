@@ -511,6 +511,45 @@ class Doc_QA(atman):
         self.prompt = ""
         self.ignored_files = []
 
+    def _truncate_docs(self):
+        """truncate documents if the total length of documents exceed the max_doc_len
+
+        Returns:
+            ret (str): string of truncated documents texts
+            cur_len (int): the length of truncated documents
+            new_docs (list): the list of truncated documents 
+        """
+        cur_len = 0
+        ret = ""
+        new_docs = []
+        for db_doc in self.docs:
+            cur_doc_len = helper.get_doc_length(self.language,
+                                                db_doc.page_content)
+
+            if cur_len + cur_doc_len > self.max_doc_len:
+                tot_len = len(db_doc.page_content)
+                idx = 2
+                truncate_content = db_doc.page_content[:(tot_len // idx)]
+                truncate_len = helper.get_doc_length(self.language,
+                                                     truncate_content)
+                while cur_len + truncate_len > self.max_doc_len:
+                    idx *= 2
+                    truncate_content = db_doc.page_content[:(tot_len // idx)]
+                    truncate_len = helper.get_doc_length(
+                        self.language, truncate_content)
+
+                ret += truncate_content + "\n"
+                cur_len += truncate_len
+                new_docs.append(
+                    Document(page_content=truncate_content,
+                             metadata=db_doc.metadata))
+                return ret, cur_len, new_docs
+            cur_len += cur_doc_len
+            ret += db_doc.page_content + "\n"
+            new_docs.append(db_doc)
+
+        return ret, cur_len, new_docs
+
     def get_response(self, doc_path: Union[List[str], str], prompt: str,
                      **kwargs) -> str:
         """input the documents directory path and question, will first store the documents
@@ -788,15 +827,13 @@ class Doc_QA(atman):
             self.logs[timestamp]["embeddings"] = "ask_whole_file"
 
         ### start to get response ###
-        cur_documents = '\n'.join(
-            [db_doc.page_content for db_doc in self.docs])
+        cur_documents, self.doc_length, self.docs = self._truncate_docs()
+
         self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
 
         if self.docs is None:
             logging.error("No Relevant Documents.")
             raise AttributeError("No Relevant Documents.")
-
-        self.doc_length = helper.get_docs_length(self.language, self.docs)
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
@@ -863,11 +900,9 @@ class Doc_QA(atman):
             self.logs[timestamp]["embeddings"] = "ask_self"
 
         ### start to get response ###
-        cur_documents = '\n'.join(
-            [db_doc.page_content for db_doc in self.docs])
-        self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
+        cur_documents, self.doc_length, self.docs = self._truncate_docs()
 
-        self.doc_length = helper.get_docs_length(self.language, self.docs)
+        self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
