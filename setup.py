@@ -27,7 +27,7 @@ install_requires = [
     "bert-score==0.3.13",
     "click",
     "tokenizers>=0.19.1",
-    "streamlit==1.32.0",
+    "streamlit>=1.33.0",
     "streamlit_option_menu>=0.3.6",
     "rank_bm25",
     "unstructured",
@@ -43,7 +43,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.41",
+    version="0.8.42",
     description="document QA package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
