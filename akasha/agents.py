@@ -149,6 +149,8 @@ class test_agent:
         self.timestamp_list = []
         self.messages = []
         self.logs = {}
+        self.tokens = 0
+        self.input_len = 0
         self.keep_logs = keep_logs
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature)
@@ -226,6 +228,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self.logs[timestamp]["tools"] = tool_list
         self.logs[timestamp]["messages"] = self.messages
         self.logs[timestamp]["response"] = self.response
+        self.logs[timestamp]["tokens"] = self.tokens
+        self.logs[timestamp]["input_len"] = self.input_len
         return
 
     def save_logs(self, file_name: str = "", file_type: str = "json"):
@@ -296,12 +300,18 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         start_time = time.time()
         round_count = self.max_round
         self.messages = []
-        response = akasha.helper.call_model(
-            self.model_obj, "Question: " + question + " think step by step" +
-            self.REMEMBER_PROMPT, self.REACT_PROMPT)
         observation = ""
         thought = ""
         retri_messages = ""
+
+        response = akasha.helper.call_model(
+            self.model_obj, "Question: " + question + " think step by step" +
+            self.REMEMBER_PROMPT, self.REACT_PROMPT)
+        ### count the length of the input ###
+        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT
+        self.input_len = akasha.helper.get_doc_length(self.language, txt)
+        self.tokens = self.model_obj.get_num_tokens(txt)
+
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         if self.keep_logs == True:
             self.timestamp_list.append(timestamp)
@@ -314,10 +324,15 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             except:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry.")
+
                 response = akasha.helper.call_model(
                     self.model_obj, "Question: " + question + retri_messages,
                     self.REACT_PROMPT)
                 round_count -= 1
+                txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+                self.input_len += akasha.helper.get_doc_length(
+                    self.language, txt)
+                self.tokens += self.model_obj.get_num_tokens(txt)
                 continue
 
             ### get thought from response ###
@@ -338,6 +353,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     self.model_obj, retri_messages,
                     f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
                 )
+                txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                self.input_len += akasha.helper.get_doc_length(
+                    self.language, txt)
+                self.tokens += self.model_obj.get_num_tokens(txt)
                 break
             elif cur_action['action'] in self.tools:
                 tool_name = cur_action['action']
@@ -351,6 +370,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                         "Question: " + question + "\n\nThought: " + thought +
                         "\n\nObservation: " + firsthand_observation,
                         self.RETRI_OBSERVATION_PROMPT)
+                    txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
+                    self.input_len += akasha.helper.get_doc_length(
+                        self.language, txt)
+                    self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
                     observation = firsthand_observation
             else:
@@ -376,6 +399,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             response = akasha.helper.call_model(
                 self.model_obj, "Question: " + question + retri_messages,
                 self.REACT_PROMPT)
+            txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+            self.input_len += akasha.helper.get_doc_length(self.language, txt)
+            self.tokens += self.model_obj.get_num_tokens(txt)
+
             round_count -= 1
 
         end_time = time.time()
@@ -391,12 +418,17 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         start_time = time.time()
         round_count = self.max_round
         self.messages = []
-        response = akasha.helper.call_model(
-            self.model_obj, "Question: " + question + " think step by step" +
-            self.REMEMBER_PROMPT, self.REACT_PROMPT)
         observation = ""
         thought = ""
         retri_messages = ""
+        response = akasha.helper.call_model(
+            self.model_obj, "Question: " + question + " think step by step" +
+            self.REMEMBER_PROMPT, self.REACT_PROMPT)
+        ### count the length of the input ###
+        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT
+        self.input_len = akasha.helper.get_doc_length(self.language, txt)
+        self.tokens = self.model_obj.get_num_tokens(txt)
+
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         if self.keep_logs == True:
             self.timestamp_list.append(timestamp)
@@ -414,6 +446,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     self.model_obj, "Question: " + question + retri_messages +
                     self.REACT_PROMPT)
                 round_count -= 1
+                txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+                self.input_len += akasha.helper.get_doc_length(
+                    self.language, txt)
+                self.tokens += self.model_obj.get_num_tokens(txt)
                 continue
 
             ### get thought from response ###
@@ -436,6 +472,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     self.model_obj, retri_messages,
                     f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
                 )
+                txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                self.input_len += akasha.helper.get_doc_length(
+                    self.language, txt)
+                self.tokens += self.model_obj.get_num_tokens(txt)
                 break
             elif cur_action['action'] in self.tools:
                 tool_name = cur_action['action']
@@ -449,6 +489,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                         "Question: " + question + "\n\nThought: " + thought +
                         "\n\nObservation: " + firsthand_observation,
                         self.RETRI_OBSERVATION_PROMPT)
+                    txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
+                    self.input_len += akasha.helper.get_doc_length(
+                        self.language, txt)
+                    self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
                     observation = firsthand_observation
             else:
@@ -474,6 +518,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             response = akasha.helper.call_model(
                 self.model_obj, "Question: " + question + retri_messages,
                 self.REACT_PROMPT)
+            txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+            self.input_len += akasha.helper.get_doc_length(self.language, txt)
+            self.tokens += self.model_obj.get_num_tokens(txt)
+
             round_count -= 1
 
         end_time = time.time()
