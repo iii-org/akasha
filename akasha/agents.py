@@ -148,6 +148,7 @@ class test_agent:
         self.retri_observation = retri_observation
         self.timestamp_list = []
         self.messages = []
+        self.thoughts = []
         self.logs = {}
         self.tokens = 0
         self.input_len = 0
@@ -227,6 +228,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self.logs[timestamp]["time"] = time
         self.logs[timestamp]["tools"] = tool_list
         self.logs[timestamp]["messages"] = self.messages
+        self.logs[timestamp]["thoughts"] = self.thoughts
         self.logs[timestamp]["response"] = self.response
         self.logs[timestamp]["tokens"] = self.tokens
         self.logs[timestamp]["input_len"] = self.input_len
@@ -294,21 +296,30 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         print("save logs to " + str(file_path))
         return
 
-    def __call__(self, question: str):
+    def __call__(self, question: str, messages: List[dict] = []):
         """run agent to get response
         """
         start_time = time.time()
         round_count = self.max_round
-        self.messages = []
+        self.messages = messages
+        self.thoughts = []
         observation = ""
         thought = ""
         retri_messages = ""
 
+        ### call model to get response ###
+        retri_messages, messages_len = helper.retri_history_messages(
+            self.messages, self.max_past_observation, self.max_doc_len,
+            "Action", "Observation", self.language)
+        if retri_messages != "":
+            retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
+
         response = akasha.helper.call_model(
-            self.model_obj, "Question: " + question + " think step by step" +
-            self.REMEMBER_PROMPT, self.REACT_PROMPT)
-        ### count the length of the input ###
-        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT
+            self.model_obj,
+            "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+            self.REACT_PROMPT)
+
+        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
         self.input_len = akasha.helper.get_doc_length(self.language, txt)
         self.tokens = self.model_obj.get_num_tokens(txt)
 
@@ -326,10 +337,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     "Cannot extract JSON format action from response, retry.")
 
                 response = akasha.helper.call_model(
-                    self.model_obj, "Question: " + question + retri_messages,
-                    self.REACT_PROMPT)
+                    self.model_obj, "Question: " + question + retri_messages +
+                    self.REMEMBER_PROMPT, self.REACT_PROMPT)
                 round_count -= 1
-                txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+                txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
                 self.input_len += akasha.helper.get_doc_length(
                     self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
@@ -340,6 +351,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 response.split('Thought:')[1:]).split('Action:')[0]
             if thought.replace(" ", "").replace("\n", "") == "":
                 thought = "None."
+            self.thoughts.append(thought)
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
@@ -357,6 +369,16 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 self.input_len += akasha.helper.get_doc_length(
                     self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
+                self.messages.append({
+                    "role":
+                    "Action",
+                    "content":
+                    json.dumps(cur_action, ensure_ascii=False)
+                })
+                self.messages.append({
+                    "role": "Observation",
+                    "content": response
+                })
                 break
             elif cur_action['action'] in self.tools:
                 tool_name = cur_action['action']
@@ -376,6 +398,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
                     observation = firsthand_observation
+
+                if self.verbose:
+                    print("\nObservation: " + observation)
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
@@ -413,19 +438,29 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return response
 
-    def stream(self, question: str):
+    def stream(self, question: str, messages: List[dict] = []):
 
         start_time = time.time()
         round_count = self.max_round
-        self.messages = []
+        self.messages = messages
+        self.thoughts = []
         observation = ""
         thought = ""
         retri_messages = ""
+
+        ### call model to get response ###
+        retri_messages, messages_len = helper.retri_history_messages(
+            self.messages, self.max_past_observation, self.max_doc_len,
+            "Action", "Observation", self.language)
+        if retri_messages != "":
+            retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
+
         response = akasha.helper.call_model(
-            self.model_obj, "Question: " + question + " think step by step" +
-            self.REMEMBER_PROMPT, self.REACT_PROMPT)
-        ### count the length of the input ###
-        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT
+            self.model_obj,
+            "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+            self.REACT_PROMPT)
+
+        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
         self.input_len = akasha.helper.get_doc_length(self.language, txt)
         self.tokens = self.model_obj.get_num_tokens(txt)
 
@@ -444,9 +479,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     "Cannot extract JSON format action from response, retry.")
                 response = akasha.helper.call_model(
                     self.model_obj, "Question: " + question + retri_messages +
-                    self.REACT_PROMPT)
+                    self.REMEMBER_PROMPT, self.REACT_PROMPT)
                 round_count -= 1
-                txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+                txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
                 self.input_len += akasha.helper.get_doc_length(
                     self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
@@ -458,7 +493,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             if thought.replace(" ", "").replace("\n", "") == "":
                 thought = "None."
 
-            yield f"Thought: {thought}"
+            self.thoughts.append(thought)
+            yield f"\nThought: {thought}"
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
@@ -476,6 +512,17 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 self.input_len += akasha.helper.get_doc_length(
                     self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
+                self.messages.append({
+                    "role":
+                    "Action",
+                    "content":
+                    json.dumps(cur_action, ensure_ascii=False)
+                })
+                self.messages.append({
+                    "role": "Observation",
+                    "content": response
+                })
+
                 break
             elif cur_action['action'] in self.tools:
                 tool_name = cur_action['action']
@@ -495,6 +542,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
                     observation = firsthand_observation
+
+                yield f"\n Observation: {observation}"
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
