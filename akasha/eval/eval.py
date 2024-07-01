@@ -726,6 +726,7 @@ class Model_Eval(akasha.atman):
             return [], []
 
         ## check db ##
+
         if self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, "use rerank to get docs")
@@ -874,7 +875,10 @@ class Model_Eval(akasha.atman):
         ## set class variables ##
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
-        self.doc_path = doc_path
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
         self.eval_model = eval_model
         if check_sum_type(self.question_type, self.question_style):
             return 0.0, 0
@@ -883,13 +887,16 @@ class Model_Eval(akasha.atman):
             self.system_prompt) + self.system_prompt
 
         ## check db ##
-        if self.use_chroma:
+        if isinstance(doc_path, akasha.db.dbs):
+            self.db = kwargs['dbs']
+            self.ignored_files = []
+        elif self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
-                self.doc_path, self.embeddings)
+                doc_path, self.embeddings)
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
-                self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
+                doc_path, self.verbose, self.embeddings_obj, self.embeddings,
+                self.chunk_size, self.ignore_check)
         if not self._check_db():
             return ""
 
@@ -1167,14 +1174,20 @@ class Model_Eval(akasha.atman):
         ## set class variables ##
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
-        self.doc_path = doc_path
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
         self.question_num = question_num
 
         if check_sum_type(self.question_type, self.question_style, "related"):
             return [], []
 
         ## check db ##
-        if self.use_chroma:
+        if isinstance(doc_path, akasha.db.dbs):
+            self.db = kwargs['dbs']
+            self.ignored_files = []
+        elif self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:

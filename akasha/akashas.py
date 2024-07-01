@@ -550,8 +550,8 @@ class Doc_QA(atman):
 
         return ret, cur_len, new_docs
 
-    def get_response(self, doc_path: Union[List[str], str], prompt: str,
-                     **kwargs) -> str:
+    def get_response(self, doc_path: Union[List[str], str, akasha.db.dbs],
+                     prompt: str, **kwargs) -> str:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -567,35 +567,38 @@ class Doc_QA(atman):
                 response (str): the response from llm model.
         """
 
-        # Check if doc_path is a list
-        if isinstance(doc_path, list):
-            # Check if the first item in the list is a directory
-            if os.path.isdir(doc_path[0]):
-                # first item is a directory, so run get_response
-                pass
-            else:
-                # first item is not a directory, so run ask_self
-                return self.ask_self(prompt, info=doc_path, **kwargs)
-        else:
-            # Check if doc_path is a directory
-            if os.path.isdir(doc_path):
-                # the doc_path is a directory, so run get_response
-                pass
-            elif os.path.isfile(doc_path):
-                # the doc_path is a file, so run ask_whole_file
-                return self.ask_whole_file(doc_path, prompt, **kwargs)
-            else:
-                # Process as string
-                return self.ask_self(prompt, info=doc_path, **kwargs)
+        # # Check if doc_path is a list
+        # if isinstance(doc_path, list):
+        #     # Check if the first item in the list is a directory
+        #     if os.path.isdir(doc_path[0]):
+        #         # first item is a directory, so run get_response
+        #         pass
+        #     else:
+        #         # first item is not a directory, so run ask_self
+        #         return self.ask_self(prompt, info=doc_path, **kwargs)
+        # else:
+        #     # Check if doc_path is a directory
+        #     if os.path.isdir(doc_path):
+        #         # the doc_path is a directory, so run get_response
+        #         pass
+        #     elif os.path.isfile(doc_path):
+        #         # the doc_path is a file, so run ask_whole_file
+        #         return self.ask_whole_file(doc_path, prompt, **kwargs)
+        #     else:
+        #         # Process as string
+        #         return self.ask_self(prompt, info=doc_path, **kwargs)
 
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
-        self.doc_path = doc_path
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
         self.prompt = prompt
         search_dict = {}
 
-        if 'dbs' in kwargs:
-            self.db = kwargs['dbs']
+        if isinstance(doc_path, akasha.db.dbs):
+            self.db = doc_path
             self.ignored_files = []
         elif self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
@@ -697,10 +700,18 @@ class Doc_QA(atman):
         self._change_variables(**kwargs)
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt(self.language)
-        self.doc_path = doc_path
+
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
         table = {}
         search_dict = {}
-        if self.use_chroma:
+
+        if isinstance(doc_path, akasha.db.dbs):
+            self.db = doc_path
+            self.ignored_files = []
+        elif self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
@@ -954,7 +965,11 @@ class Doc_QA(atman):
         """
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
-        self.doc_path = doc_path
+
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
         self.prompt = prompt
         self.follow_up = []
         self.intermediate_ans = []
@@ -1037,13 +1052,19 @@ class Doc_QA(atman):
 
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
-        self.doc_path = doc_path
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
         self.prompt = prompt
         self.follow_up = follow_up
         self.intermediate_ans = []
         original_sys_prompt = self.system_prompt
 
-        if self.use_chroma:
+        if isinstance(doc_path, akasha.db.dbs):
+            self.db = doc_path
+            self.ignored_files = []
+        elif self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
                 self.doc_path, self.embeddings)
         else:
@@ -1058,7 +1079,6 @@ class Doc_QA(atman):
             follow_up_response = self.get_response(
                 doc_path,
                 each_follow_up,
-                dbs=self.db,
             )
 
             check = self.ask_self(

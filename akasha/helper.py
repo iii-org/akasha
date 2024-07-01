@@ -8,6 +8,11 @@ from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHan
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
+from langchain_community.embeddings import (
+    HuggingFaceEmbeddings,
+    SentenceTransformerEmbeddings,
+    TensorflowHubEmbeddings,
+)
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
 import os, traceback, logging
@@ -165,10 +170,6 @@ def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
             "transformer",
             "hf",
     ]:
-        from langchain_community.embeddings import (
-            HuggingFaceEmbeddings,
-            SentenceTransformerEmbeddings,
-        )
 
         embeddings = HuggingFaceEmbeddings(model_name=embedding_name)
         info = "selected hugging face embeddings.\n"
@@ -784,3 +785,22 @@ def retri_history_messages(messages: list,
     ret_str = splitter + ''.join(ret) + splitter
 
     return ret_str, cur_len
+
+
+def _decide_embedding_type(embeddings: vars) -> str:
+
+    if isinstance(embeddings, custom_embed):
+        return embeddings.model_name
+
+    elif isinstance(embeddings, OpenAIEmbeddings) or isinstance(
+            embeddings, AzureOpenAIEmbeddings):
+        return "openai:" + embeddings.model
+
+    elif isinstance(embeddings, HuggingFaceEmbeddings):
+        return "hf:" + embeddings.model_name
+
+    elif isinstance(embeddings, TensorflowHubEmbeddings):
+        return "tf:" + embeddings.model_url
+
+    else:
+        raise Exception("can not find the embeddings type.")

@@ -727,3 +727,107 @@ def check_db_name(file, db_dir, embed_type, embed_name, chunk_size):
 
     else:
         return storage_directory, False
+
+
+def createDB_directory(doc_path: Union[List[str], str],
+                       embeddings: Union[
+                           str, vars] = "openai:text-embedding-ada-002",
+                       chunk_size: int = 500,
+                       ignore_check: bool = False) -> dbs:
+    """create or load chromadb from doc_path and embeddings
+    """
+
+    if isinstance(doc_path, str):
+        doc_path = [doc_path]
+
+    if isinstance(embeddings, str):
+        embeddings_name = embeddings
+        embeddings = helper.handle_embeddings(embeddings, False)
+
+    else:
+        embeddings_name = helper._decide_embedding_type(embeddings)
+
+    ret_db, ret_ignored_files = processMultiDB(doc_path, False, embeddings,
+                                               embeddings_name, chunk_size,
+                                               ignore_check)
+
+    return ret_db
+
+
+def createDB_file(file_path: Union[List[str], str],
+                  embeddings: Union[str,
+                                    vars] = "openai:text-embedding-ada-002",
+                  chunk_size: int = 500,
+                  ignore_check: bool = False) -> dbs:
+    """create or load chromadb from file_path and embeddings
+    """
+    sleep_time = 60
+    ret_db = dbs()
+    if isinstance(file_path, str):
+        file_path = [file_path]
+
+    if isinstance(embeddings, str):
+        embeddings_name = embeddings
+        embeddings = helper.handle_embeddings(embeddings, False)
+    else:
+        embeddings_name = helper._decide_embedding_type(embeddings)
+
+    embed_type, embed_name = helper._separate_name(embeddings_name)
+
+    for file in file_path:
+
+        need_create = True
+        try:
+            if isinstance(file, Path):
+                doc_path = str(file.parent).replace("\\", "/")
+                file_name = file.name
+            else:
+                doc_path = "/".join(file.split("/")[:-1])
+                file_name = file.split("/")[-1]
+        except:
+            logging.warning(f"file path {file} error.\n\n")
+            continue
+
+        ## add '/' at the end of doc_path ##
+        if doc_path[-1] != "/":
+            doc_path += "/"
+        db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
+        add_pic = True
+
+        ## ignore_check is True, load chromadb directly to increase loading speed ##
+        if ignore_check:
+            storage_directory, exist = check_db_name(file, db_dir, embed_type,
+                                                     embed_name, chunk_size)
+            if exist:
+                temp_chroma = Chroma(persist_directory=storage_directory)
+                if temp_chroma is not None:
+                    ret_db.add_chromadb(temp_chroma)
+                    need_create = False
+                    #db_path_names.append(storage_directory)
+                    del temp_chroma
+
+        if need_create:
+            file_doc = _load_file(doc_path + file_name,
+                                  file_name.split(".")[-1])
+            if file_doc == "" or len(file_doc) == 0:
+                logging.warning(f"file {file} load failed or empty.\n\n")
+                continue
+
+            md5_hash = helper.get_text_md5("".join(
+                [fd.page_content for fd in file_doc]))
+
+            storage_directory = (
+                "chromadb/" + db_dir + "_" +
+                file_name.split(".")[0].replace(" ", "").replace("_", "") +
+                "_" + md5_hash + "_" + embed_type + "_" +
+                embed_name.replace("/", "-") + "_" + str(chunk_size))
+
+            db, add_pic = get_chromadb_from_file(file_doc, storage_directory,
+                                                 chunk_size, embeddings,
+                                                 doc_path + file_name,
+                                                 sleep_time, add_pic,
+                                                 embed_type)
+
+            ret_db.merge(db)
+
+    return ret_db
