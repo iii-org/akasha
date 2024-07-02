@@ -185,8 +185,8 @@ Question: input question to answer\nThought: consider previous and subsequent st
 Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
 """
         self.REMEMBER_PROMPT = "**Remember, Format is Thought: then Action:```$JSON_BLOB```, Begin!\n\n"
-        self.OBSERVATION_PROMPT = "\n\nBelow are your previous work, please check them carefully and provide the next action and thought,**do not ask same question repeatedly: "
-        self.RETRI_OBSERVATION_PROMPT = "User will give you Question, Thought and Observation, please return the information from Observation that you think is most relevant to the Question or Thought, if you can't find the information, please return None."
+        self.OBSERVATION_PROMPT = "\n\nBelow are your previous work, check them carefully and provide the next action and thought,**do not ask same question repeatedly: "
+        self.RETRI_OBSERVATION_PROMPT = "User will give you Question, Thought and Observation, return the information from Observation that you think is most relevant to the Question or Thought, if you can't find the information, return None."
 
     def _add_basic_log(self, timestamp: str, fn_type: str):
         """add pre-process log to self.logs
@@ -296,17 +296,20 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         print("save logs to " + str(file_path))
         return
 
-    def __call__(self, question: str, messages: List[dict] = []):
+    def __call__(self, question: str, messages: List[dict] = None):
         """run agent to get response
         """
         start_time = time.time()
         round_count = self.max_round
-        self.messages = messages
+        if messages is None:
+            self.messages = []
+        else:
+            self.messages = messages
         self.thoughts = []
         observation = ""
         thought = ""
         retri_messages = ""
-
+        print(self.messages)
         ### call model to get response ###
         retri_messages, messages_len = helper.retri_history_messages(
             self.messages, self.max_past_observation, self.max_doc_len,
@@ -332,6 +335,11 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         while round_count > 0:
             try:
                 cur_action = akasha.helper.extract_json(response)
+                if (not isinstance(cur_action["action"], str)) or (
+                    (not isinstance(cur_action["action_input"], dict) and
+                     (cur_action["action"] != "Final Answer"))):
+                    raise ValueError(
+                        "Cannot find correct action from response")
             except:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry.")
@@ -438,11 +446,14 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return response
 
-    def stream(self, question: str, messages: List[dict] = []):
+    def stream(self, question: str, messages: List[dict] = None):
 
         start_time = time.time()
         round_count = self.max_round
-        self.messages = messages
+        if messages is None:
+            self.messages = []
+        else:
+            self.messages = messages
         self.thoughts = []
         observation = ""
         thought = ""
@@ -474,6 +485,11 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
             try:
                 cur_action = akasha.helper.extract_json(response)
+                if (not isinstance(cur_action["action"], str)) or (
+                    (not isinstance(cur_action["action_input"], dict) and
+                     (cur_action["action"] != "Final Answer"))):
+                    raise ValueError(
+                        "Cannot find correct action from response")
             except:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry.")
