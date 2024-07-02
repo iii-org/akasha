@@ -10,12 +10,12 @@ from views.experts import experts_page
 from views.dataset import dataset_page
 from views.settings import settings_page
 from views.userguide import user_guide_page
-from views.signup import signup_page
-from views.forgetpwd import forgetpwd_page
-from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command
+from views.signup import signup_page, non_verify_signup_page
+from views.forgetpwd import non_verify_forgetpwd_page, forgetpwd_page
+from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command, get_mail_credentials
 
 # info
-VERSION = '0.14'
+VERSION = '0.16'
 
 # get host ip
 if 'host_ip' not in st.session_state:
@@ -46,6 +46,20 @@ if 'ans' not in st.session_state:
 
 if 'history_messages' not in st.session_state:
     st.session_state['history_messages'] = []
+
+if 'is_email_verified' not in st.session_state:
+    st.session_state.is_email_verified = False
+
+if 'email' not in st.session_state:
+    st.session_state.email = ''
+
+if 'verification_code' not in st.session_state:
+    st.session_state.verification_code = ''
+
+if 'email_valid' not in st.session_state:
+    st.session_state.email_valid = False
+if 'forg_username' not in st.session_state:
+    st.session_state.forg_username = ''
 
 # page config
 st.set_page_config(
@@ -176,8 +190,25 @@ if url_params == {}:
 
 # forget password page
 if 'forgetpwd' in url_params.keys():
-    forgetpwd_page(url_params, authenticator, config, ACCOUNTS_PATH)
+
+    sender_mail, sender_pass = get_mail_credentials()
+    if sender_mail is None or sender_pass is None:
+        st.warning('Mail credentials not found.')
+        non_verify_forgetpwd_page(url_params, authenticator, config,
+                                  ACCOUNTS_PATH)
+    else:
+        forgetpwd_page(url_params, authenticator, config, ACCOUNTS_PATH,
+                       sender_mail, sender_pass)
 
 # sign-up page
 if 'signup' in url_params.keys():
-    signup_page(url_params, authenticator, config, ACCOUNTS_PATH)
+
+    sender_mail, sender_pass = get_mail_credentials()
+
+    if sender_mail is None or sender_pass is None:
+        st.warning('Mail credentials not found.')
+        non_verify_signup_page(url_params, authenticator, config,
+                               ACCOUNTS_PATH)
+    else:
+        signup_page(url_params, authenticator, config, ACCOUNTS_PATH,
+                    sender_mail, sender_pass)

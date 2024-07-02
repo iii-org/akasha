@@ -12,6 +12,7 @@ import datetime
 import traceback
 import opencc
 import gc, torch
+import random, string
 
 cc = opencc.OpenCC("s2t.json")
 CHUNKSIZE = 3000
@@ -22,6 +23,7 @@ PORT = os.getenv("API_PORT", "8000")
 api_urls = {
     "load_openai": f"{HOST}:{PORT}/openai/load_openai",
     "get_docs_path": f"{HOST}:{PORT}/get_docs_path",
+    "get_config_path": f"{HOST}:{PORT}/get_base_config_path",
     "get_dataset": f"{HOST}:{PORT}/dataset/get",
     "get_model_path": f"{HOST}:{PORT}/get_model_path",
     "get_filename_list": f"{HOST}:{PORT}/dataset/get_filename",
@@ -2000,9 +2002,87 @@ def collect_logs(data: dict, response: str, fn_type: str):
 
 
 def clean():
+    """clean the memory and cuda cache.
+    """
     try:
         gc.collect()
         torch.cuda.ipc_collect()
         torch.cuda.empty_cache()
     except:
         pass
+
+
+def generate_verification_code(size=6) -> str:
+    """generate a random verification code.
+
+    Args:
+        size (int, optional): length of verification code. Defaults to 6.
+
+    Returns:
+        str: verification code
+    """
+    return ''.join(
+        random.choices(string.ascii_uppercase + string.digits, k=size))
+
+
+def get_mail_credentials():
+    """get the email and app password from mail_config.json file.
+
+    Returns:
+        email, app_pass: None,None or email(str), app_pass(str)
+    """
+    with st.spinner(SPINNER_MESSAGE):
+        CONFIG_PATH = requests.get(
+            api_urls["get_config_path"]).json()["response"]
+
+    config_path = CONFIG_PATH + '/mail_config.json'
+    if not os.path.exists(config_path):
+        print("mail_config.json file does not exist.")
+        return None, None
+    try:
+        with open(config_path, 'r') as file:
+            config = json.load(file)
+        email = config.get('email')
+        app_pass = config.get('app_pass')
+        if email and app_pass:
+            return email, app_pass
+        else:
+            print(
+                "Could not retrieve 'email' and/or 'app_pass' from mail_config.json."
+            )
+            return None, None
+    except json.JSONDecodeError as e:
+        print(f"Error reading JSON file: {e}")
+        return None, None
+
+
+def gmail_send_message(to_mail: str,
+                       from_mail: str,
+                       sender_pass: str,
+                       subject: str = 'Email Verification',
+                       message_text: str = 'Verification code: missing'):
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import smtplib
+    #The mail password
+    #application password of your google account
+    try:
+        #Setup the MIME
+        message = MIMEMultipart()
+        message['From'] = from_mail
+        message['To'] = to_mail
+        message['Subject'] = subject
+        #The body and the attachments for the mail
+        message.attach(MIMEText(message_text, 'plain'))
+        #Create SMTP session for sending the mail
+        session = smtplib.SMTP('smtp.gmail.com', 587)  #use gmail with port
+        session.starttls()  #enable security
+        session.login(from_mail, sender_pass)  #login with mail_id and password
+        text = message.as_string()
+        session.sendmail(from_mail, to_mail, text)
+        session.quit()
+        # print(f'Mail Sent to {to_mail} successfully')
+        return True
+    except Exception as e:
+        print('Error: ', e)
+        return False
