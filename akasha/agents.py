@@ -309,7 +309,6 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         observation = ""
         thought = ""
         retri_messages = ""
-        print(self.messages)
         ### call model to get response ###
         retri_messages, messages_len = helper.retri_history_messages(
             self.messages, self.max_past_observation, self.max_doc_len,
