@@ -338,6 +338,30 @@ If you don't know the answer, just say that you don't know, don't try to make up
     return prompt
 
 
+def default_conclusion_prompt(question: str, language: str = "zh"):
+
+    prompt = f"""User will give you several pieces of answer about a question, use those context to answer the question: {question}. 
+Remember to response non-repeated, clear and organized answer.\n"""
+    if "chinese" in afr.language_dict[language]:
+        prompt += "用中文回答。\n"
+
+    return prompt
+
+
+def default_doc_grader_prompt():
+
+    return """You are a grader assessing relevance of a retrieved document to a user question. \n 
+    It does not need to be a stringent test. The goal is to filter out erroneous retrievals. \n
+    If the document contains keyword(s) or semantic meaning related to the user question, grade it as relevant. \n
+    Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question."""
+
+
+def default_answer_grader_prompt():
+
+    return """You are a grader assessing whether an answer addresses / resolves a question \n 
+    Give a binary score 'yes' or 'no'. Yes' means that the answer resolves the question."""
+
+
 DEFAULT_CHINESE_ANS_PROMPT = " A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER:用中文回答問題。"
 
 

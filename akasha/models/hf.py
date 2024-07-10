@@ -354,26 +354,45 @@ class remote_model(LLM):
             ):
                 print(token, end='', flush=True)
                 response += token
-            # data = {
-            #     "inputs": prompt,
-            #     "parameters": {
-            #         'temperature': self.temperature,
-            #         'max_new_tokens': 1024,
-            #         'do_sample': True,
-            #         'top_k': 10,
-            #         'top_p': 0.95,
-            #     }
-            # }
-            # headers = {"Content-Type": "application/json"}
 
-            # try:
-            #     response = requests.post(self.url + "/generate",
-            #                              json=data,
-            #                              headers=headers).json()
         except Exception as e:
             logging.error("call remote model failed\n\n", e.__str__())
             raise e
         return response  # response["generated_text"]
+
+    def batch(self,
+              prompt: List[str],
+              stop: Optional[List[str]] = None) -> List[str]:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
+        import multiprocessing
+        parameters = {
+            'temperature': self.temperature,
+            'max_new_tokens': 1024,
+            'do_sample': True,
+            'top_k': 10,
+            'top_p': 0.95,
+        }
+        headers = {"Content-Type": "application/json"}
+
+        worker_args = [(self.url, pmpt, headers, parameters)
+                       for pmpt in prompt]
+
+        # Number of processes should not exceed the number of prompts
+        num_processes = min(len(prompt), multiprocessing.cpu_count())
+
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            results = pool.map(_url_requests, worker_args)
+
+        generated_texts = [res["generated_text"] for res in results]
+        return generated_texts
 
 
 class hf_model(LLM):
@@ -479,6 +498,26 @@ class hf_model(LLM):
 
         return self._call(prompt, stop)
 
+    def batch(self,
+              prompt: List[str],
+              stop: Optional[List[str]] = None) -> List[str]:
+
+        stop_list = get_stop_list(stop)
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        inputs = self.tokenizer(prompt,
+                                return_tensors="pt",
+                                padding=True,
+                                truncation=True,
+                                max_length=1024).to(self.device)
+        generated_ids = self.model.generate(**inputs,
+                                            max_new_tokens=1024,
+                                            do_sample=True,
+                                            stop_strings=stop_list)
+        generated_texts = self.tokenizer.batch_decode(generated_ids,
+                                                      skip_special_tokens=True)
+
+        return generated_texts
+
 
 def get_stop_list(stop: Optional[List[str]]) -> List[str]:
     """get stop list
@@ -493,3 +532,18 @@ def get_stop_list(stop: Optional[List[str]]) -> List[str]:
     if stop is not None:
         ret = stop
     return ret
+
+
+def _url_requests(args):
+    url, prompt, headers, parameters = args
+    try:
+        response = requests.post(url + "/generate",
+                                 json={
+                                     "inputs": prompt,
+                                     "parameters": parameters
+                                 },
+                                 headers=headers).json()
+        return response
+    except Exception as e:
+        logging.error("Call to remote model failed: ", e)
+        return None

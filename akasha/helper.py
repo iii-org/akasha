@@ -1,9 +1,10 @@
 import numpy as np
 import jieba
-import json, re
+import json, re, time
 from pathlib import Path
 import opencc
-from typing import Callable, Union, Tuple
+from typing import Callable, Union, Tuple, List
+from langchain.schema import Document
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -20,6 +21,8 @@ import shutil
 from langchain.llms.base import LLM
 import akasha.format as afr
 import akasha.prompts
+import dill
+from multiprocessing import Process
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -108,7 +111,8 @@ def _handle_azure_env() -> Tuple[str, str, str]:
     return ret[0], ret[1], ret[2]
 
 
-def handle_embeddings(embedding_name: str, verbose: bool) -> vars:
+def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
+                      verbose: bool = False) -> vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
@@ -639,6 +643,79 @@ def call_model(model: LLM, prompt: str, system_prompt: str = "") -> str:
     return response
 
 
+def call_batch_model(model: LLM,
+                     prompt: List[str],
+                     system_prompt: Union[List[str], str] = "") -> List[str]:
+    """call llm model in batch and return the response 
+
+    Args:
+        model (LLM): llm model
+        prompt (str): input prompt
+
+    Returns:
+        str: llm response
+    """
+
+    ### check the input prompt and system prompt ###
+    if isinstance(prompt, str):
+        prompt = [prompt]
+
+    if isinstance(system_prompt, str):
+        system_prompt = [system_prompt] * len(prompt)
+    elif len(system_prompt) != len(prompt):
+        system_prompt = [system_prompt[0]] * len(prompt)
+
+    ### format list of prompt ###
+
+    input_text = []
+    try:
+        if "openai" in model._llm_type.lower():
+            for i in range(len(prompt)):
+                input_text.append([
+                    SystemMessage(content=system_prompt[i]),
+                    HumanMessage(content=prompt[i])
+                ])
+        elif ("huggingface"
+              in model._llm_type.lower()) or ("remote"
+                                              in model._llm_type.lower()):
+            for i in range(len(prompt)):
+                input_text.append(system_prompt[i] + prompt[i])
+        else:
+            raise ValueError("llm type is not openai, huggingface or remote.")
+    except Exception as e:
+        logging.error("can not find the llm type.")
+        raise e
+
+    response = ""
+    responses = []
+    try:
+
+        response = model.batch(input_text)
+        for res in response:
+            if isinstance(res, AIMessage):
+                res = res.content
+            if isinstance(res, dict):
+                res = res.__str__()
+            if isinstance(res, list):
+                res = '\n'.join(res)
+            responses.append(res)
+
+        if response is None or response == "" or ''.join(responses) == "":
+            print_flag = False
+            raise Exception("LLM response is empty.")
+
+    except Exception as e:
+        trace_text = traceback.format_exc()
+        logging.error(trace_text + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n")
+        raise e
+
+    # if print_flag:
+    #     print("llm response:", "\n\n" + response)
+
+    return responses
+
+
 def get_non_repeat_rand_int(vis: set, num: int, doc_range: int):
     temp = np.random.randint(num)
     if len(vis) >= num // 2:
@@ -804,3 +881,79 @@ def _decide_embedding_type(embeddings: vars) -> str:
 
     else:
         raise Exception("can not find the embeddings type.")
+
+
+class DillProcess(Process):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._target = dill.dumps(
+            self._target)  # Save the target function as bytes, using dill
+
+    def run(self):
+        if self._target:
+            self._target = dill.loads(
+                self._target)  # Unpickle the target function before executing
+            self._target(*self._args,
+                         **self._kwargs)  # Execute the target function
+
+
+def self_RAG(model_obj: LLM,
+             question: str,
+             docs: List[Document],
+             process_num: int = 10,
+             earlyend_num: int = 8) -> List[Document]:
+    """self RAG model to get the answer
+
+    Args:
+        model (LLM): LLM model
+        question (str): input prompt
+        docs (List[Document]): list of documents
+        process_num (int, optional): number of documents to process at one time. Defaults to 10.
+        earlyend_num (int, optional): number of irrelevant documents to end the process at each time. Defaults to 8.
+
+    Returns:
+        List[Document]: relevant documents
+    """
+    sys_prompt = akasha.prompts.default_doc_grader_prompt()
+
+    results = []
+
+    count = 0
+    while count < len(docs):
+        txts = []
+        for idx in range(min(process_num, len(docs) - count)):
+            prod_prompt = f"Retrieved document: \n\n {docs[count+idx].page_content} \n\n User question: {question}"
+            txts.append(prod_prompt)
+
+        irre_count = 0
+        response_list = call_batch_model(model_obj, txts, sys_prompt)
+        for idx, response in enumerate(response_list):
+            if 'yes' in response.lower():
+                results.append(docs[count + idx])
+            else:
+                irre_count += 1
+        if irre_count >= earlyend_num:
+            break
+
+        count += process_num
+
+    return results
+
+
+def check_relevant_answer(model_obj: LLM, batch_responses: List[str],
+                          question: str) -> List[str]:
+    """ask LLM that each of the retrieved answers list is relevant to the question or not"""
+    results = []
+    txts = []
+    sys_prompt = akasha.prompts.default_answer_grader_prompt()
+    for idx in range(len(batch_responses)):
+        prod_prompt = f"Retrieved answer: \n\n {batch_responses[idx]} \n\n User question: {question}"
+        txts.append(prod_prompt)
+
+    response_list = call_batch_model(model_obj, txts, sys_prompt)
+    for idx, response in enumerate(response_list):
+        if 'yes' in response.lower():
+            results.append(batch_responses[idx])
+
+    return results

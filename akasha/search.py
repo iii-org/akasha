@@ -255,7 +255,7 @@ def get_retrivers(
     use_rerank: bool,
     threshold: float,
     search_type: Union[str, Callable],
-    log: dict,
+    log: dict = {},
 ) -> List[BaseRetriever]:
     """get the retrivers based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together.
@@ -414,6 +414,87 @@ def get_docs(
                                          max_doc_len, model)
 
     return docs, docs_len, tokens
+
+
+def retri_docs(
+    db: Union[dbs, list],
+    embeddings,
+    retriver_list: List[BaseRetriever],
+    query: str,
+    search_type: Union[str, Callable],
+    topK: int,
+    verbose: bool = True,
+) -> Tuple[list, int]:
+    """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
+        and merge them together.
+
+    Args:
+        **db (Chromadb)**: chroma db\n
+        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **query (str)**: the query str used to search similar documents\n
+        **topK (int)**: for each search type, return first topK documents\n
+        **search_type (str)**: search type to find similar documents from db, default 'merge'.
+            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        **verbose (bool)**: show log texts or not. Defaults to False.\n
+
+    Returns:
+        list: selected list of similar documents.
+    """
+
+    ### if use rerank to get more accurate similar documents, set topK to 200 ###
+
+    final_docs = []
+
+    def merge_docs(
+        docs_list: list,
+        topK: int,
+    ):
+        res = []
+        page_contents = set()
+        for i in range(topK):
+            for docs in docs_list:
+                if i >= len(docs):
+                    continue
+
+                if docs[i].page_content in page_contents:
+                    continue
+                res.append(docs[i])
+                page_contents.add(docs[i].page_content)
+        return res
+
+    if len(retriver_list) == 0:
+        docs = rerank(query, db, 0.0, embeddings)
+
+        return docs
+
+    if not callable(search_type):
+
+        search_type = search_type.lower()
+
+        if search_type == "auto":
+            docs_list = db.get_Documents()
+            times = _get_threshold_times(db)
+            docs = _get_relevant_doc_auto(retriver_list, docs_list, query,
+                                          topK, times, verbose)
+            docs = merge_docs(docs, topK)
+            return docs
+        elif search_type == "auto_rerank":
+            docs_list = db.get_Documents()
+            times = _get_threshold_times(db)
+            docs = _get_relevant_doc_auto_rerank(retriver_list, docs_list,
+                                                 query, topK, times, verbose)
+            docs = merge_docs(docs, topK)
+            return docs
+
+    for retri in retriver_list:
+
+        docs = retri.get_relevant_documents(query)
+        # docs, scores = retri._gs(query)
+        final_docs.append(docs)
+
+    docs = merge_docs(final_docs, topK)
+
+    return docs
 
 
 class myMMRRetriever(BaseRetriever):

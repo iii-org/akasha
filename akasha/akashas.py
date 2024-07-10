@@ -1,6 +1,6 @@
 import pathlib
 import time
-from typing import Callable, Union, List, Tuple
+from typing import Callable, Union, List, Tuple, Generator
 from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
@@ -400,13 +400,15 @@ class atman:
         print("save logs to " + str(file_path))
         return
 
+    def _display_docs(self, ) -> str:
+        splitter = '\n----------------\n'
+        return "----------------\n" + splitter.join(
+            [doc.page_content for doc in self.docs]) + splitter
+
     def _ask_model(self, system_prompt: str, prompt: str) -> str:
 
-        splitter = '\n----------------\n'
-
         try:
-            text_input = system_prompt + "----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
-                splitter
+            text_input = system_prompt + self._display_docs()
 
             if self.verbose:
                 print("Prompt after formatting:", "\n\n" + text_input + prompt)
@@ -549,6 +551,31 @@ class Doc_QA(atman):
             new_docs.append(db_doc)
 
         return ret, cur_len, new_docs
+
+    def _separate_docs(self):
+        """separate documents if the total length of documents exceed the max_doc_len
+
+        Returns:
+            ret (List[str]): list of string of separated documents texts
+            tot_len (int): the length of total documents
+            
+        """
+        tot_len = 0
+        cur_len = 0
+        ret = [""]
+        for db_doc in self.docs:
+            cur_doc_len = helper.get_doc_length(self.language,
+                                                db_doc.page_content)
+
+            if cur_len + cur_doc_len > self.max_doc_len:
+                cur_len = cur_doc_len
+                ret.append(db_doc.page_content)
+
+            cur_len += cur_doc_len
+            ret[-1] += db_doc.page_content + "\n"
+            tot_len += cur_doc_len
+
+        return ret, tot_len
 
     def get_response(self, doc_path: Union[List[str], str, akasha.db.dbs],
                      prompt: str, **kwargs) -> str:
@@ -837,21 +864,37 @@ class Doc_QA(atman):
             self._add_basic_log(timestamp, "ask_whole_file")
             self.logs[timestamp]["embeddings"] = "ask_whole_file"
 
-        ### start to get response ###
-        cur_documents, self.doc_length, self.docs = self._truncate_docs()
-
-        self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
-
         if self.docs is None:
             logging.error("No Relevant Documents.")
             raise AttributeError("No Relevant Documents.")
 
+        ### start to get response ###
+        cur_documents, self.doc_length = self._separate_docs()
+
+        self.doc_tokens = self.model_obj.get_num_tokens(''.join(cur_documents))
+
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt(self.language)
-        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt, self.prompt_format_type)
-        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
+        prod_sys_prompts = []
+
+        for d_count in range(len(cur_documents)):
+            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+                self.system_prompt, self.prompt, self.prompt_format_type)
+            prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
+
+        ## call batch model ##
+        batch_responses = helper.call_batch_model(
+            self.model_obj, [prompt] * len(cur_documents), prod_sys_prompts)
+
+        ## check relevant answer if batch_responses > 5 ##
+        if len(batch_responses) > 5:
+            batch_responses = helper.check_relevant_answer(
+                self.model_obj, batch_responses, self.prompt)
+
+        self.response = helper.call_model(
+            self.model_obj, "\n\n".join(batch_responses),
+            prompts.default_conclusion_prompt(prompt, self.language))
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -911,16 +954,32 @@ class Doc_QA(atman):
             self.logs[timestamp]["embeddings"] = "ask_self"
 
         ### start to get response ###
-        cur_documents, self.doc_length, self.docs = self._truncate_docs()
+        cur_documents, self.doc_length = self._separate_docs()
 
-        self.doc_tokens = self.model_obj.get_num_tokens(cur_documents)
+        self.doc_tokens = self.model_obj.get_num_tokens(''.join(cur_documents))
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt(self.language)
-        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt, self.prompt_format_type)
-        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
+        prod_sys_prompts = []
+
+        for d_count in range(len(cur_documents)):
+            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+                self.system_prompt, self.prompt, self.prompt_format_type)
+            prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
+
+        ## call batch model ##
+        batch_responses = helper.call_batch_model(
+            self.model_obj, [prompt] * len(cur_documents), prod_sys_prompts)
+
+        ## check relevant answer if batch_responses > 10 ##
+        if len(batch_responses) > 10:
+            batch_responses = helper.check_relevant_answer(
+                self.model_obj, batch_responses, self.prompt)
+
+        self.response = helper.call_model(
+            self.model_obj, "\n\n".join(batch_responses),
+            prompts.default_conclusion_prompt(prompt, self.language))
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -945,6 +1004,57 @@ class Doc_QA(atman):
             aiido_upload(self.record_exp, params, metrics, table)
 
         return self.response
+
+    def ask_self_stream(
+        self,
+        prompt: str,
+        info: Union[str, list] = "",
+    ) -> Generator[str, None, None]:
+        """input information and question, llm model will use the information to generate the response of the question.
+
+            Args:
+                **info (str,list)**: document file path\n
+                **prompt (str)**:question you want to ask.\n
+                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                system_prompt, max_doc_len, temperature.
+
+            Returns:
+                response (str): the response from llm model.
+        """
+
+        self.prompt = prompt
+        if isinstance(info, str):
+            self.docs = [Document(page_content=info)]
+        else:
+            self.docs = [Document(page_content=i) for i in info]
+
+        ### start to get response ###
+        cur_documents, self.doc_length = self._separate_docs()
+
+        ## format prompt ##
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
+        prod_sys_prompts = []
+
+        for d_count in range(len(cur_documents)):
+            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+                self.system_prompt, self.prompt, self.prompt_format_type)
+            prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
+
+        ## call batch model ##
+        batch_responses = helper.call_batch_model(
+            self.model_obj, [prompt] * len(cur_documents), prod_sys_prompts)
+
+        ## check relevant answer if batch_responses > 10 ##
+        if len(batch_responses) > 10:
+            batch_responses = helper.check_relevant_answer(
+                self.model_obj, batch_responses, self.prompt)
+
+        fnl_sys_prompt, fnl_prompt = prompts.format_sys_prompt(
+            prompts.default_conclusion_prompt(prompt, self.language),
+            "\n\n".join(batch_responses), self.prompt_format_type)
+
+        yield from self.model_obj.stream(fnl_sys_prompt + fnl_prompt)
 
     def ask_agent(self, doc_path: Union[List[str], str], prompt: str,
                   **kwargs) -> str:
