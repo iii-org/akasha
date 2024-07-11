@@ -562,12 +562,14 @@ class Doc_QA(atman):
         """
         tot_len = 0
         cur_len = 0
+        left_doc_len = self.max_doc_len - helper.get_doc_length(
+            self.language, self.prompt)
         ret = [""]
         for db_doc in self.docs:
             cur_doc_len = helper.get_doc_length(self.language,
                                                 db_doc.page_content)
 
-            if cur_len + cur_doc_len > self.max_doc_len:
+            if cur_len + cur_doc_len > left_doc_len:
                 cur_len = cur_doc_len
                 ret.append(db_doc.page_content)
 
@@ -659,7 +661,8 @@ class Doc_QA(atman):
             self.search_type,
             self.verbose,
             self.model_obj,
-            self.max_doc_len,
+            self.max_doc_len -
+            helper.get_doc_length(self.language, self.prompt),
             compression=self.compression,
         )
 
@@ -785,7 +788,8 @@ class Doc_QA(atman):
                         self.search_type,
                         self.verbose,
                         self.model_obj,
-                        self.max_doc_len,
+                        self.max_doc_len -
+                        helper.get_doc_length(self.language, self.prompt),
                         compression=self.compression,
                     )
                     total_docs.extend(docs)
