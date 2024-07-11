@@ -341,7 +341,7 @@ If you don't know the answer, just say that you don't know, don't try to make up
 def default_conclusion_prompt(question: str, language: str = "zh"):
 
     prompt = f"""User will give you several pieces of answer about a question, use those context to answer the question: {question}. 
-Remember to response non-repeated, clear and organized answer.\n"""
+Remember to response non-repeated, detailed and coherent answer..\n"""
     if "chinese" in afr.language_dict[language]:
         prompt += "用中文回答。\n"
 
@@ -351,7 +351,8 @@ Remember to response non-repeated, clear and organized answer.\n"""
 def default_doc_grader_prompt():
 
     return """You are a grader assessing relevance of a retrieved document to a user question. \n 
-    It does not need to be a stringent test. The goal is to filter out erroneous retrievals. \n
+    It does not need to be a stringent test, so if it's possible relevant to the question, grade it as relevant. 
+    The goal is to filter out erroneous retrievals. \n
     If the document contains keyword(s) or semantic meaning related to the user question, grade it as relevant. \n
     Give a binary score 'yes' or 'no' score to indicate whether the document is relevant to the question."""
 

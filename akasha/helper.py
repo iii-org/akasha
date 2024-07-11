@@ -902,7 +902,8 @@ def self_RAG(model_obj: LLM,
              question: str,
              docs: List[Document],
              process_num: int = 10,
-             earlyend_num: int = 8) -> List[Document]:
+             earlyend_num: int = 8,
+             max_view_num: int = 100) -> List[Document]:
     """self RAG model to get the answer
 
     Args:
@@ -911,6 +912,7 @@ def self_RAG(model_obj: LLM,
         docs (List[Document]): list of documents
         process_num (int, optional): number of documents to process at one time. Defaults to 10.
         earlyend_num (int, optional): number of irrelevant documents to end the process at each time. Defaults to 8.
+        max_view_num (int, optional): number of max documents to view. Defaults to 100.
 
     Returns:
         List[Document]: relevant documents
@@ -920,7 +922,8 @@ def self_RAG(model_obj: LLM,
     results = []
 
     count = 0
-    while count < len(docs):
+    while count < len(docs) and count < max_view_num:
+
         txts = []
         for idx in range(min(process_num, len(docs) - count)):
             prod_prompt = f"Retrieved document: \n\n {docs[count+idx].page_content} \n\n User question: {question}"
