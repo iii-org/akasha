@@ -579,6 +579,85 @@ class Doc_QA(atman):
 
         return ret, tot_len
 
+    def get_response_stream(
+            self,
+            doc_path: Union[List[str], str, akasha.db.dbs],
+            prompt: str,
+            system_prompt: str = "") -> Generator[str, None, None]:
+        """stream output for get_response.
+
+            Args:
+                **doc_path (str)**: documents directory path\n
+                **prompt (str)**:question you want to ask.\n
+                **system_prompt (str)**: the system prompt that you assign special instruction to llm modeld
+
+            Returns:
+                response (Generator[str,None,None]): the response from llm model.
+        """
+
+        self.system_prompt = system_prompt
+        if isinstance(doc_path, akasha.db.dbs):
+            self.doc_path = "use dbs object"
+        else:
+            self.doc_path = doc_path
+        self.prompt = prompt
+        search_dict = {}
+
+        if isinstance(doc_path, akasha.db.dbs):
+            self.db = doc_path
+            self.ignored_files = []
+        elif self.use_chroma:
+            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
+                self.doc_path, self.embeddings)
+        else:
+            self.db, self.ignored_files = akasha.db.processMultiDB(
+                self.doc_path, self.verbose, self.embeddings_obj,
+                self.embeddings, self.chunk_size, self.ignore_check)
+
+        self._check_db()
+
+        ### start to get response ###
+        retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
+                                              self.use_rerank, self.threshold,
+                                              self.search_type, search_dict)
+        self.docs, self.doc_length, self.doc_tokens = search.get_docs(
+            self.db,
+            self.embeddings_obj,
+            retrivers_list,
+            self.prompt,
+            self.use_rerank,
+            self.language,
+            self.search_type,
+            self.verbose,
+            self.model_obj,
+            self.max_doc_len -
+            helper.get_doc_length(self.language, self.prompt),
+            compression=self.compression,
+        )
+
+        if self.docs is None:
+            print("\n\nNo Relevant Documents.\n\n")
+            return ""
+
+        ## format prompt ##
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
+        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+            self.system_prompt, self.prompt, self.prompt_format_type)
+
+        try:
+            text_input = prod_sys_prompt + self._display_docs()
+
+        except Exception as e:
+            trace_text = traceback.format_exc()
+            logging.error(
+                trace_text +
+                "\n\nText generation encountered an error before querying the language model (LLM).\
+                Please check your input data or configuration settings.\n\n")
+            raise e
+
+        yield from self.model_obj.stream(text_input + prod_prompt)
+
     def get_response(self, doc_path: Union[List[str], str, akasha.db.dbs],
                      prompt: str, **kwargs) -> str:
         """input the documents directory path and question, will first store the documents

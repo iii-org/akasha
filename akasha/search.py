@@ -82,11 +82,12 @@ def _get_relevant_doc_auto(
     final_docs = []  #docs_mmr[0]
     del svmR, bm25R
     ## backup_docs is all documents from docs_svm that svm_scores>0.2 ##
-
+    low = 0
     for i in range(len(svm_scores)):
         if svm_scores[i] >= 0.2 * rate:
             backup_docs.append(docs_svm[i])
         else:
+            low = i
             break
 
     if tf_scores[0] >= 0.1:
@@ -110,7 +111,7 @@ def _get_relevant_doc_auto(
         final_docs.extend(docs_bm25[:idx])
 
     final_docs.extend(backup_docs)
-
+    final_docs.extend(docs_svm[low:])
     return final_docs
 
 
