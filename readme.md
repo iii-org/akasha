@@ -29,12 +29,40 @@ We recommend using Python 3.9 to run our akasha package. You can use Anaconda to
 
 conda create --name py3-9 python=3.9
 activate py3-9
-
-# install akasha
-pip install akasha-terminal
-
-
 ```
+
+> [!NOTE]
+> We use `ubuntu 20.04` and `windows 11 23H2` to test the package, both of them can be installed successfully by following the instructions below.
+
+<br/>
+
+We provide two ways to install akasha. Make sure you have  entered the virtual environment before installing the package.
+
+## Install from PyPI (for users)
+```bash
+# install akasha
+
+pip install akasha-terminal
+```
+
+## Install from source (for developers)
+If you want to modify the package, you can fork the repository and clone it to your local machine.
+
+```bash
+git clone <your forked repository>
+```
+`your forked repository` : the link to your forked repository.
+
+<br/>
+
+Then, you can install the package by running the following command in the root directory of the cloned repository.
+
+```bash
+cd path/to/akasha
+pip install .
+```
+`path/to/akasha` : the path to the cloned akasha repository.
+
 
 
 <br/>
