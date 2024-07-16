@@ -38,7 +38,7 @@ activate py3-9
 
 We provide two ways to install akasha. Make sure you have  entered the virtual environment before installing the package.
 
-## Install from PyPI (for users)
+## Install from PyPI
 ```bash
 # install akasha
 
@@ -46,12 +46,11 @@ pip install akasha-terminal
 ```
 
 ## Install from source (for developers)
-If you want to modify the package, you can fork the repository and clone it to your local machine.
+If you want to modify the package, you can clone the repository to your local machine.
 
 ```bash
-git clone <your forked repository>
+git clone https://github.com/iii-org/akasha.git
 ```
-`your forked repository` : the link to your forked repository.
 
 <br/>
 
@@ -72,17 +71,33 @@ pip install .
 
 ### OPENAI 
 If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key. 
-You can either save **OPENAI_API_KEY=your api key** into **.env** file to current working directory or,
-set as a environment variable, using **export** in bash or use **os.environ** in python.
+Select one of the following methods to set the api key.
 
-```bash
+<br/>
 
-# set a environment variable
+1. Create a **.env** file in the current working directory and save the API key.
 
-export OPENAI_API_KEY="your api key"
+    ```sh
+    # .env 
 
+    OPENAI_API_KEY="your api key"
+    ```
 
-```
+2. Run the following command in bash to set the environment variable.
+
+    ```bash
+    # set a environment variable
+
+    export OPENAI_API_KEY="your api key"
+    ```
+
+3. Use the following code in python to set the environment variable.
+
+    ```python
+    #PYTHON3.9
+    import os
+    os.environ["OPENAI_API_KEY"] = "your api key"
+    ```
 
 <br/>
 <br/>
@@ -98,11 +113,10 @@ If you want to save both openai key and azure key at the same time, you can also
 
 ```sh
 ## .env file
-AZURE_API_KEY={your azure key}
-AZURE_API_BASE={your Language API base url}
+AZURE_API_KEY="your azure key"
+AZURE_API_BASE="your Language API base url"
 AZURE_API_TYPE=azure
 AZURE_API_VERSION=2023-05-15
-
 ```
 
 
@@ -116,8 +130,6 @@ And now we can run akasha in python
 import akasha
 ak = akasha.Doc_QA(model="openai:gpt-3.5-turbo")
 response = ak.get_response(dir_path, prompt)
-
-
 ```
 
 
@@ -141,22 +153,37 @@ You should see the **Gated model You have been granted access to this model** on
 Again, you can either save **HUGGINGFACEHUB_API_TOKEN=your api key** into **.env** file to current working directory or set as a environment variable, using **export** in bash or use **os.environ** in python. 
 After you create Doc_QA() class, you can still change the model you want when you call the function.
 
-```bash
+1. Create a **.env** file in the current working directory and save the API key.
 
-# set a environment variable
+    ```sh
+    # .env 
 
-export HUGGINGFACEHUB_API_TOKEN="your api key"
+    HUGGINGFACEHUB_API_TOKEN="your api key"
+    ```
+2. Run the following command in bash to set the environment variable.
 
+    ```bash
+    # set a environment variable
 
-```
+    export HUGGINGFACEHUB_API_TOKEN="your api key"
+    ```
+3. Use the following code in python to set the environment variable.
+
+    ```python
+    #PYTHON3.9
+    import os
+    os.environ["HUGGINGFACEHUB_API_TOKEN"] = "your api key"
+    ```
+
+<br/>
+
+And now we can run akasha in python
 
 ```python
 #PYTHON3.9
 import akasha
 ak = akasha.Doc_QA()
 response = ak.get_response(dir_path, prompt, model="hf:meta-llama/Llama-2-7b-chat-hf")
-
-
 ```
 
 
@@ -186,8 +213,6 @@ prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	�
 ak = akasha.Doc_QA()
 response = ak.get_response(dir_path, prompt)
 print(response)
-	
-	
 ```
 
 
@@ -211,7 +236,7 @@ Currently support **openai**, **huggingface** and **tensorflowhub**.
 
 ``` 
 ak = akasha.Doc_QA(embeddings="huggingface:all-MiniLM-L6-v2")
-resposne = ak.get_response(dir_path, prompt)
+response = ak.get_response(dir_path, prompt)
 ```
 To use huggingface embedding models, you can type huggingface:model_name or hf:model_name, for example, **huggingface:all-MiniLM-L6-v2**
 
@@ -303,7 +328,7 @@ the combination of mmr, svm and tfidf.**auto** is another strategy combine bm25/
 
 ``` python
 ak = akasha.Doc_QA(search_type="merge")
-akasha.get_response(dir_path, prompt, search_type="mmr")
+ak.get_response(dir_path, prompt, search_type="mmr")
 
 ```
  
@@ -493,7 +518,7 @@ ak = akasha.Doc_QA(
     model="openai:gpt-4-32k",
 )
 
-response = ak.ask_whole_file(system_prompt="用列舉的方式描述"
+response = ak.ask_whole_file(system_prompt="用列舉的方式描述", 
     file_path="docs/mic/20230726_工業4_0發展重點與案例分析，以西門子、鴻海為例.pdf",
     prompt="工業4.0有什麼可以參考的標準或是架構嗎?")
 
@@ -613,8 +638,8 @@ ak = akasha.Doc_QA(
     model="openai:gpt-4",
 )
 res = ak.ask_agent(
-    doc_path="./docs/mic/",  #   
-    "LPWAN和5G的區別是什麼?",
+    doc_path="./docs/mic/",   
+    prompt="LPWAN和5G的區別是什麼?",
 )
 
 ```
