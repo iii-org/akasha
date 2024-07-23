@@ -856,7 +856,7 @@ class Doc_QA(atman):
                     pre_result.append(Document(page_content="".join(response)))
                 else:
                     self.prompt.append(prompt)
-
+                    merge_prompts = ''.join(self.prompt)
                     docs, docs_len, tokens = search.get_docs(
                         self.db,
                         self.embeddings_obj,
@@ -868,7 +868,7 @@ class Doc_QA(atman):
                         self.verbose,
                         self.model_obj,
                         self.max_doc_len -
-                        helper.get_doc_length(self.language, self.prompt),
+                        helper.get_doc_length(self.language, merge_prompts),
                         compression=self.compression,
                     )
                     total_docs.extend(docs)
@@ -1051,18 +1051,27 @@ class Doc_QA(atman):
                 self.system_prompt, self.prompt, self.prompt_format_type)
             prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
 
-        ## call batch model ##
-        batch_responses = helper.call_batch_model(
-            self.model_obj, [prompt] * len(cur_documents), prod_sys_prompts)
+        ### start to get response ###
+        if len(cur_documents) > 1:
+            ## call batch model ##
+            batch_responses = helper.call_batch_model(
+                self.model_obj, [prompt] * len(cur_documents),
+                prod_sys_prompts)
 
-        ## check relevant answer if batch_responses > 10 ##
-        if len(batch_responses) > 10:
-            batch_responses = helper.check_relevant_answer(
-                self.model_obj, batch_responses, self.prompt)
+            ## check relevant answer if batch_responses > 10 ##
+            if len(batch_responses) > 10:
+                batch_responses = helper.check_relevant_answer(
+                    self.model_obj, batch_responses, self.prompt)
 
-        self.response = helper.call_model(
-            self.model_obj, "\n\n".join(batch_responses),
-            prompts.default_conclusion_prompt(prompt, self.language))
+            self.response = helper.call_model(
+                self.model_obj, "\n\n".join(batch_responses),
+                prompts.default_conclusion_prompt(prompt, self.language))
+        else:
+            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+                self.system_prompt, self.prompt, self.prompt_format_type)
+            self.response = helper.call_model(
+                self.model_obj, prod_prompt,
+                prod_sys_prompt + '\n\n'.join(cur_documents))
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -1124,20 +1133,27 @@ class Doc_QA(atman):
                 self.system_prompt, self.prompt, self.prompt_format_type)
             prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
 
-        ## call batch model ##
-        batch_responses = helper.call_batch_model(
-            self.model_obj, [prompt] * len(cur_documents), prod_sys_prompts)
+        if len(cur_documents) > 1:
+            ## call batch model ##
+            batch_responses = helper.call_batch_model(
+                self.model_obj, [prompt] * len(cur_documents),
+                prod_sys_prompts)
 
-        ## check relevant answer if batch_responses > 10 ##
-        if len(batch_responses) > 10:
-            batch_responses = helper.check_relevant_answer(
-                self.model_obj, batch_responses, self.prompt)
+            ## check relevant answer if batch_responses > 10 ##
+            if len(batch_responses) > 10:
+                batch_responses = helper.check_relevant_answer(
+                    self.model_obj, batch_responses, self.prompt)
 
-        fnl_sys_prompt, fnl_prompt = prompts.format_sys_prompt(
-            prompts.default_conclusion_prompt(prompt, self.language),
-            "\n\n".join(batch_responses), self.prompt_format_type)
+            fnl_sys_prompt, fnl_prompt = prompts.format_sys_prompt(
+                prompts.default_conclusion_prompt(prompt, self.language),
+                "\n\n".join(batch_responses), self.prompt_format_type)
 
-        yield from self.model_obj.stream(fnl_sys_prompt + fnl_prompt)
+            yield from self.model_obj.stream(fnl_sys_prompt + fnl_prompt)
+        else:
+            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
+                self.system_prompt, self.prompt, self.prompt_format_type)
+            yield from self.model_obj.stream(prod_prompt + prod_sys_prompt +
+                                             '\n\n'.join(cur_documents))
 
     def ask_agent(self, doc_path: Union[List[str], str], prompt: str,
                   **kwargs) -> str:

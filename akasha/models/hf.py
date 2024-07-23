@@ -360,6 +360,63 @@ class remote_model(LLM):
             raise e
         return response  # response["generated_text"]
 
+    def JSON_call(self,
+                  prompt: str,
+                  schema: dict = None,
+                  stop: Optional[List[str]] = None) -> str:
+
+        stop_list = get_stop_list(stop)
+        try:
+            client = InferenceClient(self.url)
+            response = client.text_generation(
+                prompt,
+                max_new_tokens=1024,
+                do_sample=True,
+                top_k=10,
+                top_p=0.95,
+                grammar={
+                    "type": "json",
+                    "value": schema
+                },
+                repetition_penalty=1.2,
+                stop_sequences=stop_list,
+            )
+
+        except Exception as e:
+            logging.error("call remote model in JSON_call mode failed\n\n",
+                          e.__str__())
+            raise e
+        return response  # response["generated_text"]
+
+    def REGEX_call(self,
+                   prompt: str,
+                   regex: str = r"(yes|no)",
+                   max_tokens: int = 1024,
+                   stop: Optional[List[str]] = None) -> str:
+
+        stop_list = get_stop_list(stop)
+        try:
+            client = InferenceClient(self.url)
+            response = client.text_generation(
+                prompt,
+                max_new_tokens=max_tokens,
+                do_sample=True,
+                top_k=10,
+                top_p=0.95,
+                grammar={
+                    "type": "regex",
+                    "value": regex
+                },
+                repetition_penalty=1.2,
+                stop_sequences=stop_list,
+            )
+
+        except Exception as e:
+            logging.error("call remote model in JSON_call mode failed\n\n",
+                          e.__str__())
+            raise e
+        return response  # response["generated_text"]
+
     def batch(self,
               prompt: List[str],
               stop: Optional[List[str]] = None) -> List[str]:
