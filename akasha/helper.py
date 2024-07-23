@@ -437,6 +437,10 @@ def extract_json(s: str) -> Union[dict, None]:
     match = re.search(r'\{.*\}', s, re.DOTALL)
     stack = []
     start = 0
+
+    if match is None:
+        return None
+
     s = match.group()
     for i, c in enumerate(s):
         if c == '{':
@@ -881,21 +885,6 @@ def _decide_embedding_type(embeddings: vars) -> str:
 
     else:
         raise Exception("can not find the embeddings type.")
-
-
-class DillProcess(Process):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._target = dill.dumps(
-            self._target)  # Save the target function as bytes, using dill
-
-    def run(self):
-        if self._target:
-            self._target = dill.loads(
-                self._target)  # Unpickle the target function before executing
-            self._target(*self._args,
-                         **self._kwargs)  # Execute the target function
 
 
 def self_RAG(model_obj: LLM,
