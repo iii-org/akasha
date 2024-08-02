@@ -345,7 +345,7 @@ def get_docs(
     model,
     max_doc_len: int,
     compression: bool = False,
-) -> Tuple[list, int]:
+) -> Tuple[list, int, int]:
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together.
 

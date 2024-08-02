@@ -254,7 +254,6 @@ class atman:
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
-
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
             if (key == "model"
@@ -422,7 +421,8 @@ class atman:
             raise e
 
         try:
-            response = helper.call_model(self.model_obj, prompt, text_input)
+            response = helper.call_model(self.model_obj, text_input + prompt,
+                                         self.prompt_format_type)
             if response is None or response == "":
                 raise Exception("LLM response is empty.")
             response = helper.sim_to_trad(response)
@@ -462,6 +462,7 @@ class Doc_QA(atman):
         use_chroma: bool = False,
         use_rerank: bool = False,
         ignore_check: bool = False,
+        stream: bool = False,
     ):
         """initials of Doc_QA class
 
@@ -512,6 +513,7 @@ class Doc_QA(atman):
         self.response = ""
         self.prompt = ""
         self.ignored_files = []
+        self.stream = stream
 
     def _truncate_docs(self):
         """truncate documents if the total length of documents exceed the max_doc_len
@@ -579,87 +581,8 @@ class Doc_QA(atman):
 
         return ret, tot_len
 
-    def get_response_stream(
-            self,
-            doc_path: Union[List[str], str, akasha.db.dbs],
-            prompt: str,
-            system_prompt: str = "") -> Generator[str, None, None]:
-        """stream output for get_response.
-
-            Args:
-                **doc_path (str)**: documents directory path\n
-                **prompt (str)**:question you want to ask.\n
-                **system_prompt (str)**: the system prompt that you assign special instruction to llm modeld
-
-            Returns:
-                response (Generator[str,None,None]): the response from llm model.
-        """
-
-        self.system_prompt = system_prompt
-        if isinstance(doc_path, akasha.db.dbs):
-            self.doc_path = "use dbs object"
-        else:
-            self.doc_path = doc_path
-        self.prompt = prompt
-        search_dict = {}
-
-        if isinstance(doc_path, akasha.db.dbs):
-            self.db = doc_path
-            self.ignored_files = []
-        elif self.use_chroma:
-            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
-                self.doc_path, self.embeddings)
-        else:
-            self.db, self.ignored_files = akasha.db.processMultiDB(
-                self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
-
-        self._check_db()
-
-        ### start to get response ###
-        retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
-                                              self.use_rerank, self.threshold,
-                                              self.search_type, search_dict)
-        self.docs, self.doc_length, self.doc_tokens = search.get_docs(
-            self.db,
-            self.embeddings_obj,
-            retrivers_list,
-            self.prompt,
-            self.use_rerank,
-            self.language,
-            self.search_type,
-            self.verbose,
-            self.model_obj,
-            self.max_doc_len -
-            helper.get_doc_length(self.language, self.prompt),
-            compression=self.compression,
-        )
-
-        if self.docs is None:
-            print("\n\nNo Relevant Documents.\n\n")
-            return ""
-
-        ## format prompt ##
-        if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = prompts.default_doc_ask_prompt(self.language)
-        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt, self.prompt_format_type)
-
-        try:
-            text_input = prod_sys_prompt + self._display_docs()
-
-        except Exception as e:
-            trace_text = traceback.format_exc()
-            logging.error(
-                trace_text +
-                "\n\nText generation encountered an error before querying the language model (LLM).\
-                Please check your input data or configuration settings.\n\n")
-            raise e
-
-        yield from self.model_obj.stream(text_input + prod_prompt)
-
     def get_response(self, doc_path: Union[List[str], str, akasha.db.dbs],
-                     prompt: str, **kwargs) -> str:
+                     prompt: str, **kwargs):
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -674,27 +597,6 @@ class Doc_QA(atman):
             Returns:
                 response (str): the response from llm model.
         """
-
-        # # Check if doc_path is a list
-        # if isinstance(doc_path, list):
-        #     # Check if the first item in the list is a directory
-        #     if os.path.isdir(doc_path[0]):
-        #         # first item is a directory, so run get_response
-        #         pass
-        #     else:
-        #         # first item is not a directory, so run ask_self
-        #         return self.ask_self(prompt, info=doc_path, **kwargs)
-        # else:
-        #     # Check if doc_path is a directory
-        #     if os.path.isdir(doc_path):
-        #         # the doc_path is a directory, so run get_response
-        #         pass
-        #     elif os.path.isfile(doc_path):
-        #         # the doc_path is a file, so run ask_whole_file
-        #         return self.ask_whole_file(doc_path, prompt, **kwargs)
-        #     else:
-        #         # Process as string
-        #         return self.ask_self(prompt, info=doc_path, **kwargs)
 
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
@@ -746,43 +648,50 @@ class Doc_QA(atman):
         )
 
         if self.docs is None:
+
             print("\n\nNo Relevant Documents.\n\n")
-            return ""
+            self.docs = []
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt(self.language)
-        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self.system_prompt, self.prompt, self.prompt_format_type)
-
-        self.response = self._ask_model(prod_sys_prompt, prod_prompt)
+        text_input = prompts.format_sys_prompt(
+            self.system_prompt + self._display_docs(), self.prompt,
+            self.prompt_format_type)
 
         end_time = time.time()
+        if self.stream:
+            return helper.call_stream_model(self.model_obj, text_input,
+                                            self.prompt_format_type)
+        else:
 
-        if self.keep_logs == True:
-            self._add_result_log(timestamp, end_time - start_time)
-            self.logs[timestamp]["prompt"] = self.prompt
-            self.logs[timestamp]["response"] = self.response
-            for k, v in search_dict.items():
-                self.logs[timestamp][k] = v
+            self.response = helper.call_model(self.model_obj, text_input,
+                                              self.prompt_format_type)
 
-        if self.record_exp != "":
-            params = format.handle_params(
-                self.model,
-                self.embeddings,
-                self.chunk_size,
-                self.search_type_str,
-                self.topK,
-                self.threshold,
-                self.language,
-            )
-            metrics = format.handle_metrics(self.doc_length,
-                                            end_time - start_time,
-                                            self.doc_tokens)
-            table = format.handle_table(prompt, self.docs, self.response)
-            aiido_upload(self.record_exp, params, metrics, table)
+            if self.keep_logs == True:
+                self._add_result_log(timestamp, end_time - start_time)
+                self.logs[timestamp]["prompt"] = self.prompt
+                self.logs[timestamp]["response"] = self.response
+                for k, v in search_dict.items():
+                    self.logs[timestamp][k] = v
 
-        return self.response
+            if self.record_exp != "":
+                params = format.handle_params(
+                    self.model,
+                    self.embeddings,
+                    self.chunk_size,
+                    self.search_type_str,
+                    self.topK,
+                    self.threshold,
+                    self.language,
+                )
+                metrics = format.handle_metrics(self.doc_length,
+                                                end_time - start_time,
+                                                self.doc_tokens)
+                table = format.handle_table(prompt, self.docs, self.response)
+                aiido_upload(self.record_exp, params, metrics, table)
+
+            return self.response
 
     def chain_of_thought(self, doc_path: Union[List[str], str],
                          prompt_list: list, **kwargs) -> list:
@@ -876,8 +785,10 @@ class Doc_QA(atman):
                     self.doc_tokens += tokens
                     self.docs = docs + pre_result
                     ## format prompt ##
-                    prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-                        self.system_prompt, prompt, self.prompt_format_type)
+                    prod_sys_prompt = prompts.format_sys_prompt(
+                        self.system_prompt, "", self.prompt_format_type)
+                    prod_prompt = prompts.format_sys_prompt(
+                        "", prompt, self.prompt_format_type)
 
                     response = self._ask_model(prod_sys_prompt, prod_prompt)
 
@@ -962,22 +873,27 @@ class Doc_QA(atman):
         prod_sys_prompts = []
 
         for d_count in range(len(cur_documents)):
-            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-                self.system_prompt, self.prompt, self.prompt_format_type)
-            prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
+            prod_sys_prompt = prompts.format_sys_prompt(
+                self.system_prompt + cur_documents[d_count], prompt,
+                self.prompt_format_type)
+            prod_sys_prompts.append(prod_sys_prompt)
 
         ## call batch model ##
-        batch_responses = helper.call_batch_model(
-            self.model_obj, [prompt] * len(cur_documents), prod_sys_prompts)
+        batch_responses = helper.call_batch_model(self.model_obj,
+                                                  prod_sys_prompts,
+                                                  self.prompt_format_type)
 
         ## check relevant answer if batch_responses > 5 ##
         if len(batch_responses) > 5:
             batch_responses = helper.check_relevant_answer(
                 self.model_obj, batch_responses, self.prompt)
 
-        self.response = helper.call_model(
-            self.model_obj, "\n\n".join(batch_responses),
-            prompts.default_conclusion_prompt(prompt, self.language))
+        fnl_input = akasha.prompts.format_sys_prompt(
+            prompts.default_conclusion_prompt(prompt, self.language),
+            "\n\n".join(batch_responses), self.prompt_format_type)
+
+        self.response = helper.call_model(self.model_obj, fnl_input,
+                                          self.prompt_format_type)
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -1047,16 +963,17 @@ class Doc_QA(atman):
         prod_sys_prompts = []
 
         for d_count in range(len(cur_documents)):
-            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-                self.system_prompt, self.prompt, self.prompt_format_type)
-            prod_sys_prompts.append(prod_sys_prompt + cur_documents[d_count])
+            prod_sys_prompt = prompts.format_sys_prompt(
+                self.system_prompt + cur_documents[d_count], self.prompt,
+                self.prompt_format_type)
+            prod_sys_prompts.append(prod_sys_prompt)
 
         ### start to get response ###
         if len(cur_documents) > 1:
             ## call batch model ##
-            batch_responses = helper.call_batch_model(
-                self.model_obj, [prompt] * len(cur_documents),
-                prod_sys_prompts)
+            batch_responses = helper.call_batch_model(self.model_obj,
+                                                      prod_sys_prompts,
+                                                      self.prompt_format_type)
 
             ## check relevant answer if batch_responses > 10 ##
             if len(batch_responses) > 10:
@@ -1067,11 +984,11 @@ class Doc_QA(atman):
                 self.model_obj, "\n\n".join(batch_responses),
                 prompts.default_conclusion_prompt(prompt, self.language))
         else:
-            prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-                self.system_prompt, self.prompt, self.prompt_format_type)
-            self.response = helper.call_model(
-                self.model_obj, prod_prompt,
-                prod_sys_prompt + '\n\n'.join(cur_documents))
+            prod_sys_prompt = prompts.format_sys_prompt(
+                self.system_prompt + '\n\n'.join(cur_documents), self.prompt,
+                self.prompt_format_type)
+            self.response = helper.call_model(self.model_obj, prod_sys_prompt,
+                                              self.prompt_format_type)
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -1209,8 +1126,10 @@ class Doc_QA(atman):
         if "chinese" in format.language_dict[self.language]:
             self_ask_sys_prompt = "用中文回答 "
         self_ask_sys_prompt += prompts.JSON_formatter(formatter)
-        prod_sys_prompt, prod_prompt = prompts.format_sys_prompt(
-            self_ask_sys_prompt, self_ask_prompt, self.prompt_format_type)
+        prod_sys_prompt = prompts.format_sys_prompt(self_ask_sys_prompt, "",
+                                                    self.prompt_format_type)
+        prod_prompt = prompts.format_sys_prompt("", self_ask_prompt,
+                                                self.prompt_format_type)
 
         ret = self.ask_self(prompt=prod_prompt, system_prompt=prod_sys_prompt)
         parse_json = akasha.helper.extract_json(ret)

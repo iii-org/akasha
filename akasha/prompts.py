@@ -5,29 +5,60 @@ sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
 
 
-def format_llama_sys_prompt(system_prompt: str,
-                            prompt: str) -> Tuple[str, str]:
+def format_chat_gpt_prompt(system_prompt: str, prompt: str) -> List[dict]:
+    if system_prompt == "" and prompt == "":
+        return []
+
     if system_prompt == "":
-        return "", "[INST] " + prompt + " [/INST]\n"
-    return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n", prompt + " [/INST]\n"
+        return [{"role": "user", "content": prompt}]
+    if prompt == "":
+        return [{"role": "system", "content": system_prompt}]
+
+    return [{
+        "role": "system",
+        "content": system_prompt
+    }, {
+        "role": "user",
+        "content": prompt
+    }]
+
+
+def format_llama_sys_prompt(system_prompt: str, prompt: str) -> str:
+
+    if system_prompt == "" and prompt == "":
+        return ""
+
+    if system_prompt == "":
+        return "[INST] " + prompt + " [/INST]\n"
+    if prompt == "":
+        return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n"
+
+    return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n\n" + prompt + " [/INST]\n"
 
 
 def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> Tuple[str, str]:
+
+    if system_prompt == "" and prompt == "":
+        return ""
+
     if system_prompt == "":
-        return "", "Human: " + prompt + "\n"
-    return "System: " + system_prompt + "\n", "Human: " + prompt + "\n"
+        return "Human: " + prompt + "\n\n"
+    if prompt == "":
+        return "System: " + system_prompt + "\n"
+
+    return "System: " + system_prompt + "\n\n" + "Human: " + prompt + "\n"
 
 
 def format_sys_prompt(system_prompt: str,
                       prompt: str,
                       model_type: str = "gpt"):
     if model_type.lower() == "llama":
-        prod_sys_prompt, prod_prompt = format_llama_sys_prompt(
-            system_prompt, prompt)
+        ret_text = format_llama_sys_prompt(system_prompt, prompt)
+    elif model_type.lower() == "chat_gpt":
+        ret_text = format_chat_gpt_prompt(system_prompt, prompt)
     else:
-        prod_sys_prompt, prod_prompt = format_GPT_sys_prompt(
-            system_prompt, prompt)
-    return prod_sys_prompt, prod_prompt
+        ret_text = format_GPT_sys_prompt(system_prompt, prompt)
+    return ret_text
 
 
 def format_question_query(question: list, answer: str) -> Tuple[str, str]:

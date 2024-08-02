@@ -12,6 +12,7 @@ import requests
 import sys
 from huggingface_hub import InferenceClient
 from threading import Thread
+from openai import OpenAI
 
 
 class chatGLM(LLM):
@@ -417,6 +418,10 @@ class remote_model(LLM):
             raise e
         return response  # response["generated_text"]
 
+    def _invoke_helper(self, args):
+        messages, stop = args
+        return self.invoke(messages, stop)
+
     def batch(self,
               prompt: List[str],
               stop: Optional[List[str]] = None) -> List[str]:
@@ -430,26 +435,114 @@ class remote_model(LLM):
             str: llm response
         """
         import multiprocessing
-        parameters = {
-            'temperature': self.temperature,
-            'max_new_tokens': 1024,
-            'do_sample': True,
-            'top_k': 10,
-            'top_p': 0.95,
-        }
-        headers = {"Content-Type": "application/json"}
-
-        worker_args = [(self.url, pmpt, headers, parameters)
-                       for pmpt in prompt]
-
         # Number of processes should not exceed the number of prompts
         num_processes = min(len(prompt), multiprocessing.cpu_count())
 
-        with multiprocessing.Pool(processes=num_processes) as pool:
-            results = pool.map(_url_requests, worker_args)
+        if isinstance(prompt[0], list):
+            with multiprocessing.Pool(processes=num_processes) as pool:
+                results = pool.map(self._invoke_helper,
+                                   [(message, stop) for message in prompt])
+            return results
 
-        generated_texts = [res["generated_text"] for res in results]
-        return generated_texts
+        else:
+
+            parameters = {
+                'temperature': self.temperature,
+                'max_new_tokens': 1024,
+                'do_sample': True,
+                'top_k': 10,
+                'top_p': 0.95,
+            }
+            headers = {"Content-Type": "application/json"}
+
+            worker_args = [(self.url, pmpt, headers, parameters)
+                           for pmpt in prompt]
+
+            with multiprocessing.Pool(processes=num_processes) as pool:
+                results = pool.map(_url_requests, worker_args)
+
+            generated_texts = [res["generated_text"] for res in results]
+            return generated_texts
+
+    def invoke(self, messages: list, stop: Optional[List[str]] = None) -> str:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
+        stop_list = get_stop_list(stop)
+        url = self.url
+        if url[-1] != "/":
+            url += "/"
+
+        if url[-3:] != "v1/":
+            url = url + "v1/"
+        client = OpenAI(base_url=url, api_key="123")
+
+        response = ""
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=messages,
+                model="remote_model",
+                stream=True,
+                max_tokens=1024,
+                temperature=0.001,
+                top_p=0.95,
+                stop=stop_list,
+                frequency_penalty=1.2)
+
+            for message in chat_completion:
+                print(message.choices[0].delta.content, end="")
+                response += message.choices[0].delta.content
+
+        except Exception as e:
+            logging.error("call remote model failed\n\n", e.__str__())
+            raise e
+        return response
+
+    def invoke_stream(self,
+                      messages: list,
+                      stop: Optional[List[str]] = None) -> Generator:
+        """run llm and get the response
+
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
+
+        Returns:
+            str: llm response
+        """
+        stop_list = get_stop_list(stop)
+        url = self.url
+        if url[-1] != "/":
+            url += "/"
+
+        if url[-3:] != "v1/":
+            url = url + "v1/"
+        client = OpenAI(base_url=url, api_key="123")
+
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=messages,
+                model="remote_model",
+                stream=True,
+                max_tokens=1024,
+                temperature=0.001,
+                top_p=0.95,
+                stop=stop_list,
+                frequency_penalty=1.2)
+
+            for message in chat_completion:
+                yield message.choices[0].delta.content
+
+        except Exception as e:
+            info = "call remote model failed\n\n"
+            logging.error(info, e.__str__())
+            yield info + e.__str__()
 
 
 class hf_model(LLM):

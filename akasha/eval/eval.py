@@ -523,8 +523,11 @@ class Model_Eval(akasha.atman):
             query = question
             prod_sys = self.system_prompt + akasha.prompts.default_doc_ask_prompt(
                 self.language)
-            prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
-                prod_sys, question, self.prompt_format_type)
+            prod_sys = akasha.prompts.format_sys_prompt(
+                prod_sys, "", self.prompt_format_type)
+            query_with_prompt = akasha.prompts.format_sys_prompt(
+                "", question, self.prompt_format_type)
+
         else:
             prod_sys = self.system_prompt
             query, ans = akasha.prompts.format_question_query(question, answer)
@@ -609,8 +612,10 @@ class Model_Eval(akasha.atman):
         """
 
         prompt = "請對以上文件進行摘要。"
-        prod_sys, query_with_prompt = akasha.prompts.format_sys_prompt(
-            self.system_prompt, prompt, self.prompt_format_type)
+        prod_sys = akasha.prompts.format_sys_prompt(self.system_prompt, "",
+                                                    self.prompt_format_type)
+        query_with_prompt = akasha.prompts.format_sys_prompt(
+            "", prompt, self.prompt_format_type)
 
         self.docs = [
             Document(page_content=sum_doc, metadata={
