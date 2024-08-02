@@ -13,6 +13,7 @@ import sys
 from huggingface_hub import InferenceClient
 from threading import Thread
 from openai import OpenAI
+import concurrent.futures
 
 
 class chatGLM(LLM):
@@ -310,6 +311,10 @@ class remote_model(LLM):
             Generator: _description_
         """
         stop_list = get_stop_list(stop)
+
+        if isinstance(prompt, list):
+            yield from self.invoke_stream(prompt, stop)
+            return
         try:
             client = InferenceClient(self.url)
 
@@ -339,8 +344,12 @@ class remote_model(LLM):
         Returns:
             str: llm response
         """
-        stop_list = get_stop_list(stop)
+
+        if isinstance(prompt, list):
+            return self.invoke(prompt, stop)
+
         try:
+            stop_list = get_stop_list(stop)
             client = InferenceClient(self.url)
             response = ""
             for token in client.text_generation(
@@ -419,8 +428,8 @@ class remote_model(LLM):
         return response  # response["generated_text"]
 
     def _invoke_helper(self, args):
-        messages, stop = args
-        return self.invoke(messages, stop)
+        messages, stop, verbose = args
+        return self.invoke(messages, stop, verbose)
 
     def batch(self,
               prompt: List[str],
@@ -434,18 +443,20 @@ class remote_model(LLM):
         Returns:
             str: llm response
         """
-        import multiprocessing
-        # Number of processes should not exceed the number of prompts
-        num_processes = min(len(prompt), multiprocessing.cpu_count())
+        # Number of threads should not exceed the number of prompts
+        num_threads = min(
+            len(prompt),
+            concurrent.futures.thread.ThreadPoolExecutor()._max_workers)
 
         if isinstance(prompt[0], list):
-            with multiprocessing.Pool(processes=num_processes) as pool:
-                results = pool.map(self._invoke_helper,
-                                   [(message, stop) for message in prompt])
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=num_threads) as executor:
+                results = list(
+                    executor.map(self._invoke_helper, [(message, stop, False)
+                                                       for message in prompt]))
             return results
 
         else:
-
             parameters = {
                 'temperature': self.temperature,
                 'max_new_tokens': 1024,
@@ -458,13 +469,17 @@ class remote_model(LLM):
             worker_args = [(self.url, pmpt, headers, parameters)
                            for pmpt in prompt]
 
-            with multiprocessing.Pool(processes=num_processes) as pool:
-                results = pool.map(_url_requests, worker_args)
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=num_threads) as executor:
+                results = list(executor.map(_url_requests, worker_args))
 
             generated_texts = [res["generated_text"] for res in results]
             return generated_texts
 
-    def invoke(self, messages: list, stop: Optional[List[str]] = None) -> str:
+    def invoke(self,
+               messages: list,
+               stop: Optional[List[str]] = None,
+               verbose: bool = True) -> str:
         """run llm and get the response
 
         Args:
@@ -496,7 +511,8 @@ class remote_model(LLM):
                 frequency_penalty=1.2)
 
             for message in chat_completion:
-                print(message.choices[0].delta.content, end="")
+                if verbose:
+                    print(message.choices[0].delta.content, end="")
                 response += message.choices[0].delta.content
 
         except Exception as e:

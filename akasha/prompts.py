@@ -61,6 +61,22 @@ def format_sys_prompt(system_prompt: str,
     return ret_text
 
 
+def format_history_prompt(history_messages: list,
+                          prompt_format_type: str = "chat_gpt",
+                          user_tag="user",
+                          assistant_tag="assistant") -> List[dict]:
+
+    prod_history = []
+
+    for idx, msg in enumerate(history_messages):
+        if idx % 2 == 0:
+            prod_history.append({'role': user_tag, 'content': msg})
+        else:
+            prod_history.append({'role': assistant_tag, 'content': msg})
+
+    return prod_history
+
+
 def format_question_query(question: list, answer: str) -> Tuple[str, str]:
     """generate a certain format of question to input to llm. Last element means which selection is the correct answer.
        return the question query string and the answer string.\n

@@ -574,9 +574,10 @@ def _get_text(texts: list,
     return cur_count, cur_text, i
 
 
-def call_model(model: LLM,
-               input_text: Union[str, list],
-               prompt_type: str = "gpt") -> str:
+def call_model(
+    model: LLM,
+    input_text: Union[str, list],
+) -> str:
     """call llm model and return the response
 
     Args:
@@ -602,7 +603,7 @@ def call_model(model: LLM,
             except:
                 response = model._generate(input_text)
 
-        if ("openai" in model_type) or prompt_type == "chat_gpt":
+        if ("openai" in model_type):
             print_flag = False
             response = model.invoke(input_text)
 
@@ -638,12 +639,14 @@ def call_model(model: LLM,
     if print_flag:
         print("llm response:", "\n\n" + response)
 
+    response = sim_to_trad(response)
     return response
 
 
-def call_batch_model(model: LLM,
-                     input_text: list,
-                     prompt_type: str = "gpt") -> List[str]:
+def call_batch_model(
+    model: LLM,
+    input_text: list,
+) -> List[str]:
     """call llm model in batch and return the response 
 
     Args:
@@ -688,9 +691,10 @@ def call_batch_model(model: LLM,
     return responses
 
 
-def call_stream_model(model: LLM,
-                      input_text: Union[str, list],
-                      prompt_type: str = "gpt") -> Generator[str, None, None]:
+def call_stream_model(
+    model: LLM,
+    input_text: Union[str, list],
+) -> Generator[str, None, None]:
     """call llm model and yield the response
 
     Args:
@@ -705,6 +709,7 @@ def call_stream_model(model: LLM,
     ### for openai, change system prompt and prompt into system meg and human meg ###
 
     response = None
+    texts = ""
     try:
         try:
             model_type = model._llm_type
@@ -715,17 +720,10 @@ def call_stream_model(model: LLM,
             except:
                 response = model._call(input_text)
 
-        if prompt_type == "chat_gpt":
-            if "openai" in model_type:
-                response = model.stream(input_text)
-            else:
-                response = model.invoke_stream(input_text)
-
-        else:
-            try:
-                response = model.stream(input_text)
-            except:
-                response = model._call(input_text)
+        try:
+            response = model.stream(input_text)
+        except:
+            response = model._call(input_text)
 
         for r in response:
             if isinstance(r, AIMessage):
@@ -734,9 +732,10 @@ def call_stream_model(model: LLM,
                     r = r.__str__()
                 if isinstance(r, list):
                     r = '\n'.join(r)
-            yield r
+            texts += r
+            yield sim_to_trad(r)
 
-        if response is None or response == "":
+        if texts == "":
             yield "ERROR! LLM response is empty.\n\n"
 
     except Exception as e:
@@ -800,7 +799,7 @@ def call_translator(model_obj: LLM,
     prod_prompt = akasha.prompts.format_sys_prompt(sys_prompt, texts,
                                                    prompt_format_type)
 
-    response = call_model(model_obj, prod_prompt, prompt_format_type)
+    response = call_model(model_obj, prod_prompt)
 
     return response
 
@@ -836,7 +835,7 @@ def call_JSON_formatter(
         "TEXTS: " + texts,
     )
 
-    response = call_model(model_obj, prod_prompt, prompt_format_type)
+    response = call_model(model_obj, prod_prompt)
     return extract_json(response)
 
 
@@ -920,7 +919,8 @@ def self_RAG(model_obj: LLM,
              docs: List[Document],
              process_num: int = 10,
              earlyend_num: int = 8,
-             max_view_num: int = 100) -> List[Document]:
+             max_view_num: int = 100,
+             prompt_format_type: str = "gpt") -> List[Document]:
     """self RAG model to get the answer
 
     Args:
@@ -944,10 +944,13 @@ def self_RAG(model_obj: LLM,
         txts = []
         for idx in range(min(process_num, len(docs) - count)):
             prod_prompt = f"Retrieved document: \n\n {docs[count+idx].page_content} \n\n User question: {question}"
-            txts.append(prod_prompt)
+            input_text = akasha.prompts.format_sys_prompt(
+                sys_prompt, prod_prompt, prompt_format_type)
+            txts.append(input_text)
 
         irre_count = 0
-        response_list = call_batch_model(model_obj, txts, sys_prompt)
+
+        response_list = call_batch_model(model_obj, txts)
         for idx, response in enumerate(response_list):
             if 'yes' in response.lower():
                 results.append(docs[count + idx])
@@ -962,18 +965,65 @@ def self_RAG(model_obj: LLM,
 
 
 def check_relevant_answer(model_obj: LLM, batch_responses: List[str],
-                          question: str) -> List[str]:
+                          question: str, prompt_format_type: str) -> List[str]:
     """ask LLM that each of the retrieved answers list is relevant to the question or not"""
     results = []
     txts = []
     sys_prompt = akasha.prompts.default_answer_grader_prompt()
     for idx in range(len(batch_responses)):
         prod_prompt = f"Retrieved answer: \n\n {batch_responses[idx]} \n\n User question: {question}"
-        txts.append(prod_prompt)
+        text_input = akasha.prompts.format_sys_prompt(sys_prompt, prod_prompt,
+                                                      prompt_format_type)
+        txts.append(text_input)
 
-    response_list = call_batch_model(model_obj, txts, sys_prompt)
+    response_list = call_batch_model(model_obj, txts)
     for idx, response in enumerate(response_list):
         if 'yes' in response.lower():
             results.append(batch_responses[idx])
 
     return results
+
+
+def merge_history_and_prompt(
+        history_messages: list,
+        system_prompt: str,
+        prompt: str,
+        prompt_format_type: str = "gpt",
+        user_tag: str = "user",
+        assistant_tag: str = "assistant") -> Union[str, list]:
+
+    if history_messages == [] or history_messages == None or history_messages == "":
+        return akasha.prompts.format_sys_prompt(system_prompt, prompt,
+                                                prompt_format_type)
+
+    if prompt_format_type == "chat_gpt":
+        text_input = akasha.prompts.format_sys_prompt(system_prompt, "",
+                                                      prompt_format_type)
+
+        prod_prompt = akasha.prompts.format_sys_prompt("", prompt,
+                                                       prompt_format_type)
+
+        prod_history = akasha.prompts.format_history_prompt(
+            history_messages, prompt_format_type, user_tag, assistant_tag)
+
+        text_input.extend(prod_history)
+
+        text_input.extend(prod_prompt)
+
+        return text_input
+
+    else:
+        history_str = ""
+
+        for i in range(len(history_messages)):
+
+            if i % 2 == 0:
+                history_str += user_tag + ": " + history_messages[i] + "\n"
+
+            else:
+                history_str += assistant_tag + ": " + history_messages[i] + "\n"
+
+        history_str += "\n\n"
+        return akasha.prompts.format_sys_prompt(system_prompt,
+                                                history_str + prompt,
+                                                prompt_format_type)

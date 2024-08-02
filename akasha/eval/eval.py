@@ -42,9 +42,9 @@ def _generate_single_choice_question(
     random_index = np.random.randint(choice_num)
     q_prompt = akasha.prompts.format_wrong_answer(choice_num - 1, doc_text,
                                                   question, cor_ans)
-    response = akasha.helper.call_model(model, q_prompt, system_prompt)
-    response = akasha.helper.sim_to_trad(
-        response)  # transform simplified chinese to traditional chinese
+
+    input_text = akasha.prompts.format_sys_prompt(system_prompt, q_prompt)
+    response = akasha.helper.call_model(model, input_text)
 
     ### separate the response into wrong answers ###
     try:
@@ -418,7 +418,6 @@ class Model_Eval(akasha.atman):
                         doc_text, self.language)
                     response = akasha.helper.call_model(
                         self.model_obj, category_prompt)
-                    response = akasha.helper.sim_to_trad(response)
 
                     json_response = akasha.helper.extract_json(response)
                     if json_response is None:
@@ -443,7 +442,6 @@ class Model_Eval(akasha.atman):
                 q_prompt = akasha.prompts.compare_question_prompt(
                     self.question_style, topic, nouns, used_texts)
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
-                response = akasha.helper.sim_to_trad(response)
 
                 if not self._process_response(response, used_texts, choice_num,
                                               ""):
@@ -549,7 +547,10 @@ class Model_Eval(akasha.atman):
 
         ### ask llm ###
         try:
-            response = self._ask_model(prod_sys, query_with_prompt)
+            intput_text = akasha.prompts.format_sys_prompt(
+                prod_sys + self._display_docs(), query_with_prompt,
+                self.prompt_format_type)
+            response = akasha.helper.call_model(self.model_obj, intput_text)
             self.response.append(response)
             self.doc_length += docs_len
             self.doc_tokens += docs_token
@@ -625,7 +626,10 @@ class Model_Eval(akasha.atman):
         ]
 
         try:
-            response = self._ask_model(prod_sys, query_with_prompt)
+            intput_text = akasha.prompts.format_sys_prompt(
+                prod_sys + self._display_docs(), query_with_prompt,
+                self.prompt_format_type)
+            response = akasha.helper.call_model(self.model_obj, intput_text)
             self.response.append(response)
             self.doc_length += akasha.helper.get_doc_length(
                 self.language, sum_doc)
@@ -800,7 +804,6 @@ class Model_Eval(akasha.atman):
                 q_prompt = akasha.prompts.format_create_question_prompt(
                     doc_text, self.question_type, self.question_style)
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
-                response = akasha.helper.sim_to_trad(response)
 
                 if not self._process_response(response, doc_text, choice_num,
                                               source_files_name):
@@ -1272,9 +1275,6 @@ class Model_Eval(akasha.atman):
                     doc_text, self.question_type, self.question_style, topic)
 
                 response = akasha.helper.call_model(self.model_obj, q_prompt)
-                response = akasha.helper.sim_to_trad(
-                    response
-                )  # transform simplified chinese to traditional chinese
                 if not self._process_response(response, doc_text, choice_num,
                                               source_files_name):
                     raise Exception(f"Question Format Error, got {response}")

@@ -15,6 +15,8 @@ from pathlib import Path
 import akasha
 import akasha.helper as helper
 
+logging.basicConfig(level=logging.ERROR)
+
 
 class dbs:
 
@@ -299,9 +301,12 @@ def get_chromadb_from_file(documents: list,
                 for ix, text in enumerate(texts):
                     if open_model.get_num_tokens(text.page_content) > 2000:
                         try:
+                            text_input = akasha.prompts.format_sys_prompt(
+                                "use traditional chinese to list details of below article:\n\n",
+                                text.page_content)
                             page_contents[ix] = helper.call_model(
-                                open_model, text.page_content,
-                                "use traditional chinese to list details of below article:\n\n"
+                                open_model,
+                                text_input,
                             )
                             logging.warning(
                                 "\ncontent too long, using llm to summarize for embedding...\n\n"
