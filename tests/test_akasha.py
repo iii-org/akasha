@@ -144,43 +144,6 @@ def test_get_response(base_line):
 
 
 @pytest.mark.akasha
-def test_cot(base_line):
-    ak = base_line
-    queries = ["西門子自有工廠如何朝工業4.0 發展", "解釋「工業4.0 成熟度指數」發展路徑的六個成熟度"]
-
-    assert (type(
-        ak.chain_of_thought(doc_path="./docs/mic/",
-                            prompt_list=queries,
-                            search_type="svm")) == list)
-
-    # assert (type(
-    #     ak.chain_of_thought(doc_path="./docs/mic/",
-    #                         prompt_list=queries,
-    #                         search_type="merge")) == list)
-
-    # assert (type(
-    #     ak.chain_of_thought(doc_path="./docs/mic/",
-    #                         prompt_list=queries,
-    #                         search_type="tfidf")) == list)
-
-    # assert (type(
-    #     ak.chain_of_thought(doc_path="./docs/mic/",
-    #                         prompt_list=queries,
-    #                         search_type="mmr")) == list)
-
-    assert (type(
-        ak.chain_of_thought(
-            doc_path="./docs/mic/",
-            prompt_list=queries,
-            search_type=base_search,
-            model=base_model,
-            embeddings=base_embed,
-        )) == list)
-
-    return
-
-
-@pytest.mark.akasha
 def test_ask_whole_file(base_line):
     ak = base_line
 

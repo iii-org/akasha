@@ -207,8 +207,6 @@ class Summary(akasha.atman):
         """
         response_list = []
         i = 0
-        prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
-            self.system_prompt, "", self.prompt_format_type)
         while i < len(texts):
             token, cur_text, newi = akasha.helper._get_text(
                 texts, "", i, self.max_doc_len, self.language)
@@ -220,10 +218,12 @@ class Summary(akasha.atman):
             if i == 0 and newi == len(texts):
                 prompt = akasha.prompts.format_reduce_summary_prompt(
                     cur_text, self.summary_len)
-
-                response = akasha.helper.call_model(self.model_obj,
-                                                    "\n" + prompt,
-                                                    prod_sys_prompt)
+                input_text = akasha.prompts.format_sys_prompt(
+                    self.system_prompt, "\n" + prompt, self.prompt_format_type)
+                response = akasha.helper.call_model(
+                    self.model_obj,
+                    input_text,
+                )
 
                 total_list.append(response)
 
@@ -236,9 +236,9 @@ class Summary(akasha.atman):
                 return total_list, tokens
 
             prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, 0)
-
-            response = akasha.helper.call_model(self.model_obj, "\n" + prompt,
-                                                prod_sys_prompt)
+            input_text = akasha.prompts.format_sys_prompt(
+                self.system_prompt, "\n" + prompt, self.prompt_format_type)
+            response = akasha.helper.call_model(self.model_obj, input_text)
 
             i = newi
 
@@ -284,7 +284,7 @@ class Summary(akasha.atman):
         i = 0
         tokens = 0
         response_list = []
-        prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
+        prod_sys_prompt = akasha.prompts.format_sys_prompt(
             self.system_prompt, "", self.prompt_format_type)
         ###
 
@@ -305,9 +305,12 @@ class Summary(akasha.atman):
             else:
                 prompt = akasha.prompts.format_refine_summary_prompt(
                     cur_text, previous_summary, self.summary_len)
-
-            response = akasha.helper.call_model(self.model_obj, "\n" + prompt,
-                                                prod_sys_prompt)
+            text_input = akasha.prompts.format_sys_prompt(
+                self.system_prompt, "\n" + prompt, self.prompt_format_type)
+            response = akasha.helper.call_model(
+                self.model_obj,
+                text_input,
+            )
 
             if self.verbose:
                 print("prompt: \n", self.system_prompt + prompt)
@@ -416,12 +419,13 @@ class Summary(akasha.atman):
 
         ### write summary to file, and if auto_translate is True , translate it ###
         if self.format_prompt != "":
-            prod_format_prompt, ___ = akasha.prompts.format_sys_prompt(
-                self.format_prompt, "", self.prompt_format_type)
+
+            input_text = akasha.prompts.format_sys_prompt(
+                self.format_prompt, "\n\n" + self.summary,
+                self.prompt_format_type)
             self.summary = akasha.helper.call_model(
                 self.model_obj,
-                "\n\n" + self.summary,
-                prod_format_prompt,
+                input_text,
             )
 
         if self.auto_translate:
@@ -534,11 +538,14 @@ class Summary(akasha.atman):
 
         ### write summary to file, and if auto_translate is True , translate it ###
         if self.format_prompt != "":
-            prod_format_prompt, ___ = akasha.prompts.format_sys_prompt(
-                self.format_prompt, "", self.prompt_format_type)
-            self.summary = akasha.helper.call_model(self.model_obj,
-                                                    "\n\n" + self.summary,
-                                                    prod_format_prompt)
+            text_input = akasha.prompts.format_sys_prompt(
+                self.format_prompt, "\n\n" + self.summary,
+                self.prompt_format_type)
+
+            self.summary = akasha.helper.call_model(
+                self.model_obj,
+                text_input,
+            )
 
         if self.auto_translate:
 

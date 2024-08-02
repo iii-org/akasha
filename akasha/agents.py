@@ -123,6 +123,8 @@ class test_agent:
         max_doc_len: int = 1800,
         max_past_observation: int = 10,
         retri_observation: bool = False,
+        prompt_format_type: str = "chat_gpt",
+        stream: bool = False,
     ):
         """initials of agent class
 
@@ -153,6 +155,8 @@ class test_agent:
         self.tokens = 0
         self.input_len = 0
         self.keep_logs = keep_logs
+        self.prompt_format_type = prompt_format_type
+        self.stream = stream
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature)
         self.model = helper.handle_search_type(model)
@@ -316,10 +320,11 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         if retri_messages != "":
             retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
-        response = akasha.helper.call_model(
-            self.model_obj,
+        text_input = akasha.prompts.format_sys_prompt(
+            self.REACT_PROMPT,
             "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.REACT_PROMPT)
+            self.prompt_format_type)
+        response = akasha.helper.call_model(self.model_obj, text_input)
 
         txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
         self.input_len = akasha.helper.get_doc_length(self.language, txt)
@@ -342,10 +347,11 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             except:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry.")
-
-                response = akasha.helper.call_model(
-                    self.model_obj, "Question: " + question + retri_messages +
-                    self.REMEMBER_PROMPT, self.REACT_PROMPT)
+                text_input = akasha.prompts.format_sys_prompt(
+                    self.REACT_PROMPT, "Question: " + question +
+                    retri_messages + self.REMEMBER_PROMPT,
+                    self.prompt_format_type)
+                response = akasha.helper.call_model(self.model_obj, text_input)
                 round_count -= 1
                 txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
                 self.input_len += akasha.helper.get_doc_length(
@@ -368,10 +374,16 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 retri_messages = retri_messages.replace(
                     self.OBSERVATION_PROMPT, "")
                 response = cur_action['action_input']
-                response = akasha.helper.call_model(
-                    self.model_obj, retri_messages,
-                    f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                )
+                text_input = akasha.prompts.format_sys_prompt(
+                    f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
+                    retri_messages, self.prompt_format_type)
+
+                if self.stream:
+                    return akasha.helper.call_stream_model(
+                        self.model_obj, text_input)
+
+                response = akasha.helper.call_model(self.model_obj, text_input)
+
                 txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
                 self.input_len += akasha.helper.get_doc_length(
                     self.language, txt)
@@ -394,11 +406,13 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 firsthand_observation = tool._run(**tool_input)
 
                 if self.retri_observation:
-                    observation = akasha.helper.call_model(
-                        self.model_obj,
+                    text_input = akasha.prompts.format_sys_prompt(
+                        self.RETRI_OBSERVATION_PROMPT,
                         "Question: " + question + "\n\nThought: " + thought +
                         "\n\nObservation: " + firsthand_observation,
-                        self.RETRI_OBSERVATION_PROMPT)
+                        self.prompt_format_type)
+                    observation = akasha.helper.call_model(
+                        self.model_obj, text_input)
                     txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
                     self.input_len += akasha.helper.get_doc_length(
                         self.language, txt)
@@ -428,9 +442,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             if retri_messages != "":
                 retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
-            response = akasha.helper.call_model(
-                self.model_obj, "Question: " + question + retri_messages,
-                self.REACT_PROMPT)
+            text_input = akasha.prompts.format_sys_prompt(
+                self.REACT_PROMPT, "Question: " + question + retri_messages,
+                self.prompt_format_type)
+            response = akasha.helper.call_model(self.model_obj, text_input)
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += akasha.helper.get_doc_length(self.language, txt)
             self.tokens += self.model_obj.get_num_tokens(txt)
@@ -444,157 +459,6 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self._add_result_log(timestamp, end_time - start_time)
 
         return response
-
-    def stream(self, question: str, messages: List[dict] = None):
-
-        start_time = time.time()
-        round_count = self.max_round
-        if messages is None:
-            self.messages = []
-        else:
-            self.messages = messages
-        self.thoughts = []
-        observation = ""
-        thought = ""
-        retri_messages = ""
-
-        ### call model to get response ###
-        retri_messages, messages_len = helper.retri_history_messages(
-            self.messages, self.max_past_observation, self.max_doc_len,
-            "Action", "Observation", self.language)
-        if retri_messages != "":
-            retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
-
-        response = akasha.helper.call_model(
-            self.model_obj,
-            "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.REACT_PROMPT)
-
-        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
-        self.input_len = akasha.helper.get_doc_length(self.language, txt)
-        self.tokens = self.model_obj.get_num_tokens(txt)
-
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        if self.keep_logs == True:
-            self.timestamp_list.append(timestamp)
-            self._add_basic_log(timestamp, "agent_stream")
-
-        ### start to run agent ###
-        while round_count > 0:
-
-            try:
-                cur_action = akasha.helper.extract_json(response)
-                if (not isinstance(cur_action["action"], str)) or (
-                    (not isinstance(cur_action["action_input"], dict) and
-                     (cur_action["action"] != "Final Answer"))):
-                    raise ValueError(
-                        "Cannot find correct action from response")
-            except:
-                logging.warning(
-                    "Cannot extract JSON format action from response, retry.")
-                response = akasha.helper.call_model(
-                    self.model_obj, "Question: " + question + retri_messages +
-                    self.REMEMBER_PROMPT, self.REACT_PROMPT)
-                round_count -= 1
-                txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
-                self.input_len += akasha.helper.get_doc_length(
-                    self.language, txt)
-                self.tokens += self.model_obj.get_num_tokens(txt)
-                continue
-
-            ### get thought from response ###
-            thought = ''.join(
-                response.split('Thought:')[1:]).split('Action:')[0]
-            if thought.replace(" ", "").replace("\n", "") == "":
-                thought = "None."
-
-            self.thoughts.append(thought)
-            yield f"\nThought: {thought}"
-
-            if cur_action is None:
-                raise ValueError("Cannot find correct action from response")
-            if cur_action['action'].lower() in [
-                    'final answer', 'final_answer', 'final', 'answer'
-            ]:
-                retri_messages = retri_messages.replace(
-                    self.OBSERVATION_PROMPT, "")
-                response = cur_action['action_input']
-                response = akasha.helper.call_model(
-                    self.model_obj, retri_messages,
-                    f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                )
-                txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                self.input_len += akasha.helper.get_doc_length(
-                    self.language, txt)
-                self.tokens += self.model_obj.get_num_tokens(txt)
-                self.messages.append({
-                    "role":
-                    "Action",
-                    "content":
-                    json.dumps(cur_action, ensure_ascii=False)
-                })
-                self.messages.append({
-                    "role": "Observation",
-                    "content": response
-                })
-
-                break
-            elif cur_action['action'] in self.tools:
-                tool_name = cur_action['action']
-                tool_input = cur_action['action_input']
-                tool = self.tools[tool_name]
-                firsthand_observation = tool._run(**tool_input)
-
-                if self.retri_observation:
-                    observation = akasha.helper.call_model(
-                        self.model_obj,
-                        "Question: " + question + "\n\nThought: " + thought +
-                        "\n\nObservation: " + firsthand_observation,
-                        self.RETRI_OBSERVATION_PROMPT)
-                    txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
-                    self.input_len += akasha.helper.get_doc_length(
-                        self.language, txt)
-                    self.tokens += self.model_obj.get_num_tokens(txt)
-                else:
-                    observation = firsthand_observation
-
-                yield f"\n Observation: {observation}"
-            else:
-                raise ValueError(f"Cannot find tool {cur_action['action']}")
-
-            self.messages.append({
-                "role":
-                "Action",
-                "content":
-                json.dumps(cur_action, ensure_ascii=False)
-            })
-            self.messages.append({
-                "role": "Observation",
-                "content": observation
-            })
-
-            retri_messages, messages_len = helper.retri_history_messages(
-                self.messages, self.max_past_observation, self.max_doc_len,
-                "Action", "Observation", self.language)
-            if retri_messages != "":
-                retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
-
-            response = akasha.helper.call_model(
-                self.model_obj, "Question: " + question + retri_messages,
-                self.REACT_PROMPT)
-            txt = "Question: " + question + retri_messages + self.REACT_PROMPT
-            self.input_len += akasha.helper.get_doc_length(self.language, txt)
-            self.tokens += self.model_obj.get_num_tokens(txt)
-
-            round_count -= 1
-
-        end_time = time.time()
-        print("\n-------------------------------------\nSpend Time: ",
-              end_time - start_time, "s\n")
-        self.response = response
-        self._add_result_log(timestamp, end_time - start_time)
-
-        yield response
 
 
 class agent:

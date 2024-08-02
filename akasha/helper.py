@@ -3,7 +3,7 @@ import jieba
 import json, re, time
 from pathlib import Path
 import opencc
-from typing import Callable, Union, Tuple, List
+from typing import Callable, Union, Tuple, List, Generator
 from langchain.schema import Document
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
@@ -574,27 +574,22 @@ def _get_text(texts: list,
     return cur_count, cur_text, i
 
 
-def call_model(model: LLM, prompt: str, system_prompt: str = "") -> str:
+def call_model(
+    model: LLM,
+    input_text: Union[str, list],
+) -> str:
     """call llm model and return the response
 
     Args:
         model (LLM): llm model
-        prompt (str): input prompt
+        input_text (str): the input_text that send to llm model
+        prompt_type (str): the type of prompt, default "gpt"
 
     Returns:
         str: llm response
     """
 
     ### for openai, change system prompt and prompt into system meg and human meg ###
-    input_text = system_prompt + prompt
-    try:
-        if "openai" in model._llm_type.lower():
-            input_text = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=prompt)
-            ]
-    except:
-        logging.warning("can not find the llm type.")
 
     response = ""
     print_flag = True
@@ -608,7 +603,7 @@ def call_model(model: LLM, prompt: str, system_prompt: str = "") -> str:
             except:
                 response = model._generate(input_text)
 
-        if "openai" in model_type:
+        if ("openai" in model_type):
             print_flag = False
             response = model.invoke(input_text)
 
@@ -644,51 +639,27 @@ def call_model(model: LLM, prompt: str, system_prompt: str = "") -> str:
     if print_flag:
         print("llm response:", "\n\n" + response)
 
+    response = sim_to_trad(response)
     return response
 
 
-def call_batch_model(model: LLM,
-                     prompt: List[str],
-                     system_prompt: Union[List[str], str] = "") -> List[str]:
+def call_batch_model(
+    model: LLM,
+    input_text: list,
+) -> List[str]:
     """call llm model in batch and return the response 
 
     Args:
         model (LLM): llm model
-        prompt (str): input prompt
+        input_text: list
 
     Returns:
         str: llm response
     """
 
     ### check the input prompt and system prompt ###
-    if isinstance(prompt, str):
-        prompt = [prompt]
-
-    if isinstance(system_prompt, str):
-        system_prompt = [system_prompt] * len(prompt)
-    elif len(system_prompt) != len(prompt):
-        system_prompt = [system_prompt[0]] * len(prompt)
-
-    ### format list of prompt ###
-
-    input_text = []
-    try:
-        if "openai" in model._llm_type.lower():
-            for i in range(len(prompt)):
-                input_text.append([
-                    SystemMessage(content=system_prompt[i]),
-                    HumanMessage(content=prompt[i])
-                ])
-        elif ("huggingface"
-              in model._llm_type.lower()) or ("remote"
-                                              in model._llm_type.lower()):
-            for i in range(len(prompt)):
-                input_text.append(system_prompt[i] + prompt[i])
-        else:
-            raise ValueError("llm type is not openai, huggingface or remote.")
-    except Exception as e:
-        logging.error("can not find the llm type.")
-        raise e
+    if isinstance(input_text, str):
+        input_text = [input_text]
 
     response = ""
     responses = []
@@ -718,6 +689,60 @@ def call_batch_model(model: LLM,
     #     print("llm response:", "\n\n" + response)
 
     return responses
+
+
+def call_stream_model(
+    model: LLM,
+    input_text: Union[str, list],
+) -> Generator[str, None, None]:
+    """call llm model and yield the response
+
+    Args:
+        model (LLM): llm model
+        input_text (str): the input_text that send to llm model
+        prompt_type (str): the type of prompt, default "gpt"
+
+    Returns:
+        str: llm response
+    """
+
+    ### for openai, change system prompt and prompt into system meg and human meg ###
+
+    response = None
+    texts = ""
+    try:
+        try:
+            model_type = model._llm_type
+        except:
+
+            try:
+                response = model.stream(input_text)
+            except:
+                response = model._call(input_text)
+
+        try:
+            response = model.stream(input_text)
+        except:
+            response = model._call(input_text)
+
+        for r in response:
+            if isinstance(r, AIMessage):
+                r = r.content
+                if isinstance(r, dict):
+                    r = r.__str__()
+                if isinstance(r, list):
+                    r = '\n'.join(r)
+            texts += r
+            yield sim_to_trad(r)
+
+        if texts == "":
+            yield "ERROR! LLM response is empty.\n\n"
+
+    except Exception as e:
+        trace_text = traceback.format_exc()
+        logging.error(trace_text + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n")
+        yield e
 
 
 def get_non_repeat_rand_int(vis: set, num: int, doc_range: int):
@@ -771,10 +796,10 @@ def call_translator(model_obj: LLM,
         str: translated texts
     """
     sys_prompt = akasha.prompts.default_translate_prompt(language)
-    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
-        sys_prompt, "", prompt_format_type)
+    prod_prompt = akasha.prompts.format_sys_prompt(sys_prompt, texts,
+                                                   prompt_format_type)
 
-    response = call_model(model_obj, "\n" + texts, prod_sys_prompt)
+    response = call_model(model_obj, prod_prompt)
 
     return response
 
@@ -805,10 +830,12 @@ def call_JSON_formatter(
     if keys != "":
         sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
 
-    prod_sys_prompt, ___ = akasha.prompts.format_sys_prompt(
-        sys_prompt, "", prompt_format_type)
+    prod_prompt = akasha.prompts.format_sys_prompt(
+        sys_prompt,
+        "TEXTS: " + texts,
+    )
 
-    response = call_model(model_obj, "TEXTS: " + texts, prod_sys_prompt)
+    response = call_model(model_obj, prod_prompt)
     return extract_json(response)
 
 
@@ -892,7 +919,8 @@ def self_RAG(model_obj: LLM,
              docs: List[Document],
              process_num: int = 10,
              earlyend_num: int = 8,
-             max_view_num: int = 100) -> List[Document]:
+             max_view_num: int = 100,
+             prompt_format_type: str = "gpt") -> List[Document]:
     """self RAG model to get the answer
 
     Args:
@@ -916,10 +944,13 @@ def self_RAG(model_obj: LLM,
         txts = []
         for idx in range(min(process_num, len(docs) - count)):
             prod_prompt = f"Retrieved document: \n\n {docs[count+idx].page_content} \n\n User question: {question}"
-            txts.append(prod_prompt)
+            input_text = akasha.prompts.format_sys_prompt(
+                sys_prompt, prod_prompt, prompt_format_type)
+            txts.append(input_text)
 
         irre_count = 0
-        response_list = call_batch_model(model_obj, txts, sys_prompt)
+
+        response_list = call_batch_model(model_obj, txts)
         for idx, response in enumerate(response_list):
             if 'yes' in response.lower():
                 results.append(docs[count + idx])
@@ -934,18 +965,65 @@ def self_RAG(model_obj: LLM,
 
 
 def check_relevant_answer(model_obj: LLM, batch_responses: List[str],
-                          question: str) -> List[str]:
+                          question: str, prompt_format_type: str) -> List[str]:
     """ask LLM that each of the retrieved answers list is relevant to the question or not"""
     results = []
     txts = []
     sys_prompt = akasha.prompts.default_answer_grader_prompt()
     for idx in range(len(batch_responses)):
         prod_prompt = f"Retrieved answer: \n\n {batch_responses[idx]} \n\n User question: {question}"
-        txts.append(prod_prompt)
+        text_input = akasha.prompts.format_sys_prompt(sys_prompt, prod_prompt,
+                                                      prompt_format_type)
+        txts.append(text_input)
 
-    response_list = call_batch_model(model_obj, txts, sys_prompt)
+    response_list = call_batch_model(model_obj, txts)
     for idx, response in enumerate(response_list):
         if 'yes' in response.lower():
             results.append(batch_responses[idx])
 
     return results
+
+
+def merge_history_and_prompt(
+        history_messages: list,
+        system_prompt: str,
+        prompt: str,
+        prompt_format_type: str = "gpt",
+        user_tag: str = "user",
+        assistant_tag: str = "assistant") -> Union[str, list]:
+
+    if history_messages == [] or history_messages == None or history_messages == "":
+        return akasha.prompts.format_sys_prompt(system_prompt, prompt,
+                                                prompt_format_type)
+
+    if prompt_format_type == "chat_gpt":
+        text_input = akasha.prompts.format_sys_prompt(system_prompt, "",
+                                                      prompt_format_type)
+
+        prod_prompt = akasha.prompts.format_sys_prompt("", prompt,
+                                                       prompt_format_type)
+
+        prod_history = akasha.prompts.format_history_prompt(
+            history_messages, prompt_format_type, user_tag, assistant_tag)
+
+        text_input.extend(prod_history)
+
+        text_input.extend(prod_prompt)
+
+        return text_input
+
+    else:
+        history_str = ""
+
+        for i in range(len(history_messages)):
+
+            if i % 2 == 0:
+                history_str += user_tag + ": " + history_messages[i] + "\n"
+
+            else:
+                history_str += assistant_tag + ": " + history_messages[i] + "\n"
+
+        history_str += "\n\n"
+        return akasha.prompts.format_sys_prompt(system_prompt,
+                                                history_str + prompt,
+                                                prompt_format_type)
