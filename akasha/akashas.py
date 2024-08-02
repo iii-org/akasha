@@ -887,7 +887,8 @@ class Doc_QA(atman):
             ## check relevant answer if batch_responses > 5 ##
             if len(batch_responses) > 5:
                 batch_responses = helper.check_relevant_answer(
-                    self.model_obj, batch_responses, self.prompt)
+                    self.model_obj, batch_responses, self.prompt,
+                    self.prompt_format_type)
 
             fnl_input = akasha.prompts.format_sys_prompt(
                 prompts.default_conclusion_prompt(prompt, self.language),
@@ -988,7 +989,8 @@ class Doc_QA(atman):
             ## check relevant answer if batch_responses > 10 ##
             if len(batch_responses) > 10:
                 batch_responses = helper.check_relevant_answer(
-                    self.model_obj, batch_responses, self.prompt)
+                    self.model_obj, batch_responses, self.prompt,
+                    self.prompt_format_type)
 
             fnl_input = prompts.format_sys_prompt(
                 prompts.default_conclusion_prompt(prompt, self.language),
