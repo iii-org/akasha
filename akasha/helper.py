@@ -204,8 +204,8 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
     return embeddings
 
 
-def handle_model(model_name: Union[str, Callable],
-                 verbose: bool,
+def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
+                 verbose: bool = False,
                  temperature: float = 0.0) -> vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
@@ -846,10 +846,9 @@ def call_JSON_formatter(
     if keys != "":
         sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
 
-    prod_prompt = akasha.prompts.format_sys_prompt(
-        sys_prompt,
-        "TEXTS: " + texts,
-    )
+    prod_prompt = akasha.prompts.format_sys_prompt(sys_prompt,
+                                                   "TEXTS: " + texts,
+                                                   prompt_format_type)
 
     response = call_model(model_obj, prod_prompt)
     return extract_json(response)

@@ -1,5 +1,6 @@
 from typing import List, Union, Tuple
 import akasha.format as afr
+# from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
@@ -11,11 +12,41 @@ def format_chat_gpt_prompt(system_prompt: str, prompt: str) -> List[dict]:
 
     if system_prompt == "":
         return [{"role": "user", "content": prompt}]
+
     if prompt == "":
         return [{"role": "system", "content": system_prompt}]
 
     return [{
         "role": "system",
+        "content": system_prompt
+    }, {
+        "role": "user",
+        "content": prompt
+    }]
+
+
+def format_chat_mistral_prompt(system_prompt: str, prompt: str) -> List[dict]:
+
+    if system_prompt == "" and prompt == "":
+        return []
+
+    if system_prompt == "":
+        return [{"role": "user", "content": prompt}]
+
+    if prompt == "":
+        return [{
+            "role": "user",
+            "content": "start conversation."
+        }, {
+            "role": "assistant",
+            "content": system_prompt
+        }]
+
+    return [{
+        "role": "user",
+        "content": "start conversation."
+    }, {
+        "role": "assistant",
         "content": system_prompt
     }, {
         "role": "user",
@@ -54,10 +85,16 @@ def format_sys_prompt(system_prompt: str,
                       model_type: str = "gpt"):
     if model_type.lower() == "llama":
         ret_text = format_llama_sys_prompt(system_prompt, prompt)
+
     elif model_type.lower() == "chat_gpt":
         ret_text = format_chat_gpt_prompt(system_prompt, prompt)
+
+    elif model_type.lower() == "chat_mistral":
+        ret_text = format_chat_mistral_prompt(system_prompt, prompt)
+
     else:
         ret_text = format_GPT_sys_prompt(system_prompt, prompt)
+
     return ret_text
 
 

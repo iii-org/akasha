@@ -793,6 +793,10 @@ def createDB_file(file_path: Union[List[str], str],
             logging.warning(f"file path {file} error.\n\n")
             continue
 
+        ## add './' at the front if doc_path is empty ##
+        if doc_path.replace(" ", "") == "":
+            doc_path = "./"
+
         ## add '/' at the end of doc_path ##
         if doc_path[-1] != "/":
             doc_path += "/"
