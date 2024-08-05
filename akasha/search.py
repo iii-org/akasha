@@ -839,8 +839,11 @@ class myTFIDFRetriever(TFIDFRetriever):
                               **kwargs)
 
     def _get_relevant_documents(
-            self, query: str, *,
-            run_manager: CallbackManagerForRetrieverRun) -> List[Document]:
+            self,
+            query: str,
+            *,
+            run_manager: CallbackManagerForRetrieverRun = None
+    ) -> List[Document]:
         return self._gs(query)[0]
 
     def _gs(
