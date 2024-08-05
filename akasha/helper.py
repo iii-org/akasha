@@ -19,6 +19,8 @@ from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGP
 import os, traceback, logging
 import shutil
 from langchain.llms.base import LLM
+from langchain_core.language_models.base import BaseLanguageModel
+from langchain_core.embeddings import Embeddings
 import akasha.format as afr
 import akasha.prompts
 import dill
@@ -125,6 +127,9 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
     Returns:
         vars: embeddings client
     """
+    if isinstance(embedding_name, Embeddings):
+
+        return embedding_name
 
     if isinstance(embedding_name, Callable):
         embeddings = custom_embed(func=embedding_name)
@@ -212,6 +217,9 @@ def handle_model(model_name: Union[str, Callable],
     Returns:
         vars: model client
     """
+    if isinstance(model_name, BaseLanguageModel):
+        return model_name
+
     if isinstance(model_name, Callable):
         model = custom_model(func=model_name, temperature=temperature)
         if verbose:
@@ -305,8 +313,16 @@ def handle_model(model_name: Union[str, Callable],
     return model
 
 
-def handle_search_type(search_type: str, verbose: bool = False) -> str:
-    if callable(search_type):
+def handle_search_type(search_type: Union[str, BaseLanguageModel, Embeddings],
+                       verbose: bool = False) -> str:
+
+    if isinstance(search_type, BaseLanguageModel):
+        search_type_str = search_type._llm_type
+
+    elif isinstance(search_type, Embeddings):
+        search_type_str = _decide_embedding_type(search_type)
+
+    elif callable(search_type):
         search_type_str = search_type.__name__
 
     else:
@@ -895,7 +911,7 @@ def retri_history_messages(messages: list,
     return ret_str, cur_len
 
 
-def _decide_embedding_type(embeddings: vars) -> str:
+def _decide_embedding_type(embeddings: Embeddings) -> str:
 
     if isinstance(embeddings, custom_embed):
         return embeddings.model_name
