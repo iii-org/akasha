@@ -407,7 +407,7 @@ def get_docs(
                 model, llm_chain_kwargs={"verbose": verbose})
             retri = ContextualCompressionRetriever(base_compressor=compressor,
                                                    base_retriever=retri)
-        docs = retri.get_relevant_documents(query)
+        docs = retri._get_relevant_documents(query)
         # docs, scores = retri._gs(query)
         final_docs.append(docs)
 
@@ -489,7 +489,7 @@ def retri_docs(
 
     for retri in retriver_list:
 
-        docs = retri.get_relevant_documents(query)
+        docs = retri._get_relevant_documents(query)
         # docs, scores = retri._gs(query)
         final_docs.append(docs)
 
@@ -546,6 +546,10 @@ class myMMRRetriever(BaseRetriever):
         Returns:
             List[Document]:  relevant documents
         """
+        return self._gs(query)[0]
+
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+
         return self._gs(query)[0]
 
     def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
@@ -930,7 +934,7 @@ class mySVMRetriever(BaseRetriever):
 
         clf = svm.LinearSVC(class_weight="balanced",
                             verbose=False,
-                            max_iter=10000,
+                            max_iter=50000,
                             tol=1e-6,
                             C=0.1)
         clf.fit(x, y)
