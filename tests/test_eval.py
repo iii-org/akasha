@@ -65,7 +65,8 @@ def test_Model_Eval(base_line):
 
     cor_rate, tokens = eva.auto_evaluation(f2_name,
                                            doc_path,
-                                           question_style="single_choice")
+                                           question_style="single_choice",
+                                           prompt_format_type="chat_gpt")
     assert isinstance(cor_rate, float)
     assert isinstance(tokens, int)
 

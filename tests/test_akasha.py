@@ -90,7 +90,7 @@ def base_line():
 
 
 @pytest.mark.akasha
-def test_get_response(base_line):
+def test_get_response(base_line: akasha.Doc_QA):
     ak = base_line
     query = "五軸是甚麼?"
     assert ak.verbose == False
@@ -103,8 +103,33 @@ def test_get_response(base_line):
         "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: "
     )
 
+    ## test custom
+    assert (type(
+        ak.get_response(
+            doc_path="./docs/mic/",
+            prompt=query,
+            search_type=base_search,
+            model=base_model,
+            embeddings=base_embed,
+        )) == str)
+
+    ## test streaming for get_response ##
+    streaming = ak.get_response(doc_path="./docs/mic/",
+                                prompt=query,
+                                stream=True)
+
+    for s in streaming:
+        assert type(s) == str
+
     ## test "svm"
-    assert type(ak.get_response(doc_path="./docs/mic/", prompt=query)) == str
+    assert type(
+        ak.get_response(doc_path="./docs/mic/", prompt=query,
+                        stream=False)) == str
+
+    ## test "chat_gpt" prompt_format_type ##
+    assert (ak.get_response(doc_path="./docs/mic/",
+                            prompt=query,
+                            prompt_format_type="chat_gpt"))
 
     ## test "merge"
     assert (type(
@@ -118,11 +143,11 @@ def test_get_response(base_line):
                         prompt=query,
                         search_type="tfidf")) == str)
 
-    ## test "mmr"
+    ## test "auto"
     assert (type(
         ak.get_response(doc_path="./docs/mic/",
                         prompt=query,
-                        search_type="mmr")) == str)
+                        search_type="auto")) == str)
 
     ## test "bm25"
     assert (type(
@@ -130,29 +155,19 @@ def test_get_response(base_line):
                         prompt=query,
                         search_type="bm25")) == str)
 
-    ## test custom
-    assert (type(
-        ak.get_response(
-            doc_path="./docs/mic/",
-            prompt=query,
-            search_type=base_search,
-            model=base_model,
-            embeddings=base_embed,
-        )) == str)
-
     return
 
 
 @pytest.mark.akasha
-def test_ask_whole_file(base_line):
+def test_ask_whole_file(base_line: akasha.Doc_QA):
     ak = base_line
 
     response = ak.ask_whole_file(
         file_path="./docs/mic/20230726_工業4_0發展重點與案例分析，以西門子、鴻海為例.pdf",
         search_type="knn",
         prompt="西門子自有工廠如何朝工業4.0 發展",
-        model="openai:gpt-4-32k",
-        max_doc_len=2000)
+        model="openai:gpt-4",
+        max_doc_len=3000)
 
     assert type(response) == str
 
@@ -160,11 +175,79 @@ def test_ask_whole_file(base_line):
 
 
 @pytest.mark.akasha
-def test_ask_self(base_line):
+def test_ask_self(base_line: akasha.Doc_QA):
     ak = base_line
 
-    response = ak.ask_self(prompt="langchain的套件版本?", info=install_requires)
+    response = ak.ask_self(prompt="langchain的套件版本?",
+                           info=install_requires,
+                           stream=False)
 
     assert type(response) == str
+
+    streaming = ak.ask_self(prompt="langchain的套件版本?",
+                            info=install_requires,
+                            stream=True)
+    for s in streaming:
+        assert type(s) == str
+
+    return
+
+
+@pytest.mark.akasha
+def test_self_rag():
+
+    question = "LPWAN和5G的區別是什麼?"
+
+    ## test_handle_model ##
+
+    model_obj = akasha.handle_model("openai:gpt-3.5-turbo", False, 0.0)
+    emb_obj = akasha.handle_embeddings()
+
+    ## test load db ##
+    db = akasha.createDB_directory("./docs/mic/", emb_obj, ignore_check=True)
+    assert type(db) == akasha.dbs
+    assert len(db.ids) > 0
+    assert len(db.embeds) > 0
+    assert len(db.metadatas) > 0
+    assert len(db.docs) > 0
+
+    db2 = akasha.createDB_file(
+        ["./docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"],
+        emb_obj,
+        ignore_check=True)
+
+    assert type(db2) == akasha.dbs
+    assert len(db2.ids) > 0
+    assert len(db2.embeds) > 0
+    assert len(db2.metadatas) > 0
+    assert len(db2.docs) > 0
+
+    ### test get docs ###
+    retrivers_list = akasha.search.get_retrivers(db2, emb_obj, False, 0.0,
+                                                 "auto", {})
+
+    docs, doc_length, doc_tokens = akasha.search.get_docs(
+        db2,
+        emb_obj,
+        retrivers_list,
+        question,
+        False,
+        "ch",
+        "auto",
+        False,
+        model_obj,
+        6000,
+        compression=False,
+    )
+    assert len(docs) > 0
+    assert doc_length > 0
+    assert doc_tokens > 0
+
+    RAGed_docs = akasha.self_RAG(model_obj,
+                                 question,
+                                 docs,
+                                 prompt_format_type="chat_gpt")
+
+    assert len(RAGed_docs) > 0
 
     return
