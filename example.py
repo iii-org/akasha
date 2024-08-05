@@ -135,7 +135,69 @@ def QA_log(doc_path="./docs/mic/"):
     print(qa.logs[timestamps[-1]])
 
 
-### EVAL ###
+### stream output ###
+def QA_stream(doc_path="./docs/mic/"):
+    # set stream=True to get stream output
+    qa = akasha.Doc_QA(verbose=False, search_type="auto", stream=True)
+
+    streaming = qa.get_response(
+        doc_path=doc_path,
+        prompt=query1,
+        chunk_size=500,
+        max_doc_len=1500,
+    )
+
+    ### the output will be generator, you can use for loop to get each output ###
+    for s in streaming:
+        print(s)
+
+
+### pass model ###
+def QA_pass_model(doc_path="./docs/mic/"):
+
+    ### You can pass the model and embedding objects into Doc_QA to avoid creating them repeatedly. ###
+    model_obj = akasha.handle_model("openai:gpt-3.5-turbo", False, 0.0)
+    emb_obj = akasha.handle_embeddings()
+
+    qa = akasha.Doc_QA(model=model_obj, embeddings=emb_obj, search_type="auto")
+
+    ### You can also create a db object and pass it into Doc_QA to avoid creating and load chromadb repeatedly. ###
+    db = akasha.createDB_directory(doc_path, emb_obj, ignore_check=True)
+
+    qa.get_response(
+        doc_path=db,
+        prompt=query1,
+        chunk_size=500,
+        max_doc_len=1500,
+    )
+    print(qa.response)
+
+
+def QA_prompt_format(doc_path="./docs/mic/"):
+    # choose prompt_format_type to make response more accurate #
+    # option: gpt, chat_mistral, chat_gpt, llama
+    qa = akasha.Doc_QA(
+        prompt_format_type="chat_gpt",
+        verbose=False,
+        search_type="svm",
+    )
+
+    qa.get_response(
+        doc_path=doc_path,
+        prompt=query1,
+        chunk_size=500,
+        max_doc_len=1500,
+    )
+    print(qa.response)
+
+
+#######################
+#                     #
+#                     #
+######## EVAL #########
+#                     #
+#                     #
+#######################
 ### remember the question_style must match the q_file's type
 def EVAL(doc_path: str = "./docs/mic/"):
     eva = eval.Model_Eval(question_style="single_choice",
@@ -168,8 +230,15 @@ def EVAL(doc_path: str = "./docs/mic/"):
 
 #eval_obj.save_logs("./eva.json")
 
+#######################
+#                     #
+#                     #
+####### SUMMARY #######
+#                     #
+#                     #
+#######################
 
-### SUMMARY ###
+
 def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"):
     sum = summary.Summary(
         chunk_size=1000,
