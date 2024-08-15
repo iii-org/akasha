@@ -22,7 +22,7 @@ For the chinese manual, please visit [manual](https://hackmd.io/@akasha-terminal
 
 
 # Updates
-- 0.8.55
+- 0.8.56
     add extract_db_by_file and extract_db_by_keyword functions.
 
 

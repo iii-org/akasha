@@ -861,7 +861,7 @@ def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
         file_set.add(file_name)
 
     for i in range(len(db.ids)):
-        if db.metadatas[i]["source"] in file_set:
+        if db.metadatas[i]["source"].split('/')[-1] in file_set:
             ret_db.ids.append(db.ids[i])
             ret_db.embeds.append(db.embeds[i])
             ret_db.metadatas.append(db.metadatas[i])
