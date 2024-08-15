@@ -840,3 +840,59 @@ def createDB_file(file_path: Union[List[str], str],
             ret_db.merge(db)
 
     return ret_db
+
+
+def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
+    """extract db from dbs based on file_name_list
+
+    Args:
+        db (dbs): dbs object
+        file_name_list (list): list of file names
+
+    Returns:
+        dbs: dbs object
+    """
+    ret_db = dbs()
+    file_set = set()
+    for file_name in file_name_list:
+        file_name = file_name.replace('\\', '/')
+        file_name = file_name.lstrip('./')
+        file_set.add(file_name)
+
+    for i in range(len(db.ids)):
+        if db.metadatas[i]["source"] in file_set:
+            ret_db.ids.append(db.ids[i])
+            ret_db.embeds.append(db.embeds[i])
+            ret_db.metadatas.append(db.metadatas[i])
+            ret_db.docs.append(db.docs[i])
+            ret_db.vis.add(db.ids[i])
+
+    return ret_db
+
+
+def extract_db_by_keyword(db: dbs, keyword_list: List[str]) -> dbs:
+    """extract db from dbs based on keyword_list
+
+    Args:
+        db (dbs): dbs object
+        keyword_list (list): list of keywords
+
+    Returns:
+        dbs: dbs object
+    """
+    ret_db = dbs()
+    vis_id = set()
+
+    for keyword in keyword_list:
+        for i in range(len(db.ids)):
+            if db.ids[i] in vis_id:
+                continue
+            if keyword in db.docs[i]:
+                ret_db.ids.append(db.ids[i])
+                ret_db.embeds.append(db.embeds[i])
+                ret_db.metadatas.append(db.metadatas[i])
+                ret_db.docs.append(db.docs[i])
+                ret_db.vis.add(db.ids[i])
+                vis_id.add(db.ids[i])
+
+    return ret_db
