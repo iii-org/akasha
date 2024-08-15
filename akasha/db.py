@@ -857,6 +857,7 @@ def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
     for file_name in file_name_list:
         file_name = file_name.replace('\\', '/')
         file_name = file_name.lstrip('./')
+        file_name = file_name.split('/')[-1]
         file_set.add(file_name)
 
     for i in range(len(db.ids)):
