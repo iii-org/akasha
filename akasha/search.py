@@ -63,8 +63,8 @@ def _get_relevant_doc_auto(
 
     # ### tfidf ###
 
-    tfretriever = retriver_list[1]
-    docs_tf, tf_scores = tfretriever._gs(query)
+    # tfretriever = retriver_list[1]
+    # docs_tf, tf_scores = tfretriever._gs(query)
     #print("TFIDF", tf_scores, docs_tf[0], "\n\n")
 
     # ### knn ###
@@ -73,14 +73,14 @@ def _get_relevant_doc_auto(
     # print("KNN: ", knn_scores, len(knn_scores), "\n\n")
 
     ### bm25 ###
-    bm25R = retriver_list[2]
+    bm25R = retriver_list[1]
     docs_bm25, bm25_scores = bm25R._gs(query)
     #print("BM25: ", bm25_scores[:10], len(bm25_scores), "\n\n")
 
     ### decide which to use ###
     backup_docs = []
     final_docs = []  #docs_mmr[0]
-    del svmR, bm25R
+    del bm25R
     ## backup_docs is all documents from docs_svm that svm_scores>0.2 ##
     low = 0
     for i in range(len(svm_scores)):
@@ -90,22 +90,14 @@ def _get_relevant_doc_auto(
             low = i
             break
 
-    if tf_scores[0] >= 0.1:
-        idx = 0
-        for i in range(len(tf_scores)):
-            if tf_scores[i] < 0.1 or i >= 2:
-                idx = i
-                break
-        final_docs.extend(docs_tf[:idx])
-
-    elif bm25_scores[0] >= 80:
+    if bm25_scores[0] >= 70:
         if verbose:
             print("<<search>>go to bm25\n\n")
 
         ## find out the idx that the sorted tf_scores is not 0
         idx = 0
         for i in range(len(bm25_scores)):
-            if bm25_scores[i] < 80 or i >= 2:
+            if bm25_scores[i] < 70 or i >= 2:
                 idx = i
                 break
         final_docs.extend(docs_bm25[:idx])
@@ -145,12 +137,12 @@ def _get_relevant_doc_auto_rerank(
 
     # ### tfidf ###
 
-    tfretriever = retriver_list[1]
-    docs_tf, tf_scores = tfretriever._gs(query)
+    # tfretriever = retriver_list[1]
+    # docs_tf, tf_scores = tfretriever._gs(query)
     #print("TFIDF", tf_scores, docs_tf[0], "\n\n")
 
     ### bm25 ###
-    bm25R = retriver_list[2]
+    bm25R = retriver_list[1]
     docs_bm25, bm25_scores = bm25R._gs(query)
     #print("BM25: ", bm25_scores[:10], len(bm25_scores), "\n\n")
 
@@ -166,22 +158,14 @@ def _get_relevant_doc_auto_rerank(
         else:
             break
 
-    if tf_scores[0] >= 0.1:
-        idx = 0
-        for i in range(len(tf_scores)):
-            if tf_scores[i] < 0.1 or i >= 2:
-                idx = i
-                break
-        final_docs.extend(docs_tf[:idx])
-
-    elif bm25_scores[0] >= 80:
+    if bm25_scores[0] >= 70:
         if verbose:
             print("<<search>>go to bm25\n\n")
 
         ## find out the idx that the sorted tf_scores is not 0
         idx = 0
         for i in range(len(bm25_scores)):
-            if bm25_scores[i] < 80 or i >= 2:
+            if bm25_scores[i] < 70 or i >= 2:
                 idx = i
                 break
         final_docs.extend(docs_bm25[:idx])
@@ -312,7 +296,7 @@ def get_retrivers(
                                                   threshold)
             retriver_list.append(svm_retriver)
 
-        if search_type in ["tfidf", "merge", "auto", "auto_rerank"]:
+        if search_type in ["tfidf", "merge"]:
             tfidf_retriver = myTFIDFRetriever.from_documents(docs_list, k=topK)
             retriver_list.append(tfidf_retriver)
 
@@ -425,7 +409,7 @@ def retri_docs(
     search_type: Union[str, Callable],
     topK: int,
     verbose: bool = True,
-) -> Tuple[list, int]:
+) -> list:
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together.
 
@@ -453,14 +437,14 @@ def retri_docs(
         res = []
         page_contents = set()
         for i in range(topK):
-            for docs in docs_list:
-                if i >= len(docs):
+            for adocs in docs_list:
+                if i >= len(docs_list):
                     continue
 
-                if docs[i].page_content in page_contents:
+                if adocs.page_content in page_contents:
                     continue
-                res.append(docs[i])
-                page_contents.add(docs[i].page_content)
+                res.append(adocs)
+                page_contents.add(adocs.page_content)
         return res
 
     if len(retriver_list) == 0:
@@ -491,7 +475,7 @@ def retri_docs(
 
         docs = retri._get_relevant_documents(query)
         # docs, scores = retri._gs(query)
-        final_docs.append(docs)
+        final_docs.extend(docs)
 
     docs = merge_docs(final_docs, topK)
 

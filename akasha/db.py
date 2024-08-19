@@ -787,6 +787,7 @@ def createDB_file(file_path: Union[List[str], str],
                 doc_path = str(file.parent).replace("\\", "/")
                 file_name = file.name
             else:
+                file = file.replace("\\", "/")
                 doc_path = "/".join(file.split("/")[:-1])
                 file_name = file.split("/")[-1]
         except:
