@@ -12,7 +12,7 @@ COPY ./views /app/views
 COPY ./routers /app/routers
 RUN chmod u+x *.sh
 EXPOSE 8000
-RUN python -m pip install streamlit==1.32.0
+RUN python -m pip install streamlit==1.32.0 akasha-terminal==0.8.57
 
 ENV PORT 8501
 ENV PREFIX akasha-lab
