@@ -61,6 +61,7 @@ class ExpertConsult(ExpertID):
     temperature: Optional[float] = 0.0,
     use_compression: Optional[int] = 0,  # 0 for False, 1 for True
     compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
+    prompt_format_type: Optional[str] = "gpt"
 
 
 ### data class ###
@@ -250,6 +251,7 @@ def save_consult_to_expert(user_input: ExpertConsult):
         temperature: Optional[float] = 0.0,
         use_compression: Optional[int] = 0, # 0 for False, 1 for True
         compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
+        prompt_format_type: Optional[str] = "gpt"
     Returns:
         dict: status, response
     """
@@ -270,7 +272,7 @@ def save_consult_to_expert(user_input: ExpertConsult):
     with open(data_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    consult_info = user_input.dict()
+    consult_info = user_input.model_dump()
     consult_info.pop('owner')
     consult_info.pop('expert_name')
     data['consultation'] = consult_info

@@ -112,6 +112,7 @@ class ConsultModel(BaseModel):
     temperature: Optional[float] = 0.0
     use_chroma: Optional[bool] = True
     openai_config: Optional[Dict[str, Any]] = {}
+    prompt_format_type: Optional[str] = "gpt"
 
 
 class ChatModel(ConsultModel):
@@ -177,7 +178,7 @@ def regular_consult(user_input: ConsultModel):
         clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
-            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma)
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,prompt_format_type=user_input.prompt_format_type)
 
         response = qa.get_response(doc_path=user_input.data_path,
                                    prompt=user_input.prompt,
@@ -222,37 +223,26 @@ def regular_consult(user_input: ConsultModel):
 
 def run_llm(user_input: ConsultModel) -> Generator:
 
-    mdl = user_input.model
-
-    if "openai" in mdl:
-        prompt_format_type = "gpt"
-    else:
-        prompt_format_type = "llama"
-
     try:
         clean()
-        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
-                 prompt_format_type = prompt_format_type,)
+                 prompt_format_type = user_input.prompt_format_type,)
 
-        inputs, prod_prompt = qa.search_docs(doc_path=user_input.data_path,
-                                             prompt=user_input.prompt)
+        response_iter = qa.get_response(doc_path=user_input.data_path,
+                                        prompt=user_input.prompt,
+                                        stream=True)
+
+        for response in response_iter:
+            yield response
 
         ref_name = set()
         for doc in qa.docs:
             ref_name.add(doc.metadata['source'].split("/")[-1])
         doc_metadata = list(ref_name)
-
-        response_iter = qa.model_obj.stream(inputs + prod_prompt)
-
         yield json.dumps({"doc_metadata": doc_metadata})
-        if "openai" in qa.model_obj._llm_type:
-            for response in response_iter:
-                yield f"{response.content}"
-        else:
-            for response in response_iter:
-                yield response
 
         del qa.model_obj
         del qa
@@ -266,42 +256,30 @@ def run_llm(user_input: ConsultModel) -> Generator:
 
 def run_llm_chat(user_input: ChatModel) -> Generator:
 
-    mdl = user_input.model
-
-    if "openai" in mdl:
-        prompt_format_type = "gpt"
-    else:
-        prompt_format_type = "llama"
-
     try:
         clean()
-        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
-            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
-                 prompt_format_type = prompt_format_type,)
 
         message, chat_history_len = apu.retri_history_messages(
             user_input.history_messages,
             max_doc_len=user_input.max_doc_len // 2)
 
-        inputs, prod_prompt = qa.search_docs(
-            doc_path=user_input.data_path,
-            prompt=user_input.prompt,
-            max_doc_len=user_input.max_doc_len - chat_history_len)
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
+                 prompt_format_type = user_input.prompt_format_type,)
+        response_iter = qa.get_response(doc_path=user_input.data_path,
+                                        prompt=user_input.prompt,
+                                        stream=True,
+                                        history_messages=message)
+
+        for response in response_iter:
+            yield response
 
         ref_name = set()
         for doc in qa.docs:
             ref_name.add(doc.metadata['source'].split("/")[-1])
         doc_metadata = list(ref_name)
-
-        response_iter = qa.model_obj.stream(inputs + message + prod_prompt)
         yield json.dumps({"doc_metadata": doc_metadata})
-        if "openai" in qa.model_obj._llm_type:
-            for response in response_iter:
-                yield f"{response.content}"
-        else:
-            for response in response_iter:
-                yield response
 
         del qa.model_obj
         del qa
@@ -414,29 +392,21 @@ def chat(user_input: ChatModel):
                 'response': 'load openai config failed.\n\n'
             }
 
-    if "openai" in user_input.model:
-        prompt_format_type = "gpt"
-    else:
-        prompt_format_type = "llama"
-
     try:
         clean()
-        qa = apu.Doc_QA_stream(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
-            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
-                 prompt_format_type = prompt_format_type,)
-
         message, chat_history_len = apu.retri_history_messages(
             user_input.history_messages,
             max_doc_len=user_input.max_doc_len // 2)
 
-        inputs, prod_prompt = qa.search_docs(
-            doc_path=user_input.data_path,
-            prompt=user_input.prompt,
-            max_doc_len=user_input.max_doc_len - chat_history_len)
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
+            ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
+                 prompt_format_type = user_input.prompt_format_type,)
+        response = qa.get_response(doc_path=user_input.data_path,
+                                   prompt=user_input.prompt,
+                                   stream=False,
+                                   history_messages=message)
 
-        response = akasha.helper.call_model(qa.model_obj,
-                                            inputs + message + prod_prompt)
         ref_name = set()
         for doc in qa.docs:
             ref_name.add(doc.metadata['source'].split("/")[-1])

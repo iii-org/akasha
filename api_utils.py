@@ -43,6 +43,7 @@ DEFAULT_CONFIG = {
     "temperature": 0.0,
     "use_compression": 0,  # 0 for False, 1 for True
     "compression_language_model": "",
+    "prompt_format_type": "gpt",
 }
 
 
@@ -560,7 +561,7 @@ def load_openai(config: dict) -> bool:
 def retri_history_messages(messages: list,
                            pairs: int = 10,
                            max_doc_len: int = 750,
-                           language: str = "ch") -> Tuple[str, int]:
+                           language: str = "ch") -> Tuple[list, int]:
     """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_doc_len and pairs, and return the text with total length
 
     Args:
@@ -570,7 +571,7 @@ def retri_history_messages(messages: list,
         language (str, optional): message language. Defaults to "ch".
 
     Returns:
-        Tuple[str, int]: return the text with total length.
+        Tuple[list, int]: return the text with total length.
     """
     cur_len = 0
     count = 0
@@ -584,8 +585,8 @@ def retri_history_messages(messages: list,
                                                     != "user"):
             i += 1
             continue
-        texta = "Assistant: " + messages[i]["content"] + "\n"
-        textq = "User: " + messages[i - 1]["content"] + "\n"
+        texta = messages[i]["content"] + "\n"
+        textq = messages[i - 1]["content"] + "\n"
         temp = akasha.helper.get_doc_length(language, textq + texta)
         if cur_len + temp > max_doc_len:
             break
@@ -598,9 +599,9 @@ def retri_history_messages(messages: list,
         return "", 0
 
     ret.reverse()
-    ret_str = splitter + "chat history: \n\n" + ''.join(ret) + splitter
+    #ret_str = splitter + "chat history: \n\n" + ''.join(ret) + splitter
 
-    return ret_str, cur_len
+    return ret, cur_len
 
 
 class hf_model(LLM):

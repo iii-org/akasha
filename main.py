@@ -140,6 +140,7 @@ if url_params == {}:
         EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', \
             'hf:shibing624/text2vec-base-multilingual',"hf:BAAI/bge-large-en-v1.5", "hf:BAAI/bge-large-zh-v1.5"]
         SEARCH_TYPES = ['merge', 'svm', 'auto', 'tfidf', 'mmr', 'bm25']
+        PROMPT_FORMAT_TYPES = ["gpt", "llama", "chat_gpt", "chat_mistral"]
         LANGUAGE_MODELS = list_models()
 
         # layout after successfully login
@@ -173,7 +174,7 @@ if url_params == {}:
         user_accounts = config['credentials']['usernames']
         if selected == 'Consult':
             consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
-                         username)
+                         PROMPT_FORMAT_TYPES, username)
 
         elif selected == 'Knowledges':
             experts_page(EXPERTS, EMBEDDING_MODELS, DATASETS, username,

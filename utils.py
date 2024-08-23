@@ -13,6 +13,7 @@ import traceback
 import opencc
 import gc, torch
 import random, string
+from streamlit.elements.layouts import LayoutsMixin
 
 cc = opencc.OpenCC("s2t.json")
 CHUNKSIZE = 3000
@@ -98,7 +99,7 @@ def ask_chat(
     expert_owner: str,
     expert_name: str,
     advanced_params: dict,
-    col_answer: st.columns = None,
+    col_answer: Union[LayoutsMixin, None] = None,
 ):
     """ask chat and get response from akasha, the question and resposne will be saved in st.session_state['history_messages'].
     first check if prompt empty or not, then add openai config if needed.
@@ -152,6 +153,7 @@ def ask_chat(
         "max_doc_len": advanced_params["max_doc_len"],
         "openai_config": openai_config,
         "history_messages": st.session_state.history_messages,
+        "prompt_format_type": advanced_params["prompt_format_type"],
     }
     try:
         with st.spinner(SPINNER_MESSAGE):
@@ -260,6 +262,8 @@ def ask_chat(
                 advanced_params["use_compression"],
                 "compression_language_model":
                 advanced_params["compression_language_model"],
+                "prompt_format_type":
+                advanced_params["prompt_format_type"],
             }
             data["owner"] = expert_owner
             data["expert_name"] = expert_name
@@ -280,7 +284,7 @@ def ask_question(
     expert_owner: str,
     expert_name: str,
     advanced_params: dict,
-    col_answer: st.columns = None,
+    col_answer: Union[LayoutsMixin, None] = None,
 ):
     """ask question and get response from akasha, the question and resposne will be saved in session_state['que'] and session_state['ans'].
     first check if prompt empty or not, then add openai config if needed.
@@ -333,6 +337,7 @@ def ask_question(
         "search_type": advanced_params["search_type"],
         "max_doc_len": advanced_params["max_doc_len"],
         "openai_config": openai_config,
+        "prompt_format_type": advanced_params["prompt_format_type"],
     }
     try:
         with st.spinner(SPINNER_MESSAGE):
@@ -416,6 +421,8 @@ def ask_question(
                 advanced_params["use_compression"],
                 "compression_language_model":
                 advanced_params["compression_language_model"],
+                "prompt_format_type":
+                advanced_params["prompt_format_type"],
             }
             data["owner"] = expert_owner
             data["expert_name"] = expert_name

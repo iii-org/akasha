@@ -5,7 +5,8 @@ from utils import get_dataset_info, get_doc_file_path, ask_summary
 import os
 
 
-def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
+def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
+                 PROMPT_FORMAT_TYPES, username):
     st.title('Consult Knowledge')
     consult_strategy = st.radio(
         'Consult Strategy', ['Chat', 'Regular', 'Summary'],
@@ -15,9 +16,11 @@ def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
         label_visibility='collapsed')
 
     if consult_strategy == 'Chat':
-        _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
+        _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
+                      PROMPT_FORMAT_TYPES, username)
     elif consult_strategy == 'Regular':
-        _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username)
+        _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
+                         PROMPT_FORMAT_TYPES, username)
     elif consult_strategy == 'Summary':
         st.subheader('File Summarization',
                      divider='rainbow',
@@ -25,7 +28,8 @@ def consult_page(DATASETS, EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
         _summary(DATASETS, LANGUAGE_MODELS, username)
 
 
-def _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
+def _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, PROMPT_FORMAT_TYPES,
+                  username):
     st.subheader('Chat', divider='rainbow', help='Single Question at a time')
     col_answer, col_question = st.columns([3, 1])
     shared = col_question.toggle('Shared Knowledges',
@@ -68,11 +72,13 @@ def _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                 with col_question.expander('Advanced'):
                     advanced_params = get_advance_param(
                         True, last_consult_config_for_expert, LANGUAGE_MODELS,
-                        SEARCH_TYPES, datasets, chunk_size, embeddings_model)
+                        SEARCH_TYPES, PROMPT_FORMAT_TYPES, datasets,
+                        chunk_size, embeddings_model)
             else:
                 advanced_params = get_advance_param(
                     False, last_consult_config_for_expert, LANGUAGE_MODELS,
-                    SEARCH_TYPES, datasets, chunk_size, embeddings_model)
+                    SEARCH_TYPES, PROMPT_FORMAT_TYPES, datasets, chunk_size,
+                    embeddings_model)
 
             for message in st.session_state.history_messages:
                 with col_answer.chat_message(message["role"]):
@@ -89,7 +95,8 @@ def _chat_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                                     expert_name, advanced_params, col_answer)
 
 
-def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
+def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS,
+                     PROMPT_FORMAT_TYPES, username):
     st.subheader('Regular Consult',
                  divider='rainbow',
                  help='Single Question at a time')
@@ -129,11 +136,13 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
                 with col_question.expander('Advanced'):
                     advanced_params = get_advance_param(
                         True, last_consult_config_for_expert, LANGUAGE_MODELS,
-                        SEARCH_TYPES, datasets, chunk_size, embeddings_model)
+                        SEARCH_TYPES, PROMPT_FORMAT_TYPES, datasets,
+                        chunk_size, embeddings_model)
             else:
                 advanced_params = get_advance_param(
                     False, last_consult_config_for_expert, LANGUAGE_MODELS,
-                    SEARCH_TYPES, datasets, chunk_size, embeddings_model)
+                    SEARCH_TYPES, PROMPT_FORMAT_TYPES, datasets, chunk_size,
+                    embeddings_model)
 
             prompt = st.chat_input("Ask your question here")
             if prompt:
@@ -158,8 +167,8 @@ def _regular_consult(EXPERTS, SEARCH_TYPES, LANGUAGE_MODELS, username):
 
 
 def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
-                      SEARCH_TYPES: list, datasets, chunk_size: int,
-                      embeddings_model: str):
+                      SEARCH_TYPES: list, PROMPT_FORMAT_TYPES: list, datasets,
+                      chunk_size: int, embeddings_model: str):
     # search type + top k + threshold + max token + embedding model(must same as vector db) + (language model, if compression)
     if param['language_model'] not in LANGUAGE_MODELS:
         param['language_model'] = LANGUAGE_MODELS[0]
@@ -173,6 +182,12 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
                                       index=LANGUAGE_MODELS.index(
                                           param.get('language_model',
                                                     LANGUAGE_MODELS[0])))
+        prompt_format_type = st.selectbox('Prompt Format Type',
+                                          PROMPT_FORMAT_TYPES,
+                                          index=PROMPT_FORMAT_TYPES.index(
+                                              param.get(
+                                                  'prompt_format_type',
+                                                  PROMPT_FORMAT_TYPES[0])))
         search_type = st.selectbox('search type',
                                    SEARCH_TYPES,
                                    index=SEARCH_TYPES.index(
@@ -212,6 +227,7 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
         system_prompt = param['system_prompt']
         language_model = param['language_model']
         search_type = param['search_type']
+        prompt_format_type = param['prompt_format_type']
         top_k = param['top_k']
         threshold = param['threshold']
         max_doc_len = param['max_doc_len']
@@ -242,6 +258,8 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
         chunk_size,
         'embedding_model':
         embeddings_model,
+        'prompt_format_type':
+        prompt_format_type,
         'compression_language_model':
         compression_language_model if use_compression else ''
     }

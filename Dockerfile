@@ -1,4 +1,4 @@
-FROM ccchang0518/akasha-lab-builder:0.3
+FROM ccchang0518/akasha-lab-builder:0.5
 LABEL chih-chuan chang<ccchang@iii.org.tw>
 
 WORKDIR /app
@@ -17,6 +17,7 @@ RUN python -m pip install streamlit==1.32.0
 ENV PORT 8501
 ENV PREFIX akasha-lab
 ENV USE_PREFIX false
+ENV ANONYMIZED_TELEMETRY false
 EXPOSE $PORT
 CMD if [ "$USE_PREFIX" = "true" ]; then \
     nohup /bin/bash -c "./start.sh &" && streamlit run main.py --server.maxUploadSize 200000  --server.port 8501 --browser.serverAddress 0.0.0.0 --server.headless true --server.baseUrlPath /${PREFIX}/; \

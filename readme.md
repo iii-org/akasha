@@ -1,5 +1,5 @@
 # akasha-lab
-
+[![docker](https://img.shields.io/docker/v/ccchang0518/akasha-lab)](https://hub.docker.com/r/ccchang0518/akasha-lab/tags)
 # Installation
 1. clone all the files in dev-ui branch to your directory
 2. install akasha package(pip install akasha-terminal)
@@ -106,6 +106,26 @@ sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/doc
 
 ```
 
+</br>
+</br>
 
+# Email verification
+If you want to use email verification for "regist account" and "forget password", you can add your email info in /config/mail_config.json
+(mail_config.json)
 
+```text
+
+{
+    "email": "your_gmail@gmail.com",
+"app_pass": "your_gmail_app_password"
+}
+
+```
+
+If the info is correct, akasha-lab will use it to send verification code when user use "regist account" or "forget password".
+
+</br>
+</br>
+
+If you want to use other email other than gmail to send verifcation code, you may need to modify the code of ***gmail_send_message*** function in the utils.py 
 
