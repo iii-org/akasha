@@ -1,4 +1,4 @@
-FROM ccchang0518/akasha-lab-builder:0.5
+FROM ccchang0518/akasha-lab-builder:0.6
 LABEL maintainer=chih-chuan-chang<ccchang@iii.org.tw>
 
 WORKDIR /app
@@ -12,7 +12,7 @@ COPY ./views /app/views
 COPY ./routers /app/routers
 RUN chmod u+x *.sh
 EXPOSE 8000
-RUN python -m pip install --upgrade pip && python -m pip install akasha-terminal==0.8.57
+#RUN python -m pip install --upgrade pip && python -m pip install akasha-terminal==0.8.57
 
 ENV PORT=8501
 ENV PREFIX=akasha-lab

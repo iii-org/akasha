@@ -21,7 +21,9 @@ spec:
           args: []
           env: 
             - name: PREFIX
-              value: akasha-dev # Change this to the path you want to serve your app at
+              value: akasha-lab # Change this to the path you want to serve your app at
+            - name: USE_PREFIX
+              value: "true"
           ports:
             - containerPort: 8501
           resources:

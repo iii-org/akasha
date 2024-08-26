@@ -10,7 +10,7 @@ spec:
   rules:
   - http:
       paths:
-      - path: /akasha-dev # Change this to the path you want to serve your app at
+      - path: /akasha-lab # Change this to the path you want to serve your app at
         pathType: ImplementationSpecific
         backend:
           service:
