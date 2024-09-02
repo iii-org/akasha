@@ -12,7 +12,7 @@ akasha simplifies document-based Question Answering (QA) and Retrieval Augmented
 
 With akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
 
-For the chinese manual, please visit [manual](https://hackmd.io/@akasha-terminal-2024/ryS4pS1ca)
+For the chinese manual, please visit [manual](https://tea9297.github.io/)
 
 <br/>
 <br/>
