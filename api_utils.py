@@ -26,7 +26,7 @@ api_url = {
     "test_openai": f"{HOST}:{PORT}/openai/test_openai",
     "test_azure": f"{HOST}:{PORT}/openai/test_azure",
 }
-ACCOUNTS_PATH = "./accounts.yaml"
+ACCOUNTS_PATH = "./config/accounts.yaml"
 DOCS_PATH = "./docs"
 CONFIG_PATH = "./config"
 EXPERT_CONFIG_PATH = "./config/experts"

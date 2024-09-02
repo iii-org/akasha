@@ -18,12 +18,14 @@ from logging.handlers import TimedRotatingFileHandler
 from fastapi.responses import StreamingResponse, Response
 from langchain.llms.base import LLM
 ## if default_key.json exist, create a thread to keep checking if the key is valid
+if not Path("./config").exists():
+    os.mkdir("./config")
 if Path("./config/default_key.json").exists():
     thread = threading.Thread(target=start_observer)
     thread.start()
 
-if not Path("./accounts.yaml").exists():
-    with open("accounts.yaml", "w") as f:
+if not Path(apu.get_accounts_path()).exists():
+    with open(apu.get_accounts_path(), "w") as f:
         f.write("""cookie:
   expiry_days: 30
   key: random_signature_key

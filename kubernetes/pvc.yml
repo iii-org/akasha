@@ -53,17 +53,3 @@ spec:
   resources:
     requests:
       storage: 250Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: akasha-account-pvc
-  namespace: akasha
-  labels:
-    app: akasha-rag
-spec:
-  accessModes:
-  - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Gi

@@ -42,9 +42,6 @@ spec:
             mountPath: /app/docs
           - name: chromadb-volume
             mountPath: /app/chromadb
-          - name: account-volume
-            mountPath: /app/accounts.yaml
-            subPath: accounts.yaml
       volumes:
         - name: model-volume
           persistentVolumeClaim:
@@ -58,7 +55,4 @@ spec:
         - name: chromadb-volume
           persistentVolumeClaim:
             claimName: akasha-chromadb-pvc
-        - name: account-volume
-          persistentVolumeClaim:
-            claimName: akasha-account-pvc
       restartPolicy: Always

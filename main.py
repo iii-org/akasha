@@ -26,6 +26,8 @@ HOST = os.getenv('HOST', st.session_state.host_ip)
 PORT = os.getenv('PORT', '8501')
 USE_PREFIX = os.getenv('USE_PREFIX', False)
 PREFIX = os.getenv('PREFIX', "")
+ACCOUNTS_PATH = os.getenv('ACCOUNTS_PATH',
+                          os.path.join('config/', 'accounts.yaml'))
 
 # session state parameters
 if 'openai_on' not in st.session_state:
@@ -68,7 +70,7 @@ st.set_page_config(
 )
 
 # load existed accounts and initialize authentication
-ACCOUNTS_PATH = os.path.join('.', 'accounts.yaml')
+
 with open(ACCOUNTS_PATH) as file:
     config = yaml.load(file, Loader=SafeLoader)
 

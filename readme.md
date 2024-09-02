@@ -102,7 +102,7 @@ you can download the docker image from docker hub
 
 ``` bash 
 sudo docker pull ccchang0518/akasha-lab:0.17
-sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -v ./accounts.yaml:/app/accounts.yaml -p 8501:8501 --name akasha-lab ccchang0518/akasha-lab:0.17
+sudo docker run -v ./model:/app/model -v ./config:/app/config -v ./docs:/app/docs -v ./chromadb:/app/chromadb -p 8501:8501 --name akasha-lab ccchang0518/akasha-lab:0.17
 
 ```
 

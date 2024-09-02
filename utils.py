@@ -15,7 +15,6 @@ import gc, torch
 import random, string
 from streamlit.elements.layouts import LayoutsMixin
 
-cc = opencc.OpenCC("s2t.json")
 CHUNKSIZE = 3000
 SPINNER_MESSAGE = "Wait for api response..."
 HOST = os.getenv("API_HOST", "http://127.0.0.1")
@@ -174,15 +173,21 @@ def ask_chat(
                     doc_metadata = " "
                     for chunk in chat_response.iter_content(
                             chunk_size=1024, decode_unicode=True):
-
                         try:
                             # Try to parse the chunk as JSON
-                            metadata = json.loads(chunk)
+                            load_json = json.loads(chunk)
+
+                            if isinstance(load_json, str) or isinstance(
+                                    load_json, int):
+                                response += str(chunk)
+                                placeholder.write(response)
+                            elif isinstance(load_json, dict):
+                                metadata = load_json
+
                         except json.JSONDecodeError:
                             # If it's not JSON, write it to the stream
                             response += chunk
                             placeholder.write(response)
-                    trans_result = cc.convert(response)
 
                     if metadata is None:
                         metadata = {"doc_metadata": []}
@@ -199,14 +204,14 @@ def ask_chat(
                         "role":
                         "assistant",
                         "content":
-                        trans_result,
+                        response,
                         "doc_metadata":
                         doc_metadata
                     })
                     placeholder.empty()
-                    placeholder.markdown(trans_result, help=doc_metadata)
+                    placeholder.markdown(response, help=doc_metadata)
 
-                collect_logs(data, trans_result, "chat")
+                collect_logs(data, response, "chat")
 
             else:
                 with col_answer.chat_message("user"):
@@ -357,16 +362,23 @@ def ask_question(
                     doc_metadata = " "
                     for chunk in chat_response.iter_content(
                             chunk_size=1024, decode_unicode=True):
-
                         try:
                             # Try to parse the chunk as JSON
-                            metadata = json.loads(chunk)
+                            load_json = json.loads(chunk)
+
+                            if isinstance(load_json, str) or isinstance(
+                                    load_json, int):
+                                response += str(chunk)
+                                placeholder.write(response)
+                            elif isinstance(load_json, dict):
+                                metadata = load_json
+
                         except json.JSONDecodeError:
                             # If it's not JSON, write it to the stream
                             response += chunk
                             placeholder.write(response)
                     st.session_state["que"] = prompt
-                    st.session_state["ans"] = cc.convert(response)
+                    st.session_state["ans"] = response
 
                     if metadata is None:
                         metadata = {"doc_metadata": []}
