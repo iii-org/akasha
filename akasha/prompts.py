@@ -6,6 +6,19 @@ sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
 
 
+def format_chat_gemma_prompt(system_prompt: str, prompt: str) -> List[dict]:
+    if system_prompt == "" and prompt == "":
+        return []
+
+    if system_prompt == "":
+        return [{"role": "user", "content": prompt}]
+
+    if prompt == "":
+        return [{"role": "user", "content": system_prompt}]
+
+    return [{"role": "user", "content": system_prompt + "\n\n" + prompt}]
+
+
 def format_chat_gpt_prompt(system_prompt: str, prompt: str) -> List[dict]:
     if system_prompt == "" and prompt == "":
         return []
@@ -91,6 +104,9 @@ def format_sys_prompt(system_prompt: str,
 
     elif model_type.lower() == "chat_mistral":
         ret_text = format_chat_mistral_prompt(system_prompt, prompt)
+
+    elif model_type.lower() == "chat_gemma":
+        ret_text = format_chat_gemma_prompt(system_prompt, prompt)
 
     else:
         ret_text = format_GPT_sys_prompt(system_prompt, prompt)
