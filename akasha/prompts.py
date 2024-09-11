@@ -80,7 +80,7 @@ def format_llama_sys_prompt(system_prompt: str, prompt: str) -> str:
     return "[INST] <<SYS>> " + system_prompt + " <<SYS>> \n\n" + prompt + " [/INST]\n"
 
 
-def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> Tuple[str, str]:
+def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> str:
 
     if system_prompt == "" and prompt == "":
         return ""
@@ -330,11 +330,11 @@ def format_llm_score(cand: str, ref: str):
         +
         "remember, you can only return the score and need to return the score of this [candidate] sentence as a float number range from 0 to 1.\n"
         +
-        "Example Format:\n Human: [candidate]: ...\n [reference]: ...\n\n You: 0.8\n\n"
+        "Example Format:\n Human: [candidate]: ...\n\n [reference]: ...\n\n You: 0.8\n\n"
     )
 
-    prompt = sys_s + sys_prompt + sys_e
-    return prompt + "[candidate]: " + cand + "\n[reference]: " + ref + "\n"
+    #prompt = sys_s + sys_prompt + sys_e
+    return sys_prompt, "[candidate]: " + cand + "\n\n[reference]: " + ref + "\n\n"
 
 
 def format_reduce_summary_prompt(cur_text: str,

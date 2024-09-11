@@ -91,8 +91,6 @@ def _get_relevant_doc_auto(
             break
 
     if bm25_scores[0] >= 70:
-        if verbose:
-            print("<<search>>go to bm25\n\n")
 
         ## find out the idx that the sorted tf_scores is not 0
         idx = 0

@@ -468,6 +468,7 @@ def extract_json(s: str) -> Union[dict, None]:
                     try:
                         json_part = s[start:i + 1]
                         json_part = json_part.replace("\n", "")
+                        json_part = json_part.replace("'", '"')
                         # Try to parse the JSON part of the string
                         return json.loads(json_part)
                     except json.JSONDecodeError:
@@ -478,21 +479,6 @@ def extract_json(s: str) -> Union[dict, None]:
                         )
                         return None
     return None
-
-    # if match:
-    #     json_part = match.group(0).strip()
-    #     json_part = json_part.replace("\n", "")
-    #     try:
-    #         # Try to parse the JSON part of the string
-    #         return json.loads(json_part)
-    #     except json.JSONDecodeError:
-    #         traceback.print_exc()
-    #         print(json_part)
-    #         print("The JSON part of the string is not well-formatted")
-    #         return None
-    # else:
-    #     print("No JSON found in the string")
-    #     return None
 
 
 def get_all_combine(

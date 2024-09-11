@@ -174,6 +174,22 @@ class Model_Eval(akasha.atman):
         self.ignore_check = ignore_check
         self.use_rerank = use_rerank
 
+    def _add_result_log(self, timestamp: str, time: float):
+        """add post-process log to self.logs
+        
+        Args:
+            timestamp (str): timestamp of this run
+            time (float): spent time of this run
+        """
+
+        if self.keep_logs == False:
+            return
+
+        self.logs[timestamp]["time"] = time
+        self.logs[timestamp]["doc_length"] = self.doc_length
+        self.logs[timestamp]["doc_tokens"] = self.doc_tokens
+        self.logs[timestamp]["system_prompt"] = self.system_prompt
+
     def _save_questionset(self, timestamp: str, output_file_path: str):
         """save questions and ref answers into txt file, and save the path of question set into logs
 
@@ -521,10 +537,7 @@ class Model_Eval(akasha.atman):
             query = question
             prod_sys = self.system_prompt + akasha.prompts.default_doc_ask_prompt(
                 self.language)
-            prod_sys = akasha.prompts.format_sys_prompt(
-                prod_sys, "", self.prompt_format_type)
-            query_with_prompt = akasha.prompts.format_sys_prompt(
-                "", question, self.prompt_format_type)
+            query_with_prompt = question
 
         else:
             prod_sys = self.system_prompt
@@ -573,7 +586,8 @@ class Model_Eval(akasha.atman):
             self.score["rouge"].append(
                 eval.scores.get_rouge_score(response, answer, self.language))
             self.score["llm_score"].append(
-                eval.scores.get_llm_score(response, answer, self.eval_model))
+                eval.scores.get_llm_score(response, answer, self.eval_model,
+                                          self.prompt_format_type))
 
             new_table = akasha.format.handle_table(
                 question + "\nAnswer:  " + answer, self.docs, response)
@@ -612,11 +626,10 @@ class Model_Eval(akasha.atman):
             dict: evaluation result
         """
 
-        prompt = "請對以上文件進行摘要。"
-        prod_sys = akasha.prompts.format_sys_prompt(self.system_prompt, "",
-                                                    self.prompt_format_type)
-        query_with_prompt = akasha.prompts.format_sys_prompt(
-            "", prompt, self.prompt_format_type)
+        prompt = "請對以下文件進行摘要: "
+        intput_text = akasha.prompts.format_sys_prompt(
+            self.system_prompt, prompt + "\n\n" + sum_doc,
+            self.prompt_format_type)
 
         self.docs = [
             Document(page_content=sum_doc, metadata={
@@ -626,9 +639,7 @@ class Model_Eval(akasha.atman):
         ]
 
         try:
-            intput_text = akasha.prompts.format_sys_prompt(
-                prod_sys + self._display_docs(), query_with_prompt,
-                self.prompt_format_type)
+
             response = akasha.helper.call_model(self.model_obj, intput_text)
             self.response.append(response)
             self.doc_length += akasha.helper.get_doc_length(
@@ -651,7 +662,8 @@ class Model_Eval(akasha.atman):
         self.score["rouge"].append(
             eval.scores.get_rouge_score(response, answer, self.language))
         self.score["llm_score"].append(
-            eval.scores.get_llm_score(response, answer, self.eval_model))
+            eval.scores.get_llm_score(response, answer, self.eval_model,
+                                      self.prompt_format_type))
 
         new_table = akasha.format.handle_table(prompt + "\nAnswer:  " + answer,
                                                self.docs, response)
@@ -959,6 +971,8 @@ class Model_Eval(akasha.atman):
         self.docs = total_docs
         ### record logs ###
         end_time = time.time()
+        self.question = question
+        self.answer = answer
         if self.keep_logs == True:
             self._add_result_log(timestamp, end_time - start_time)
             self.logs[timestamp]["response"] = self.response

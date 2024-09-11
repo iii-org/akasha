@@ -83,10 +83,14 @@ def get_rouge_score(candidate_str: str,
 def get_llm_score(candidate_str: str,
                   reference_str: str,
                   model: str,
+                  prompt_format_type: str = "gpt",
                   round_digit: int = 3):
-    prompt = prompts.format_llm_score(candidate_str, reference_str)
+    system_prompt, prompt = prompts.format_llm_score(candidate_str,
+                                                     reference_str)
+    input_text = prompts.format_sys_prompt(system_prompt, prompt,
+                                           prompt_format_type)
     model = akasha.helper.handle_model(model, False, 0.0)
-    response = akasha.helper.call_model(model, prompt)
+    response = akasha.helper.call_model(model, input_text)
 
     # find the first float number in the response string and turn to float
     try:

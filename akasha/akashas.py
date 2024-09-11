@@ -319,6 +319,8 @@ class atman:
         self.logs[timestamp]["time"] = time
         self.logs[timestamp]["doc_length"] = self.doc_length
         self.logs[timestamp]["doc_tokens"] = self.doc_tokens
+        self.logs[timestamp]["question"] = self.question
+        self.logs[timestamp]["answer"] = self.answer
         try:
             self.logs[timestamp]["docs"] = "\n\n".join(
                 [doc.page_content for doc in self.docs])
