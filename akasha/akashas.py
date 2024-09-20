@@ -429,6 +429,7 @@ class Doc_QA(atman):
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         keep_logs: bool = False,
+        max_output_tokens: int = 1024,
         compression: bool = False,
         use_chroma: bool = False,
         use_rerank: bool = False,
@@ -460,7 +461,7 @@ class Doc_QA(atman):
 
         super().__init__(chunk_size, model, verbose, topK, threshold, language,
                          search_type, record_exp, system_prompt, max_doc_len,
-                         temperature, keep_logs)
+                         temperature, keep_logs, max_output_tokens)
         ### set argruments ###
         self.doc_path = ""
         self.compression = compression

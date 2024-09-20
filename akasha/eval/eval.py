@@ -99,6 +99,7 @@ class Model_Eval(akasha.atman):
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         keep_logs: bool = False,
+        max_output_tokens: int = 1024,
         question_type: str = "fact",
         question_style: str = "essay",
         use_chroma: bool = False,
@@ -132,20 +133,9 @@ class Model_Eval(akasha.atman):
             **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
         """
 
-        super().__init__(
-            chunk_size,
-            model,
-            verbose,
-            topK,
-            threshold,
-            language,
-            search_type,
-            record_exp,
-            system_prompt,
-            max_doc_len,
-            temperature,
-            keep_logs,
-        )
+        super().__init__(chunk_size, model, verbose, topK, threshold, language,
+                         search_type, record_exp, system_prompt, max_doc_len,
+                         temperature, keep_logs, max_output_tokens)
         ### set argruments ###
         self.doc_path = ""
         self.question_type = question_type

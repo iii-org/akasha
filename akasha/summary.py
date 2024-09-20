@@ -73,6 +73,7 @@ class Summary(akasha.atman):
         auto_translate: bool = False,
         prompt_format_type: str = "gpt",
         consecutive_merge_failures: int = 5,
+        max_output_tokens: int = 1024,
     ):
         """initials of Summary class
 
@@ -112,6 +113,7 @@ class Summary(akasha.atman):
         self.prompt_format_type = prompt_format_type
         self.keep_logs = keep_logs
         self.consecutive_merge_failures = consecutive_merge_failures
+        self.max_output_tokens = max_output_tokens
         ### set variables ###
         self.file_name = ""
         self.summary_type = ""
