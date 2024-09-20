@@ -243,14 +243,17 @@ class atman:
             self.embeddings_obj = helper.handle_embeddings(
                 kwargs["embeddings"], self.verbose)
 
-        if "model" in kwargs or "temperature" in kwargs:
+        if "model" in kwargs or "temperature" or "max_output_tokens" in kwargs:
             new_temp = self.temperature
             new_model = self.model
+            new_tokens = self.max_output_tokens
             if "temperature" in kwargs:
                 new_temp = kwargs["temperature"]
             if "model" in kwargs:
                 new_model = kwargs["model"]
-            if new_model != self.model or new_temp != self.temperature:
+            if "max_output_tokens" in kwargs:
+                new_tokens = kwargs["max_output_tokens"]
+            if new_model != self.model or new_temp != self.temperature or new_tokens != self.max_output_tokens:
                 self.model_obj = helper.handle_model(new_model, self.verbose,
                                                      new_temp,
                                                      self.max_output_tokens)
