@@ -118,7 +118,8 @@ class Summary(akasha.atman):
         self.summary_len = 500
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose,
-                                                    self.temperature)
+                                                    self.temperature,
+                                                    self.max_output_tokens)
         self.model = akasha.helper.handle_search_type(model)
         self.doc_tokens = 0
         self.doc_length = 0
@@ -174,7 +175,7 @@ class Summary(akasha.atman):
                 new_model = kwargs["model"]
             if new_model != self.model or new_temp != self.temperature:
                 self.model_obj = akasha.helper.handle_model(
-                    new_model, self.verbose, new_temp)
+                    new_model, self.verbose, new_temp, self.max_output_tokens)
 
     def _save_file(self, default_file_name: str, output_file_path: str):
         ### write summary to file ###

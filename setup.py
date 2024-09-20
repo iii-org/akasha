@@ -43,7 +43,7 @@ else:
 
 setup(
     name="akasha-terminal",
-    version="0.8.59",
+    version="0.8.60",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
