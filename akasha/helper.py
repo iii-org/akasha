@@ -206,7 +206,8 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
 
 def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                  verbose: bool = False,
-                 temperature: float = 0.0) -> vars:
+                 temperature: float = 0.0,
+                 max_output_tokens: int = 1024) -> BaseLanguageModel:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -232,7 +233,9 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
 
         base_url = model_name
         info = f"selected remote model. \n"
-        model = remote_model(base_url, temperature)
+        model = remote_model(base_url,
+                             temperature,
+                             max_output_tokens=max_output_tokens)
 
     elif (model_type
           in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
@@ -247,11 +250,15 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             "huggingface-hub",
             "hf",
     ]:
-        model = hf_model(model_name=model_name, temperature=temperature)
+        model = hf_model(model_name=model_name,
+                         temperature=temperature,
+                         max_output_tokens=max_output_tokens)
         info = f"selected huggingface model {model_name}.\n"
 
     elif model_type in ["chatglm", "chatglm2", "glm"]:
-        model = chatGLM(model_name=model_name, temperature=temperature)
+        model = chatGLM(model_name=model_name,
+                        temperature=temperature,
+                        max_output_tokens=max_output_tokens)
         info = f"selected chatglm model {model_name}.\n"
 
     elif model_type in ["lora", "peft"]:
@@ -1028,3 +1035,26 @@ def merge_history_and_prompt(
         return akasha.prompts.format_sys_prompt(system_prompt,
                                                 history_str + prompt,
                                                 prompt_format_type)
+
+
+def retri_max_texts(texts_list: list,
+                    left_doc_len: int,
+                    language: str = "ch") -> Tuple[list, int]:
+    """return list of texts that do not exceed the left_doc_len
+
+    Args:
+        texts_list (list): _description_
+        left_doc_len (int): _description_
+
+    Returns:
+        Tuple[list, int]: _description_
+    """
+    ret = []
+    cur_len = 0
+    for text in texts_list:
+        txt_len = get_doc_length(language, text)
+        if cur_len + txt_len > left_doc_len:
+            break
+        cur_len += txt_len
+        ret.append(text)
+    return ret, cur_len

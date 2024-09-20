@@ -155,7 +155,8 @@ class Model_Eval(akasha.atman):
         ### set variables ###
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose,
-                                                    self.temperature)
+                                                    self.temperature,
+                                                    self.max_output_tokens)
         self.embeddings_obj = akasha.helper.handle_embeddings(
             embeddings, self.verbose)
         self.embeddings = akasha.helper.handle_search_type(embeddings)

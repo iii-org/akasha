@@ -187,6 +187,7 @@ class atman:
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         keep_logs: bool = False,
+        max_output_tokens: int = 1024,
     ):
         """initials of atman class
 
@@ -224,6 +225,7 @@ class atman:
         self.max_doc_len = max_doc_len
         self.temperature = temperature
         self.keep_logs = keep_logs
+        self.max_output_tokens = max_output_tokens
         self.timestamp_list = []
         if topK != -1:
             warnings.warn(
@@ -250,7 +252,8 @@ class atman:
                 new_model = kwargs["model"]
             if new_model != self.model or new_temp != self.temperature:
                 self.model_obj = helper.handle_model(new_model, self.verbose,
-                                                     new_temp)
+                                                     new_temp,
+                                                     self.max_output_tokens)
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
@@ -468,7 +471,8 @@ class Doc_QA(atman):
         ### set variables ###
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose,
-                                             self.temperature)
+                                             self.temperature,
+                                             self.max_output_tokens)
         self.embeddings_obj = helper.handle_embeddings(embeddings,
                                                        self.verbose)
         self.embeddings = helper.handle_search_type(embeddings)
@@ -483,7 +487,8 @@ class Doc_QA(atman):
         self.ignored_files = []
         self.stream = stream
 
-    def _truncate_docs(self):
+    def _truncate_docs(self, text: str, cur_doc_len: int,
+                       left_doc_len: int) -> Tuple[str, int]:
         """truncate documents if the total length of documents exceed the max_doc_len
 
         Returns:
@@ -491,36 +496,27 @@ class Doc_QA(atman):
             cur_len (int): the length of truncated documents
             new_docs (list): the list of truncated documents 
         """
-        cur_len = 0
         ret = ""
         new_docs = []
-        for db_doc in self.docs:
-            cur_doc_len = helper.get_doc_length(self.language,
-                                                db_doc.page_content)
+        tot_len = len(text)
+        idx = 2
+        truncate_content = text[:(tot_len // idx)]
+        truncate_len = helper.get_doc_length(self.language, truncate_content)
+        while truncate_len > self.max_doc_len:
+            idx *= 2
+            truncate_content = text[:(tot_len // idx)]
+            truncate_len = helper.get_doc_length(self.language,
+                                                 truncate_content)
 
-            if cur_len + cur_doc_len > self.max_doc_len:
-                tot_len = len(db_doc.page_content)
-                idx = 2
-                truncate_content = db_doc.page_content[:(tot_len // idx)]
-                truncate_len = helper.get_doc_length(self.language,
-                                                     truncate_content)
-                while cur_len + truncate_len > self.max_doc_len:
-                    idx *= 2
-                    truncate_content = db_doc.page_content[:(tot_len // idx)]
-                    truncate_len = helper.get_doc_length(
-                        self.language, truncate_content)
+        rge = tot_len // idx
+        st = 0
+        ed = rge
+        while st < tot_len:
+            new_docs.append(text[st:ed])
+            st += rge
+            ed += rge
 
-                ret += truncate_content + "\n"
-                cur_len += truncate_len
-                new_docs.append(
-                    Document(page_content=truncate_content,
-                             metadata=db_doc.metadata))
-                return ret, cur_len, new_docs
-            cur_len += cur_doc_len
-            ret += db_doc.page_content + "\n"
-            new_docs.append(db_doc)
-
-        return ret, cur_len, new_docs
+        return new_docs
 
     def _separate_docs(self,
                        history_messages: list = []) -> Tuple[List[str], int]:
@@ -542,12 +538,26 @@ class Doc_QA(atman):
                                                 db_doc.page_content)
 
             if cur_len + cur_doc_len > left_doc_len:
-                cur_len = cur_doc_len
-                ret.append(db_doc.page_content)
+                if cur_doc_len <= left_doc_len:
+                    cur_len = cur_doc_len
+                    ret.append(db_doc.page_content)
+                else:
+                    new_docs = self._truncate_docs(db_doc.page_content,
+                                                   cur_doc_len, left_doc_len)
+                    ret.extend(new_docs)
+                    ret.append("")
+                    cur_len = 0
+
+                tot_len += cur_doc_len
+                continue
 
             cur_len += cur_doc_len
             ret[-1] += db_doc.page_content + "\n"
             tot_len += cur_doc_len
+
+        ## remove the last empty string ##
+        if ret[-1] == "":
+            ret = ret[:-1]
 
         return ret, tot_len
 
@@ -987,16 +997,21 @@ class Doc_QA(atman):
                 self.model_obj,
                 prod_sys_prompts,
             )
-
+            fnl_conclusion_prompt = prompts.default_conclusion_prompt(
+                prompt, self.language)
             ## check relevant answer if batch_responses > 10 ##
             if len(batch_responses) > 10:
                 batch_responses = helper.check_relevant_answer(
                     self.model_obj, batch_responses, self.prompt,
                     self.prompt_format_type)
 
-            fnl_input = prompts.format_sys_prompt(
-                prompts.default_conclusion_prompt(prompt, self.language),
-                "\n\n".join(batch_responses), self.prompt_format_type)
+            batch_responses, cur_len = helper.retri_max_texts(
+                batch_responses, self.max_doc_len -
+                helper.get_doc_length(self.language, fnl_conclusion_prompt),
+                self.language)
+            fnl_input = prompts.format_sys_prompt(fnl_conclusion_prompt,
+                                                  "\n\n".join(batch_responses),
+                                                  self.prompt_format_type)
 
             if self.stream:
                 return helper.call_stream_model(

@@ -18,13 +18,17 @@ import concurrent.futures
 
 class chatGLM(LLM):
     max_token: int = 4096
+    max_output_tokens: int = 1024
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
     tokenizer: Any
     model: Any
 
-    def __init__(self, model_name: str, temperature: float = 0.01):
+    def __init__(self,
+                 model_name: str,
+                 temperature: float = 0.01,
+                 max_output_tokens: int = 1024):
         """define chatglm model and the tokenizer
 
         Args:
@@ -39,6 +43,7 @@ class chatGLM(LLM):
         self.model = AutoModel.from_pretrained(model_name,
                                                trust_remote_code=True,
                                                device="cuda")
+        self.max_output_tokens = max_output_tokens
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
@@ -271,6 +276,7 @@ class custom_model(LLM):
 
 class remote_model(LLM):
     max_token: int = 4096
+    max_output_tokens: 1024
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
@@ -278,7 +284,7 @@ class remote_model(LLM):
     model: Any
     url: Any
 
-    def __init__(self, base_url: str, temperature: float = 0.001):
+    def __init__(self, base_url: str, temperature: float = 0.001, **kwargs):
         """define custom model, input func and temperature
 
         Args:
@@ -287,6 +293,9 @@ class remote_model(LLM):
         super().__init__()
         self.url = base_url
         self.temperature = temperature
+        if 'max_output_tokens' in kwargs:
+            self.max_output_tokens = kwargs['max_output_tokens']
+
         if self.temperature == 0.0:
             self.temperature = 0.01
 
@@ -320,7 +329,8 @@ class remote_model(LLM):
 
             yield from client.text_generation(
                 prompt,
-                max_new_tokens=1024,
+                temperature=self.temperature,
+                max_new_tokens=self.max_output_tokens,
                 do_sample=True,
                 top_k=10,
                 top_p=0.95,
@@ -354,7 +364,8 @@ class remote_model(LLM):
             response = ""
             for token in client.text_generation(
                     prompt,
-                    max_new_tokens=1024,
+                    temperature=self.temperature,
+                    max_new_tokens=self.max_output_tokens,
                     do_sample=True,
                     top_k=10,
                     top_p=0.95,
@@ -380,7 +391,8 @@ class remote_model(LLM):
             client = InferenceClient(self.url)
             response = client.text_generation(
                 prompt,
-                max_new_tokens=1024,
+                temperature=self.temperature,
+                max_new_tokens=self.max_output_tokens,
                 do_sample=True,
                 top_k=10,
                 top_p=0.95,
@@ -409,6 +421,7 @@ class remote_model(LLM):
             client = InferenceClient(self.url)
             response = client.text_generation(
                 prompt,
+                temperature=self.temperature,
                 max_new_tokens=max_tokens,
                 do_sample=True,
                 top_k=10,
@@ -459,7 +472,7 @@ class remote_model(LLM):
         else:
             parameters = {
                 'temperature': self.temperature,
-                'max_new_tokens': 1024,
+                'max_new_tokens': self.max_output_tokens,
                 'do_sample': True,
                 'top_k': 10,
                 'top_p': 0.95,
@@ -504,8 +517,8 @@ class remote_model(LLM):
                 messages=messages,
                 model="remote_model",
                 stream=True,
-                max_tokens=1024,
-                temperature=0.001,
+                max_tokens=self.max_output_tokens,
+                temperature=self.temperature,
                 top_p=0.95,
                 stop=stop_list,
                 frequency_penalty=1.2)
@@ -546,8 +559,8 @@ class remote_model(LLM):
                 messages=messages,
                 model="remote_model",
                 stream=True,
-                max_tokens=1024,
-                temperature=0.001,
+                max_tokens=self.max_output_tokens,
+                temperature=self.temperature,
                 top_p=0.95,
                 stop=stop_list,
                 frequency_penalty=1.2)
@@ -588,6 +601,8 @@ class hf_model(LLM):
             hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
         if temperature == 0.0:
             temperature = 0.01
+        if 'max_output_tokens' in kwargs:
+            self.max_output_tokens = kwargs['max_output_tokens']
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
         self.model = AutoModelForCausalLM.from_pretrained(
@@ -617,7 +632,7 @@ class hf_model(LLM):
         gerneration_kwargs = dict(
             inputs,
             streamer=self.streamer,
-            max_new_tokens=1024,
+            max_new_tokens=self.max_output_tokens,
             do_sample=True,
             min_new_tokens=10,
             stop_strings=stop_list,
@@ -646,7 +661,7 @@ class hf_model(LLM):
         gerneration_kwargs = dict(
             inputs,
             streamer=self.streamer,
-            max_new_tokens=1024,
+            max_new_tokens=self.max_output_tokens,
             do_sample=True,
             stop_strings=stop_list,
             tokenizer=self.tokenizer,
@@ -675,10 +690,11 @@ class hf_model(LLM):
                                 padding=True,
                                 truncation=True,
                                 max_length=1024).to(self.device)
-        generated_ids = self.model.generate(**inputs,
-                                            max_new_tokens=1024,
-                                            do_sample=True,
-                                            stop_strings=stop_list)
+        generated_ids = self.model.generate(
+            **inputs,
+            max_new_tokens=self.max_output_tokens,
+            do_sample=True,
+            stop_strings=stop_list)
         generated_texts = self.tokenizer.batch_decode(generated_ids,
                                                       skip_special_tokens=True)
 

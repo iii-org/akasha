@@ -125,6 +125,7 @@ class test_agent:
         retri_observation: bool = False,
         prompt_format_type: str = "chat_gpt",
         stream: bool = False,
+        max_output_tokens: int = 1024,
     ):
         """initials of agent class
 
@@ -157,8 +158,10 @@ class test_agent:
         self.keep_logs = keep_logs
         self.prompt_format_type = prompt_format_type
         self.stream = stream
+        self.max_output_tokens = max_output_tokens
         self.model_obj = helper.handle_model(model, self.verbose,
-                                             self.temperature)
+                                             self.temperature,
+                                             self.max_output_tokens)
         self.model = helper.handle_search_type(model)
 
         self.tool_explaination = _get_tool_explaination(tools)

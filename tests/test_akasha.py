@@ -44,7 +44,10 @@ def base_model(prompt: str):
     import openai
     from langchain_community.chat_models import ChatOpenAI
 
-    model = akasha.helper.handle_model("gpt-3.5-turbo", False, 0.0)
+    model = akasha.helper.handle_model("gpt-3.5-turbo",
+                                       False,
+                                       0.0,
+                                       max_output_tokens=1000)
     ret = akasha.helper.call_model(model, prompt)
 
     return ret
