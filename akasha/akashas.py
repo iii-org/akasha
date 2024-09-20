@@ -243,14 +243,17 @@ class atman:
             self.embeddings_obj = helper.handle_embeddings(
                 kwargs["embeddings"], self.verbose)
 
-        if "model" in kwargs or "temperature" in kwargs:
+        if "model" in kwargs or "temperature" or "max_output_tokens" in kwargs:
             new_temp = self.temperature
             new_model = self.model
+            new_tokens = self.max_output_tokens
             if "temperature" in kwargs:
                 new_temp = kwargs["temperature"]
             if "model" in kwargs:
                 new_model = kwargs["model"]
-            if new_model != self.model or new_temp != self.temperature:
+            if "max_output_tokens" in kwargs:
+                new_tokens = kwargs["max_output_tokens"]
+            if new_model != self.model or new_temp != self.temperature or new_tokens != self.max_output_tokens:
                 self.model_obj = helper.handle_model(new_model, self.verbose,
                                                      new_temp,
                                                      self.max_output_tokens)
@@ -429,6 +432,7 @@ class Doc_QA(atman):
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         keep_logs: bool = False,
+        max_output_tokens: int = 1024,
         compression: bool = False,
         use_chroma: bool = False,
         use_rerank: bool = False,
@@ -460,7 +464,7 @@ class Doc_QA(atman):
 
         super().__init__(chunk_size, model, verbose, topK, threshold, language,
                          search_type, record_exp, system_prompt, max_doc_len,
-                         temperature, keep_logs)
+                         temperature, keep_logs, max_output_tokens)
         ### set argruments ###
         self.doc_path = ""
         self.compression = compression
