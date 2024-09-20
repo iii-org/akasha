@@ -276,7 +276,7 @@ class custom_model(LLM):
 
 class remote_model(LLM):
     max_token: int = 4096
-    max_output_tokens: 1024
+    max_output_tokens: int = 1024
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
