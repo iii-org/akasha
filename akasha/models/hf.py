@@ -319,32 +319,16 @@ class remote_model(LLM):
         Yields:
             Generator: _description_
         """
-        stop_list = get_stop_list(stop)
+        if isinstance(prompt, str):
+            prompt = [{"role": "user", "content": prompt}]
 
-        if isinstance(prompt, list):
-            yield from self.invoke_stream(prompt, stop)
-            return
-        try:
-            client = InferenceClient(self.url)
+        yield from self.invoke_stream(prompt, stop)
+        return
 
-            yield from client.text_generation(
-                prompt,
-                temperature=self.temperature,
-                max_new_tokens=self.max_output_tokens,
-                do_sample=True,
-                top_k=10,
-                top_p=0.95,
-                stream=True,
-                repetition_penalty=1.2,
-                stop_sequences=stop_list,
-            )
-
-        except Exception as e:
-            info = "call remote model failed\n\n"
-            logging.error(info, e.__str__())
-            yield info + e.__str__()
-
-    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+    def _call(self,
+              prompt: str,
+              stop: Optional[List[str]] = None,
+              verbose=True) -> str:
         """run llm and get the response
 
         Args:
@@ -355,31 +339,10 @@ class remote_model(LLM):
             str: llm response
         """
 
-        if isinstance(prompt, list):
-            return self.invoke(prompt, stop)
+        if isinstance(prompt, str):
+            prompt = [{"role": "user", "content": prompt}]
 
-        try:
-            stop_list = get_stop_list(stop)
-            client = InferenceClient(self.url)
-            response = ""
-            for token in client.text_generation(
-                    prompt,
-                    temperature=self.temperature,
-                    max_new_tokens=self.max_output_tokens,
-                    do_sample=True,
-                    top_k=10,
-                    top_p=0.95,
-                    stream=True,
-                    repetition_penalty=1.2,
-                    stop_sequences=stop_list,
-            ):
-                print(token, end='', flush=True)
-                response += token
-
-        except Exception as e:
-            logging.error("call remote model failed\n\n", e.__str__())
-            raise e
-        return response  # response["generated_text"]
+        return self.invoke(prompt, stop, verbose)
 
     def JSON_call(self,
                   prompt: str,
@@ -442,7 +405,7 @@ class remote_model(LLM):
 
     def _invoke_helper(self, args):
         messages, stop, verbose = args
-        return self.invoke(messages, stop, verbose)
+        return self._call(messages, stop, verbose)
 
     def batch(self,
               prompt: List[str],
@@ -461,33 +424,12 @@ class remote_model(LLM):
             len(prompt),
             concurrent.futures.thread.ThreadPoolExecutor()._max_workers)
 
-        if isinstance(prompt[0], list):
-            with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=num_threads) as executor:
-                results = list(
-                    executor.map(self._invoke_helper, [(message, stop, False)
-                                                       for message in prompt]))
-            return results
-
-        else:
-            parameters = {
-                'temperature': self.temperature,
-                'max_new_tokens': self.max_output_tokens,
-                'do_sample': True,
-                'top_k': 10,
-                'top_p': 0.95,
-            }
-            headers = {"Content-Type": "application/json"}
-
-            worker_args = [(self.url, pmpt, headers, parameters)
-                           for pmpt in prompt]
-
-            with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=num_threads) as executor:
-                results = list(executor.map(_url_requests, worker_args))
-
-            generated_texts = [res["generated_text"] for res in results]
-            return generated_texts
+        with concurrent.futures.ThreadPoolExecutor(
+                max_workers=num_threads) as executor:
+            results = list(
+                executor.map(self._invoke_helper,
+                             [(message, stop, False) for message in prompt]))
+        return results
 
     def invoke(self,
                messages: list,
