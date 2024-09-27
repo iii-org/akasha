@@ -18,13 +18,10 @@ from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remo
 from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
 import os, traceback, logging
 import shutil
-from langchain.llms.base import LLM
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 import akasha.format as afr
 import akasha.prompts
-import dill
-from multiprocessing import Process
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -584,13 +581,13 @@ def _get_text(texts: list,
 
 
 def call_model(
-    model: LLM,
+    model: BaseLanguageModel,
     input_text: Union[str, list],
 ) -> str:
     """call llm model and return the response
 
     Args:
-        model (LLM): llm model
+        model (BaseLanguageModel): llm model
         input_text (str): the input_text that send to llm model
         prompt_type (str): the type of prompt, default "gpt"
 
@@ -653,13 +650,13 @@ def call_model(
 
 
 def call_batch_model(
-    model: LLM,
+    model: BaseLanguageModel,
     input_text: list,
 ) -> List[str]:
     """call llm model in batch and return the response 
 
     Args:
-        model (LLM): llm model
+        model (BaseLanguageModel): llm model
         input_text: list
 
     Returns:
@@ -701,13 +698,13 @@ def call_batch_model(
 
 
 def call_stream_model(
-    model: LLM,
+    model: BaseLanguageModel,
     input_text: Union[str, list],
 ) -> Generator[str, None, None]:
     """call llm model and yield the response
 
     Args:
-        model (LLM): llm model
+        model (BaseLanguageModel): llm model
         input_text (str): the input_text that send to llm model
         prompt_type (str): the type of prompt, default "gpt"
 
@@ -789,14 +786,14 @@ def image_to_base64(image_path: str) -> str:
     return img_str.decode("utf-8")
 
 
-def call_translator(model_obj: LLM,
+def call_translator(model_obj: BaseLanguageModel,
                     texts: str,
                     prompt_format_type: str = "gpt",
                     language: str = "zh") -> str:
     """translate texts to target language
 
     Args:
-        model_obj (LLM): LLM that used to translate
+        model_obj (BaseLanguageModel): LLM that used to translate
         texts (str): texts that need to be translated
         prompt_format_type (str, optional): system prompt format. Defaults to "gpt".
         language (str, optional): target language. Defaults to "zh".
@@ -814,7 +811,7 @@ def call_translator(model_obj: LLM,
 
 
 def call_JSON_formatter(
-    model_obj: LLM,
+    model_obj: BaseLanguageModel,
     texts: str,
     keys: Union[str, list] = "",
     prompt_format_type: str = "gpt",
@@ -822,7 +819,7 @@ def call_JSON_formatter(
     """use LLM to transfer texts into JSON format
 
     Args:
-        model_obj (LLM): LLM that used to transfer
+        model_obj (BaseLanguageModel): LLM that used to transfer
         texts (str): texts that need to be transferred
         keys (Union[str, list], optional): keys name of output dictionary. Defaults to "".
         prompt_format_type (str, optional): system prompt format. Defaults to "gpt". Defaults to "gpt".
@@ -922,7 +919,7 @@ def _decide_embedding_type(embeddings: Embeddings) -> str:
         raise Exception("can not find the embeddings type.")
 
 
-def self_RAG(model_obj: LLM,
+def self_RAG(model_obj: BaseLanguageModel,
              question: str,
              docs: List[Document],
              process_num: int = 10,
@@ -932,7 +929,7 @@ def self_RAG(model_obj: LLM,
     """self RAG model to get the answer
 
     Args:
-        model (LLM): LLM model
+        model (BaseLanguageModel): LLM model
         question (str): input prompt
         docs (List[Document]): list of documents
         process_num (int, optional): number of documents to process at one time. Defaults to 10.
@@ -972,8 +969,9 @@ def self_RAG(model_obj: LLM,
     return results
 
 
-def check_relevant_answer(model_obj: LLM, batch_responses: List[str],
-                          question: str, prompt_format_type: str) -> List[str]:
+def check_relevant_answer(model_obj: BaseLanguageModel,
+                          batch_responses: List[str], question: str,
+                          prompt_format_type: str) -> List[str]:
     """ask LLM that each of the retrieved answers list is relevant to the question or not"""
     results = []
     txts = []
