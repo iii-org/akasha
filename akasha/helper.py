@@ -751,6 +751,51 @@ def call_stream_model(
         yield e
 
 
+def call_image_model(
+    model: BaseLanguageModel,
+    input_text: Union[str, list],
+) -> str:
+
+    response = ""
+    print_flag = True
+    try:
+
+        model_type = model._llm_type
+
+        if ("openai" in model_type) or ("remote" in model_type):
+            print_flag = False
+            response = model.invoke(input_text)
+
+        else:
+            try:
+                response = model.call_image(input_text)
+            except:
+                response = model._generate(input_text)
+
+        if isinstance(response, AIMessage):
+            response = response.content
+            if isinstance(response, dict):
+                response = response.__str__()
+            if isinstance(response, list):
+                response = '\n'.join(response)
+
+        if response is None or response == "":
+            print_flag = False
+            raise Exception("LLM response is empty.")
+
+    except Exception as e:
+        trace_text = traceback.format_exc()
+        logging.error(trace_text + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n")
+        raise e
+
+    response = sim_to_trad(response)
+
+    if print_flag:
+        print("llm response:", "\n\n" + response)
+    return response
+
+
 def get_non_repeat_rand_int(vis: set, num: int, doc_range: int):
     temp = np.random.randint(num)
     if len(vis) >= num // 2:

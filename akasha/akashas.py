@@ -1223,3 +1223,53 @@ class Doc_QA(atman):
             dbs=self.db)
 
         return self.response, self.follow_up, self.intermediate_ans
+
+    def ask_image(self, image_path: str, prompt: str, **kwargs) -> str:
+        """ask model with image and prompt
+
+        Args:
+            image_path (str): image path or url (recommand jpeg or png file)
+            prompt (str): user question
+
+        Returns:
+            str: _description_
+        """
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.prompt = prompt
+        fnl_input = []
+        start_time = time.time()
+
+        ## check model ##
+        model_prefix = self.model.split(":")[0]
+        if model_prefix in ["hf", "hugginface"] and self.stream == True:
+            raise ValueError(
+                "Currently huggingface model does not support stream mode.\n\n"
+            )
+
+        if model_prefix in [
+                "llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp",
+                "chatglm", "chatglm2", "glm", "lora", "peft", "gptq", "gptq2"
+        ]:
+            raise ValueError(
+                f"Currently {self.model} model does not support image input.\n\n"
+            )
+
+        ## decide prompt format ##
+        if model_prefix in ["hf", "huggingface"]:
+            fnl_input = prompts.format_image_prompt(image_path, prompt,
+                                                    "image_llama")
+
+        else:
+            fnl_input = prompts.format_image_prompt(image_path, prompt,
+                                                    "image_gpt")
+
+        if self.stream:
+            return helper.call_stream_model(
+                self.model_obj,
+                fnl_input,
+            )
+
+        self.response = helper.call_image_model(self.model_obj, fnl_input)
+
+        return self.response
