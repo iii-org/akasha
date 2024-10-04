@@ -22,7 +22,7 @@ For the chinese manual, please visit [manual](https://tea9297.github.io/)
 
 # Updates
 
-- 0.8.62
+- 0.8.63
     add ask_image function to Doc_QA, which can use image as prompt to ask question.
     add max_output_tokens parameter.
     remote compatible with vllm serve.
