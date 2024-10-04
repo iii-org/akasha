@@ -26,7 +26,7 @@ For the chinese manual, please visit [manual](https://tea9297.github.io/)
     add ask_image function to Doc_QA, which can use image as prompt to ask question.
     add max_output_tokens parameter.
     remote compatible with vllm serve.
-    
+
 - 0.8.56
     add extract_db_by_file and extract_db_by_keyword functions.
 

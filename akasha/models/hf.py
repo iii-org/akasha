@@ -528,6 +528,7 @@ class hf_model(LLM):
     processor: Any = None
     temperature: float = 0.01
     hf_token: Union[str, None] = None
+    max_output_tokens: int = 1024
 
     def __init__(self, model_name: str, temperature: float, **kwargs):
         """define custom model, input func and temperature
@@ -535,12 +536,11 @@ class hf_model(LLM):
         Args:
             **func (Callable)**: the function return response from llm\n
         """
+        super().__init__(model_id=model_name)
         self.hf_token = os.environ.get("HF_TOKEN")
         if self.hf_token is None:
             self.hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
 
-        super().__init__()
-        self.model_id = model_name
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
         if temperature == 0.0:
@@ -549,6 +549,7 @@ class hf_model(LLM):
             self.max_output_tokens = kwargs['max_output_tokens']
 
         self.temperature = temperature
+
         if "vision" in model_name.lower():
             self.init_vision_model()
         else:
@@ -710,7 +711,7 @@ class hf_model(LLM):
                                      length_penalty=1.0,
                                      repetition_penalty=1.0)
         return self.processor.decode(
-            output[len(prompt[0]["content"][1]["text"]) + 8:])
+            output[0][len(prompt[0]["content"][1]["text"]) + 8:])
 
 
 def get_stop_list(stop: Optional[List[str]]) -> List[str]:
