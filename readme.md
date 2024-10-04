@@ -20,11 +20,10 @@ For the chinese manual, please visit [manual](https://tea9297.github.io/)
 <br/>
 <br/>
 
-
 # Updates
+
 - 0.8.56
     add extract_db_by_file and extract_db_by_keyword functions.
-
 
 - 0.8.53
 
@@ -32,7 +31,7 @@ For the chinese manual, please visit [manual](https://tea9297.github.io/)
     2. get_response and ask_self add history_messages parameter, use to pass chat history to model
     3. prompt_format_type add chat_gpt and chat_mistral, which change prompt, system_prompt and history_messages into instruct format: [{"role":current_role, "content":prompt}]
     4. add helper function call_model, call_batch_model, call_stream_model
-    5.  allow pass model object (LLM) and embedding object (Embeddings) to Doc_QA, Eval, and Summary, prevent redefine of the objects.
+    5. allow pass model object (LLM) and embedding object (Embeddings) to Doc_QA, Eval, and Summary, prevent redefine of the objects.
     6. add helper function self_rag
     7. Doc_QA ask_self and ask_whole_file can allow document(info) larger then max_doc_len by calling models multiple times.
     8. Doc_QA get_response can pass dbs object to doc_path, prevent reload the chromadb data.
@@ -70,8 +69,8 @@ pip install akasha-terminal
 
 ## API Keys
 
-### OPENAI 
-If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key. 
+### OPENAI
+If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key.
 You can either save **OPENAI_API_KEY=your api key** into **.env** file to current working directory or,
 set as a environment variable, using **export** in bash or use **os.environ** in python.
 
@@ -91,7 +90,7 @@ export OPENAI_API_KEY="your api key"
 If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
 Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save **OPENAI_API_KEY=your azure key**,  **OPENAI_API_BASE=your Language API base url**, **OPENAI_API_TYPE=azure**, **OPENAI_API_VERSION=2023-05-15** into **.env** file to current working directory.
 
-<br/> 
+<br/>
 
 If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**
 
@@ -109,7 +108,7 @@ AZURE_API_VERSION=2023-05-15
 <br/>
 <br/>
 
-And now we can run akasha in python 
+And now we can run akasha in python
 
 ```python
 #PYTHON3.9
@@ -127,7 +126,7 @@ response = ak.get_response(dir_path, prompt)
 
 
 
-# Example 
+# Example
 
 
 
@@ -143,8 +142,6 @@ prompt = "「塞西莉亞花」的花語是什麼?	「失之交臂的感情」	�
 ak = akasha.Doc_QA(search_type="auto")
 response = ak.get_response(dir_path, prompt)
 print(response)
-	
-	
 ```
 
 
@@ -223,8 +220,7 @@ rerank_large = "rerank:BAAI/bge-reranker-large"  # 512 max seq length
 ## File Summarization
 To create a summary of a text file in various formats like .pdf, .txt, or .docx, you can use the **Summary.summarize_file** function. For example, the following code employs the **map_reduce** summary method to instruct LLM to generate a summary of approximately 500 words.
 
-There're two summary type, **map_reduce** and **refine**, **map_reduce** will summarize every text chunks and then use all summarized text chunks to generate a final summary; **refine** will summarize each text chunk at a time and using the previous summary as a prompt for 
-summarizing the next segment to get a higher level of summary consistency.
+There're two summary type, **map_reduce** and **refine**, **map_reduce** will summarize every text chunks and then use all summarized text chunks to generate a final summary; **refine** will summarize each text chunk at a time and using the previous summary as a prompt for summarizing the next segment to get a higher level of summary consistency.
 
 ```python
 
@@ -236,6 +232,7 @@ sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的�
 
 
 ```
+
 <br/>
 <br/>
 
@@ -375,7 +372,7 @@ You should now be able to access the web page at http://localhost:8501/.
 <br/>
 <br/>
 
-You can start by going to the **Settings page** to configure your settings. 
+You can start by going to the **Settings page** to configure your settings.
 
 <br/>
 
@@ -408,11 +405,11 @@ The default setting is to use the OpenAI model and embeddings, so please remembe
 <br/>
 <br/>
 
-After you have finished setting up, you can start using Akasha. 
+After you have finished setting up, you can start using Akasha.
 
 <br/>
 
-For example, you can instruct the language model with a query like '五軸是什麼,' and you can include a system prompt to specify how you want the model to answer in Chinese. 
+For example, you can instruct the language model with a query like '五軸是什麼,' and you can include a system prompt to specify how you want the model to answer in Chinese.
 
 <br/>
 

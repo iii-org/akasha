@@ -1,5 +1,6 @@
 from typing import List, Union, Tuple
 import akasha.format as afr
+from urllib.parse import urlparse
 # from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 sys_s = "[INST] <<SYS>> "
@@ -651,3 +652,51 @@ def JSON_formatter_dict(var_list: Union[list, dict]) -> list:
         ret.append(schema)
 
     return ret
+
+
+def is_url(path):
+    parsed_url = urlparse(path)
+    return parsed_url.scheme in ('http', 'https', 'ftp')
+
+
+def format_image_llama_prompt(image_path: str, prompt: str) -> List[dict]:
+
+    image_content = [{"type": image_path}, {"type": "text", "text": prompt}]
+
+    return [{"role": "user", "content": image_content}]
+
+
+def format_image_gpt_prompt(image_path: str, prompt: str) -> List[dict]:
+
+    url_content = {}
+
+    if is_url(image_path):
+        url_content = {"url": image_path}
+    else:
+        import base64
+        base64_image = base64.b64encode(open(image_path,
+                                             "rb").read()).decode("utf-8")
+        url_content = {"url": f"data:image/jpeg;base64,{base64_image}"}
+
+    image_content = [{
+        "type": "text",
+        "text": prompt
+    }, {
+        "type": "image_url",
+        "image_url": url_content
+    }]
+
+    return [{"role": "user", "content": image_content}]
+
+
+def format_image_prompt(image_path: str,
+                        prompt: str,
+                        model_type: str = "image_gpt"):
+
+    model_type = model_type.lower()
+
+    if model_type == "image_llama":
+        return format_image_llama_prompt(image_path, prompt)
+
+    else:
+        return format_image_gpt_prompt(image_path, prompt)

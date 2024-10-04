@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Callable, Generator
+from typing import Dict, List, Any, Optional, Callable, Generator, Union
 from langchain.llms.base import LLM
 from langchain.pydantic_v1 import BaseModel, Extra
 from langchain.schema.embeddings import Embeddings
@@ -14,6 +14,7 @@ from huggingface_hub import InferenceClient
 from threading import Thread
 from openai import OpenAI
 import concurrent.futures
+from PIL import Image
 
 
 class chatGLM(LLM):
@@ -523,6 +524,10 @@ class hf_model(LLM):
     model: Any
     streamer: Any
     device: Any
+    model_id: str
+    processor: Any = None
+    temperature: float = 0.01
+    hf_token: Union[str, None] = None
 
     def __init__(self, model_name: str, temperature: float, **kwargs):
         """define custom model, input func and temperature
@@ -530,31 +535,34 @@ class hf_model(LLM):
         Args:
             **func (Callable)**: the function return response from llm\n
         """
-        hf_token = os.environ.get("HF_TOKEN")
-        if hf_token is None:
-            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        self.hf_token = os.environ.get("HF_TOKEN")
+        if self.hf_token is None:
+            self.hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
 
         super().__init__()
-
+        self.model_id = model_name
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
-        hf_token = os.environ.get("HF_TOKEN")
-        if hf_token is None:
-            hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
         if temperature == 0.0:
             temperature = 0.01
         if 'max_output_tokens' in kwargs:
             self.max_output_tokens = kwargs['max_output_tokens']
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            token=hf_token,
-            temperature=temperature,
-            repetition_penalty=1.2,
-            top_p=0.95,
-            torch_dtype=torch.float16,
-            device_map="auto").to(self.device)
+
+        self.temperature = temperature
+        if "vision" in model_name.lower():
+            self.init_vision_model()
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.streamer = TextIteratorStreamer(self.tokenizer,
+                                                 skip_prompt=True)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                token=self.hf_token,
+                temperature=temperature,
+                repetition_penalty=1.2,
+                top_p=0.95,
+                torch_dtype=torch.float16,
+                device_map="auto").to(self.device)
 
     @property
     def _llm_type(self) -> str:
@@ -563,7 +571,35 @@ class hf_model(LLM):
         Returns:
             str: llm type
         """
-        return "huggingface text generation model"
+        return "huggingface text generation model hf"
+
+    def init_vision_model(self, **kwargs):
+        """init vision model
+
+        Args:
+            model_name (str): model name
+        """
+        try:
+            from transformers import MllamaForConditionalGeneration, AutoProcessor
+
+            self.model = MllamaForConditionalGeneration.from_pretrained(
+                self.model_id,
+                torch_dtype=torch.bfloat16,
+                device_map="auto",
+            )
+            self.processor = AutoProcessor.from_pretrained(self.model_id)
+        except:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+            self.streamer = TextIteratorStreamer(self.tokenizer,
+                                                 skip_prompt=True)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_id,
+                token=self.hf_token,
+                temperature=self.temperature,
+                repetition_penalty=1.2,
+                top_p=0.95,
+                torch_dtype=torch.float16,
+                device_map="auto").to(self.device)
 
     def stream(self,
                prompt: str,
@@ -641,6 +677,40 @@ class hf_model(LLM):
                                                       skip_special_tokens=True)
 
         return generated_texts
+
+    def call_image(self, prompt: list) -> str:
+
+        def is_url(path):
+            from urllib.parse import urlparse
+            parsed_url = urlparse(path)
+            return parsed_url.scheme in ('http', 'https', 'ftp')
+
+        ### check if the image is from url or local path
+        image_path = prompt[0]["content"][0]["type"]
+        prompt[0]["content"][0]["type"] = "image"
+
+        if is_url(image_path):
+            image = Image.open(requests.get(image_path, stream=True).raw)
+        else:
+            image = Image.open(image_path)
+
+        ## apply chat template ##
+        input_text = self.processor.apply_chat_template(
+            prompt, add_generation_prompt=True)
+        inputs = self.processor(image,
+                                input_text,
+                                add_special_tokens=False,
+                                return_tensors="pt").to(self.device)
+
+        output = self.model.generate(**inputs,
+                                     max_new_tokens=512,
+                                     do_sample=True,
+                                     temperature=self.temperature,
+                                     top_p=0.95,
+                                     length_penalty=1.0,
+                                     repetition_penalty=1.0)
+        return self.processor.decode(
+            output[len(prompt[0]["content"][1]["text"]) + 8:])
 
 
 def get_stop_list(stop: Optional[List[str]]) -> List[str]:
