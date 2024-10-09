@@ -208,8 +208,8 @@ print(response)
 
 ## Some models available for use
 
-# Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY',
-# and for most Hugging Face models, a GPU is required to run them. However, .gguf models can run on CPUs.
+Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY',
+and for most Hugging Face models, a GPU is required to run them. However, .gguf models can run on CPUs.
 
 ```python
 # OpenAI Models (require environment variable 'OPENAI_API_KEY' or 'AZURE_API_KEY')
