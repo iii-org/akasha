@@ -23,7 +23,7 @@ def get_prompts(add_b):
 
     if add:
         st.session_state.n_text += 1
-        st.experimental_rerun()
+        st.rerun()
     text_inputs = ["" for _ in range(st.session_state.n_text)]
 
     for i in range(st.session_state.n_text):
@@ -73,7 +73,7 @@ def cot_page():
                 st.session_state.response_list = []
                 st.session_state.n_text = 1
                 run_flag = True
-                st.experimental_rerun()
+                st.rerun()
 
         with sb3:
             if st.button("Submit", type="primary", use_container_width=True):

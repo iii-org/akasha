@@ -1,6 +1,7 @@
 from setuptools import setup
-import platform
-
+import platform, os, subprocess
+from setuptools.command.install import install
+from setuptools.command.develop import develop
 # read the contents of your README file
 from pathlib import Path
 
@@ -34,12 +35,45 @@ install_requires = [
     "python-pptx",
     "wikipedia"
 ]
-if platform.system() == "Windows":
-    install_requires.append("opencc==1.1.1")
-elif platform.system() == "Darwin":
-    install_requires.append("opencc==0.2")
-else:
-    install_requires.append('opencc==1.1.6')
+
+install_requires.append("opencc==1.1.1; platform_system=='Windows'")
+install_requires.append("opencc==0.2; platform_system=='Darwin'")
+install_requires.append("opencc==1.1.6; platform_system=='Linux'")
+
+
+class CustomDevelopCommand(develop):
+    """Custom handler for the 'develop' command."""
+
+    def run(self):
+        if 'llama-cpp-gpu' in self.distribution.extras_require:
+            self._install_llama_cpp()
+        develop.run(self)
+
+    def _install_llama_cpp(self):
+        os.environ['CMAKE_ARGS'] = "-DGGML_CUDA=on"
+        os.environ['FORCE_CMAKE'] = "1"
+        subprocess.check_call([
+            "python", "-m", "pip", "install", "--upgrade", "--force-reinstall",
+            "llama-cpp-python>=0.2.6", "--no-cache-dir"
+        ])
+
+
+class CustomInstallCommand(install):
+    """Custom handler for the 'install' command."""
+
+    def run(self):
+        if 'llama-cpp-gpu' in self.distribution.extras_require:
+            self._install_llama_cpp()
+        install.run(self)
+
+    def _install_llama_cpp(self):
+        os.environ['CMAKE_ARGS'] = "-DGGML_CUDA=on"
+        os.environ['FORCE_CMAKE'] = "1"
+        subprocess.check_call([
+            "python", "-m", "pip", "install", "--upgrade", "--force-reinstall",
+            "llama-cpp-python>=0.2.6", "--no-cache-dir"
+        ])
+
 
 setup(
     name="akasha-terminal",
@@ -51,9 +85,14 @@ setup(
     url="https://github.com/iii-org/akasha",
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
-    extra_requires={'llama-cpp': [
-        "llama-cpp-python==0.2.6",
-    ]},
+    extras_require={
+        'llama-cpp-gpu': [
+            "llama-cpp-python>=0.2.6",
+        ],
+        'llama-cpp': [
+            "llama-cpp-python>=0.2.6",
+        ]
+    },
     packages=[
         "akasha",
         "akasha.models",
@@ -63,4 +102,8 @@ setup(
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
     python_requires=">=3.8",
-)
+    cmdclass={
+        'install': CustomInstallCommand,  # Override install command
+        'develop':
+        CustomDevelopCommand,  # Override develop command for development installs
+    })

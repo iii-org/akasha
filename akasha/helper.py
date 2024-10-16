@@ -11,11 +11,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_community.embeddings import (
     HuggingFaceEmbeddings,
-    SentenceTransformerEmbeddings,
+    #SentenceTransformerEmbeddings,
     TensorflowHubEmbeddings,
 )
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
-from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ
+from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
 import os, traceback, logging
 import shutil
 from langchain_core.language_models.base import BaseLanguageModel
@@ -237,7 +237,15 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
     elif (model_type
           in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
           and model_name != ""):
-        model = get_llama_cpp_model(model_type, model_name, temperature)
+        if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
+            device = "cpu"
+        else:
+            device = "cuda"
+        #model = get_llama_cpp_model(model_type, model_name, temperature)
+        model = LlamaCPP(model_name=model_name,
+                         temperature=temperature,
+                         max_output_tokens=max_output_tokens,
+                         device=device)
         info = "selected llama-cpp model\n"
     elif model_type in [
             "huggingface",
