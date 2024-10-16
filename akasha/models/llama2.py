@@ -180,7 +180,7 @@ class LlamaCPP(LLM):
     model_id: str
     temperature: float = 0.01
     max_output_tokens: int = 1024
-
+    verbose: bool = False
     def __init__(self, model_name: str, temperature: float, **kwargs):
         """define custom model, input func and temperature
 
@@ -196,23 +196,25 @@ class LlamaCPP(LLM):
             temperature = 0.01
         if 'max_output_tokens' in kwargs:
             self.max_output_tokens = kwargs['max_output_tokens']
-
+        if 'verbose' in kwargs:
+            self.verbose = kwargs['verbose']
         self.temperature = temperature
 
         if 'device' in kwargs and kwargs[
                 'device'] == 'cuda' and self.device == 'cuda':
             # chat_format="llama-2",
             self.model = Llama(model_path=model_name,
-                               n_ctx=4096,
+                               #n_ctx=4096,
                                n_gpu_layers=-1,
-                               n_threads=8,
-                               n_batch=512)
+                               n_threads=16,
+                               n_batch=512,
+                               verbose = self.verbose)
 
         else:
             self.model = Llama(model_path=model_name,
-                               n_ctx=4096,
-                               n_threads=8,
-                               n_batch=512).create_chat_completion()
+                               #n_ctx=4096,
+                               n_threads=16,
+                               n_batch=512, verbose = self.verbose)
 
     @property
     def _llm_type(self) -> str:

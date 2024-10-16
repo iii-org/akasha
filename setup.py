@@ -35,12 +35,6 @@ install_requires = [
     "python-pptx",
     "wikipedia"
 ]
-# if platform.system() == "Windows":
-#     install_requires.append("opencc==1.1.1")
-# elif platform.system() == "Darwin":
-#     install_requires.append("opencc==0.2")
-# else:
-#     install_requires.append("opencc==1.1.6")
 
 install_requires.append("opencc==1.1.1; platform_system=='Windows'")
 install_requires.append("opencc==0.2; platform_system=='Darwin'")
@@ -51,7 +45,7 @@ class CustomDevelopCommand(develop):
     """Custom handler for the 'develop' command."""
 
     def run(self):
-        if 'llama-cpp' in self.distribution.extras_require:
+        if 'llama-cpp-gpu' in self.distribution.extras_require:
             self._install_llama_cpp()
         develop.run(self)
 
@@ -68,7 +62,7 @@ class CustomInstallCommand(install):
     """Custom handler for the 'install' command."""
 
     def run(self):
-        if 'llama-cpp' in self.distribution.extras_require:
+        if 'llama-cpp-gpu' in self.distribution.extras_require:
             self._install_llama_cpp()
         install.run(self)
 

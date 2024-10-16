@@ -11,11 +11,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_community.embeddings import (
     HuggingFaceEmbeddings,
-    SentenceTransformerEmbeddings,
+    #SentenceTransformerEmbeddings,
     TensorflowHubEmbeddings,
 )
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
-from akasha.models.llama2 import peft_Llama2, get_llama_cpp_model, TaiwanLLaMaGPTQ, LlamaCPP
+from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
 import os, traceback, logging
 import shutil
 from langchain_core.language_models.base import BaseLanguageModel
