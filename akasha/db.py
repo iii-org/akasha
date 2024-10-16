@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from typing import Union, List
 from tqdm import tqdm
 import time, os, shutil, traceback, logging

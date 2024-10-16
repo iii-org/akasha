@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from langchain.schema import Document
 from langchain_community.retrievers import (
     TFIDFRetriever,
