@@ -124,7 +124,8 @@ Before using Azure OpenAI models, you need to request access the models you want
 - **`OPENAI_API_TYPE=azure`**
 - **`OPENAI_API_VERSION=2023-05-15`**
 
-
+[Here](https://www.genspark.ai/spark?id=2b211196-2f61-45dc-b797-2d0c2de51e80) are the steps to apply for the Azure API 
+[(中文版本)](https://www.genspark.ai/spark?id=98f398f3-2f6b-44d8-bfe0-40a26da12c2e)
 <br/>
 
 If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**

@@ -112,6 +112,10 @@ export OPENAI_API_KEY="your api key"
 - `OPENAI_API_TYPE=azure`
 - `OPENAI_API_VERSION=2023-05-15`
 
+ 請到[這裡](https://www.genspark.ai/spark?id=98f398f3-2f6b-44d8-bfe0-40a26da12c2e)查看申請 azure api的相關步驟
+
+<br/>
+
 如果你同時想儲存 OpenAI 和 Azure 的金鑰，也可以使用 `AZURE_API_KEY`、`AZURE_API_BASE`、`AZURE_API_TYPE`、`AZURE_API_VERSION`。
 
 ```sh
