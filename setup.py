@@ -77,7 +77,7 @@ class CustomInstallCommand(install):
 
 setup(
     name="akasha-terminal",
-    version="0.8.64",
+    version="0.8.65",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
