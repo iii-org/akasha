@@ -204,7 +204,7 @@ class LlamaCPP(LLM):
                 'device'] == 'cuda' and self.device == 'cuda':
             # chat_format="llama-2",
             self.model = Llama(model_path=model_name,
-                               #n_ctx=4096,
+                               n_ctx=self.max_token,
                                n_gpu_layers=-1,
                                n_threads=16,
                                n_batch=512,
@@ -212,7 +212,7 @@ class LlamaCPP(LLM):
 
         else:
             self.model = Llama(model_path=model_name,
-                               #n_ctx=4096,
+                               n_ctx=self.max_token,
                                n_threads=16,
                                n_batch=512, verbose = self.verbose)
 
@@ -244,7 +244,7 @@ class LlamaCPP(LLM):
             stream=True,
             stop=stop_list,
             temperature=self.temperature,
-            max_tokens=self.max_output_tokens)
+            max_tokens=self.max_output_tokens, presence_penalty=1,frequency_penalty=1)
 
         for text in output:
             delta = text['choices'][0]['delta']
@@ -264,6 +264,7 @@ class LlamaCPP(LLM):
             str: llm response
         """
         stop_list = get_stop_list(stop)
+        print(prompt)
         if isinstance(prompt, str):
             prompt = [{
                 "role": "system",
@@ -278,7 +279,7 @@ class LlamaCPP(LLM):
             stream=True,
             stop=stop_list,
             temperature=self.temperature,
-            max_tokens=self.max_output_tokens)
+            max_tokens=self.max_output_tokens, presence_penalty=1,frequency_penalty=1)
 
         ret = ""
         for text in output:
