@@ -237,15 +237,12 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
     elif (model_type
           in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
           and model_name != ""):
-        if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
-            device = "cpu"
-        else:
-            device = "cuda"
-        #model = get_llama_cpp_model(model_type, model_name, temperature)
-        model = LlamaCPP(model_name=model_name,
-                         temperature=temperature,
-                         max_output_tokens=max_output_tokens,
-                         device=device)
+
+        model = LlamaCPP(
+            model_name=model_name,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+        )
         info = "selected llama-cpp model\n"
     elif model_type in [
             "huggingface",

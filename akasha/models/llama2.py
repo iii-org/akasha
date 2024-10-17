@@ -3,55 +3,9 @@ from langchain.llms.base import LLM
 import torch, sys
 from transformers import AutoTokenizer, TextStreamer
 from peft import AutoPeftModelForCausalLM
-from langchain.callbacks.manager import CallbackManager
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+# from langchain.callbacks.manager import CallbackManager
+# from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from typing import Dict, List, Any, Optional, Callable, Generator, Union
-
-
-def get_llama_cpp_model(model_type: str,
-                        model_name: str,
-                        temperature: float = 0.0):
-    """define llama-cpp model, use llama-cpu for pure cpu, use llama-gpu for gpu acceleration.
-
-    Args:
-        **model_type (str)**: llama-cpu or llama-gpu\n
-        **model_name (str)**: path of gguf  file\n
-
-    Returns:
-        _type_: llm model
-    """
-    callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
-    from langchain_community.llms.llamacpp import LlamaCpp
-    if model_type in ["llama", "llama2", "llama-cpp", "llama-cpu"]:
-        model = LlamaCpp(
-            n_ctx=4096,
-            temperature=temperature,
-            model_path=model_name,
-            input={
-                "temperature": 0.0,
-                "max_length": 4096,
-                "top_p": 1
-            },
-            callback_manager=callback_manager,
-            verbose=False,
-            repetition_penalty=1.5,
-        )
-
-    else:
-        n_gpu_layers = -1
-        n_batch = 512
-
-        model = LlamaCpp(
-            n_ctx=4096,
-            temperature=temperature,
-            model_path=model_name,
-            n_gpu_layers=n_gpu_layers,
-            n_batch=n_batch,
-            callback_manager=callback_manager,
-            verbose=False,
-            repetition_penalty=1.5,
-        )
-    return model
 
 
 class peft_Llama2(LLM):
@@ -181,6 +135,7 @@ class LlamaCPP(LLM):
     temperature: float = 0.01
     max_output_tokens: int = 1024
     verbose: bool = False
+
     def __init__(self, model_name: str, temperature: float, **kwargs):
         """define custom model, input func and temperature
 
@@ -200,21 +155,21 @@ class LlamaCPP(LLM):
             self.verbose = kwargs['verbose']
         self.temperature = temperature
 
-        if 'device' in kwargs and kwargs[
-                'device'] == 'cuda' and self.device == 'cuda':
+        if self.device == 'cuda':
             # chat_format="llama-2",
             self.model = Llama(model_path=model_name,
                                n_ctx=self.max_token,
                                n_gpu_layers=-1,
                                n_threads=16,
                                n_batch=512,
-                               verbose = self.verbose)
+                               verbose=self.verbose)
 
         else:
             self.model = Llama(model_path=model_name,
                                n_ctx=self.max_token,
                                n_threads=16,
-                               n_batch=512, verbose = self.verbose)
+                               n_batch=512,
+                               verbose=self.verbose)
 
     @property
     def _llm_type(self) -> str:
@@ -244,7 +199,9 @@ class LlamaCPP(LLM):
             stream=True,
             stop=stop_list,
             temperature=self.temperature,
-            max_tokens=self.max_output_tokens, presence_penalty=1,frequency_penalty=1)
+            max_tokens=self.max_output_tokens,
+            presence_penalty=1,
+            frequency_penalty=1)
 
         for text in output:
             delta = text['choices'][0]['delta']
@@ -279,7 +236,9 @@ class LlamaCPP(LLM):
             stream=True,
             stop=stop_list,
             temperature=self.temperature,
-            max_tokens=self.max_output_tokens, presence_penalty=1,frequency_penalty=1)
+            max_tokens=self.max_output_tokens,
+            presence_penalty=1,
+            frequency_penalty=1)
 
         ret = ""
         for text in output:
