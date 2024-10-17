@@ -221,7 +221,6 @@ class LlamaCPP(LLM):
             str: llm response
         """
         stop_list = get_stop_list(stop)
-        print(prompt)
         if isinstance(prompt, str):
             prompt = [{
                 "role": "system",
