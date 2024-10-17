@@ -1,6 +1,6 @@
 import streamlit as st
 import sys
-import summary
+import akasha.summary as summary
 from pathlib import Path
 import datetime
 from interface.setting import handle_api_key
