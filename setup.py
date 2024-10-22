@@ -7,8 +7,12 @@ long_description = "n"  #(this_directory / "read.md").read_text(encoding="utf-8"
 
 install_requires = [
     "pypdf",
-    "langchain>=0.1.0,<=0.1.16",
+    "langchain-core>=0.3,<0.4",
+    "langchain>=0.3,<0.4",
+    "langchain-community>=0.3,<0.4"
     "langchain_openai>=0.1.0",
+    "langchain-chroma",
+    "lark",
     "chromadb==0.4.14",
     "openai>=0.27",
     "tiktoken",
@@ -40,7 +44,7 @@ install_requires.append("opencc==1.1.6; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
-    version="0.8.68",
+    version="0.8.69",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -59,5 +63,5 @@ setup(
         "akasha.interface",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
-    python_requires=">=3.8",
+    python_requires=">=3.9",
 )

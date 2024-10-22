@@ -1,5 +1,6 @@
 from langchain.tools import BaseTool
-from langchain.agents import load_tools, initialize_agent, tool
+from langchain.agents import initialize_agent, tool
+from langchain_community.agent_toolkits.load_tools import load_tools
 from langchain.agents import AgentType
 from langchain.agents import initialize_agent, Tool
 from langchain_community.agent_toolkits import FileManagementToolkit

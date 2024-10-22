@@ -124,7 +124,6 @@ def openai_vision(
     ### call model ###
     import os
     from langchain_openai import ChatOpenAI, AzureChatOpenAI
-    from langchain.chat_models import ChatOpenAI, AzureChatOpenAI
     from langchain.schema.messages import HumanMessage, SystemMessage
     from langchain.callbacks import get_openai_callback
 
@@ -134,6 +133,7 @@ def openai_vision(
         modeln = model.replace(".", "")
         api_base, api_key, api_version = helper._handle_azure_env()
         chat = AzureChatOpenAI(
+            name=modeln,
             deployment_name=modeln,
             temperature=0.0,
             base_url=api_base,
@@ -637,7 +637,6 @@ class Doc_QA(atman):
                                   '\n\n'.join(history_messages)),
             compression=self.compression,
         )
-
         if self.docs is None:
 
             print("\n\nNo Relevant Documents.\n\n")

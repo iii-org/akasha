@@ -6,6 +6,7 @@ from peft import AutoPeftModelForCausalLM
 # from langchain.callbacks.manager import CallbackManager
 # from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from typing import Dict, List, Any, Optional, Callable, Generator, Union
+from pydantic import Field
 import atexit
 
 
@@ -22,8 +23,8 @@ class peft_Llama2(LLM):
     max_token: int = 2048
     temperature: float = 0.01
     top_p: float = 0.95
-    tokenizer: Any
-    model: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
 
     def __init__(self,
                  model_name_or_path: str,
@@ -71,9 +72,9 @@ class TaiwanLLaMaGPTQ(LLM):
     max_token: int = 300
     temperature: float = 0.01
     top_p: float = 0.95
-    tokenizer: Any
-    model: Any
-    streamer: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
+    streamer: Any = Field(default=None)
 
     def __init__(self, model_name_or_path: str, temperature: float = 0.01):
         super().__init__()
@@ -129,9 +130,8 @@ class TaiwanLLaMaGPTQ(LLM):
 
 class LlamaCPP(LLM):
     max_token: int = 4096
-    tokenizer: Any
-    model: Any
-    device: Any
+    model: LLM = Field(default=None)
+    device: str = Field(default=None)
     model_id: str
     temperature: float = 0.01
     max_output_tokens: int = 1024
@@ -144,10 +144,10 @@ class LlamaCPP(LLM):
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__(model_id=model_name)
-
         from llama_cpp import Llama
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")
+
         if temperature == 0.0:
             temperature = 0.01
         if 'max_output_tokens' in kwargs:
@@ -155,7 +155,6 @@ class LlamaCPP(LLM):
         if 'verbose' in kwargs:
             self.verbose = kwargs['verbose']
         self.temperature = temperature
-
         if self.device == 'cuda':
             # chat_format="llama-2",
             self.model = Llama(model_path=model_name,
