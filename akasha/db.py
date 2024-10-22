@@ -15,6 +15,7 @@ from langchain.docstore.document import Document
 from pathlib import Path
 import akasha
 import akasha.helper as helper
+import sys
 
 logging.basicConfig(level=logging.ERROR)
 
@@ -475,7 +476,7 @@ def create_chromadb(doc_path: str,
     txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
     for extension in txt_extensions:
         files.extend(_load_files(doc_path, extension))
-    progress = tqdm(total=len(files), desc="Vec Storage")
+    progress = tqdm(total=len(files), desc="Vec Storage", file=sys.stdout)
 
     for file in files:
         progress.update(1)
