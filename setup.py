@@ -40,7 +40,7 @@ install_requires.append("opencc==1.1.6; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
-    version="0.8.67",
+    version="0.8.68",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",

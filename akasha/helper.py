@@ -462,7 +462,7 @@ def extract_json(s: str) -> Union[dict, None]:
     match = re.search(r'\{.*\}', s, re.DOTALL)
     stack = []
     start = 0
-
+    s = s.replace("\n", " ").replace("\r", " ").strip()
     if match is None:
         return None
 

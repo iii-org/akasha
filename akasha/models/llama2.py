@@ -6,6 +6,7 @@ from peft import AutoPeftModelForCausalLM
 # from langchain.callbacks.manager import CallbackManager
 # from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from typing import Dict, List, Any, Optional, Callable, Generator, Union
+import atexit
 
 
 class peft_Llama2(LLM):
@@ -170,6 +171,16 @@ class LlamaCPP(LLM):
                                n_threads=16,
                                n_batch=512,
                                verbose=self.verbose)
+        # Register the cleanup function
+        atexit.register(self.cleanup)
+
+    def cleanup(self):
+        """Cleanup function to be called on exit."""
+        if hasattr(self, 'model') and self.model is not None:
+            try:
+                del self.model
+            except Exception as e:
+                print(f"Error during cleanup: {e}")
 
     @property
     def _llm_type(self) -> str:
