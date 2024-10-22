@@ -1,7 +1,6 @@
 import pathlib
 import time
 from typing import Callable, Union, List, Tuple, Generator
-from langchain.chains.question_answering import load_qa_chain, LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 import akasha.helper as helper
@@ -78,12 +77,13 @@ def detect_exploitation(
         "illegal information, harmful content, Offensive Language, or encourages users to share or access copyrighted materials"
         + " And return true or false. Texts are: " + sys_e + "[/INST]")
 
-    template = (system_prompt + """ 
+    template = system_prompt + f""" 
     
     Texts: {texts}
-    Answer: """)
-    prompt = PromptTemplate(template=template, input_variables={"texts"})
-    response = LLMChain(prompt=prompt, llm=model).run(texts)
+    Answer: """
+
+    response = helper.call_model(model, template)
+
     print(response)
     return response
 
