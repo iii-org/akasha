@@ -1,6 +1,6 @@
 from typing import Dict, List, Any, Optional, Callable, Generator, Union
 from langchain.llms.base import LLM
-from langchain.pydantic_v1 import BaseModel, Extra
+from pydantic import BaseModel
 from langchain.schema.embeddings import Embeddings
 from transformers import AutoTokenizer, AutoModel, TextStreamer, AutoModelForCausalLM, TextIteratorStreamer
 #from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
@@ -15,6 +15,7 @@ from threading import Thread
 from openai import OpenAI
 import concurrent.futures
 from PIL import Image
+from pydantic import Field
 
 
 class chatGLM(LLM):
@@ -23,8 +24,8 @@ class chatGLM(LLM):
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
-    tokenizer: Any
-    model: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
 
     def __init__(self,
                  model_name: str,
@@ -86,8 +87,8 @@ class gptq(LLM):
     max_token: int = 4096
     temperature: float = 0.01
     top_p: float = 0.95
-    tokenizer: Any
-    model: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
 
     def __init__(
         self,
@@ -176,7 +177,7 @@ class custom_embed(BaseModel, Embeddings):
             )
     """
 
-    client: Any  #: :meta private:
+    client: Any = Field(default=None)  #: :meta private:
     model_name: str = "custom embedding model"
     """Model name to use."""
     # model_kwargs: Dict[str, Any] = Field(default_factory=dict)
@@ -193,11 +194,6 @@ class custom_embed(BaseModel, Embeddings):
 
         self.client = func
         self.encode_kwargs = encode_kwargs
-
-    class Config:
-        """Configuration for this pydantic object."""
-
-        extra = Extra.forbid
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Compute doc embeddings using a HuggingFace transformer model.
@@ -235,9 +231,9 @@ class custom_model(LLM):
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
-    tokenizer: Any
-    model: Any
-    func: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
+    func: Any = Field(default=None)
 
     def __init__(self, func: Callable, temperature: float = 0.001):
         """define custom model, input func and temperature
@@ -281,9 +277,9 @@ class remote_model(LLM):
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
-    tokenizer: Any
-    model: Any
-    url: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
+    url: Any = Field(default=None)
 
     def __init__(self, base_url: str, temperature: float = 0.001, **kwargs):
         """define custom model, input func and temperature
@@ -520,10 +516,10 @@ class remote_model(LLM):
 class hf_model(LLM):
 
     max_token: int = 4096
-    tokenizer: Any
-    model: Any
-    streamer: Any
-    device: Any
+    tokenizer: Any = Field(default=None)
+    model: Any = Field(default=None)
+    streamer: Any = Field(default=None)
+    device: Any = Field(default=None)
     model_id: str
     processor: Any = None
     temperature: float = 0.01

@@ -1,3 +1,6 @@
+import warnings
+
+warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 import numpy as np
 import jieba
 import json, re, time
@@ -297,6 +300,7 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             model_name = model_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env()
             model = AzureChatOpenAI(
+                model=model_name,
                 deployment_name=model_name,
                 temperature=temperature,
                 azure_endpoint=api_base,
@@ -634,7 +638,7 @@ def call_model(
             if isinstance(response, list):
                 response = '\n'.join(response)
 
-        if "huggingface" in model_type:
+        if "huggingface" or "llama cpp" in model_type:
             print_flag = False
 
         if response is None or response == "":
