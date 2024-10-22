@@ -42,7 +42,7 @@ def setting_page():
                 ]
             except:
                 pass
-            st.experimental_rerun()
+            st.rerun()
         print(st.session_state.chose_doc_path)
     with em:
         embed = st.selectbox(
@@ -57,7 +57,7 @@ def setting_page():
             st.session_state.select_idx[1] = st.session_state.embed_list.index(
                 st.session_state.embed)
 
-            st.experimental_rerun()
+            st.rerun()
     with md:
         md = st.selectbox(
             "Language Model",
@@ -69,7 +69,7 @@ def setting_page():
             st.session_state.model = md
             st.session_state.select_idx[2] = st.session_state.model_list.index(
                 st.session_state.model)
-            st.experimental_rerun()
+            st.rerun()
 
     cks, seat = st.columns([1, 1])
     with cks:
@@ -83,7 +83,7 @@ def setting_page():
         )
         if ck != st.session_state.chunksize:
             st.session_state.chunksize = ck
-            st.experimental_rerun()
+            st.rerun()
 
     with seat:
         stp = st.selectbox(
@@ -97,7 +97,7 @@ def setting_page():
             st.session_state.select_idx[
                 3] = st.session_state.search_list.index(
                     st.session_state.search_type)
-            st.experimental_rerun()
+            st.rerun()
 
     thre, tem, mxt = st.columns([1, 1, 1])
 
@@ -111,7 +111,7 @@ def setting_page():
         )
         if thres != st.session_state.threshold:
             st.session_state.threshold = thres
-            st.experimental_rerun()
+            st.rerun()
     with tem:
         tem = st.number_input(
             "Temperature",
@@ -123,7 +123,7 @@ def setting_page():
         )
         if tem != st.session_state.temperature:
             st.session_state.temperature = tem
-            st.experimental_rerun()
+            st.rerun()
     with mxt:
         mt = st.number_input(
             "Max Doc Length",
@@ -136,7 +136,7 @@ def setting_page():
 
         if mt != st.session_state.max_doc_len:
             st.session_state.max_doc_len = mt
-            st.experimental_rerun()
+            st.rerun()
 
 
 def set_model_dir():

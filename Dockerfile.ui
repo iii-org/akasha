@@ -1,0 +1,20 @@
+FROM ccchang0518/akasha-lab-builder:0.7
+LABEL chih-chuan chang<ccchang@iii.org.tw>
+
+
+WORKDIR /app
+# We need to set the host to 0.0.0.0 to allow outside access
+ENV HOST 0.0.0.0
+
+
+# Install akasha-terminal and llama-cpp-python with CUDA support
+RUN python -m pip install -U akasha-terminal
+
+# Expose the port for the UI
+EXPOSE 8501
+
+# Run the UI
+WORKDIR /app
+COPY sdk/akasha/interface /app/interface
+COPY sdk/akasha/ui.py /app/ui.py 
+ENTRYPOINT ["streamlit", "run", "ui.py"]

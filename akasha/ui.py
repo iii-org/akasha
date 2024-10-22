@@ -96,7 +96,7 @@ if "model_list" not in st.session_state:
     #         "llama-gpu:model/llama-2-7b-chat.Q5_K_S.gguf"]
 
 if "search_list" not in st.session_state:
-    st.session_state.search_list = ["merge", "svm", "tfidf", "mmr"]
+    st.session_state.search_list = ["auto", "merge", "svm", "bm25", "mmr"]
 
 if "docs_path" not in st.session_state:
     st.session_state.docs_path = "./docs"

@@ -1,6 +1,6 @@
 import streamlit as st
 import sys
-import summary
+import akasha.summary as summary
 from pathlib import Path
 import datetime
 from interface.setting import handle_api_key
@@ -51,7 +51,7 @@ def summary_page():
                 st.session_state.prompt_list = []
                 st.session_state.response_list = []
                 run_flag = True
-                st.experimental_rerun()
+                st.rerun()
         with sb2:
             if st.button("Submit", type="primary", use_container_width=True):
                 run_flag = handle_api_key()

@@ -1,6 +1,7 @@
 from typing import List, Union, Tuple
 import akasha.format as afr
 from urllib.parse import urlparse
+import os
 # from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 sys_s = "[INST] <<SYS>> "
@@ -674,9 +675,13 @@ def format_image_gpt_prompt(image_path: str, prompt: str) -> List[dict]:
         url_content = {"url": image_path}
     else:
         import base64
+        # Get the image extension
+        _, ext = os.path.splitext(image_path)
+        ext = ext.lstrip(
+            '.').lower()  # Remove the leading dot and convert to lowercase
         base64_image = base64.b64encode(open(image_path,
                                              "rb").read()).decode("utf-8")
-        url_content = {"url": f"data:image/jpeg;base64,{base64_image}"}
+        url_content = {"url": f"data:image/{ext};base64,{base64_image}"}
 
     image_content = [{
         "type": "text",

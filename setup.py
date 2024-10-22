@@ -1,6 +1,4 @@
 from setuptools import setup
-import platform
-
 # read the contents of your README file
 from pathlib import Path
 
@@ -19,7 +17,7 @@ install_requires = [
     "sentence-transformers>=3.1.1",
     "torch==2.2.0",
     "transformers>=4.45.0",  #==4.41.1
-    "auto-gptq==0.3.1",
+    "auto-gptq>=0.3.1",
     "tqdm==4.65.0",
     "docx2txt==0.8",
     "rouge==1.0.1",
@@ -32,18 +30,17 @@ install_requires = [
     "rank_bm25",
     "unstructured",
     "python-pptx",
-    "wikipedia"
+    "wikipedia",
+    "numpy<2"
 ]
-if platform.system() == "Windows":
-    install_requires.append("opencc==1.1.1")
-elif platform.system() == "Darwin":
-    install_requires.append("opencc==0.2")
-else:
-    install_requires.append('opencc==1.1.6')
+
+install_requires.append("opencc==1.1.1; platform_system=='Windows'")
+install_requires.append("opencc==0.2; platform_system=='Darwin'")
+install_requires.append("opencc==1.1.6; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
-    version="0.8.63",
+    version="0.8.67",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -51,8 +48,8 @@ setup(
     url="https://github.com/iii-org/akasha",
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
-    extra_requires={'llama-cpp': [
-        "llama-cpp-python==0.2.6",
+    extras_require={'llama-cpp': [
+        "llama-cpp-python>=0.3.1",
     ]},
     packages=[
         "akasha",

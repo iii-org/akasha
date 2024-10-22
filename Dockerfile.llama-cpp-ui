@@ -1,0 +1,28 @@
+ARG CUDA_IMAGE="12.1.0-devel-ubuntu22.04"
+FROM nvidia/cuda:${CUDA_IMAGE}
+
+WORKDIR /app
+# We need to set the host to 0.0.0.0 to allow outside access
+ENV HOST 0.0.0.0
+
+# Set CUDA environment variables
+ENV CMAKE_ARGS="-DGGML_CUDA=on"
+ENV FORCE_CMAKE=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y build-essential python3 python3-pip git cmake
+
+RUN python3 -m pip install pytest cmake scikit-build setuptools fastapi uvicorn sse-starlette pydantic-settings starlette-context
+
+# Install akasha-terminal and llama-cpp-python with CUDA support
+RUN python3 -m pip install -U akasha-terminal
+RUN python3 -m pip install --force-reinstall llama-cpp-python>=0.3.1 --no-cache-dir
+RUN python3 -m pip install "numpy<2"
+# Expose the port for the UI
+EXPOSE 8501
+
+# Run the UI
+WORKDIR /app
+COPY akasha/interface /app/interface
+COPY akasha/ui.py /app/ui.py 
+ENTRYPOINT ["streamlit", "run", "ui.py"]
