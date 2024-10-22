@@ -285,8 +285,9 @@ def get_chromadb_from_file(documents: list,
         docsearch = Chroma(persist_directory=storage_directory,
                            embedding_function=embeddings)
         if embed_type == "openai":
-            open_model = helper.handle_model("openai:gpt-3.5-turbo", False,
-                                             0.0)
+            # open_model = helper.handle_model("openai:gpt-3.5-turbo", False,
+            #                                  0.0)
+            open_model = None
         else:
             open_model = None
 
