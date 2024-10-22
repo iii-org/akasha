@@ -17,6 +17,7 @@ import numpy as np
 import akasha.helper as helper
 from akasha.db import dbs
 import jieba
+from pydantic import Field
 
 
 def _get_threshold_times(db: dbs):
@@ -482,13 +483,13 @@ def retri_docs(
 
 
 class myMMRRetriever(BaseRetriever):
-    embeddings: Embeddings
+    embeddings: Embeddings = Field(default=None)
     """Embeddings model to use."""
-    index: Any
+    index: Any = Field(default=None)
     """Index of embeddings."""
-    texts: List[str]
+    texts: List[str] = Field(default=None)
     """List of texts to index."""
-    metadata: List[dict]
+    metadata: List[dict] = Field(default=None)
     k: int = 3
     """Number of results to return."""
     relevancy_threshold: Optional[float] = None
@@ -595,13 +596,13 @@ class myMMRRetriever(BaseRetriever):
 
 
 class customRetriever(BaseRetriever):
-    embeddings: Embeddings
+    embeddings: Embeddings = Field(default=None)
     """Embeddings model to use."""
-    index: Any
+    index: Any = Field(default=None)
     """Index of embeddings."""
-    texts: List[str]
+    texts: List[str] = Field(default=None)
     """List of texts to index."""
-    metadata: List[dict]
+    metadata: List[dict] = Field(default=None)
     k: int = 3
     """Number of results to return."""
     relevancy_threshold: Optional[float] = None
@@ -685,11 +686,11 @@ class customRetriever(BaseRetriever):
 
 
 class myKNNRetriever(BaseRetriever):
-    embeddings: Embeddings
+    embeddings: Embeddings = Field(default=None)
     """Embeddings model to use."""
-    index: Any
+    index: Any = Field(default=None)
     """Index of embeddings."""
-    texts: List[str]
+    texts: List[str] = Field(default=None)
     """List of texts to index."""
     metadata: List[dict]
     k: int = 3
@@ -852,11 +853,11 @@ class myTFIDFRetriever(TFIDFRetriever):
 
 
 class mySVMRetriever(BaseRetriever):
-    embeddings: Embeddings
+    embeddings: Embeddings = Field(default=None)
     """Embeddings model to use."""
-    index: Any
+    index: Any = Field(default=None)
     """Index of embeddings."""
-    texts: List[str]
+    texts: List[str] = Field(default=None)
     """List of texts to index."""
     metadata: List[dict]
     k: int = 3
@@ -965,12 +966,12 @@ class mySVMRetriever(BaseRetriever):
 
 
 class myBM25Retriever(BaseRetriever):
-    bm25: BM25Okapi
+    bm25: BM25Okapi = Field(default=None)
     """BM25 class to use."""
-    texts: List[str]
+    texts: List[str] = Field(default=None)
     """List of texts to index."""
-    metadata: List[dict]
-    docs: List[Document]
+    metadata: List[dict] = Field(default=None)
+    docs: List[Document] = Field(default=None)
     k: int = 3
     """Number of results to return."""
     relevancy_threshold: Optional[float] = None
