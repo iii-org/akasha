@@ -9,7 +9,7 @@ install_requires = [
     "pypdf",
     "langchain-core>=0.3,<0.4",
     "langchain>=0.3,<0.4",
-    "langchain-community>=0.3,<0.4"
+    "langchain-community>=0.3,<0.4",
     "langchain_openai>=0.1.0",
     "langchain-chroma",
     "lark",
