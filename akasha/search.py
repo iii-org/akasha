@@ -877,8 +877,8 @@ class mySVMRetriever(BaseRetriever):
 
         clf = svm.LinearSVC(class_weight="balanced",
                             verbose=False,
-                            max_iter=10000,
-                            tol=1e-5,
+                            max_iter=50000,
+                            tol=1e-4,
                             C=0.1)
         clf.fit(x, y)
 

@@ -9,8 +9,7 @@ from langchain.text_splitter import (
     CharacterTextSplitter,
     RecursiveCharacterTextSplitter,
 )
-from langchain_community.vectorstores import chroma
-from langchain_community.vectorstores.chroma import Chroma
+from langchain_chroma import Chroma
 from langchain.docstore.document import Document
 from pathlib import Path
 import akasha
@@ -338,7 +337,6 @@ def get_chromadb_from_file(documents: list,
         ### add pic summary to db ###
         # if add_pic and file_name.split(".")[-1] == "pdf":
         #     docsearch, add_pic = add_pic_summary_to_db(docsearch, file_name, chunk_size)
-        docsearch.persist()
         db = dbs(docsearch)
         docsearch._client._system.stop()
         docsearch = None
