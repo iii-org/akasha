@@ -1,21 +1,44 @@
 # akasha
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
-[![downloads](https://img.shields.io/pypi/dm/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
-[![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
-![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
-
-<br/>
-
-akasha simplifies document-based Question Answering (QA) and Retrieval Augmented Generation(RAG) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
-
-With akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
-
-For the chinese manual, please visit [manual](https://tea9297.github.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat)](https://opensource.org/licenses/MIT)
+[![PyPI Version](https://img.shields.io/pypi/v/akasha-terminal?style=flat)](https://pypi.org/project/akasha-terminal/)
+[![Downloads](https://img.shields.io/pypi/dm/akasha-terminal?style=flat&color=brightgreen)](https://pypi.org/project/akasha-terminal/)
+[![Python Version](https://img.shields.io/badge/Python-3.8%20%7C%203.9%20%7C%203.10-blue?style=flat)](https://www.python.org/downloads/release/python-380/)
+[![GitLab CI](https://img.shields.io/badge/GitLab%20CI-passing-orange?style=flat&logo=gitlab&logoColor=white)](https://gitlab.com)
 
 <br/>
 <br/>
+
+# Quick Navigation
+
+- [Introduction](#introduction)
+- [Updates](#updates)
+  - [Version 0.8.63](#version-0863)
+  - [Version 0.8.56](#version-0856)
+  - [Version 0.8.53](#version-0853)
+- [Installation](#installation)
+- [API Keys](#api-keys)
+  - [OpenAI](#openai)
+  - [Azure OpenAI](#azure-openai)
+- [Usage Examples](#usage-examples)
+- [Available Models](#available-models)
+- [File Summarization](#file-summarization)
+- [Agent Usage](#agent-usage)
+- [Akasha UI](#akasha-ui)
+
+
+<br/>
+<br/>
+
+# introduction
+
+Akasha is a tool that provides two high-level features:
+
+1. Document-based Question Answering (QA) and Retrieval Augmented Generation (RAG) using advanced Large Language Models (LLMs).
+2. Flexibility to choose from a variety of language models, embedding models, and search methods for optimized results.
+
+You can leverage popular language models and embeddings to extend Akasha's capabilities, making it adaptable to your specific needs.
+
+For more information and to get started, please visit our Chinese manual [here](https://tea9297.github.io/) or [Chinese version of Readme](https://github.com/iii-org/akasha/blob/master/readmeTW.md).
 
 <br/>
 <br/>
@@ -75,10 +98,10 @@ pip install akasha-terminal
 ## API Keys
 
 ### OPENAI
-If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key.
-You can either save **OPENAI_API_KEY=your api key** into **.env** file to current working directory or,
-set as a environment variable, using **export** in bash or use **os.environ** in python.
 
+If you want to use OpenAI models or embeddings, visit [OpenAI's API key page](https://platform.openai.com/account/api-keys) to obtain your API key.
+
+You can save the key as **`OPENAI_API_KEY=your_api_key`** in a **`.env`** file in your current working directory, or set it as an environment variable using **`export`** in Bash, or **`os.environ`** in Python.
 ```bash
 
 # set a environment variable
@@ -92,9 +115,17 @@ export OPENAI_API_KEY="your api key"
 <br/>
 
 ### AZURE OPENAI
-If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
-Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save **OPENAI_API_KEY=your azure key**,  **OPENAI_API_BASE=your Language API base url**, **OPENAI_API_TYPE=azure**, **OPENAI_API_VERSION=2023-05-15** into **.env** file to current working directory.
+If you want to use Azure OpenAI, go to [Azure OpenAI Portal](https://oai.azure.com/portal) to get your Language API base URL and key.
 
+Before using Azure OpenAI models, you need to request access the models you want to use in [Azure OpenAI Studio](https://oai.azure.com/portal).. The deployment name should match the model name. Save the following information in a `.env` file in your current working directory:
+
+- **`OPENAI_API_KEY=your_azure_key`**
+- **`OPENAI_API_BASE=your_language_api_base_url`**
+- **`OPENAI_API_TYPE=azure`**
+- **`OPENAI_API_VERSION=2023-05-15`**
+
+[Here](https://www.genspark.ai/spark?id=2b211196-2f61-45dc-b797-2d0c2de51e80) are the steps to apply for the Azure API 
+[(中文版本)](https://www.genspark.ai/spark?id=98f398f3-2f6b-44d8-bfe0-40a26da12c2e)
 <br/>
 
 If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**
@@ -118,7 +149,7 @@ And now we can run akasha in python
 ```python
 #PYTHON3.9
 import akasha
-ak = akasha.Doc_QA(model="openai:gpt-3.5-turbo")
+ak = akasha.Doc_QA(model="openai:gpt-4")
 response = ak.get_response(dir_path, prompt)
 
 
@@ -133,6 +164,18 @@ response = ak.get_response(dir_path, prompt)
 
 # Example
 
+Make sure to update the `dir_path` and `prompt` variables in your code:
+
+- **`dir_path`**: Change `"doc/"` to the folder containing the relevant PDF files with the answers.
+- **`prompt`**: Set this to the specific question you want to ask.
+
+For example:
+
+```python
+# Update dir_path and prompt accordingly
+dir_path = "path/to/your/pdf_folder"
+prompt = "What is the answer to my question?"
+```
 
 
 ``` python
@@ -160,57 +203,69 @@ print(response)
 <br/>
 
 
-## Some models you can use
+## Some models available for use
 
-Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY,' and for most Hugging Face models, a GPU is required to run the models. However, for .gguf models, you can use a CPU to run them.
+Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY',
+and for most Hugging Face models, a GPU is required to run them. However, .gguf models can run on CPUs.
 
 ```python
-openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
-openai4_model = "openai:gpt-4"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
-openai4o_model = "openai:gpt-4o" # need environment variable "OPENAI_API_KEY"
-huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
-quantized_ch_llama_model = "gptq:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
-taiwan_llama_gptq = "gptq:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
-mistral = "hf:Mistral-7B-Instruct-v0.2" 
-mediatek_Breeze = "hf:MediaTek-Research/Breeze-7B-Instruct-64k-v0.1"
-### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 
-### from https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF  and the name behind "llama-gpu:" or "llama-cpu:"
-### from https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
-### is the path of the downloaded .gguf file
-llama_cpp_model = "llama-gpu:model/llama-2-13b-chat-hf.Q5_K_S.gguf"  
-llama_cpp_model = "llama-cpu:model/llama-2-7b-chat.Q5_K_S.gguf"
-llama_cpp_chinese_alpaca = "llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf"
-llama_cpp_chinese_alpaca = "llama-cpu:model/chinese-alpaca-2-13b.Q5_K_M.gguf"
-chatglm_model = "chatglm:THUDM/chatglm2-6b"
+# OpenAI Models (require environment variable 'OPENAI_API_KEY' or 'AZURE_API_KEY')
+openai_model = "openai:gpt-3.5-turbo"            # GPT-3.5 
+openai4_model = "openai:gpt-4"                    # GPT-4 
+# OpenAI Models (require environment variable 'OPENAI_API_KEY')
+openai4o_model = "openai:gpt-4o"                  # GPT-4o 
 
+# Hugging Face Models (To download the models listed below, the environment variable HUGGINGFACEHUB_API_TOKEN is required:)
+huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf"  # Meta Llama-2 model 
+
+# Quantized Models (require GPU for optimal performance)
+quantized_ch_llama_model = "gptq:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"  # 4-bit quantized Llama2 Chinese model
+taiwan_llama_gptq = "gptq:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"         # 4-bit quantized Taiwan LLaMa model
+
+# Additional Hugging Face Models
+mistral = "hf:Mistral-7B-Instruct-v0.2"                               # Mistral 7B instruct model
+mediatek_Breeze = "hf:MediaTek-Research/Breeze-7B-Instruct-64k-v0.1"  # MediaTek Breeze model
+
+# Llama-cpp Models (can run on CPU or GPU, require .gguf files from Hugging Face)
+# Download .gguf models from https://huggingface.co/TheBloke/
+# Specify the downloaded path using "llama-gpu:" or "llama-cpu:" prefix
+llama_cpp_model_gpu = "llama-gpu:model/llama-2-13b-chat-hf.Q5_K_S.gguf"       # Run on GPU
+llama_cpp_model_cpu = "llama-cpu:model/llama-2-7b-chat.Q5_K_S.gguf"           # Run on CPU
+
+# Chinese Alpaca Models for Llama-cpp
+llama_cpp_chinese_alpaca_gpu = "llama-gpu:model/chinese-alpaca-2-7b.Q5_K_S.gguf"  # Run on GPU
+llama_cpp_chinese_alpaca_cpu = "llama-cpu:model/chinese-alpaca-2-13b.Q5_K_M.gguf"  # Run on CPU
+
+# ChatGLM Model
+chatglm_model = "chatglm:THUDM/chatglm2-6b"  # THUDM ChatGLM2 model
 ```
-
 
 
 <br/>
 
 
 
-## Some embeddings you can use
+## Some embeddings available for use
 
-Please noted that each embedding model has different window size, texts that over the max seq length will be truncated and won't be represent
-in embedding model.
+Each embedding model has a different maximum sequence length. If the text exceeds this limit, it will be cut off, which means some parts won't be represented by the model.
 
-Rerank_base and rerank_large are not embedding models; instead, they compare the query to each chunk of the documents and return scores that represent the similarity. As a result, they offer higher accuracy compared to embedding models but may be slower.
+*rerank_base* and *rerank_large* are not embedding models. Instead, they compare the query with chunks of documents and return similarity scores. This makes them more accurate than embedding models, but also slower.
+
+Here are the details of the different embedding and reranking models:
 
 ```python
-openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"  # 8192 max seq length
-huggingface_emd = "hf:all-MiniLM-L6-v2" 
-text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"   # 128 max seq length 
-text2vec_mul_emd = "hf:shibing624/text2vec-base-multilingual"  # 256 max seq length
-text2vec_ch_para_emd = "hf:shibing624/text2vec-base-chinese-paraphrase" # perform better for long text, 256 max seq length
-bge_en_emd = "hf:BAAI/bge-base-en-v1.5"  # 512 max seq length
-bge_ch_emd = "hf:BAAI/bge-base-zh-v1.5"  # 512 max seq length
+openai_emd = "openai:text-embedding-ada-002"  # Needs "OPENAI_API_KEY"; 8192 max sequence length
+huggingface_emd = "hf:all-MiniLM-L6-v2"
+text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"  # 128 max sequence length
+text2vec_mul_emd = "hf:shibing624/text2vec-base-multilingual"  # 256 max sequence length
+text2vec_ch_para_emd = "hf:shibing624/text2vec-base-chinese-paraphrase"  # Better for long text; 256 max sequence length
+bge_en_emd = "hf:BAAI/bge-base-en-v1.5"  # 512 max sequence length
+bge_ch_emd = "hf:BAAI/bge-base-zh-v1.5"  # 512 max sequence length
 
-rerank_base = "rerank:BAAI/bge-reranker-base"    # 512 max seq length
-rerank_large = "rerank:BAAI/bge-reranker-large"  # 512 max seq length
-
+rerank_base = "rerank:BAAI/bge-reranker-base"  # 512 max sequence length
+rerank_large = "rerank:BAAI/bge-reranker-large"  # 512 max sequence length
 ```
+
 
 <br/>
 <br/>
@@ -230,7 +285,7 @@ There're two summary type, **map_reduce** and **refine**, **map_reduce** will su
 ```python
 
 import akasha
-sum = akasha.Summary( chunk_size=1000, chunk_overlap=100)
+sum = akasha.Summary( chunk_size=1000, chunk_overlap=100,model="openai:gpt-4")
 sum.summarize_file(file_path="doc/mic/5軸工具機因應市場訴求改變的發展態勢.pdf",summary_type="map_reduce", summary_len=500\
 , chunk_overlap=40)
 
@@ -293,7 +348,7 @@ ao = akasha.test_agent(verbose=True,
                         input_tool,
                         akasha.get_saveJSON_tool(),
                     ],
-                    model="openai:gpt-3.5-turbo")
+                    model="openai:gpt-4")
 print(
     ao("逐個詢問使用者以下問題，若所有問題都回答了，則將所有問題和回答儲存成default.json並結束。問題為:1.房間燈關了嗎? \n2. 有沒有人在家?  \n3.有哪些電器開啟?\n"
         ))
@@ -336,7 +391,7 @@ ao = akasha.test_agent(
                akasha.get_saveJSON_tool(),
                akasha.get_wiki_tool()],
         retri_observation=True,
-        model="openai:gpt-3.5-turbo")
+        model="openai:gpt-4")
 print(ao("請用中文回答李遠哲跟黃仁勳誰比較老?將查到的資訊和答案儲存成json檔案，檔名為AGE.json"))
 
 ```
