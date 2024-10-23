@@ -195,8 +195,8 @@ def get_docs_from_doc(doc_path: str, chunk_size: int, ignore_check: bool):
     for extension in txt_extensions:
         files.extend(_load_files(doc_path, extension))
 
-    progress = tqdm(total=len(files), desc="Vec Storage")
-
+    progress = tqdm(total=len(files), desc="Vec Storage", file=sys.stdout)
+    ##  file=sys.stdout:Force tqdm to write its output to the standard output stream to avoid potential conflicts
     for file in files:
 
         exist = False
@@ -477,7 +477,8 @@ def create_chromadb(doc_path: str,
     txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
     for extension in txt_extensions:
         files.extend(_load_files(doc_path, extension))
-    progress = tqdm(total=len(files), desc="Vec Storage", file=sys.stdout)
+    progress = tqdm(total=len(files), desc="Vec Storage", file=sys.stdout) 
+    ##  file=sys.stdout:Force tqdm to write its output to the standard output stream to avoid potential conflicts
 
     for file in files:
         progress.update(1)
