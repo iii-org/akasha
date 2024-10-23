@@ -493,7 +493,7 @@ class myMMRRetriever(BaseRetriever):
     k: int = 3
     """Number of results to return."""
     relevancy_threshold: Optional[float] = None
-    log: dict = None
+    log: dict = {}
     lambda_mult: float = 0.5
 
     @classmethod
@@ -503,7 +503,7 @@ class myMMRRetriever(BaseRetriever):
         embeddings: Embeddings,
         k: int = 3,
         relevancy_threshold: float = 0.2,
-        log: dict = None,
+        log: dict = {},
         lambda_mult: float = 0.5,
     ):
         # db_data = _get_all_docs(db)
@@ -520,17 +520,6 @@ class myMMRRetriever(BaseRetriever):
             log=log,
             lambda_mult=lambda_mult,
         )
-
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        """general function to retrieve relevant documents
-
-        Args:
-            **query (str)**: query string that used to find relevant documents\n
-
-        Returns:
-            List[Document]:  relevant documents
-        """
-        return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
 
@@ -607,7 +596,7 @@ class customRetriever(BaseRetriever):
     """Number of results to return."""
     relevancy_threshold: Optional[float] = None
     func: Callable
-    log: dict = None
+    log: dict = {}
 
     @classmethod
     def from_db(
@@ -617,7 +606,7 @@ class customRetriever(BaseRetriever):
         func: Callable,
         k: int = 3,
         relevancy_threshold: float = 0.2,
-        log: dict = None,
+        log: dict = {},
     ):
         # db_data = _get_all_docs(db)
         index = np.array(db.get_embeds())
@@ -633,17 +622,6 @@ class customRetriever(BaseRetriever):
             relevancy_threshold=relevancy_threshold,
             log=log,
         )
-
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        """general function to retrieve relevant documents
-
-        Args:
-            **query (str)**: query string that used to find relevant documents\n
-
-        Returns:
-            List[Document]:  relevant documents
-        """
-        return self._gs(query)
 
     def _gs(self, query: str) -> List[Document]:
         """implement using custom function to find relevant documents, the custom function func should
@@ -719,17 +697,6 @@ class myKNNRetriever(BaseRetriever):
             relevancy_threshold=relevancy_threshold,
             **kwargs,
         )
-
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        """general function to retrieve relevant documents
-
-        Args:
-            **query (str)**: query string that used to find relevant documents\n
-
-        Returns:
-            List[Document]:  relevant documents
-        """
-        return self._gs(query)[0]
 
     def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
         """implement k-means search to find relevant documents
@@ -887,17 +854,6 @@ class mySVMRetriever(BaseRetriever):
             **kwargs,
         )
 
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        """general function to retrieve relevant documents
-
-        Args:
-            **query (str)**: query string that used to find relevant documents\n
-
-        Returns:
-            List[Document]:  relevant documents
-        """
-        return self._gs(query)[0]
-
     def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
         """implement svm to find relevant documents
 
@@ -996,17 +952,6 @@ class myBM25Retriever(BaseRetriever):
             relevancy_threshold=relevancy_threshold,
             **kwargs,
         )
-
-    def get_relevant_documents(self, query: str) -> List[Document]:
-        """general function to retrieve relevant documents
-
-        Args:
-            **query (str)**: query string that used to find relevant documents\n
-
-        Returns:
-            List[Document]:  relevant documents
-        """
-        return self._gs(query)[0]
 
     def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
         """implement bm25 to find relevant documents
