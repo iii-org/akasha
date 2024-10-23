@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Union, List
 from tqdm import tqdm
-import time, os, shutil, traceback, logging
+import time, os, shutil, traceback, logging, warnings
 import datetime
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, UnstructuredPowerPointLoader
 from langchain_community.document_loaders.csv_loader import CSVLoader
@@ -16,6 +16,7 @@ from pathlib import Path
 import akasha
 import akasha.helper as helper
 
+warnings.filterwarnings('ignore', category=UserWarning, module='pypdf')
 logging.basicConfig(level=logging.ERROR)
 
 
