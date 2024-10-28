@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Union, List
+from typing import Union, List, Set
 from tqdm import tqdm
 import time, os, shutil, traceback, logging, warnings
 import datetime
@@ -897,5 +897,31 @@ def extract_db_by_keyword(db: dbs, keyword_list: List[str]) -> dbs:
                 ret_db.docs.append(db.docs[i])
                 ret_db.vis.add(db.ids[i])
                 vis_id.add(db.ids[i])
+
+    return ret_db
+
+
+def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
+    """extract db from dbs based on keyword_list
+
+    Args:
+        db (dbs): dbs object
+        id_list (Union[List[str], Set[str]]): list of ids
+
+    Returns:
+        dbs: dbs object
+    """
+    ret_db = dbs()
+    if isinstance(id_list, list):
+        id_list = set(id_list)
+
+    for idx, id in enumerate(db.ids):
+
+        if id in id_list:
+            ret_db.ids.append(db.ids[idx])
+            ret_db.embeds.append(db.embeds[idx])
+            ret_db.metadatas.append(db.metadatas[idx])
+            ret_db.docs.append(db.docs[idx])
+            ret_db.vis.add(db.ids[idx])
 
     return ret_db

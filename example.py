@@ -90,12 +90,10 @@ def QA(doc_path="./docs/mic/"):
         chunk_size=500,
         record_exp="",
         search_type=test_search,
-        max_doc_len=1500,
+        max_input_tokens=3000,
         system_prompt="請用中文回答",
     )
-
     print(qa.response)
-
     response_list = qa.chain_of_thought(doc_path=doc_path, prompt_list=query2)
     print(response_list)
 
@@ -109,7 +107,7 @@ def QA(doc_path="./docs/mic/"):
 
     ## ask_self
     qa.ask_self(model="openai:gpt-4",
-                max_doc_len=5000,
+                max_input_tokens=10000,
                 prompt="langchain的套件版本?",
                 info=install_requires)
     print(qa.response)
@@ -125,7 +123,7 @@ def QA_log(doc_path="./docs/mic/"):
         doc_path=doc_path,
         prompt=query1,
         chunk_size=500,
-        max_doc_len=1500,
+        max_input_tokens=3000,
     )
     print(qa.response)
 
@@ -144,7 +142,7 @@ def QA_stream(doc_path="./docs/mic/"):
         doc_path=doc_path,
         prompt=query1,
         chunk_size=500,
-        max_doc_len=1500,
+        max_input_tokens=3000,
     )
 
     ### the output will be generator, you can use for loop to get each output ###
@@ -168,7 +166,7 @@ def QA_pass_model(doc_path="./docs/mic/"):
         doc_path=db,
         prompt=query1,
         chunk_size=500,
-        max_doc_len=1500,
+        max_input_tokens=3000,
     )
     print(qa.response)
 
@@ -186,7 +184,7 @@ def QA_prompt_format(doc_path="./docs/mic/"):
         doc_path=doc_path,
         prompt=query1,
         chunk_size=500,
-        max_doc_len=1500,
+        max_input_tokens=3000,
     )
     print(qa.response)
 
@@ -250,7 +248,7 @@ def SUM(file_name: str = "./docs/mic/20230531_智慧製造需求下之邊緣運�
         record_exp="1234test",
         format_prompt="請你在回答前面加上喵",
         system_prompt="用中文回答",
-        max_doc_len=1500,
+        max_input_tokens=3000,
         temperature=0.0,
     )
 

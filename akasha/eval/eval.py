@@ -105,6 +105,7 @@ class Model_Eval(akasha.atman):
         use_chroma: bool = False,
         use_rerank: bool = False,
         ignore_check: bool = False,
+        max_input_tokens: int = 3000,
     ):
         """initials of Model_Eval class
 
@@ -125,17 +126,20 @@ class Model_Eval(akasha.atman):
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 3000.\n
+            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 1500.\n (deprecated in 1.0.0)
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **question_style (str, optional)**: the style of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **question_type (str, optional)**: the type of question you want to generate, "fact", "summary", "irrelevant", "compared". Defaults to "fact".\n
             **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
+            **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
+            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
         """
 
         super().__init__(chunk_size, model, verbose, topK, threshold, language,
                          search_type, record_exp, system_prompt, max_doc_len,
-                         temperature, keep_logs, max_output_tokens)
+                         temperature, keep_logs, max_output_tokens,
+                         max_input_tokens)
         ### set argruments ###
         self.doc_path = ""
         self.question_type = question_type
@@ -545,8 +549,8 @@ class Model_Eval(akasha.atman):
             self.language,
             self.search_type,
             self.verbose,
-            self.model_obj,
-            self.max_doc_len,
+            self.model,
+            self.max_input_tokens,
         )
 
         ### ask llm ###
@@ -721,7 +725,7 @@ class Model_Eval(akasha.atman):
                 **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 question_style, question_type, embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
             Raises:
                 Exception: _description_
 
@@ -880,7 +884,7 @@ class Model_Eval(akasha.atman):
             **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_doc_len, temperature.\n
+                system_prompt, max_input_tokens, temperature.\n
         """
 
         ## set class variables ##
@@ -1177,7 +1181,7 @@ class Model_Eval(akasha.atman):
                 **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 question_style, question_type, embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
             Raises:
                 Exception: _description_
 

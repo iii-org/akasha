@@ -8,7 +8,7 @@ def base_line():
         verbose=False,
         chunk_overlap=41,
         chunk_size=501,
-        max_doc_len=1510,
+        max_input_tokens=3020,
         temperature=0.15,
     )
     file_path = "./docs/mic/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.pdf"
@@ -22,7 +22,7 @@ def test_Summary(base_line):
     assert sum.verbose == False
     assert sum.chunk_size == 501
     assert sum.chunk_overlap == 41
-    assert sum.max_doc_len == 1510
+    assert sum.max_input_tokens == 3020
     assert sum.temperature == 0.15
 
     text = sum.summarize_file(file_path=file_path,

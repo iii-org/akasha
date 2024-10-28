@@ -189,8 +189,12 @@ def _get_relevant_doc_auto_rerank(
     return final_docs
 
 
-def _merge_docs(docs_list: list, topK: int, language: str, verbose: bool,
-                max_doc_len: int, model) -> Tuple[list, int]:
+def _merge_docs(docs_list: list,
+                topK: int,
+                language: str,
+                verbose: bool = False,
+                max_input_tokens: int = 3000,
+                model: str = "openai:gpt-3.5-turbo") -> Tuple[list, int]:
     """merge different search types documents, if total len of documents too large,
         will not select all documents.
         use jieba to count length of chinese words, use split space otherwise.
@@ -217,8 +221,10 @@ def _merge_docs(docs_list: list, topK: int, language: str, verbose: bool,
                 continue
 
             words_len = helper.get_doc_length(language, docs[i].page_content)
-            token_len = model.get_num_tokens(docs[i].page_content)
-            if cur_count + words_len > max_doc_len:
+            #token_len = model.get_num_tokens(docs[i].page_content)
+            token_len = helper.myTokenizer.compute_tokens(
+                docs[i].page_content, model)
+            if cur_token + token_len > max_input_tokens:
                 if verbose:
                     print("\nwords length: ", cur_count, "tokens: ", cur_token)
                 return res, cur_count, cur_token
@@ -242,20 +248,20 @@ def get_retrivers(
     search_type: Union[str, Callable],
     log: dict = {},
 ) -> List[BaseRetriever]:
-    """get the retrivers based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
-        and merge them together.
+    """get the retrivers based on given search_type, default is auto, which contain, 'svm', 'bm25'.
+       'merge' method contain 'mmr','svm','tfidf' and merge them together.
 
     Args:
         **db (Chromadb)**: chroma db\n
         **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
         **query (str)**: the query str used to search similar documents\n
         **threshold (float)**: the similarity score threshold to select documents\n
-        **search_type (str)**: search type to find similar documents from db, default 'merge'.
-            includes 'merge', 'mmr', 'svm', 'tfidf'.\n
+        **search_type (str)**: search type to find similar documents from db, .
+            includes 'auto', 'merge', 'mmr', 'svm', 'tfidf', 'bm25'.\n
         **verbose (bool)**: show log texts or not. Defaults to False.\n
 
     Returns:
-        list: selected list of similar documents.
+        List[BaseRetriever]: selected list of retrievers that the search_type needed .
     """
 
     ### if use rerank to get more accurate similar documents, set topK to 200 ###
@@ -326,8 +332,8 @@ def get_docs(
     language: str,
     search_type: Union[str, Callable],
     verbose: bool,
-    model,
-    max_doc_len: int,
+    model: str = "openai:gpt-3.5-turbo",
+    max_input_tokens: int = 3000,
     compression: bool = False,
 ) -> Tuple[list, int, int]:
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
@@ -361,7 +367,7 @@ def get_docs(
     if len(retriver_list) == 0:
         docs = rerank(query, db, 0.0, embeddings)
         docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose,
-                                             max_doc_len, model)
+                                             max_input_tokens, model)
         return docs, docs_len, tokens
 
     if not callable(search_type):
@@ -374,7 +380,8 @@ def get_docs(
             docs = _get_relevant_doc_auto(retriver_list, docs_list, query,
                                           topK, times, verbose)
             docs, docs_len, tokens = _merge_docs([docs], topK, language,
-                                                 verbose, max_doc_len, model)
+                                                 verbose, max_input_tokens,
+                                                 model)
             return docs, docs_len, tokens
         elif search_type == "auto_rerank":
             docs_list = db.get_Documents()
@@ -382,7 +389,8 @@ def get_docs(
             docs = _get_relevant_doc_auto_rerank(retriver_list, docs_list,
                                                  query, topK, times, verbose)
             docs, docs_len, tokens = _merge_docs([docs], topK, language,
-                                                 verbose, max_doc_len, model)
+                                                 verbose, max_input_tokens,
+                                                 model)
             return docs, docs_len, tokens
 
     for retri in retriver_list:
@@ -396,7 +404,7 @@ def get_docs(
         final_docs.append(docs)
 
     docs, docs_len, tokens = _merge_docs(final_docs, topK, language, verbose,
-                                         max_doc_len, model)
+                                         max_input_tokens, model)
 
     return docs, docs_len, tokens
 
@@ -879,7 +887,8 @@ class mySVMRetriever(BaseRetriever):
                             verbose=False,
                             max_iter=50000,
                             tol=1e-4,
-                            C=0.1)
+                            C=0.1,
+                            dual="auto")
         clf.fit(x, y)
 
         similarities = clf.decision_function(x)

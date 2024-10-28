@@ -23,6 +23,7 @@ class InfoModel(BaseModel):
     model: Optional[str] = "openai:gpt-3.5-turbo"
     system_prompt: Optional[str] = ""
     max_doc_len: Optional[int] = 1500
+    max_input_tokens: Optional[int] = 3000
     temperature: Optional[float] = 0.0
     openai_config: Optional[Dict[str, Any]] = {}
 
@@ -37,6 +38,7 @@ class ConsultModel(BaseModel):
     search_type: Optional[str] = 'auto'
     system_prompt: Optional[str] = ""
     max_doc_len: Optional[int] = 1500
+    max_input_tokens: Optional[int] = 3000
     temperature: Optional[float] = 0.0
     openai_config: Optional[Dict[str, Any]] = {}
 
@@ -54,6 +56,7 @@ class SummaryModel(BaseModel):
     summary_type: Optional[str] = "map_reduce"
     summary_len: Optional[int] = 500
     max_doc_len: Optional[int] = 1600
+    max_input_tokens: Optional[int] = 3200
     model: Optional[str] = "openai:gpt-3.5-turbo"
     system_prompt: Optional[str] = ""
     openai_config: Optional[Dict[str, Any]] = {}
@@ -108,9 +111,9 @@ def get_response(user_input: ConsultModel):
         threshold:Optional[float] = 0.1
         search_type:Optional[str] = 'auto'
         system_prompt:Optional[str] = ""
-        max_doc_len:Optional[int]=1500
         temperature:Optional[float]=0.0
         openai_config:Optional[Dict[str, Any]] = {}
+        max_input_tokens: Optional[int] = 3000
 
 
     Returns:
@@ -127,7 +130,7 @@ def get_response(user_input: ConsultModel):
     try:
         clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            , model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt)
 
         response = qa.get_response(doc_path=user_input.doc_path,
@@ -181,7 +184,7 @@ def ask_self(user_input: InfoModel):
         prompt: str
         model:Optional[str] = "openai:gpt-3.5-turbo"
         system_prompt:Optional[str] = ""
-        max_doc_len:Optional[int]=1500
+        max_input_tokens:Optional[int]=3000
         temperature:Optional[float]=0.0
         openai_config:Optional[Dict[str, Any]] = {}
 
@@ -197,7 +200,7 @@ def ask_self(user_input: InfoModel):
             }
     try:
         clean()
-        qa = akasha.Doc_QA(verbose=True, model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,\
+        qa = akasha.Doc_QA(verbose=True, model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens,\
             system_prompt=user_input.system_prompt)
 
         response = qa.ask_self(prompt=user_input.prompt,
@@ -255,7 +258,7 @@ def ask_whole_file(user_input: ConsultModel):
         threshold:Optional[float] = 0.1
         search_type:Optional[str] = 'auto'
         system_prompt:Optional[str] = ""
-        max_doc_len:Optional[int]=1500
+        max_input_tokens:Optional[int]=3000
         temperature:Optional[float]=0.0
         openai_config:Optional[Dict[str, Any]] = {}
 
@@ -280,7 +283,7 @@ def ask_whole_file(user_input: ConsultModel):
     try:
         clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            , model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt)
 
         response = qa.ask_whole_file(file_path=user_input.doc_path,
@@ -354,7 +357,7 @@ def get_summary(user_input: SummaryModel):
             model=user_input.model,
             verbose=True,
             system_prompt=user_input.system_prompt,
-            max_doc_len=user_input.max_doc_len,
+            max_input_tokens=user_input.max_input_tokens,
             temperature=0.0,
         )
 

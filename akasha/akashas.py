@@ -12,8 +12,10 @@ import datetime, traceback
 import warnings, logging
 import os
 from dotenv import load_dotenv
+from warnings import warn
 
 DEFAULT_MODEL = "openai:gpt-3.5-turbo"
+_DEFAULT_MAX_DOC_LEN = 1500
 load_dotenv(pathlib.Path().cwd() / ".env")
 
 
@@ -188,6 +190,7 @@ class atman:
         temperature: float = 0.0,
         keep_logs: bool = False,
         max_output_tokens: int = 1024,
+        max_input_tokens: int = 3000,
     ):
         """initials of atman class
 
@@ -207,11 +210,16 @@ class atman:
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 1500.\n
+            **max_doc_len (int, optional)**: max document size of llm input. Defaults to 1500.\n (deprecated in 1.0.0)
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
+            **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
+            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
         """
-
+        if max_doc_len != _DEFAULT_MAX_DOC_LEN:
+            warn(
+                "max_doc_len is deprecated and will be removed in future 1.0.0 version",
+                DeprecationWarning)
         self.chunk_size = chunk_size
         self.model = model
         self.verbose = verbose
@@ -226,6 +234,7 @@ class atman:
         self.temperature = temperature
         self.keep_logs = keep_logs
         self.max_output_tokens = max_output_tokens
+        self.max_input_tokens = max_input_tokens
         self.timestamp_list = []
         if topK != -1:
             warnings.warn(
@@ -262,6 +271,11 @@ class atman:
         """change other arguments if user use **kwargs to change them."""
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
+            if (key == "max_doc_len") and value != _DEFAULT_MAX_DOC_LEN:
+
+                warn(
+                    "max_doc_len is deprecated and will be removed in future 1.0.0 version",
+                    DeprecationWarning)
             if (key == "model"
                     or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = helper.handle_search_type(value)
@@ -308,7 +322,7 @@ class atman:
         self.logs[timestamp]["threshold"] = self.threshold
         self.logs[timestamp]["language"] = format.language_dict[self.language]
         self.logs[timestamp]["temperature"] = self.temperature
-        self.logs[timestamp]["max_doc_len"] = self.max_doc_len
+        self.logs[timestamp]["max_input_tokens"] = self.max_input_tokens
         self.logs[timestamp]["doc_path"] = self.doc_path
 
     def _add_result_log(self, timestamp: str, time: float):
@@ -440,6 +454,7 @@ class Doc_QA(atman):
         use_rerank: bool = False,
         ignore_check: bool = False,
         stream: bool = False,
+        max_input_tokens: int = 3000,
     ):
         """initials of Doc_QA class
 
@@ -455,18 +470,21 @@ class Doc_QA(atman):
             record_exp (str, optional): experiment name of aiido. Defaults to "".
             system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
             prompt_format_type (str, optional): the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
-            max_doc_len (int, optional): max total length of selected documents. Defaults to 1500.
+            max_doc_len (int, optional): max total length of selected documents. Defaults to 1500. (will deprecated in 1.0.0)
             temperature (float, optional): temperature for language model. Defaults to 0.0.
             keep_logs (bool, optional): record logs or not. Defaults to False.
             compression (bool, optional): compress the selected documents or not. Defaults to False.
             use_chroma (bool, optional): use chroma db name instead of documents path to load data or not. Defaults to False.
             use_rerank (bool, optional): use rerank model to re-rank the selected documents or not. Defaults to False.
             ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
+            max_output_tokens (int, optional): max output tokens of llm model. Defaults to 1024.\n
+            max_input_tokens (int, optional): max input tokens of llm model. Defaults to 3000.\n
         """
 
         super().__init__(chunk_size, model, verbose, topK, threshold, language,
                          search_type, record_exp, system_prompt, max_doc_len,
-                         temperature, keep_logs, max_output_tokens)
+                         temperature, keep_logs, max_output_tokens,
+                         max_input_tokens)
         ### set argruments ###
         self.doc_path = ""
         self.compression = compression
@@ -493,26 +511,26 @@ class Doc_QA(atman):
         self.ignored_files = []
         self.stream = stream
 
-    def _truncate_docs(self, text: str, cur_doc_len: int,
-                       left_doc_len: int) -> Tuple[str, int]:
-        """truncate documents if the total length of documents exceed the max_doc_len
+    def _truncate_docs(self, text: str) -> List[str]:
+        """truncate documents if the total length of documents exceed the max_input_tokens
 
         Returns:
-            ret (str): string of truncated documents texts
-            cur_len (int): the length of truncated documents
-            new_docs (list): the list of truncated documents 
+            text (str): string of documents texts
+            
         """
-        ret = ""
+
         new_docs = []
         tot_len = len(text)
         idx = 2
         truncate_content = text[:(tot_len // idx)]
-        truncate_len = helper.get_doc_length(self.language, truncate_content)
-        while truncate_len > self.max_doc_len:
+        # truncate_len = helper.get_doc_length(self.language, truncate_content)
+        truncated_token_len = helper.myTokenizer.compute_tokens(
+            truncate_content, self.model)
+        while truncated_token_len > self.max_input_tokens:
             idx *= 2
             truncate_content = text[:(tot_len // idx)]
-            truncate_len = helper.get_doc_length(self.language,
-                                                 truncate_content)
+            truncated_token_len = helper.myTokenizer.compute_tokens(
+                truncate_content, self.model)
 
         rge = tot_len // idx
         st = 0
@@ -526,7 +544,7 @@ class Doc_QA(atman):
 
     def _separate_docs(self,
                        history_messages: list = []) -> Tuple[List[str], int]:
-        """separate documents if the total length of documents exceed the max_doc_len
+        """separate documents if the total length of documents exceed the max_input_tokens
 
         Returns:
             ret (List[str]): list of string of separated documents texts
@@ -535,31 +553,31 @@ class Doc_QA(atman):
         """
         tot_len = 0
         cur_len = 0
-        left_doc_len = self.max_doc_len - helper.get_doc_length(
-            self.language, self.prompt) - helper.get_doc_length(
-                self.language, '\n\n'.join(history_messages))
+
+        left_tokens = self.max_input_tokens - helper.myTokenizer.compute_tokens(
+            self.prompt, self.model) - helper.myTokenizer.compute_tokens(
+                '\n\n'.join(history_messages), self.model)
         ret = [""]
         for db_doc in self.docs:
-            cur_doc_len = helper.get_doc_length(self.language,
-                                                db_doc.page_content)
 
-            if cur_len + cur_doc_len > left_doc_len:
-                if cur_doc_len <= left_doc_len:
-                    cur_len = cur_doc_len
+            cur_token_len = helper.myTokenizer.compute_tokens(
+                db_doc.page_content, self.model)
+            if cur_len + cur_token_len > left_tokens:
+                if cur_token_len <= left_tokens:
+                    cur_len = cur_token_len
                     ret.append(db_doc.page_content)
                 else:
-                    new_docs = self._truncate_docs(db_doc.page_content,
-                                                   cur_doc_len, left_doc_len)
+                    new_docs = self._truncate_docs(db_doc.page_content)
                     ret.extend(new_docs)
                     ret.append("")
                     cur_len = 0
 
-                tot_len += cur_doc_len
+                tot_len += cur_token_len
                 continue
 
-            cur_len += cur_doc_len
+            cur_len += cur_token_len
             ret[-1] += db_doc.page_content + "\n"
-            tot_len += cur_doc_len
+            tot_len += cur_token_len
 
         ## remove the last empty string ##
         if ret[-1] == "":
@@ -630,11 +648,11 @@ class Doc_QA(atman):
             self.language,
             self.search_type,
             self.verbose,
-            self.model_obj,
-            self.max_doc_len -
-            helper.get_doc_length(self.language, self.prompt) -
-            helper.get_doc_length(self.language,
-                                  '\n\n'.join(history_messages)),
+            self.model,
+            self.max_input_tokens -
+            helper.myTokenizer.compute_tokens(self.prompt, self.model) -
+            helper.myTokenizer.compute_tokens('\n\n'.join(history_messages),
+                                              self.model),
             compression=self.compression,
         )
         if self.docs is None:
@@ -707,7 +725,7 @@ class Doc_QA(atman):
             **prompt (list)**:questions you want to ask.\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
             embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-            system_prompt, max_doc_len, temperature.
+            system_prompt, max_input_tokens, temperature.
 
         Returns:
             response (list): the responses from llm model.
@@ -774,11 +792,12 @@ class Doc_QA(atman):
                         self.language,
                         self.search_type,
                         self.verbose,
-                        self.model_obj,
-                        self.max_doc_len -
-                        helper.get_doc_length(self.language, merge_prompts) -
-                        helper.get_doc_length(self.language,
-                                              '\n\n'.join(history_messages)),
+                        self.model,
+                        self.max_input_tokens -
+                        helper.myTokenizer.compute_tokens(
+                            merge_prompts, self.model) -
+                        helper.myTokenizer.compute_tokens(
+                            '\n\n'.join(history_messages), self.model),
                         compression=self.compression,
                     )
                     total_docs.extend(docs)
@@ -845,7 +864,7 @@ class Doc_QA(atman):
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
 
             Returns:
                 response (str): the response from llm model.
@@ -868,9 +887,10 @@ class Doc_QA(atman):
             raise AttributeError("No Relevant Documents.")
 
         ### start to get response ###
-        cur_documents, self.doc_length = self._separate_docs()
+        cur_documents, self.doc_tokens = self._separate_docs()
 
-        self.doc_tokens = self.model_obj.get_num_tokens(''.join(cur_documents))
+        self.doc_length = helper.get_doc_length(self.language,
+                                                ''.join(cur_documents))
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
@@ -955,7 +975,7 @@ class Doc_QA(atman):
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
 
             Returns:
                 response (str): the response from llm model.
@@ -978,9 +998,10 @@ class Doc_QA(atman):
             self.logs[timestamp]["embeddings"] = "ask_self"
 
         ### start to get response ###
-        cur_documents, self.doc_length = self._separate_docs(history_messages)
+        cur_documents, self.doc_tokens = self._separate_docs(history_messages)
 
-        self.doc_tokens = self.model_obj.get_num_tokens(''.join(cur_documents))
+        self.doc_length = helper.get_doc_length(self.language,
+                                                ''.join(cur_documents))
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
@@ -1010,10 +1031,10 @@ class Doc_QA(atman):
                     self.model_obj, batch_responses, self.prompt,
                     self.prompt_format_type)
 
-            batch_responses, cur_len = helper.retri_max_texts(
-                batch_responses, self.max_doc_len -
-                helper.get_doc_length(self.language, fnl_conclusion_prompt),
-                self.language)
+            batch_responses, cur_len = retri_max_texts(
+                batch_responses,
+                self.max_input_tokens - helper.myTokenizer.compute_tokens(
+                    fnl_conclusion_prompt, self.model), self.model)
             fnl_input = prompts.format_sys_prompt(fnl_conclusion_prompt,
                                                   "\n\n".join(batch_responses),
                                                   self.prompt_format_type)
@@ -1075,7 +1096,7 @@ class Doc_QA(atman):
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
 
             Returns:
                 response (str): the response from llm model.
@@ -1274,3 +1295,27 @@ class Doc_QA(atman):
         self.response = helper.call_image_model(self.model_obj, fnl_input)
 
         return self.response
+
+
+def retri_max_texts(
+        texts_list: list,
+        left_token_len: int,
+        model_name: str = "openai:gpt-3.5-turbo") -> Tuple[list, int]:
+    """return list of texts that do not exceed the left_token_len
+
+    Args:
+        texts_list (list): _description_
+        left_doc_len (int): _description_
+
+    Returns:
+        Tuple[list, int]: _description_
+    """
+    ret = []
+    cur_len = 0
+    for text in texts_list:
+        txt_len = helper.myTokenizer.compute_tokens(text, model_name)
+        if cur_len + txt_len > left_token_len:
+            break
+        cur_len += txt_len
+        ret.append(text)
+    return ret, cur_len

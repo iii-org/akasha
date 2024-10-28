@@ -549,7 +549,8 @@ class hf_model(LLM):
         if "vision" in model_name.lower():
             self.init_vision_model()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                           token=self.hf_token)
             self.streamer = TextIteratorStreamer(self.tokenizer,
                                                  skip_prompt=True)
             self.model = AutoModelForCausalLM.from_pretrained(

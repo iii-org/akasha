@@ -27,14 +27,14 @@ def calculate_approx_sum_times(chunks: int, per_sum_chunks: int) -> int:
     return times
 
 
-def calculate_per_summary_chunks(language: str, max_doc_len: int,
+def calculate_per_summary_chunks(language: str, max_input_tokens: int,
                                  summary_len: int, chunk_size: int) -> int:
     """calculate the estimation of chunks that can fit into llm each time
 
     Args:
         language (str): texts language
-        max_doc_len (int): the max doc length we want to fit into llm model at one time
-        summary_len (int): the length of summary
+        max_input_tokens (int): the max tokens we want to fit into llm model at one time
+        summary_len (int): the length of summary tokens
         chunk_size (int): the chunk size of texts we want to summarize
 
     Returns:
@@ -48,7 +48,8 @@ def calculate_per_summary_chunks(language: str, max_doc_len: int,
     else:
         token_to_text = 1
 
-    ret = max(ret, token_to_text * (max_doc_len - summary_len) // chunk_size)
+    ret = max(ret,
+              (token_to_text * max_input_tokens - summary_len) // chunk_size)
 
     return ret
 
@@ -74,6 +75,7 @@ class Summary(akasha.atman):
         prompt_format_type: str = "gpt",
         consecutive_merge_failures: int = 5,
         max_output_tokens: int = 1024,
+        max_input_tokens: int = 3000,
     ):
         """initials of Summary class
 
@@ -89,13 +91,15 @@ class Summary(akasha.atman):
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
-            **max_doc_len (int, optional)**: max doc size of llm document input. Defaults to 3000.\n
+            **max_doc_len (int, optional)**: max doc size of llm document input. Defaults to 3000.\n (will be deprecated and remove in the future 1.0.0 versin)
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **auto_translate (bool, optional)**: auto translate the summary to target language since LLM may generate different language. 
             Defaults to False.\n
             **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
             **consecutive_merge_failures (int, optional)**: the number of consecutive merge failures before returning the current response list as the summary. Defaults to 5.
+            **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
+            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n        
         """
 
         ### set argruments ###
@@ -107,13 +111,13 @@ class Summary(akasha.atman):
         self.record_exp = record_exp
         self.format_prompt = format_prompt
         self.system_prompt = system_prompt
-        self.max_doc_len = max_doc_len
         self.temperature = temperature
         self.auto_translate = auto_translate
         self.prompt_format_type = prompt_format_type
         self.keep_logs = keep_logs
         self.consecutive_merge_failures = consecutive_merge_failures
         self.max_output_tokens = max_output_tokens
+        self.max_input_tokens = max_input_tokens
         ### set variables ###
         self.file_name = ""
         self.summary_type = ""
@@ -151,7 +155,6 @@ class Summary(akasha.atman):
         self.logs[timestamp]["language"] = akasha.format.language_dict[
             self.language]
         self.logs[timestamp]["temperature"] = self.temperature
-        self.logs[timestamp]["max_doc_len"] = self.max_doc_len
         self.logs[timestamp]["file_name"] = self.file_name
 
         self.logs[timestamp]["time"] = time
@@ -212,7 +215,7 @@ class Summary(akasha.atman):
         i = 0
         while i < len(texts):
             token, cur_text, newi = akasha.helper._get_text(
-                texts, "", i, self.max_doc_len, self.language)
+                texts, "", i, self.max_input_tokens, self.model)
             tokens += token
 
             progress.update(1)
@@ -299,7 +302,7 @@ class Summary(akasha.atman):
         while i < len(texts):
             prei = i
             token, cur_text, i = akasha.helper._get_text(
-                texts, previous_summary, i, self.max_doc_len, self.language)
+                texts, previous_summary, i, self.max_input_tokens, self.model)
 
             tokens += token
             if previous_summary == "":
@@ -362,11 +365,11 @@ class Summary(akasha.atman):
         Args:
             **file_path (str)**:  the path of file you want to summarize, can be '.txt', '.docx', '.pdf' file.\n
             **summary_type (str, optional)**: summary method, "map_reduce" or "refine". Defaults to "map_reduce".\n
-            **summary_len (int, optional)**: _description_. Defaults to 500.\n
+            **summary_len (int, optional)**: expected output length. Defaults to 500.\n
             **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
             **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
                 chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
         Returns:
             str: the summary of the file
         """
@@ -402,7 +405,7 @@ class Summary(akasha.atman):
 
         else:
             per_sum_chunks = calculate_per_summary_chunks(
-                self.language, self.max_doc_len, self.summary_len,
+                self.language, self.max_input_tokens, self.summary_len,
                 self.chunk_size)
             approx_sum_times = calculate_approx_sum_times(
                 len(texts), per_sum_chunks)
@@ -485,7 +488,7 @@ class Summary(akasha.atman):
             **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
             **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
                 chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
-                system_prompt, max_doc_len, temperature.
+                system_prompt, max_input_tokens, temperature.
         Returns:
             str: the summary of the file
         """
@@ -521,7 +524,7 @@ class Summary(akasha.atman):
 
         else:
             per_sum_chunks = calculate_per_summary_chunks(
-                self.language, self.max_doc_len, self.summary_len,
+                self.language, self.max_input_tokens, self.summary_len,
                 self.chunk_size)
             approx_sum_times = calculate_approx_sum_times(
                 len(texts), per_sum_chunks)

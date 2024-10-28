@@ -15,6 +15,7 @@ from langchain_core.agents import AgentAction, AgentFinish
 import traceback, warnings, datetime, time, logging
 from langchain.llms.base import LLM
 import inspect
+from warnings import warn
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -126,6 +127,7 @@ class test_agent:
         prompt_format_type: str = "chat_gpt",
         stream: bool = False,
         max_output_tokens: int = 1024,
+        max_input_tokens: int = 3600,
     ):
         """initials of agent class
 
@@ -137,11 +139,16 @@ class test_agent:
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             ** max_round (int, optional)**: the maximum round of the conversation. Defaults to 20.\n
-            ** max_doc_len (int, optional)**: the maximum length of the past thoughts and observations that will send to agent. Defaults to 1500.\n
+            ** max_doc_len (int, optional)**: the maximum length of the past thoughts and observations that will send to agent. Defaults to 1500.\n (deprecated in future 1.0.0 version)\n
             ** max_past_observation (int, optional)**: the maximum round of the past thoughts and observations that will send to agent. Defaults to 10.\n
             ** retri_observation (bool, optional)**: if True, agent will ask LLM to retrieve the information from the past thoughts and observations. Defaults to False.\n
+            **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
+            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3600.\n
         """
-
+        if max_doc_len != 1800:
+            warn(
+                "max_doc_len is deprecated and will be removed in future 1.0.0 version",
+                DeprecationWarning)
         self.verbose = verbose
         self.language = language
         self.temperature = temperature
@@ -159,6 +166,7 @@ class test_agent:
         self.prompt_format_type = prompt_format_type
         self.stream = stream
         self.max_output_tokens = max_output_tokens
+        self.max_input_tokens = max_input_tokens
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature,
                                              self.max_output_tokens)
@@ -211,7 +219,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self.logs[timestamp]["language"] = self.language
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_round"] = self.max_round
-        self.logs[timestamp]["max_doc_len"] = self.max_doc_len
+        self.logs[timestamp]["max_input_tokens"] = self.max_input_tokens
         self.logs[timestamp][
             "max_past_observation"] = self.max_past_observation
 
@@ -318,8 +326,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         retri_messages = ""
         ### call model to get response ###
         retri_messages, messages_len = helper.retri_history_messages(
-            self.messages, self.max_past_observation, self.max_doc_len,
-            "Action", "Observation", self.language)
+            self.messages, self.max_past_observation, self.max_input_tokens,
+            self.model, "Action", "Observation")
         if retri_messages != "":
             retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
@@ -440,8 +448,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             })
 
             retri_messages, messages_len = helper.retri_history_messages(
-                self.messages, self.max_past_observation, self.max_doc_len,
-                "Action", "Observation", self.language)
+                self.messages, self.max_past_observation,
+                self.max_input_tokens, self.model, "Action", "Observation")
             if retri_messages != "":
                 retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
