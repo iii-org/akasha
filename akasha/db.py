@@ -925,3 +925,94 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
             ret_db.vis.add(db.ids[idx])
 
     return ret_db
+
+
+def get_db_metadata(doc_path: str,
+                    embeddings: str = "openai:text-embedding-ada-002",
+                    chunk_size: int = 1000) -> List[dict]:
+    """get all metadata of chromadb from doc_path directory
+
+    Args:
+        doc_path (str): the directory of documents\n
+        embeddings (str, optional): the embedding type and name. Defaults to "openai:text-embedding-ada-002".
+        chunk_size (int, optional): the chunk size of chromadb. Defaults to 1000.
+
+    Returns:
+        List[dict]: the list of metadata, looks like [{'page':1,'source':'docs/mic/2.pdf'},{'page':0, 'source':'docs/mic/1.txt'}...]
+    """
+    files = []
+    ret = []
+    if doc_path[-1] != "/":
+        doc_path += "/"
+    db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
+    embed_type, embed_name = helper._separate_name(embeddings)
+    txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
+    for extension in txt_extensions:
+        files.extend(_load_files(doc_path, extension))
+
+    for file in files:
+        storage_directory, exist = check_db_name(file, db_dir, embed_type,
+                                                 embed_name, chunk_size)
+        if exist:
+            docsearch = Chroma(persist_directory=storage_directory, )
+            data = docsearch.get(include=["metadatas"])
+            ret.extend(data['metadatas'])
+            docsearch._client._system.stop()
+            docsearch = None
+            del docsearch
+
+    return ret
+
+
+def update_db_metadata(metadata_list: List[dict],
+                       doc_path: str,
+                       embeddings: str = "openai:text-embedding-ada-002",
+                       chunk_size: int = 1000):
+
+    cur_meta = []
+    pre_meta_source = ''
+    suc_count = 0
+    embed_type, embed_name = helper._separate_name(embeddings)
+    if doc_path[-1] != "/":
+        doc_path += "/"
+    db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
+
+    for meta in metadata_list:
+
+        if pre_meta_source == '':
+            pre_meta_source = meta['source']
+            cur_meta.append(meta)
+        elif pre_meta_source == meta['source']:
+            cur_meta.append(meta)
+        else:
+            ## update metadata of the same source ##
+            file = pre_meta_source.split('/')[-1]
+            storage_directory, exist = check_db_name(file, db_dir, embed_type,
+                                                     embed_name, chunk_size)
+            if exist:
+                docsearch = Chroma(persist_directory=storage_directory)
+                data = docsearch.get(include=["metadatas"])
+                docsearch._collection.update(ids=data['ids'],
+                                             metadatas=cur_meta)
+                docsearch._client._system.stop()
+                docsearch = None
+                del docsearch
+                suc_count += 1
+
+            cur_meta = [meta]
+            pre_meta_source = meta['source']
+
+    ## update the last source ##
+    file = pre_meta_source.split('/')[-1]
+    storage_directory, exist = check_db_name(file, db_dir, embed_type,
+                                             embed_name, chunk_size)
+    if exist:
+        docsearch = Chroma(persist_directory=storage_directory)
+        data = docsearch.get(include=["metadatas"])
+        docsearch._collection.update(ids=data['ids'], metadatas=cur_meta)
+        docsearch._client._system.stop()
+        docsearch = None
+        del docsearch
+
+    print(f"update {suc_count} files metadata successfully.")
+    return
