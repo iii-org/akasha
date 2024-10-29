@@ -303,7 +303,6 @@ class Summary(akasha.atman):
             prei = i
             token, cur_text, i = akasha.helper._get_text(
                 texts, previous_summary, i, self.max_input_tokens, self.model)
-
             tokens += token
             if previous_summary == "":
                 prompt = akasha.prompts.format_reduce_summary_prompt(
