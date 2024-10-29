@@ -45,6 +45,11 @@ For more information and to get started, please visit our Chinese manual [here](
 
 # Updates
 
+- 0.8.70
+    add self_query module
+    support gemini model and embedding api
+    replace max_doc_len with max_input_tokens
+
 - 0.8.63
     add ask_image function to Doc_QA, which can use image as prompt to ask question.
     add max_output_tokens parameter.
