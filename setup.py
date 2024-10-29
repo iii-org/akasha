@@ -36,6 +36,7 @@ install_requires = [
     "python-pptx",
     "wikipedia",
     "numpy<2"
+    "sentencepiece",
     "vertexai",
     "google-generativeai",
     "langchain-google-genai"
