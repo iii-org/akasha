@@ -31,3 +31,4 @@ opencc==1.1.6
 vertexai
 google-generativeai
 langchain-google-genai
+sentencepiece
