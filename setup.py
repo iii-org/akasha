@@ -19,7 +19,6 @@ install_requires = [
     "scikit-learn<1.3.0",
     "jieba>=0.42.1",
     "sentence-transformers>=3.1.1",
-    "torch==2.2.0",
     "transformers>=4.45.0",  #==4.41.1
     "auto-gptq>=0.3.1",
     "tqdm==4.65.0",
@@ -42,9 +41,15 @@ install_requires = [
     "langchain-google-genai"
 ]
 
+### install different opencc version###
 install_requires.append("opencc==1.1.1; platform_system=='Windows'")
 install_requires.append("opencc==0.2; platform_system=='Darwin'")
 install_requires.append("opencc==1.1.6; platform_system=='Linux'")
+
+### install different torch version###
+install_requires.append("torch==2.2.0; platform_system=='Windows'")
+install_requires.append("torch==2.0.1; platform_system=='Darwin'")
+install_requires.append("torch==2.2.0; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
