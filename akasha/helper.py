@@ -595,15 +595,15 @@ def _get_text(
     Returns:
         (int, str, int): return the total tokens of combined chunks, combined chunks of texts, and the index of next chunk
     """
-    cur_count = myTokenizer.compute_tokens(model_name, previous_summary)
-    words_len = myTokenizer.compute_tokens(model_name, texts[i])
+    cur_count = myTokenizer.compute_tokens(previous_summary, model_name)
+    words_len = myTokenizer.compute_tokens(texts[i], model_name)
     cur_text = ""
     while cur_count + words_len < max_input_tokens and i < len(texts):
         cur_count += words_len
         cur_text += texts[i] + "\n"
         i += 1
         if i < len(texts):
-            words_len = myTokenizer.compute_tokens(model_name, texts[i])
+            words_len = myTokenizer.compute_tokens(texts[i], model_name)
 
     return cur_count, cur_text, i
 
@@ -955,8 +955,8 @@ def retri_history_messages(
         texta = f"{role2}: " + messages[i]["content"].replace('\n', '') + "\n"
         textq = f"{role1}: " + messages[i - 1]["content"].replace(
             '\n', '')  # {(i+1)//2}.
-        len_texta = myTokenizer.compute_tokens(model_name, texta)
-        len_textq = myTokenizer.compute_tokens(model_name, textq)
+        len_texta = myTokenizer.compute_tokens(texta, model_name)
+        len_textq = myTokenizer.compute_tokens(textq, model_name)
 
         if cur_len + len_texta > max_input_tokens:
             break
@@ -1263,7 +1263,6 @@ class myTokenizer(object):
 
         """
         model_type, model_name = _separate_name(model_id)
-
         if model_type in ["openai", "gpt-3.5", "gpt"]:
             return cls.compute_tokens_openai(text, model_name)
         elif model_type in ["gemini", "google"]:
