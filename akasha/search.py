@@ -888,7 +888,7 @@ class mySVMRetriever(BaseRetriever):
                             max_iter=50000,
                             tol=1e-4,
                             C=0.1,
-                            dual="auto")
+                            dual=True)
         clf.fit(x, y)
 
         similarities = clf.decision_function(x)
