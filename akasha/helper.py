@@ -19,12 +19,18 @@ from langchain_community.embeddings import (
 )
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
+from akasha.models.gemi import gemini_model
 import os, traceback, logging
 import shutil
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 import akasha.format as afr
 import akasha.prompts
+import tiktoken
+from transformers import AutoTokenizer
+from pathlib import Path
+import os
+from vertexai.preview import tokenization
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -195,6 +201,12 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         embeddings = TensorflowHubEmbeddings()
         info = "selected tensorflow embeddings.\n"
 
+    elif embedding_type in ["gemini", "gemi", "google"]:
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        embeddings = GoogleGenerativeAIEmbeddings(
+            model=embedding_name, google_api_key=os.environ["GEMINI_API_KEY"])
+        info = "selected gemini embeddings.\n"
+
     else:
         embeddings = OpenAIEmbeddings()
         info = "can not find the embeddings, use openai as default.\n"
@@ -235,6 +247,12 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         info = f"selected remote model. \n"
         model = remote_model(base_url,
                              temperature,
+                             max_output_tokens=max_output_tokens)
+
+    elif model_type in ["google", "gemini", "gemi"]:
+        info = f"selected gemini model. \n"
+        model = gemini_model(model_name=model_name,
+                             temperature=temperature,
                              max_output_tokens=max_output_tokens)
 
     elif (model_type
@@ -559,32 +577,33 @@ def sim_to_trad(text: str) -> str:
     return cc.convert(text)
 
 
-def _get_text(texts: list,
-              previous_summary: str,
-              i: int,
-              max_doc_len: int,
-              language: str = "ch") -> Tuple[int, str, int]:
+def _get_text(
+        texts: list,
+        previous_summary: str,
+        i: int,
+        max_input_tokens: int,
+        model_name: str = "openai:gpt-3.5-turbo") -> Tuple[int, str, int]:
     """used in summary, combine chunks of texts into one chunk that can fit into llm model
 
     Args:
         texts (list): chunks of texts
         previous_summary (str): _description_
         i (int): start from i-th chunk
-        max_doc_len (int): the max doc length we want to fit into llm model at one time
-        language (str): 'ch' for chinese and 'en' for others, default 'ch'\n
+        max_input_tokens (int): the max tokens we want to fit into llm model at one time
+        model_name (str): model name(to calculate tokens) default "openai:gpt-3.5-turbo"\n
 
     Returns:
         (int, str, int): return the total tokens of combined chunks, combined chunks of texts, and the index of next chunk
     """
-    cur_count = get_doc_length(language, previous_summary)
-    words_len = get_doc_length(language, texts[i])
+    cur_count = myTokenizer.compute_tokens(model_name, previous_summary)
+    words_len = myTokenizer.compute_tokens(model_name, texts[i])
     cur_text = ""
-    while cur_count + words_len < max_doc_len and i < len(texts):
+    while cur_count + words_len < max_input_tokens and i < len(texts):
         cur_count += words_len
         cur_text += texts[i] + "\n"
         i += 1
         if i < len(texts):
-            words_len = get_doc_length(language, texts[i])
+            words_len = myTokenizer.compute_tokens(model_name, texts[i])
 
     return cur_count, cur_text, i
 
@@ -654,7 +673,9 @@ def call_model(
     if print_flag:
         print("llm response:", "\n\n" + response)
 
-    response = sim_to_trad(response)
+    if isinstance(response, str):
+        response = sim_to_trad(response)
+
     return response
 
 
@@ -898,19 +919,23 @@ def call_JSON_formatter(
     return extract_json(response)
 
 
-def retri_history_messages(messages: list,
-                           pairs: int = 10,
-                           max_doc_len: int = 750,
-                           role1: str = "User",
-                           role2: str = "Assistant",
-                           language: str = "ch") -> Tuple[str, int]:
-    """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_doc_len and pairs, and return the text with total length
+def retri_history_messages(
+    messages: list,
+    pairs: int = 10,
+    max_input_tokens: int = 1500,
+    model_name: str = "openai:gpt-3.5-turbo",
+    role1: str = "User",
+    role2: str = "Assistant",
+) -> Tuple[str, int]:
+    """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_input_tokens and pairs, and return the text with total length
 
     Args:
         messages (list): history messages list, each index is a dict with keys: role("user", "assistant"), content(content of message)
         pairs (int, optional): the maximum number of messages. Defaults to 10.
-        max_doc_len (int, optional): the maximum number of messages length. Defaults to 750.
-        language (str, optional): message language. Defaults to "ch".
+        max_input_tokens (int, optional): the maximum number of messages tokens. Defaults to 1500.
+        model_name (str, optional): model name. Defaults to "openai:gpt-3.5-turbo".
+        role1 (str, optional): role1 name. Defaults to "User".
+        role2 (str, optional): role2 name. Defaults to "Assistant".
 
     Returns:
         Tuple[str, int]: return the text with total length.
@@ -930,15 +955,15 @@ def retri_history_messages(messages: list,
         texta = f"{role2}: " + messages[i]["content"].replace('\n', '') + "\n"
         textq = f"{role1}: " + messages[i - 1]["content"].replace(
             '\n', '')  # {(i+1)//2}.
-        len_texta = akasha.helper.get_doc_length(language, texta)  #)
-        len_textq = akasha.helper.get_doc_length(language, textq)
+        len_texta = myTokenizer.compute_tokens(model_name, texta)
+        len_textq = myTokenizer.compute_tokens(model_name, textq)
 
-        if cur_len + len_texta > max_doc_len:
+        if cur_len + len_texta > max_input_tokens:
             break
         cur_len += len_texta
         ret.append(texta)
 
-        if cur_len + len_textq > max_doc_len:
+        if cur_len + len_textq > max_input_tokens:
             break
         cur_len += len_textq
         ret.append(textq)
@@ -1089,24 +1114,174 @@ def merge_history_and_prompt(
                                                 prompt_format_type)
 
 
-def retri_max_texts(texts_list: list,
-                    left_doc_len: int,
-                    language: str = "ch") -> Tuple[list, int]:
-    """return list of texts that do not exceed the left_doc_len
+class myTokenizer(object):
 
-    Args:
-        texts_list (list): _description_
-        left_doc_len (int): _description_
+    def __init__(self,
+                 model_id: str,
+                 tokenizer: object,
+                 path: str = './tokenizers'):
+        """
+        Initialize a Tokenizer object.
 
-    Returns:
-        Tuple[list, int]: _description_
-    """
-    ret = []
-    cur_len = 0
-    for text in texts_list:
-        txt_len = get_doc_length(language, text)
-        if cur_len + txt_len > left_doc_len:
-            break
-        cur_len += txt_len
-        ret.append(text)
-    return ret, cur_len
+        Args:
+            model_id (str): The name of the model for the tokenizer.
+            tokenizer (object): The tokenizer object from HuggingFace.
+            path (str, optional): The path to save the tokenizer. Defaults to './tokenizers'.
+        """
+        self.model_id = model_id
+        self.tokenizer = tokenizer
+        self.path = path
+
+    @classmethod
+    def load(cls, model_id: str, path: str = './tokenizers'):
+        """
+        Load a tokenizer from local path or huggingface model hub.
+
+        Args:
+            model_id (str): The name of the model. only supported on Non-OpenAI models & gpt-2 model. 
+                            ex. 'google/gemma-2-2b-it', 'openai:gpt2'
+                            Reminder: model_id which includes '/' will be replaced by '--' to find the local path
+            path (str, optional): The path to the tokenizer. Defaults to './tokenizers'.
+        """
+
+        model_path = Path.joinpath(Path(path),
+                                   Path(model_id.replace('/', '--')))
+        if model_path.exists():
+            print('Loading tokenizer from local path...')
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+        else:
+            print('Loading tokenizer from huggingface model hub...')
+            hf_token = os.environ.get("HF_TOKEN")
+            if hf_token is None:
+                hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+            tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
+        return cls(model_id, tokenizer, path)
+
+    def save(self, name: str, path: str = None):
+        """
+        Save the tokenizer to local path.
+
+        Args:
+            name (str): The name of the tokenizer to be saved. 
+            path (str, optional): The path to the tokenizer. Defaults to the path given in `__init__`.
+        """
+        if self.tokenizer is None:
+            raise ValueError('Tokenizer is not initialized')
+        if path is None:
+            path = self.path
+        root_path = Path(path)
+        if not root_path.exists():
+            Path.mkdir(root_path)
+        model_path = Path.joinpath(root_path, Path(name))
+        if not model_path.exists():
+            Path.mkdir(model_path)
+        self.tokenizer.save_pretrained(model_path)
+
+    def compute_tokens_huggingface(self, text: str) -> int:
+        """
+        Compute the number of tokens in a given text using huggingface tokenizer.
+
+        Args:
+            text (str): The text to be tokenized.
+
+        Returns:
+            int: The number of tokens in the text.
+        """
+        tokens = self.tokenizer(text)
+        num_tokens = len(tokens['input_ids'])
+        return num_tokens
+
+    @staticmethod
+    def compute_tokens_openai(text: str, model_name: str) -> int:
+        """
+        Compute the number of tokens in a given text using OpenAI tiktoken.
+
+        Args:
+            text (str): The text to be tokenized.
+            model_name (str): The name of the OpenAI model. ex. 'openai:gpt-3.5-turbo'
+                            Reminder: '/' should not be included in model_name 
+
+        Returns:
+            int: The number of tokens in the text.
+
+        Raises:
+            ValueError: If the model_name is not a valid OpenAI model.
+        """
+        if '/' in model_name:
+            raise ValueError('Non-OpenAI models are not supported')
+        if model_name.lower().startswith('openai:'):
+            model_name = model_name.lower().lstrip('openai:')
+        encoding = tiktoken.encoding_for_model(model_name)
+        tokens = encoding.encode(text)
+        num_tokens = len(tokens)
+        return num_tokens
+
+    @staticmethod
+    def compute_tokens_gemini(text: str, model_name: str) -> int:
+        """
+        Compute the number of tokens in a given text using Google Vertex AI.
+
+        Args:
+            text (str): The text to be tokenized.
+            model_name (str): The name of the Gemini model. ex. 'gemini:gemini-1.5-flash'
+                            
+
+        Returns:
+            int: The number of tokens in the text.
+
+        Raises:
+            ValueError: If the model_id is not a valid Gemini model.
+        """
+        if '/' in model_name:
+            model_name = model_name.split('/')[-1]
+        if model_name.lower().startswith('gemini:'):
+            model_name = model_name.lower().lstrip('gemini:')
+        tokenizer = tokenization.get_tokenizer_for_model(model_name)
+        num_tokens = tokenizer.count_tokens(text).total_tokens
+        return num_tokens
+
+    @classmethod
+    def compute_tokens(cls,
+                       text: str,
+                       model_id: str,
+                       model_path: str = './tokenizers',
+                       save_tokenizer: bool = True) -> int:
+        """
+        Compute the number of tokens in a given text using either huggingface or OpenAI tiktoken.
+
+        If the model_id is an OpenAI model, the tiktoken library is used to tokenize the text.
+        If the model_id is a Non-OpenAI model, the huggingface tokenizer is used to tokenize the text.
+
+        Args:
+            text (str): The text to be tokenized.
+            model_id (str): The name of the model. ex. 'gpt-2', 'openai:gpt-3.5-turbo'
+            model_path (str, optional): The path to the tokenizer. Defaults to './tokenizers'.
+            save_tokenizer (bool, optional): Whether to save the tokenizer locally. Defaults to True.
+
+        Returns:
+            int: The number of tokens in the text.
+
+        """
+        model_type, model_name = _separate_name(model_id)
+
+        if model_type in ["openai", "gpt-3.5", "gpt"]:
+            return cls.compute_tokens_openai(text, model_name)
+        elif model_type in ["gemini", "google"]:
+            return cls.compute_tokens_gemini(text, model_name)
+        elif model_type in [
+                "huggingface",
+                "huggingfacehub",
+                "transformers",
+                "transformer",
+                "huggingface-hub",
+                "hf",
+        ]:
+            tkn = cls.load(model_name, model_path)
+            # tokenizer is storable if using Non-OpenAI model
+            if save_tokenizer:
+                tkn.save(name=model_name.replace('/', '--'), path=model_path)
+            return tkn.compute_tokens_huggingface(text)
+        else:
+            encoding = tiktoken.get_encoding("cl100k_base")
+            num_tokens = len(encoding.encode(text))
+            return num_tokens

@@ -70,7 +70,11 @@ def akasha():
 @click.option("--max_doc_len",
               "-md",
               default=1500,
-              help="max doc len for the llm model input")
+              help="max doc len for the llm model input (deprecated)")
+@click.option("--max_input_tokens",
+              "-md",
+              default=3000,
+              help="max token for the llm model input")
 def get_response(
     doc_path: str,
     prompt: str,
@@ -84,6 +88,7 @@ def get_response(
     record_exp: str,
     system_prompt: str,
     max_doc_len: int,
+    max_input_tokens: int,
 ):
     gr = ak.Doc_QA(
         verbose=False,
@@ -95,7 +100,7 @@ def get_response(
         search_type=search_type,
         record_exp=record_exp,
         system_prompt=system_prompt,
-        max_doc_len=max_doc_len,
+        max_input_tokens=max_input_tokens,
     )
     res = gr.get_response(doc_path, prompt)
 
@@ -154,7 +159,7 @@ def get_response(
               "-sys",
               default="",
               help="system prompt for the llm model")
-@click.option("--max_doc_len",
+@click.option("--max_input_tokens",
               "-md",
               default=3000,
               help="max token for the llm model input")
@@ -168,7 +173,7 @@ def keep_responsing(
     language: str,
     search_type: str,
     system_prompt: str,
-    max_doc_len: int,
+    max_input_tokens: int,
 ):
     import akasha.helper as helper
     import akasha.search as search
@@ -176,6 +181,7 @@ def keep_responsing(
 
     embeddings_name = embeddings
     embeddings = helper.handle_embeddings(embeddings, False)
+    model_name = model
     model = helper.handle_model(model, False)
 
     db = helper.create_chromadb(doc_path, False, embeddings, embeddings_name,
@@ -192,11 +198,9 @@ def keep_responsing(
                                           threshold, search_type, {})
 
     while user_input != "exit()":
-        docs, docs_len, tokens = search.get_docs(db, embeddings,
-                                                 retrivers_list, user_input,
-                                                 use_rerank, language,
-                                                 search_type, False, model,
-                                                 max_doc_len, False)
+        docs, docs_len, tokens = search.get_docs(
+            db, embeddings, retrivers_list, user_input, use_rerank, language,
+            search_type, False, model_name, max_input_tokens, False)
         if docs is None:
             docs = []
 
@@ -279,6 +283,10 @@ def keep_responsing(
 @click.option("--max_doc_len",
               "-md",
               default=1500,
+              help="max word length for the llm model input (deprecated)")
+@click.option("--max_input_tokens",
+              "-mt",
+              default=3000,
               help="max token for the llm model input")
 def chain_of_thought(
     doc_path: str,
@@ -293,6 +301,7 @@ def chain_of_thought(
     record_exp: str,
     system_prompt: str,
     max_doc_len: int,
+    max_input_tokens: int,
 ):
     gr = ak.Doc_QA(
         verbose=False,
@@ -304,7 +313,7 @@ def chain_of_thought(
         search_type=search_type,
         record_exp=record_exp,
         system_prompt=system_prompt,
-        max_doc_len=max_doc_len,
+        max_intput_token=max_input_tokens,
     )
 
     res = gr.chain_of_thought(doc_path, prompt)
@@ -465,6 +474,10 @@ def auto_create_questionset(
 @click.option("--max_doc_len",
               "-md",
               default=1500,
+              help="max doc length for the llm model input (deprecated)")
+@click.option("--max_input_tokens",
+              "-md",
+              default=3000,
               help="max token for the llm model input")
 def auto_evaluation(
     question_path: str,
@@ -479,6 +492,7 @@ def auto_evaluation(
     search_type: str,
     record_exp: str,
     max_doc_len: int,
+    max_input_tokens: int,
 ):
     eva = eval.Model_Eval()
 
@@ -495,7 +509,7 @@ def auto_evaluation(
             language=language,
             search_type=search_type,
             record_exp=record_exp,
-            max_doc_len=max_doc_len,
+            max_input_tokens=max_input_tokens,
         )
 
         print("correct rate: ", cor_rate)
@@ -514,7 +528,7 @@ def auto_evaluation(
             language=language,
             search_type=search_type,
             record_exp=record_exp,
-            max_doc_len=max_doc_len,
+            max_input_tokens=max_input_tokens,
         )
 
         print("avg bert score: ", avg_bert)

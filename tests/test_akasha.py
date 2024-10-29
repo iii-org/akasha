@@ -67,7 +67,7 @@ def base_line():
         verbose=False,
         search_type="svm",
         chunk_size=500,
-        max_doc_len=1510,
+        max_input_tokens=3010,
         temperature=0.15,
         system_prompt=
         "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: ",
@@ -99,7 +99,7 @@ def test_get_response(base_line: akasha.Doc_QA):
     assert ak.verbose == False
     assert ak.search_type == "svm"
     assert ak.chunk_size == 500
-    assert ak.max_doc_len == 1510
+    assert ak.max_input_tokens == 3010
     assert ak.temperature == 0.15
     assert (
         ak.system_prompt ==
@@ -170,7 +170,7 @@ def test_ask_whole_file(base_line: akasha.Doc_QA):
         search_type="knn",
         prompt="西門子自有工廠如何朝工業4.0 發展",
         model="openai:gpt-4",
-        max_doc_len=3000)
+        max_input_tokens=6000)
 
     assert type(response) == str
 
@@ -238,8 +238,8 @@ def test_self_rag():
         "ch",
         "auto",
         False,
-        model_obj,
-        6000,
+        "openai:gpt-3.5-turbo",
+        12000,
         compression=False,
     )
     assert len(docs) > 0

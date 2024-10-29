@@ -8,7 +8,7 @@ def base_line():
         verbose=True,
         search_type="tfidf",
         chunk_size=500,
-        max_doc_len=1234,
+        max_input_tokens=2468,
         temperature=0.15,
         keep_logs=True,
     )
@@ -23,7 +23,7 @@ def test_Model_Eval(base_line):
     assert eva.verbose == True
     assert eva.search_type == "tfidf"
     assert eva.chunk_size == 500
-    assert eva.max_doc_len == 1234
+    assert eva.max_input_tokens == 2468
     assert eva.temperature == 0.15
 
     ql, al = eva.auto_create_questionset(doc_path,

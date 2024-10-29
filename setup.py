@@ -36,6 +36,9 @@ install_requires = [
     "python-pptx",
     "wikipedia",
     "numpy<2"
+    "vertexai",
+    "google-generativeai",
+    "langchain-google-genai"
 ]
 
 install_requires.append("opencc==1.1.1; platform_system=='Windows'")
@@ -44,7 +47,7 @@ install_requires.append("opencc==1.1.6; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
-    version="0.8.69",
+    version="0.8.70",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",

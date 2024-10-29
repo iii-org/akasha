@@ -75,7 +75,8 @@ def summary_page():
                                 language="ch",
                                 verbose=True,
                                 record_exp="",
-                                max_doc_len=st.session_state.max_doc_len,
+                                max_input_tokens=st.session_state.
+                                max_input_tokens,
                                 temperature=st.session_state.temperature,
                             )
 
@@ -84,7 +85,7 @@ def summary_page():
                             summary_type=summary_type,
                             summary_len=summary_len,
                             chunk_size=st.session_state.chunksize,
-                            max_doc_len=st.session_state.max_doc_len,
+                            max_input_tokens=st.session_state.max_input_tokens,
                             temperature=st.session_state.temperature,
                             keep_logs=True,
                         )

@@ -167,8 +167,8 @@ if "threshold" not in st.session_state:
 if "temperature" not in st.session_state:
     st.session_state.temperature = 0.0
 
-if "max_doc_len" not in st.session_state:
-    st.session_state.max_doc_len = 1500
+if "max_input_tokens" not in st.session_state:
+    st.session_state.max_input_tokens = 3000
 if "sys_prompt" not in st.session_state:
     st.session_state.sys_prompt = ""
 if "logs" not in st.session_state:

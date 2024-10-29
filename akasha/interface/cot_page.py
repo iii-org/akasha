@@ -97,7 +97,7 @@ def cot_page():
                             language="ch",
                             verbose=True,
                             record_exp="",
-                            max_doc_len=st.session_state.max_doc_len,
+                            max_input_tokens=st.session_state.max_input_tokens,
                             temperature=st.session_state.temperature,
                         )
 
@@ -110,7 +110,7 @@ def cot_page():
                         threshold=st.session_state.threshold,
                         search_type=st.session_state.search_type,
                         system_prompt=st.session_state.sys_prompt,
-                        max_doc_len=st.session_state.max_doc_len,
+                        max_input_tokens=st.session_state.max_input_tokens,
                         temperature=st.session_state.temperature,
                         keep_logs=True,
                     )
