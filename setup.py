@@ -34,14 +34,14 @@ install_requires = [
     "unstructured",
     "python-pptx",
     "wikipedia",
-    "numpy<2"
+    "numpy<2",
     "sentencepiece",
     "vertexai",
     "google-generativeai",
     "langchain-google-genai"
 ]
 
-### install different opencc version###
+### install different opencc version###\
 install_requires.append("opencc==1.1.1; platform_system=='Windows'")
 install_requires.append("opencc==0.2; platform_system=='Darwin'")
 install_requires.append("opencc==1.1.6; platform_system=='Linux'")
