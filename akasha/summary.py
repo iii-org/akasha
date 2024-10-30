@@ -63,7 +63,7 @@ class Summary(akasha.atman):
         chunk_overlap: int = 40,
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
-        threshold: float = 0.2,
+        threshold: float = 0.1,
         language: str = "ch",
         record_exp: str = "",
         format_prompt: str = "",

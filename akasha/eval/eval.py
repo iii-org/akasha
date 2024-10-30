@@ -90,7 +90,7 @@ class Model_Eval(akasha.atman):
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
         topK: int = -1,
-        threshold: float = 0.2,
+        threshold: float = 0.1,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
