@@ -46,17 +46,17 @@ For more information and to get started, please visit our Chinese manual [here](
 # Updates
 
 - 0.8.70
-    add self_query module
-    support gemini model and embedding api
-    replace max_doc_len with max_input_tokens
+  - add self_query module
+  - support gemini model and embedding api
+  - replace max_doc_len with max_input_tokens
 
 - 0.8.63
-    add ask_image function to Doc_QA, which can use image as prompt to ask question.
-    add max_output_tokens parameter.
-    remote compatible with vllm serve.
+  - add ask_image function to Doc_QA, which can use image as prompt to ask question.
+  - add max_output_tokens parameter.
+  - remote compatible with vllm serve.
 
 - 0.8.56
-    add extract_db_by_file and extract_db_by_keyword functions.
+  - add extract_db_by_file and extract_db_by_keyword functions.
 
 - 0.8.53
 
