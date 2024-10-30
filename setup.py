@@ -34,7 +34,7 @@ install_requires = [
     "unstructured",
     "python-pptx",
     "wikipedia",
-    "numpy<2"
+    "numpy<2",
     "sentencepiece",
     "vertexai",
     "google-generativeai",
