@@ -264,11 +264,11 @@ def get_retrivers(
         List[BaseRetriever]: selected list of retrievers that the search_type needed .
     """
 
-    ### if use rerank to get more accurate similar documents, set topK to 200 ###
+    ### if use rerank to get more accurate similar documents, set topK to 400 ###
     if use_rerank:
-        topK = 200
+        topK = 400
     else:
-        topK = 199
+        topK = 399
 
     retriver_list = []
     if isinstance(embeddings, str):
@@ -356,11 +356,11 @@ def get_docs(
         list: selected list of similar documents.
     """
 
-    ### if use rerank to get more accurate similar documents, set topK to 200 ###
+    ### if use rerank to get more accurate similar documents, set topK to 400 ###
     if use_rerank:
-        topK = 200
+        topK = 400
     else:
-        topK = 199
+        topK = 399
 
     final_docs = []
 
@@ -433,8 +433,6 @@ def retri_docs(
     Returns:
         list: selected list of similar documents.
     """
-
-    ### if use rerank to get more accurate similar documents, set topK to 200 ###
 
     final_docs = []
 
