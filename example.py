@@ -155,6 +155,8 @@ def QA_pass_model(doc_path="./docs/mic/"):
 
     ### You can pass the model and embedding objects into Doc_QA to avoid creating them repeatedly. ###
     model_obj = akasha.handle_model("openai:gpt-3.5-turbo", False, 0.0)
+    ### You can pass the certain .env file into handle_model if you want to use different api key. ###
+    # model_obj = akasha.handle_model("openai:gpt-3.5-turbo", False, 0.0, ".env2")
     emb_obj = akasha.handle_embeddings()
 
     qa = akasha.Doc_QA(model=model_obj, embeddings=emb_obj, search_type="auto")

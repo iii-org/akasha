@@ -526,16 +526,20 @@ class hf_model(LLM):
     hf_token: Union[str, None] = None
     max_output_tokens: int = 1024
 
-    def __init__(self, model_name: str, temperature: float, **kwargs):
+    def __init__(self, model_name: str, env_dict: dict, temperature: float,
+                 **kwargs):
         """define custom model, input func and temperature
 
         Args:
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__(model_id=model_name)
-        self.hf_token = os.environ.get("HF_TOKEN")
-        if self.hf_token is None:
-            self.hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        if "HF_TOKEN" in env_dict:
+            self.hf_token = env_dict["HF_TOKEN"]
+        elif "HUGGINGFACEHUB_API_TOKEN" in env_dict:
+            self.hf_token = env_dict["HUGGINGFACEHUB_API_TOKEN"]
+        else:
+            self.hf_token = None
 
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu")

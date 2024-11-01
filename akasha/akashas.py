@@ -191,6 +191,7 @@ class atman:
         keep_logs: bool = False,
         max_output_tokens: int = 1024,
         max_input_tokens: int = 3000,
+        env_file: str = "",
     ):
         """initials of atman class
 
@@ -215,6 +216,7 @@ class atman:
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
             **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
+            **env_file (str, optional)**: the path of the .env file. Defaults to "".\n
         """
         if max_doc_len != _DEFAULT_MAX_DOC_LEN:
             warn(
@@ -235,6 +237,7 @@ class atman:
         self.keep_logs = keep_logs
         self.max_output_tokens = max_output_tokens
         self.max_input_tokens = max_input_tokens
+        self.env_file = env_file
         self.timestamp_list = []
         if topK != -1:
             warnings.warn(
@@ -248,24 +251,39 @@ class atman:
             self.search_type_str = helper.handle_search_type(
                 kwargs["search_type"], self.verbose)
 
-        if "embeddings" in kwargs:
-            self.embeddings_obj = helper.handle_embeddings(
-                kwargs["embeddings"], self.verbose)
+        if ("embeddings" in kwargs) or ("env_file" in kwargs):
+            new_embeddings = self.embeddings
+            new_env_file = self.env_file
+            if "embeddings" in kwargs:
+                new_embeddings = kwargs["embeddings"]
+            if "env_file" in kwargs:
+                new_env_file = kwargs["env_file"]
 
-        if "model" in kwargs or "temperature" or "max_output_tokens" in kwargs:
+            if new_embeddings != self.embeddings or new_env_file != self.env_file:
+                self.embeddings_obj = helper.handle_embeddings(
+                    new_embeddings, self.verbose, new_env_file)
+
+        if ("model" in kwargs) or ("temperature" in kwargs) or (
+                "max_output_tokens" in kwargs) or ("env_file" in kwargs):
             new_temp = self.temperature
             new_model = self.model
             new_tokens = self.max_output_tokens
+            new_env_file = self.env_file
             if "temperature" in kwargs:
                 new_temp = kwargs["temperature"]
             if "model" in kwargs:
                 new_model = kwargs["model"]
             if "max_output_tokens" in kwargs:
                 new_tokens = kwargs["max_output_tokens"]
-            if new_model != self.model or new_temp != self.temperature or new_tokens != self.max_output_tokens:
+            if "env_file" in kwargs:
+                new_env_file = kwargs["env_file"]
+            if (new_model != self.model) or (new_temp != self.temperature) or (
+                    new_tokens
+                    != self.max_output_tokens) or (new_env_file
+                                                   != self.env_file):
                 self.model_obj = helper.handle_model(new_model, self.verbose,
-                                                     new_temp,
-                                                     self.max_output_tokens)
+                                                     new_temp, new_tokens,
+                                                     new_env_file)
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
@@ -455,6 +473,7 @@ class Doc_QA(atman):
         ignore_check: bool = False,
         stream: bool = False,
         max_input_tokens: int = 3000,
+        env_file: str = "",
     ):
         """initials of Doc_QA class
 
@@ -479,12 +498,13 @@ class Doc_QA(atman):
             ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
             max_output_tokens (int, optional): max output tokens of llm model. Defaults to 1024.\n
             max_input_tokens (int, optional): max input tokens of llm model. Defaults to 3000.\n
+            env_file (str, optional): the path of the .env file. Defaults to "".\n
         """
 
         super().__init__(chunk_size, model, verbose, topK, threshold, language,
                          search_type, record_exp, system_prompt, max_doc_len,
                          temperature, keep_logs, max_output_tokens,
-                         max_input_tokens)
+                         max_input_tokens, env_file)
         ### set argruments ###
         self.doc_path = ""
         self.compression = compression
@@ -496,9 +516,11 @@ class Doc_QA(atman):
         self.logs = {}
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature,
-                                             self.max_output_tokens)
+                                             self.max_output_tokens,
+                                             self.env_file)
         self.embeddings_obj = helper.handle_embeddings(embeddings,
-                                                       self.verbose)
+                                                       self.verbose,
+                                                       self.env_file)
         self.embeddings = helper.handle_search_type(embeddings)
         self.model = helper.handle_search_type(model)
         self.search_type = search_type

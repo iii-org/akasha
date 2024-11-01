@@ -5,6 +5,7 @@ __pycache__
 akasha_terminal.egg-info/
 build/
 dist/
+.env*
 chromadb/
 chromadb*/
 logs/

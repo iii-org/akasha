@@ -106,6 +106,7 @@ class Model_Eval(akasha.atman):
         use_rerank: bool = False,
         ignore_check: bool = False,
         max_input_tokens: int = 3000,
+        env_file: str = "",
     ):
         """initials of Model_Eval class
 
@@ -139,7 +140,7 @@ class Model_Eval(akasha.atman):
         super().__init__(chunk_size, model, verbose, topK, threshold, language,
                          search_type, record_exp, system_prompt, max_doc_len,
                          temperature, keep_logs, max_output_tokens,
-                         max_input_tokens)
+                         max_input_tokens, env_file)
         ### set argruments ###
         self.doc_path = ""
         self.question_type = question_type
@@ -150,9 +151,10 @@ class Model_Eval(akasha.atman):
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose,
                                                     self.temperature,
-                                                    self.max_output_tokens)
+                                                    self.max_output_tokens,
+                                                    self.env_file)
         self.embeddings_obj = akasha.helper.handle_embeddings(
-            embeddings, self.verbose)
+            embeddings, self.verbose, self.env_file)
         self.embeddings = akasha.helper.handle_search_type(embeddings)
         self.model = akasha.helper.handle_search_type(model)
         self.search_type = search_type

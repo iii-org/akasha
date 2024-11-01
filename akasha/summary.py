@@ -76,6 +76,7 @@ class Summary(akasha.atman):
         consecutive_merge_failures: int = 5,
         max_output_tokens: int = 1024,
         max_input_tokens: int = 3000,
+        env_file: str = "",
     ):
         """initials of Summary class
 
@@ -99,7 +100,8 @@ class Summary(akasha.atman):
             **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
             **consecutive_merge_failures (int, optional)**: the number of consecutive merge failures before returning the current response list as the summary. Defaults to 5.
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
-            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n        
+            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n      
+            **env_file (str, optional)**: the path of env file. Defaults to "".\n  
         """
 
         ### set argruments ###
@@ -118,6 +120,7 @@ class Summary(akasha.atman):
         self.consecutive_merge_failures = consecutive_merge_failures
         self.max_output_tokens = max_output_tokens
         self.max_input_tokens = max_input_tokens
+        self.env_file = env_file
         ### set variables ###
         self.file_name = ""
         self.summary_type = ""
@@ -125,7 +128,8 @@ class Summary(akasha.atman):
         self.logs = {}
         self.model_obj = akasha.helper.handle_model(model, self.verbose,
                                                     self.temperature,
-                                                    self.max_output_tokens)
+                                                    self.max_output_tokens,
+                                                    env_file)
         self.model = akasha.helper.handle_search_type(model)
         self.doc_tokens = 0
         self.doc_length = 0
@@ -171,16 +175,27 @@ class Summary(akasha.atman):
     def _set_model(self, **kwargs):
         """change model_obj if "model" or "temperature" changed"""
 
-        if "model" in kwargs or "temperature" in kwargs:
+        if ("model" in kwargs) or ("temperature" in kwargs) or (
+                "max_output_tokens" in kwargs) or ("env_file" in kwargs):
             new_temp = self.temperature
             new_model = self.model
+            new_tokens = self.max_output_tokens
+            new_env_file = self.env_file
             if "temperature" in kwargs:
                 new_temp = kwargs["temperature"]
             if "model" in kwargs:
                 new_model = kwargs["model"]
-            if new_model != self.model or new_temp != self.temperature:
+            if "max_output_tokens" in kwargs:
+                new_tokens = kwargs["max_output_tokens"]
+            if "env_file" in kwargs:
+                new_env_file = kwargs["env_file"]
+            if (new_model != self.model) or (new_temp != self.temperature) or (
+                    new_tokens
+                    != self.max_output_tokens) or (new_env_file
+                                                   != self.env_file):
                 self.model_obj = akasha.helper.handle_model(
-                    new_model, self.verbose, new_temp, self.max_output_tokens)
+                    new_model, self.verbose, new_temp, new_tokens,
+                    new_env_file)
 
     def _save_file(self, default_file_name: str, output_file_path: str):
         ### write summary to file ###
