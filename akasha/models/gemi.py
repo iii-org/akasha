@@ -15,14 +15,18 @@ class gemini_model(LLM):
     history: list = []
     model: genai.GenerativeModel = Field(default=None)
 
-    def __init__(self, model_name: str, temperature: float = 0.0, **kwargs):
+    def __init__(self,
+                 model_name: str,
+                 api_key: str,
+                 temperature: float = 0.0,
+                 **kwargs):
         """define custom model, input func and temperature
 
         Args:
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__()
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+        genai.configure(api_key=api_key)
         self.temperature = temperature
         if 'max_output_tokens' in kwargs:
             self.max_output_tokens = kwargs['max_output_tokens']

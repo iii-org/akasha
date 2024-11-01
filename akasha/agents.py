@@ -128,6 +128,7 @@ class test_agent:
         stream: bool = False,
         max_output_tokens: int = 1024,
         max_input_tokens: int = 3600,
+        env_file: str = "",
     ):
         """initials of agent class
 
@@ -167,9 +168,11 @@ class test_agent:
         self.stream = stream
         self.max_output_tokens = max_output_tokens
         self.max_input_tokens = max_input_tokens
+        self.env_file = env_file
         self.model_obj = helper.handle_model(model, self.verbose,
                                              self.temperature,
-                                             self.max_output_tokens)
+                                             self.max_output_tokens,
+                                             self.env_file)
         self.model = helper.handle_search_type(model)
 
         self.tool_explaination = _get_tool_explaination(tools)
@@ -484,6 +487,7 @@ class agent:
         language: str = "ch",
         temperature: float = 0.0,
         keep_logs: bool = False,
+        env_file: str = "",
     ):
         """initials of agent class
 
@@ -504,7 +508,7 @@ class agent:
         self.keep_logs = keep_logs
         self.agent_type = _get_agent_type(agent_type)
         self.model_obj = helper.handle_model(model, self.verbose,
-                                             self.temperature)
+                                             self.temperature, env_file)
         self.model = helper.handle_search_type(model)
         self.agent_obj = None
         self.new_agent_flag = True  # check if need to create a new agent

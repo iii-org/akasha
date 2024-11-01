@@ -593,7 +593,8 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
 def create_single_file_db(file_path: str,
                           embeddings_name: str,
                           chunk_size: int,
-                          sleep_time: int = 60):
+                          sleep_time: int = 60,
+                          env_file: str = ""):
     try:
         if isinstance(file_path, Path):
             doc_path = str(file_path.parent).replace("\\", "/")
@@ -611,7 +612,7 @@ def create_single_file_db(file_path: str,
     db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
     add_pic = True
     embed_type, embed_name = helper._separate_name(embeddings_name)
-    embeddings_obj = helper.handle_embeddings(embeddings_name, True)
+    embeddings_obj = helper.handle_embeddings(embeddings_name, True, env_file)
 
     file_doc = _load_file(doc_path + file_name, file_name.split(".")[-1])
     if file_doc == "" or len(file_doc) == 0:
@@ -739,7 +740,8 @@ def createDB_directory(doc_path: Union[List[str], str],
                        embeddings: Union[
                            str, vars] = "openai:text-embedding-ada-002",
                        chunk_size: int = 500,
-                       ignore_check: bool = False) -> dbs:
+                       ignore_check: bool = False,
+                       env_file: str = "") -> dbs:
     """create or load chromadb from doc_path and embeddings
     """
 
@@ -748,7 +750,7 @@ def createDB_directory(doc_path: Union[List[str], str],
 
     if isinstance(embeddings, str):
         embeddings_name = embeddings
-        embeddings = helper.handle_embeddings(embeddings, False)
+        embeddings = helper.handle_embeddings(embeddings, False, env_file)
 
     else:
         embeddings_name = helper._decide_embedding_type(embeddings)
@@ -764,7 +766,8 @@ def createDB_file(file_path: Union[List[str], str],
                   embeddings: Union[str,
                                     vars] = "openai:text-embedding-ada-002",
                   chunk_size: int = 500,
-                  ignore_check: bool = False) -> dbs:
+                  ignore_check: bool = False,
+                  env_file: str = "") -> dbs:
     """create or load chromadb from file_path and embeddings
     """
     sleep_time = 60
@@ -774,7 +777,7 @@ def createDB_file(file_path: Union[List[str], str],
 
     if isinstance(embeddings, str):
         embeddings_name = embeddings
-        embeddings = helper.handle_embeddings(embeddings, False)
+        embeddings = helper.handle_embeddings(embeddings, False, env_file)
     else:
         embeddings_name = helper._decide_embedding_type(embeddings)
 

@@ -31,6 +31,7 @@ from transformers import AutoTokenizer
 from pathlib import Path
 import os
 from vertexai.preview import tokenization
+from dotenv import dotenv_values
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -85,8 +86,34 @@ def _separate_name(name: str):
     return res_type, res_name
 
 
-def _handle_azure_env() -> Tuple[str, str, str]:
-    """from environment variable get the api_base, api_key, api_version
+def get_env_var(env_file: str = "") -> dict:
+    """if env_file is not empty, get the environment variable from the file
+        else get the environment variable from the os.environ
+
+    Args:
+        env_file (str, optional): the path of .env file. Defaults to "".
+
+    Returns:
+        dict: return the environment variable dictionary
+    """
+
+    require_env = ["OPENAI_API_KEY", "OPENAI_API_BASE", "OPENAI_API_VERSION","OPEANI_API_TYPE", \
+        "AZURE_API_KEY", "AZURE_API_BASE", "AZURE_API_VERSION", "AZURE_API_TYPE", "SERPER_API_KEY",\
+            "GEMINI_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN"]
+    if env_file == "" or not Path(env_file).exists():
+        env_dict = {}
+        os_env_dict = os.environ.copy()
+        for req in require_env:
+            if req in os_env_dict:
+                env_dict[req] = os_env_dict[req]
+
+    else:
+        env_dict = dotenv_values(env_file)
+    return env_dict
+
+
+def _handle_azure_env(env_dict: dict) -> Tuple[str, str, str]:
+    """from environment variable dictionary env_dict get the api_base, api_key, api_version
 
     Returns:
         (str, str, str): api_base, api_key, api_version
@@ -94,16 +121,15 @@ def _handle_azure_env() -> Tuple[str, str, str]:
     check_env, ret, count = ["BASE", "KEY", "VERSION"], ["", "", ""], 0
     try:
         for check in check_env:
-            if f"AZURE_API_{check}" in os.environ:
-                ret[count] = os.environ[f"AZURE_API_{check}"]
-                if "OPENAI_API_BASE" in os.environ:
-                    os.environ.pop("OPENAI_API_BASE", None)
+            if f"AZURE_API_{check}" in env_dict:
+                ret[count] = env_dict[f"AZURE_API_{check}"]
+                #if "OPENAI_API_BASE" in os.environ:
+                #os.environ.pop("OPENAI_API_BASE", None)
             elif f"OPENAI_API_{check}" in os.environ:
-                ret[count] = os.environ[f"OPENAI_API_{check}"]
+                ret[count] = env_dict[f"OPENAI_API_{check}"]
                 if check == "BASE":
-                    os.environ["AZURE_API_BASE"] = os.environ[
-                        "OPENAI_API_BASE"]
-                    os.environ.pop("OPENAI_API_BASE", None)
+                    env_dict["AZURE_API_BASE"] = os.environ["OPENAI_API_BASE"]
+                    env_dict.pop("OPENAI_API_BASE", None)
             else:
                 if check == "VERSION":
                     ret[count] = "2023-05-15"
@@ -120,7 +146,8 @@ def _handle_azure_env() -> Tuple[str, str, str]:
 
 
 def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
-                      verbose: bool = False) -> vars:
+                      verbose: bool = False,
+                      env_file: str = "") -> vars:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
@@ -144,17 +171,17 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         return embeddings
 
     embedding_type, embedding_name = _separate_name(embedding_name)
-
+    env_dict = get_env_var(env_file)
     if embedding_type in [
             "text-embedding-ada-002", "openai", "openaiembeddings"
     ]:
         import openai
 
-        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
-                == "azure") or ("OPENAI_API_TYPE" in os.environ
-                                and os.environ["OPENAI_API_TYPE"] == "azure"):
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in env_dict
+                                and env_dict["OPENAI_API_TYPE"] == "azure"):
             embedding_name = embedding_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env()
+            api_base, api_key, api_version = _handle_azure_env(env_dict)
             embeddings = AzureOpenAIEmbeddings(azure_deployment=embedding_name,
                                                azure_endpoint=api_base,
                                                api_key=api_key,
@@ -162,12 +189,16 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
                                                validate_base_url=False)
 
         else:
-            openai.api_type = "open_ai"
 
+            if "OPENAI_API_KEY" not in env_dict:
+                raise Exception(
+                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
+                )
+            openai.api_type = "open_ai"
             embeddings = OpenAIEmbeddings(
                 model=embedding_name,
                 openai_api_base="https://api.openai.com/v1",
-                api_key=os.environ["OPENAI_API_KEY"],
+                api_key=env_dict["OPENAI_API_KEY"],
                 openai_api_type="open_ai",
             )
         info = "selected openai embeddings.\n"
@@ -219,7 +250,8 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
 def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                  verbose: bool = False,
                  temperature: float = 0.0,
-                 max_output_tokens: int = 1024) -> BaseLanguageModel:
+                 max_output_tokens: int = 1024,
+                 env_file: str = "") -> BaseLanguageModel:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -240,7 +272,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         return model
 
     model_type, model_name = _separate_name(model_name)
-
+    env_dict = get_env_var(env_file)
+    print(env_dict)
     if model_type in ["remote", "server", "tgi", "text-generation-inference"]:
 
         base_url = model_name
@@ -250,8 +283,12 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                              max_output_tokens=max_output_tokens)
 
     elif model_type in ["google", "gemini", "gemi"]:
+        if "GEMINI_API_KEY" not in env_dict:
+            raise Exception(
+                "can not find the GEMINI_API_KEY in environment variable.\n\n")
         info = f"selected gemini model. \n"
         model = gemini_model(model_name=model_name,
+                             api_key=env_dict["GEMINI_API_KEY"],
                              temperature=temperature,
                              max_output_tokens=max_output_tokens)
 
@@ -274,6 +311,7 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             "hf",
     ]:
         model = hf_model(model_name=model_name,
+                         env_dict=env_dict,
                          temperature=temperature,
                          max_output_tokens=max_output_tokens)
         info = f"selected huggingface model {model_name}.\n"
@@ -312,11 +350,12 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             call_back = [StreamingStdOutCallbackHandler()]
         else:
             call_back = None
-        if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
-                == "azure") or ("OPENAI_API_TYPE" in os.environ
-                                and os.environ["OPENAI_API_TYPE"] == "azure"):
+
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in env_dict
+                                and env_dict["OPENAI_API_TYPE"] == "azure"):
             model_name = model_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env()
+            api_base, api_key, api_version = _handle_azure_env(env_dict)
             model = AzureChatOpenAI(
                 model=model_name,
                 deployment_name=model_name,
@@ -329,11 +368,15 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                 callbacks=call_back,
             )
         else:
+            if "OPENAI_API_KEY" not in env_dict:
+                raise Exception(
+                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
+                )
             openai.api_type = "open_ai"
             model = ChatOpenAI(
                 model=model_name,
                 temperature=temperature,
-                api_key=os.environ["OPENAI_API_KEY"],
+                api_key=env_dict["OPENAI_API_KEY"],
                 streaming=True,
                 callbacks=call_back,
             )
