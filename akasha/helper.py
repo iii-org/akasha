@@ -273,7 +273,6 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
 
     model_type, model_name = _separate_name(model_name)
     env_dict = get_env_var(env_file)
-    print(env_dict)
     if model_type in ["remote", "server", "tgi", "text-generation-inference"]:
 
         base_url = model_name
