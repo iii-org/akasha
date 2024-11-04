@@ -1251,8 +1251,8 @@ class Model_Eval(akasha.atman):
             self.language,
             self.search_type,
             self.verbose,
-            self.model_obj,
-            25000,
+            self.model,
+            50000,
             False,
         )
 
