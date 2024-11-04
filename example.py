@@ -191,6 +191,18 @@ def QA_prompt_format(doc_path="./docs/mic/"):
     print(qa.response)
 
 
+### assign .env file ###
+def assign_env(doc_path="./docs/mic/"):
+
+    ### You can pass the .env file name into Doc_QA to assign certain API KEY. ###
+    model_obj = akasha.handle_model("openai:gpt-3.5-turbo",
+                                    False,
+                                    0.0,
+                                    env_file=".env")
+
+    print(akasha.call_model(model_obj, "五軸是甚麼?"))
+
+
 #######################
 #                     #
 #                     #
