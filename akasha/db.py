@@ -643,6 +643,14 @@ def create_single_file_db(file_path: str,
 
 
 def save_pdf_pic(file_path: str):
+    """save the images in pdf file to temp_pic directory
+
+    Args:
+        file_path (str): path of pdf file
+
+    Returns:
+        _type_: _description_
+    """
     import fitz  # PyMuPDF
     import os
 
@@ -679,6 +687,16 @@ def save_pdf_pic(file_path: str):
 
 
 def add_pic_summary_to_db(db, file_path, chunk_size):
+    """ use llm to get pic summary and add it to db
+
+    Args:
+        db (_type_): _description_
+        file_path (_type_): _description_
+        chunk_size (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     add_pic = True
 
     file_pics, mid_names, pages = save_pdf_pic(file_path)
@@ -709,7 +727,18 @@ def add_pic_summary_to_db(db, file_path, chunk_size):
 
 
 def check_db_name(file, db_dir, embed_type, embed_name, chunk_size):
+    """check if the db is existed, if existed, return the most recently built storage directory
 
+    Args:
+        file (str): name of the file
+        db_dir (str): name of the directory
+        embed_type (str): embeddings type (openai, hf,....)
+        embed_name (str): embeddings name
+        chunk_size (int): chunk size
+
+    Returns:
+        Tuple(str, bool): the storage directory and a flag to indicate if the db is existed
+    """
     storage_directory = ("chromadb/" + db_dir + "_" +
                          file.split(".")[0].replace(" ", "").replace("_", "") +
                          "_*_" + embed_type + "_" +
@@ -905,7 +934,7 @@ def extract_db_by_keyword(db: dbs, keyword_list: List[str]) -> dbs:
 
 
 def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
-    """extract db from dbs based on keyword_list
+    """extract db from dbs based on ids
 
     Args:
         db (dbs): dbs object
@@ -971,7 +1000,14 @@ def update_db_metadata(metadata_list: List[dict],
                        doc_path: str,
                        embeddings: str = "openai:text-embedding-ada-002",
                        chunk_size: int = 1000):
-
+    """for each metadata in metadata_list, update the metadata of the same source in chromadb
+        *** need to use createDB_directory/processMultiDB to create chromadb first ***
+    Args:
+        metadata_list (List[dict]): list of metadata
+        doc_path (str): the directory of documents
+        embeddings (_type_, optional): the full embedding name(type:name). Defaults to "openai:text-embedding-ada-002".
+        chunk_size (int, optional): chunk size. Defaults to 1000.
+    """
     cur_meta = []
     pre_meta_source = ''
     suc_count = 0
