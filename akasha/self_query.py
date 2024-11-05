@@ -2,27 +2,29 @@
 from langchain_core.documents import Document
 #from langchain_openai import OpenAIEmbeddings
 from langchain.chains.query_constructor.base import AttributeInfo
-from typing import List, Union, Set, Any, Tuple
+from typing import List, Union, Set, Any, Tuple, Optional, Callable
 import json
 from pydantic import Field
 import operator
-from langchain.retrievers.self_query.chroma import ChromaTranslator
-#from langchain.chains.query_constructor.ir import StructuredQuery
-from langchain.chains.query_constructor.base import StructuredQueryOutputParser
 from langchain_core.language_models.base import BaseLanguageModel
 import akasha.helper as helper
 from akasha.db import dbs, extract_db_by_ids
+import re
 
 
-def query_filter(prompt: str,
-                 model_obj: BaseLanguageModel,
-                 db: dbs,
-                 metadata_field_info: List[AttributeInfo] = [],
-                 document_content_description: str = "") -> Tuple[dbs, str]:
+def query_filter(
+    prompt: str,
+    model_obj: BaseLanguageModel,
+    db: dbs,
+    metadata_field_info: List[AttributeInfo] = [],
+    document_content_description: str = "",
+    custom_parser: Optional[Callable[[str], Tuple[str, dict]]] = None
+) -> Tuple[dbs, str]:
 
     query, fnl_filter, data_source = generate_query_filter(
-        model_obj, prompt, metadata_field_info, document_content_description)
-    #print(fnl_filter)
+        model_obj, prompt, metadata_field_info, document_content_description,
+        custom_parser)
+
     new_docs = [
         DocumentCP(doc, metadata, ids)
         for doc, metadata, ids in zip(db.docs, db.metadatas, db.ids)
@@ -110,7 +112,7 @@ Structured Request:
 ```json
 {
     "query": "teenager love",
-    "filter": "and(or(eq(\"artist\", \"Taylor Swift\"), eq(\"artist\", \"Katy Perry\")), lt(\"length\", 180))"
+    "filter": "and(or(eq(artist, Taylor Swift), eq(artist, Katy Perry)), lt(length, 180))"
     }
 
 ```
@@ -262,7 +264,98 @@ def filter_docs(docs: Document,
 
         return res
 
-    return list(recur(docs, filters['filter']))
+    return list(recur(docs, filters))
+
+
+def translate(expr):
+    # Pattern to match logical operations (e.g., and(...), or(...))
+    logical_op_pattern = re.compile(r'(and|or|AND|OR)\((.*)\)')
+    # Pattern to match comparison operations (e.g., eq(公司名稱, a公司))
+    comparison_op_pattern = re.compile(
+        r'(eq|ne|gt|gte|lt|lte)\(([^,]+),([^,]+)\)')
+
+    # Check if it's a logical operation
+    logical_match = logical_op_pattern.match(expr)
+    if logical_match:
+        logical_op = logical_match.group(1)  # "and" or "or"
+        inner_expr = logical_match.group(
+            2)  # Expressions inside the parentheses
+
+        # Split inner expressions by commas not inside parentheses
+        parts = split_expressions(inner_expr)
+        # Recursively translate each part
+        parsed_parts = [translate(part.strip()) for part in parts]
+        return {f"${logical_op}": parsed_parts}
+
+    # Check if it's a comparison operation
+    comparison_match = comparison_op_pattern.match(expr)
+    if comparison_match:
+
+        comparison_op, field, value = comparison_match.groups()
+        field = field.strip()
+        value = value.strip()
+        return {field: {f"${comparison_op}": value}}
+
+    raise ValueError("Invalid expression format")
+
+
+def split_expressions(expr):
+    # Split expressions by commas outside parentheses
+    parts = []
+    depth = 0
+    current_part = []
+
+    for char in expr:
+        if char == ',' and depth == 0:
+            parts.append(''.join(current_part).strip())
+            current_part = []
+        else:
+            current_part.append(char)
+            if char == '(':
+                depth += 1
+            elif char == ')':
+                depth -= 1
+
+    if current_part:
+        parts.append(''.join(current_part).strip())
+
+    return parts
+
+
+def translate_output(llm_res: str) -> tuple[str, dict]:
+    """translate the output of the language model to query and filter
+    the output of llm may look like this:
+    ```json
+    {
+        "query": "產品疑慮",
+        "filter": "and(eq(公司名稱, a公司), eq(拜訪年, 2024))"
+    }
+    ```
+    first we extract the query and filter from the llm_res by using helper.extract_json
+    then we translate the filter to a dictionary looks like this:
+    {'$and': [{'公司名稱': {'$eq': 'a公司'}}, {'拜訪年': {'$eq': '2024'}}]}
+    
+    Args:
+        llm_res (str): the output of the language model
+
+    Returns:
+        tuple[str, dict]: _description_
+    """
+    query = ""
+    filters = {}
+    try:
+        llm_res = helper.extract_json(llm_res)
+        query = llm_res['query']
+        filter = llm_res['filter'].replace("\"",
+                                           "").replace("\\",
+                                                       "").replace("  ", "")
+
+        filters = translate(filter)
+        print(filters)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    return query, filters
 
 
 def generate_query_filter(
@@ -270,15 +363,16 @@ def generate_query_filter(
     prompt: str,
     metadata_field_info: List[AttributeInfo] = [],
     document_content_description: str = "",
+    custom_parser: Optional[Callable[[str], Tuple[str, dict]]] = None,
 ) -> tuple[str, dict, dict[str, Any]]:
     """based on metadata_field_info and document_content_description, generate a query and filter to filter out documents
 
     Args:
-        model_obj (BaseLanguageModel): _description_
-        prompt (str): _description_
+        model_obj (BaseLanguageModel): llm object
+        prompt (str): the user question to generate the query and filter
         metadata_field_info (List[AttributeInfo], optional): _description_. Defaults to [].
         document_content_description (str, optional): _description_. Defaults to "".
-
+        if custom_parser is not None, it will be used to parse the output of the model
     Returns:
         tuple[str, dict, dict[str, Any]]: query, fnl_filter, data_source
     """
@@ -286,8 +380,9 @@ def generate_query_filter(
         metadata_field_info, document_content_description, prompt)
     res = helper.call_model(model_obj, query_constructor_prompt)
 
-    vis = ChromaTranslator()
-    stq = StructuredQueryOutputParser.from_components().parse(res)
+    if custom_parser is not None:
+        query, fnl_filter = custom_parser(res)
+    else:
+        query, fnl_filter = translate_output(res)
 
-    query, fnl_filter = vis.visit_structured_query(stq)
     return query, fnl_filter, data_source
