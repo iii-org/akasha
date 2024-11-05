@@ -36,7 +36,7 @@ install_requires = [
     "wikipedia",
     "numpy<2",
     "sentencepiece",
-    "vertexai",
+    "google-cloud-aiplatform>=1.64",
     "google-generativeai",
     "langchain-google-genai"
 ]
