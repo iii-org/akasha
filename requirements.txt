@@ -28,7 +28,7 @@ unstructured
 python-pptx
 wikipedia
 opencc==1.1.6
-vertexai
+google-cloud-aiplatform>=1.64
 google-generativeai
 langchain-google-genai
 sentencepiece
