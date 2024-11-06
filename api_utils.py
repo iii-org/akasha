@@ -44,6 +44,7 @@ DEFAULT_CONFIG = {
     "use_compression": 0,  # 0 for False, 1 for True
     "compression_language_model": "",
     "prompt_format_type": "gpt",
+    "max_input_tokens": 3000,
 }
 
 
@@ -558,16 +559,19 @@ def load_openai(config: dict) -> bool:
     return False
 
 
-def retri_history_messages(messages: list,
-                           pairs: int = 10,
-                           max_doc_len: int = 750,
-                           language: str = "ch") -> Tuple[list, int]:
-    """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_doc_len and pairs, and return the text with total length
+def retri_history_messages(
+    messages: list,
+    pairs: int = 10,
+    max_input_tokens: int = 1500,
+    model_name: str = "openai:gpt-3.5-turbo",
+) -> Tuple[list, int]:
+    """from messages dict list, get pairs of user question and assistant response from most recent and not exceed max_input_tokens and pairs, and return the text with total length
 
     Args:
         messages (list): history messages list, each index is a dict with keys: role("user", "assistant"), content(content of message)
         pairs (int, optional): the maximum number of messages. Defaults to 10.
-        max_doc_len (int, optional): the maximum number of messages length. Defaults to 750.
+        max_input_tokens (int, optional): the maximum number of messages tokens. Defaults to 1500.
+        model_name (str, optional): model name. Defaults to "openai:gpt-3.5-turbo".
         language (str, optional): message language. Defaults to "ch".
 
     Returns:
@@ -587,8 +591,10 @@ def retri_history_messages(messages: list,
             continue
         texta = messages[i]["content"] + "\n"
         textq = messages[i - 1]["content"] + "\n"
-        temp = akasha.helper.get_doc_length(language, textq + texta)
-        if cur_len + temp > max_doc_len:
+        temp = akasha.helper.myTokenizer.compute_tokens(
+            model_name, textq + texta)
+        #temp = akasha.helper.get_doc_length(language, textq + texta)
+        if cur_len + temp > max_input_tokens:
             break
         cur_len += temp
         ret.append(texta)
@@ -784,147 +790,3 @@ def _handle_stream_model(model_name: str, verbose: bool,
         print(info)
 
     return model
-
-
-class Doc_QA_stream(akasha.atman):
-    """class for implement search db based on user prompt and generate response from llm model, include get_response and chain_of_thoughts."""
-
-    def __init__(
-        self,
-        embeddings: str = "openai:text-embedding-ada-002",
-        chunk_size: int = 1000,
-        model: str = "openai:gpt-3.5-turbo",
-        verbose: bool = False,
-        topK: int = -1,
-        threshold: float = 0.2,
-        language: str = "ch",
-        search_type: Union[str, Callable] = "svm",
-        system_prompt: str = "",
-        prompt_format_type: str = "gpt",
-        max_doc_len: int = 1500,
-        temperature: float = 0.0,
-        use_chroma: bool = False,
-        use_rerank: bool = False,
-        ignore_check: bool = False,
-    ):
-        """initials of Doc_QA_stream class
-
-        Args:
-            embeddings (_type_, optional): embedding model, including two types(openai and huggingface). Defaults to "openai:text-embedding-ada-002".
-            chunk_size (int, optional): the max length of each text segments. Defaults to 1000.
-            model (_type_, optional): language model. Defaults to "openai:gpt-3.5-turbo".
-            verbose (bool, optional): print the processing text or not. Defaults to False.
-            topK (int, optional): the number of documents to be selected. Defaults to 2.
-            threshold (float, optional): threshold of similarity for searching relavant documents. Defaults to 0.2.
-            language (str, optional): "ch" chinese or "en" english. Defaults to "ch".
-            search_type (Union[str, Callable], optional): _description_. Defaults to "svm".
-            system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
-            prompt_format_type (str, optional): the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
-            max_doc_len (int, optional): max total length of selected documents. Defaults to 1500.
-            temperature (float, optional): temperature for language model. Defaults to 0.0.
-            compression (bool, optional): compress the selected documents or not. Defaults to False.
-            use_chroma (bool, optional): use chroma db name instead of documents path to load data or not. Defaults to False.
-            use_rerank (bool, optional): use rerank model to re-rank the selected documents or not. Defaults to False.
-            ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
-        """
-
-        super().__init__(chunk_size, model, verbose, topK, threshold, language,
-                         search_type, "", system_prompt, max_doc_len,
-                         temperature)
-
-        ### set argruments ###
-        self.doc_path = ""
-        self.compression = False
-        self.use_chroma = use_chroma
-        self.ignore_check = ignore_check
-        self.use_rerank = use_rerank
-        self.prompt_format_type = prompt_format_type
-        ### set variables ###
-        self.logs = {}
-        self.model_obj = _handle_stream_model(model, self.verbose,
-                                              self.temperature)
-        self.embeddings_obj = akasha.helper.handle_embeddings(
-            embeddings, self.verbose)
-        self.embeddings = akasha.helper.handle_search_type(embeddings)
-        self.model = akasha.helper.handle_search_type(model)
-        self.search_type = search_type
-        self.db = None
-        self.docs = []
-        self.doc_tokens = 0
-        self.doc_length = 0
-        self.response = ""
-        self.prompt = ""
-        self.ignored_files = []
-
-    def _set_model(self, **kwargs):
-        """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
-        ## check if we need to change db, model_obj or embeddings_obj ##
-        if "search_type" in kwargs:
-            self.search_type_str = akasha.helper.handle_search_type(
-                kwargs["search_type"], self.verbose)
-
-        if "embeddings" in kwargs:
-            self.embeddings_obj = akasha.helper.handle_embeddings(
-                kwargs["embeddings"], self.verbose)
-
-        if "model" in kwargs or "temperature" in kwargs:
-            new_temp = self.temperature
-            new_model = self.model
-            if "temperature" in kwargs:
-                new_temp = kwargs["temperature"]
-            if "model" in kwargs:
-                new_model = kwargs["model"]
-            if new_model != self.model or new_temp != self.temperature:
-                self.model_obj = _handle_stream_model(new_model, self.verbose,
-                                                      new_temp)
-
-    def search_docs(self, doc_path: Union[List[str], str], prompt: str,
-                    **kwargs) -> Tuple[str, str]:
-
-        self._set_model(**kwargs)
-        self._change_variables(**kwargs)
-        self.doc_path = doc_path
-        self.prompt = prompt
-        search_dict = {}
-        if self.use_chroma:
-            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
-                self.doc_path, self.embeddings)
-        else:
-            self.db, self.ignored_files = akasha.db.processMultiDB(
-                self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
-
-        ### start to get response ###
-        retrivers_list = akasha.search.get_retrivers(
-            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
-            self.search_type, search_dict)
-        self.docs, self.doc_length, self.doc_tokens = akasha.search.get_docs(
-            self.db,
-            self.embeddings_obj,
-            retrivers_list,
-            self.prompt,
-            self.use_rerank,
-            self.language,
-            self.search_type,
-            self.verbose,
-            self.model_obj,
-            self.max_doc_len,
-            compression=self.compression,
-        )
-
-        #end_time = time.time()
-        if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = akasha.prompts.default_doc_ask_prompt()
-        prod_sys_prompt, prod_prompt = akasha.prompts.format_sys_prompt(
-            self.system_prompt, self.prompt, self.prompt_format_type)
-
-        splitter = '\n----------------\n'
-
-
-        text_input = prod_sys_prompt + "\n----------------\n" + splitter.join([doc.page_content for doc in self.docs]) +\
-            splitter
-
-        if self.verbose:
-            print("Prompt after formatting:", "\n\n" + text_input)
-
-        return text_input, prod_prompt

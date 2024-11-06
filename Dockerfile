@@ -1,4 +1,4 @@
-FROM ccchang0518/akasha-lab-builder:0.6
+FROM ccchang0518/akasha-lab-builder:0.8
 LABEL maintainer=chih-chuan-chang<ccchang@iii.org.tw>
 
 WORKDIR /app

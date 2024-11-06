@@ -115,6 +115,7 @@ class ConsultModel(BaseModel):
     use_chroma: Optional[bool] = True
     openai_config: Optional[Dict[str, Any]] = {}
     prompt_format_type: Optional[str] = "gpt"
+    max_input_tokens: Optional[int] = 3000
 
 
 class ChatModel(ConsultModel):
@@ -159,10 +160,10 @@ def regular_consult(user_input: ConsultModel):
         threshold:Optional[float] = 0.2
         search_type:Optional[str] = 'svm'
         system_prompt:Optional[str] = ""
-        max_doc_len:Optional[int]=1500
         temperature:Optional[float]=0.0
         use_chroma:Optional[bool]=True
         openai_config:Optional[Dict[str, Any]] = {}
+        max_input_tokens: Optional[int] = 3000
 
 
     Returns:
@@ -179,7 +180,7 @@ def regular_consult(user_input: ConsultModel):
     try:
         clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            , model=user_input.model, temperature=user_input.temperature,max_input_token=user_input.max_input_tokens, embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,prompt_format_type=user_input.prompt_format_type)
 
         response = qa.get_response(doc_path=user_input.data_path,
@@ -229,7 +230,7 @@ def run_llm(user_input: ConsultModel) -> Generator:
         clean()
 
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            , model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens, embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
                  prompt_format_type = user_input.prompt_format_type,)
 
@@ -263,10 +264,11 @@ def run_llm_chat(user_input: ChatModel) -> Generator:
 
         message, chat_history_len = apu.retri_history_messages(
             user_input.history_messages,
-            max_doc_len=user_input.max_doc_len // 2)
+            max_input_tokens=(user_input.max_input_tokens // 2),
+            model_name=user_input.model)
 
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
+            , model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens, embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
                  prompt_format_type = user_input.prompt_format_type,)
         response_iter = qa.get_response(doc_path=user_input.data_path,
@@ -307,7 +309,7 @@ def regular_consult_stream(user_input: ConsultModel):
         threshold:Optional[float] = 0.2
         search_type:Optional[str] = 'svm'
         system_prompt:Optional[str] = ""
-        max_doc_len:Optional[int]=1500
+        max_input_tokens: Optional[int] = 3000
         temperature:Optional[float]=0.0
         use_chroma:Optional[bool]=True
         openai_config:Optional[Dict[str, Any]] = {}
@@ -398,7 +400,8 @@ def chat(user_input: ChatModel):
         clean()
         message, chat_history_len = apu.retri_history_messages(
             user_input.history_messages,
-            max_doc_len=user_input.max_doc_len // 2)
+            max_input_tokens=(user_input.max_input_tokens // 2),
+            model_name=user_input.model)
 
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
@@ -467,7 +470,7 @@ def deep_consult(user_input: ConsultModel):
         threshold:Optional[float] = 0.2
         search_type:Optional[str] = 'svm'
         system_prompt:Optional[str] = ""
-        max_doc_len:Optional[int]=1500
+        max_input_tokens:Optional[int]=3000
         temperature:Optional[float]=0.0
         use_chroma:Optional[bool]=True
         openai_config:Optional[Dict[str, Any]] = {}
@@ -488,7 +491,7 @@ def deep_consult(user_input: ConsultModel):
     try:
         clean()
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
-            , model=user_input.model, temperature=user_input.temperature, max_doc_len=user_input.max_doc_len,embeddings=user_input.embedding_model\
+            , model=user_input.model, temperature=user_input.temperature, max_input_token=user_input.max_input_tokens, embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma=user_input.use_chroma)
         response = qa.chain_of_thought(doc_path=user_input.data_path,
                                        prompt_list=user_input.prompt,
@@ -557,7 +560,7 @@ def get_summary(user_input: SummaryModel):
             model=user_input.model,
             verbose=True,
             system_prompt=user_input.system_prompt,
-            max_doc_len=1600,
+            max_input_tokens=3300,
             temperature=0.0,
         )
 

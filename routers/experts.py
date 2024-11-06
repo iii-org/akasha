@@ -62,6 +62,7 @@ class ExpertConsult(ExpertID):
     use_compression: Optional[int] = 0,  # 0 for False, 1 for True
     compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"
     prompt_format_type: Optional[str] = "gpt"
+    max_input_tokens: Optional[int] = 3000
 
 
 ### data class ###
@@ -247,7 +248,7 @@ def save_consult_to_expert(user_input: ExpertConsult):
         search_type: Optional[str] = "svm",
         top_k: Optional[int] = 5,
         threshold: Optional[float] = 0.1,
-        max_doc_len: Optional[int] = 1500,
+        max_input_tokens: Optional[int] = 3000,
         temperature: Optional[float] = 0.0,
         use_compression: Optional[int] = 0, # 0 for False, 1 for True
         compression_language_model: Optional[str] = "openai:gpt-3.5-turbo"

@@ -194,11 +194,12 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
                                        param.get('search_type',
                                                  SEARCH_TYPES[0])))
 
-        max_doc_len = st.number_input('Max Doc Length',
-                                      min_value=100,
-                                      max_value=15000,
-                                      value=param.get('max_doc_len', 1500),
-                                      step=50)
+        max_input_tokens = st.number_input('Max Input Tokens',
+                                           min_value=500,
+                                           max_value=30000,
+                                           value=param.get(
+                                               'max_input_tokens', 3000),
+                                           step=100)
 
         top_k = param.get('top_k', 3)
 
@@ -230,7 +231,7 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
         prompt_format_type = param['prompt_format_type']
         top_k = param['top_k']
         threshold = param['threshold']
-        max_doc_len = param['max_doc_len']
+        max_input_tokens = param['max_input_tokens']
         temperature = param['temperature']
         use_compression = param['use_compression']
         compression_language_model = param['compression_language_model']
@@ -248,8 +249,8 @@ def get_advance_param(show: bool, param: dict, LANGUAGE_MODELS: list,
         top_k,
         'threshold':
         threshold,
-        'max_doc_len':
-        max_doc_len,
+        'max_input_tokens':
+        max_input_tokens,
         'temperature':
         temperature,
         'use_compression':

@@ -112,7 +112,7 @@ def ask_chat(
         expert_owner (str): the owner of expert.
         expert_name (str): the name of expert.
         advanced_params (dict): advanced parameters of expert, include 'datasets', 'model', 'search_type', 'topK','threshold',
-            'max_doc_len', 'temperature', 'use_compression', 'chunk_size', 'embedding_model', 'compression_language_model'.
+            'max_input_tokens', 'temperature', 'use_compression', 'chunk_size', 'embedding_model', 'compression_language_model'.
         auto_clean (bool, optional): if True, clean the question area after ask question. Defaults to False.
 
     Returns:
@@ -149,7 +149,7 @@ def ask_chat(
         "topK": advanced_params["topK"],
         "threshold": advanced_params["threshold"],
         "search_type": advanced_params["search_type"],
-        "max_doc_len": advanced_params["max_doc_len"],
+        "max_input_tokens": advanced_params["max_input_tokens"],
         "openai_config": openai_config,
         "history_messages": st.session_state.history_messages,
         "prompt_format_type": advanced_params["prompt_format_type"],
@@ -259,8 +259,8 @@ def ask_chat(
                 advanced_params["topK"],
                 "threshold":
                 advanced_params["threshold"],
-                "max_doc_len":
-                advanced_params["max_doc_len"],
+                "max_input_tokens":
+                advanced_params["max_input_tokens"],
                 "temperature":
                 advanced_params["temperature"],
                 "use_compression":
@@ -303,7 +303,7 @@ def ask_question(
         expert_owner (str): the owner of expert.
         expert_name (str): the name of expert.
         advanced_params (dict): advanced parameters of expert, include 'datasets', 'model', 'search_type', 'topK','threshold',
-            'max_doc_len', 'temperature', 'use_compression', 'chunk_size', 'embedding_model', 'compression_language_model'.
+            'max_input_tokens', 'temperature', 'use_compression', 'chunk_size', 'embedding_model', 'compression_language_model'.
         auto_clean (bool, optional): if True, clean the question area after ask question. Defaults to False.
 
     Returns:
@@ -340,7 +340,7 @@ def ask_question(
         "topK": advanced_params["topK"],
         "threshold": advanced_params["threshold"],
         "search_type": advanced_params["search_type"],
-        "max_doc_len": advanced_params["max_doc_len"],
+        "max_input_tokens": advanced_params["max_input_tokens"],
         "openai_config": openai_config,
         "prompt_format_type": advanced_params["prompt_format_type"],
     }
@@ -425,8 +425,8 @@ def ask_question(
                 advanced_params["topK"],
                 "threshold":
                 advanced_params["threshold"],
-                "max_doc_len":
-                advanced_params["max_doc_len"],
+                "max_input_tokens":
+                advanced_params["max_input_tokens"],
                 "temperature":
                 advanced_params["temperature"],
                 "use_compression":
