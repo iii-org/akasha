@@ -32,6 +32,7 @@ from pathlib import Path
 import os
 from vertexai.preview import tokenization
 from dotenv import dotenv_values
+import uuid
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -1326,3 +1327,14 @@ class myTokenizer(object):
             encoding = tiktoken.get_encoding("cl100k_base")
             num_tokens = len(encoding.encode(text))
             return num_tokens
+
+
+def get_mac_address() -> str:
+    # Get the MAC address
+    mac = uuid.getnode()
+    # Convert the MAC address to a readable format without colons
+    mac_address = ''.join([
+        '{:02x}'.format((mac >> elements) & 0xff)
+        for elements in range(0, 2 * 6, 2)
+    ][::-1])
+    return get_text_md5(mac_address)
