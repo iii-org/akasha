@@ -274,6 +274,7 @@ def get_chromadb_from_file(documents: list,
     k = 0
     cum_ids = 0
     interval = 3
+    mac_address = helper.get_mac_address()
     if Path(storage_directory).exists():
         docsearch = Chroma(persist_directory=storage_directory,
                            embedding_function=embeddings)
@@ -330,7 +331,7 @@ def get_chromadb_from_file(documents: list,
                 continue
             docsearch._collection.add(
                 embeddings=vectors, metadatas=[text.metadata for text in texts], documents=[text.page_content for text in texts]\
-                    , ids=[formatted_date + "_" + str(cum_ids + i) for i in range(len(texts))]
+                    , ids=[formatted_date + "_" + str(cum_ids + i) + "_" + mac_address for i in range(len(texts))]
             )
             k += interval
             cum_ids += len(texts)
