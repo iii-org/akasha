@@ -50,7 +50,7 @@ class dbs:
             else:
                 self.docs = ["" for _ in range(len(data["ids"]))]
 
-    def merge(self, db):
+    def merge(self, db: 'dbs'):
 
         for i in range(len(db.ids)):
             if db.ids[i] not in self.vis:
