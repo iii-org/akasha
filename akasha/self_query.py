@@ -18,9 +18,22 @@ def query_filter(
     db: dbs,
     metadata_field_info: List[AttributeInfo] = [],
     document_content_description: str = "",
-    custom_parser: Optional[Callable[[str], Tuple[str, dict]]] = None
-) -> Tuple[dbs, str]:
+    custom_parser: Optional[Callable[[str], Tuple[str, dict]]] = None,
+    loose_filter: bool = False,
+) -> Tuple[dbs, str, dict]:
+    """use prompt to generate query and filter to filter out documents, return the filtered documents dbs and the query and matched fields
 
+    Args:
+        prompt (str): user question to generate query and filter
+        model_obj (BaseLanguageModel): llm object
+        db (dbs): the documents dbs to be filtered
+        metadata_field_info (List[AttributeInfo], optional): the metadata attributes info . Defaults to [].
+        document_content_description (str, optional): the desciption of documents. Defaults to "".
+        custom_parser (Optional[Callable[[str], Tuple[str, dict]]], optional): custom parser function. Defaults to None.
+
+    Returns:
+        Tuple[dbs, str, dict]: the filtered documents dbs, the query(str) and matched fields dict(dict[db.ids, List[str]])
+    """
     query, fnl_filter, data_source = generate_query_filter(
         model_obj, prompt, metadata_field_info, document_content_description,
         custom_parser)
@@ -29,12 +42,12 @@ def query_filter(
         DocumentCP(doc, metadata, ids)
         for doc, metadata, ids in zip(db.docs, db.metadatas, db.ids)
     ]
-    filtered_docs = filter_docs(new_docs, fnl_filter, data_source)
+    filtered_docs = filter_docs(new_docs, fnl_filter, data_source,
+                                loose_filter)
     filtered_docs_set = set(fd.ids for fd in filtered_docs)
-
+    matched_fields_dict = {fd.ids: fd.matched_fields for fd in filtered_docs}
     new_dbs = extract_db_by_ids(db, filtered_docs_set)
-
-    return new_dbs, query
+    return new_dbs, query, matched_fields_dict
 
 
 def generate_query_constructor(metadata_info: List[AttributeInfo],
@@ -151,6 +164,7 @@ Structured Request:
 
 class DocumentCP(Document):
     ids: Union[int, str] = Field(default="")
+    matched_fields: List[str] = Field(default=[])
 
     def __init__(self, page_content, metadata, ids):
         super().__init__(page_content)
@@ -203,19 +217,23 @@ def find_subset(
                 for doc in cur_docs:
                     if keyword in doc.metadata and attr in doc.metadata[
                             keyword].lower():
+                        doc.matched_fields.append(keyword)
                         res.add(doc)
             else:
                 for doc in cur_docs:
                     if keyword in doc.metadata and func(
                             doc.metadata[keyword], attr):
+                        doc.matched_fields.append(keyword)
                         res.add(doc)
 
     return res
 
 
-def transfer_filter(filters: dict) -> dict:
+def transfer_filter(filters: Union[dict, int, float, str]) -> dict:
     """Recursively convert all $and filters to $or filters."""
-    if '$and' in filters:
+    if not isinstance(filters, dict):
+        return filters
+    elif '$and' in filters:
         filters = {'$or': [transfer_filter(f) for f in filters['$and']]}
     else:
         for key, value in filters.items():
@@ -236,7 +254,7 @@ def filter_docs(docs: Document,
         loose_filter (bool, optional): if True, change $and to $or. Defaults to False.
 
     Returns:
-        List[DocumentCP]: _description_
+        List[DocumentCP]: return the filtered documents
     """
     if filters is None or len(filters) == 0:
         return docs
