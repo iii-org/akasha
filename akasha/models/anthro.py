@@ -184,3 +184,20 @@ class anthropic_model(LLM):
         )
 
         return messages.content[0].text
+
+    def count_tokens(self, prompt: Union[list, str]) -> int:
+        """caculate the token count
+
+        Args:
+            prompt (Union[list,str]): _description_
+
+        Returns:
+            int: _description_
+        """
+        if isinstance(prompt, str):
+            input_text = [{'role': 'user', 'content': prompt}]
+
+        token_count = self.model.beta.messages.count_tokens(
+            model=self.model_name, messages=input_text)
+
+        return token_count.input_tokens

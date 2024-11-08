@@ -17,7 +17,6 @@ from langchain_community.embeddings import (
     #SentenceTransformerEmbeddings,
     TensorflowHubEmbeddings,
 )
-from langchain_community.utilities.anthropic import get_num_tokens_anthropic
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
 from akasha.models.gemi import gemini_model
@@ -1240,10 +1239,16 @@ class myTokenizer(object):
 
     @staticmethod
     def compute_tokens_anthropic(text: str, model_name: str) -> int:
+        ### take too long time to load the model, skip for now ###
+        import anthropic
 
-        num_tokens = get_num_tokens_anthropic(text)
+        token_count = anthropic.Anthropic().beta.messages.count_tokens(
+            model=model_name, messages=[{
+                'role': 'user',
+                'content': text
+            }])
 
-        return num_tokens
+        return token_count.input_tokens
 
     @staticmethod
     def compute_tokens_openai(text: str, model_name: str) -> int:
@@ -1335,8 +1340,6 @@ class myTokenizer(object):
                 tkn.save(name=model_name.replace('/', '--'), path=model_path)
             return tkn.compute_tokens_huggingface(text)
 
-        elif model_type in ["anthropic", "anthropicai", "claude", "anthro"]:
-            return cls.compute_tokens_anthropic(text, model_name)
         else:
             encoding = tiktoken.get_encoding("cl100k_base")
             num_tokens = len(encoding.encode(text))
