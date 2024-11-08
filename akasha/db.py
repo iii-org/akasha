@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Union, List, Set
+from typing import Union, List, Set, Tuple
 from tqdm import tqdm
 import time, os, shutil, traceback, logging, warnings
 import datetime
@@ -347,6 +347,97 @@ def get_chromadb_from_file(documents: list,
         shutil.rmtree(storage_directory)
         return file_name, add_pic
     return db, add_pic
+
+
+def get_keyword_chromadb_from_file(
+        documents: list,
+        storage_directory: str,
+        chunk_size: int,
+        embeddings: vars,
+        file_name: str,
+        sleep_time: int = 60,
+        keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
+        keyword_num: int = 5):
+    """load the existing chromadb of documents from storage_directory and return it, if not exist, create it.
+
+    Args:
+        documents (list): list of Documents
+        storage_directory (str): the path of chromadb directory
+        chunk_size (int): the chunk size of documents
+        embeddings (vars): the embeddings used in transfer documents into vector storage
+        file_name (str): the path and name of the file
+        sleep_time (int, optional): waiting time if exceed api calls. Defaults to 60.
+
+    Returns:
+        (chromadb object, bool): return the chromadb object and add_pic flag
+    """
+    text_splitter = RecursiveCharacterTextSplitter(
+        separators=["\n", " ", ",", ".", "。", "!"],
+        chunk_size=chunk_size,
+        chunk_overlap=100,
+    )
+    from keybert import KeyBERT
+
+    kw_model = KeyBERT(keyword_model)
+
+    k = 0
+    cum_ids = 0
+    interval = 5
+    mac_address = helper.get_mac_address()
+    if Path(storage_directory).exists():
+        docsearch = Chroma(persist_directory=storage_directory,
+                           embedding_function=embeddings)
+        db = dbs(docsearch)
+        docsearch._client._system.stop()
+        docsearch = None
+        del docsearch
+
+    else:
+        docsearch = Chroma(persist_directory=storage_directory,
+                           embedding_function=embeddings)
+
+        while k < len(documents):
+            cur_doc = documents[k:k + interval]
+            texts = text_splitter.split_documents(cur_doc)
+            formatted_date = datetime.datetime.now().strftime(
+                "%Y-%m-%d-%H_%M_%S_%f")
+
+            ### if page_content is too long, use llm to summarize ###
+            page_contents = [text.page_content for text in texts]
+            keywords = kw_model.extract_keywords(page_contents,
+                                                 top_n=keyword_num)
+
+            for idx, kw in enumerate(keywords):
+                keyword_list = [kwww[0] for kwww in kw]
+
+                try:
+                    vectors = embeddings.embed_documents(keyword_list)
+                except:
+                    time.sleep(sleep_time)
+                    vectors = embeddings.embed_documents(keyword_list)
+
+                if len(vectors) == 0:
+                    continue
+
+                docsearch._collection.add(
+                    embeddings=vectors, metadatas=[texts[idx].metadata for _ in range(keyword_num)], documents=[texts[idx].page_content for _ in range(keyword_num)]\
+                        , ids=[formatted_date + "_" + str(cum_ids) + "_" + str(idx) + "_" + str(keyword_list[w])+ "_" + mac_address for w in range(keyword_num)]
+                )
+            k += interval
+            cum_ids += len(texts)
+
+        ### add pic summary to db ###
+        # if add_pic and file_name.split(".")[-1] == "pdf":
+        #     docsearch, add_pic = add_pic_summary_to_db(docsearch, file_name, chunk_size)
+        db = dbs(docsearch)
+        docsearch._client._system.stop()
+        docsearch = None
+        del docsearch
+    if len(db.get_ids()) == 0:
+        logging.warning(f"\n{file_name} has empty content, ignored.\n")
+        shutil.rmtree(storage_directory)
+        return file_name
+    return db
 
 
 def processMultiDB(
@@ -958,6 +1049,84 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
             ret_db.vis.add(db.ids[idx])
 
     return ret_db
+
+
+def create_keyword_chromadb(
+        doc_path: str,
+        embeddings: Union[str, vars] = "openai:text-embedding-ada-002",
+        chunk_size: int = 1000,
+        keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
+        env_file: str = "") -> Tuple[dbs, List[str]]:
+
+    if isinstance(embeddings, str):
+        embeddings_name = embeddings
+        embeddings = helper.handle_embeddings(embeddings, False, env_file)
+
+    else:
+        embeddings_name = helper._decide_embedding_type(embeddings)
+
+    #### parameter ####
+    dby = dbs()  # list of dbs
+    files = []
+    db_path_names = []
+    txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
+    ## add '/' at the end of doc_path ##
+    if doc_path[-1] != "/":
+        doc_path += "/"
+    db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
+    embed_type, embed_name = helper._separate_name(embeddings_name)
+    ####            #####
+
+    for extension in txt_extensions:
+        files.extend(_load_files(doc_path, extension))
+    progress = tqdm(total=len(files), desc="Vec Storage")
+
+    for file in files:
+        progress.update(1)
+        exist = False
+
+        storage_directory, exist = check_db_name(file, db_dir, embed_type,
+                                                 embed_name, chunk_size)
+        if exist:
+            temp_chroma = Chroma(persist_directory=storage_directory)
+
+            if temp_chroma is not None:
+                dby.add_chromadb(temp_chroma)
+                #db_path_names.append(storage_directory)
+                del temp_chroma
+                print(f"{file} db existed, ignored.")
+            else:
+                db_path_names.append(file)
+                print(f"{file} db existed, but can not load, please check.")
+        else:
+
+            file_doc = _load_file(doc_path + file, file.split(".")[-1])
+            if file_doc == "" or len(file_doc) == 0:
+                print(f"file {file} load failed or empty, ignored.")
+
+            md5_hash = helper.get_text_md5("".join(
+                [fd.page_content for fd in file_doc]))
+
+            storage_directory = (
+                "chromadb/" + db_dir + "_" +
+                file.split(".")[0].replace(" ", "").replace("_", "") + "_" +
+                md5_hash + "_" + embed_type + "_" +
+                embed_name.replace("/", "-") + "_" + str(chunk_size))
+
+            db = get_keyword_chromadb_from_file(
+                file_doc,
+                storage_directory,
+                chunk_size,
+                embeddings,
+                doc_path + file,
+                keyword_model=keyword_model,
+            )
+            if isinstance(db, str):
+                db_path_names.append(db)
+            else:
+                dby.merge(db)
+
+    return dby, db_path_names
 
 
 def get_db_metadata(doc_path: str,

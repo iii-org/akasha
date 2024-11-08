@@ -38,7 +38,8 @@ install_requires = [
     "sentencepiece",
     "google-cloud-aiplatform>=1.64",
     "google-generativeai",
-    "langchain-google-genai"
+    "langchain-google-genai",
+    "anthropic",
 ]
 
 ### install different opencc version###\
@@ -53,7 +54,7 @@ install_requires.append("torch==2.2.0; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
-    version="0.8.75",
+    version="0.8.76",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",

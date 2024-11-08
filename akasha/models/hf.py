@@ -26,6 +26,7 @@ class chatGLM(LLM):
     history: list = []
     tokenizer: Any = Field(default=None)
     model: Any = Field(default=None)
+    model_name: str = ""
 
     def __init__(self,
                  model_name: str,
@@ -49,6 +50,7 @@ class chatGLM(LLM):
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
+        self.model_name = model_name
 
     @property
     def _llm_type(self) -> str:
@@ -57,7 +59,7 @@ class chatGLM(LLM):
         Returns:
             str: llm type
         """
-        return "ChatGLM"
+        return f"chatglm:{self.model_name}  ChatGLM"
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         """run llm and get the response
@@ -134,7 +136,7 @@ class gptq(LLM):
 
     @property
     def _llm_type(self) -> str:
-        return "gptq model"
+        return "gptq: model"
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         input_ids = self.tokenizer(
@@ -254,7 +256,7 @@ class custom_model(LLM):
         Returns:
             str: llm type
         """
-        return self.func.__name__
+        return "custom: " + self.func.__name__
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         """run llm and get the response
@@ -303,7 +305,7 @@ class remote_model(LLM):
         Returns:
             str: llm type
         """
-        return "remote api"
+        return "remote: api model"
 
     def stream(self,
                prompt: str,
@@ -525,6 +527,7 @@ class hf_model(LLM):
     temperature: float = 0.01
     hf_token: Union[str, None] = None
     max_output_tokens: int = 1024
+    model_name: str = ""
 
     def __init__(self, model_name: str, env_dict: dict, temperature: float,
                  **kwargs):
@@ -549,7 +552,7 @@ class hf_model(LLM):
             self.max_output_tokens = kwargs['max_output_tokens']
 
         self.temperature = temperature
-
+        self.model_name = model_name
         if "vision" in model_name.lower():
             self.init_vision_model()
         else:
@@ -573,7 +576,7 @@ class hf_model(LLM):
         Returns:
             str: llm type
         """
-        return "huggingface text generation model hf"
+        return f"hf:{self.model_name} huggingface"
 
     def init_vision_model(self, **kwargs):
         """init vision model

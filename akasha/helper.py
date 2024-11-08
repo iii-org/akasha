@@ -17,9 +17,11 @@ from langchain_community.embeddings import (
     #SentenceTransformerEmbeddings,
     TensorflowHubEmbeddings,
 )
+from langchain_community.utilities.anthropic import get_num_tokens_anthropic
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
 from akasha.models.gemi import gemini_model
+from akasha.models.anthro import anthropic_model
 import os, traceback, logging
 import shutil
 from langchain_core.language_models.base import BaseLanguageModel
@@ -100,7 +102,7 @@ def get_env_var(env_file: str = "") -> dict:
 
     require_env = ["OPENAI_API_KEY", "OPENAI_API_BASE", "OPENAI_API_VERSION","OPEANI_API_TYPE", \
         "AZURE_API_KEY", "AZURE_API_BASE", "AZURE_API_VERSION", "AZURE_API_TYPE", "SERPER_API_KEY",\
-            "GEMINI_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN"]
+            "GEMINI_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN","ANTHROPIC_API_KEY"]
     if env_file == "" or not Path(env_file).exists():
         env_dict = {}
         os_env_dict = os.environ.copy()
@@ -291,6 +293,17 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                              api_key=env_dict["GEMINI_API_KEY"],
                              temperature=temperature,
                              max_output_tokens=max_output_tokens)
+
+    elif model_type in ["anthropic", "anthropicai", "claude", "anthro"]:
+        if "ANTHROPIC_API_KEY" not in env_dict:
+            raise Exception(
+                "can not find the ANTHROPIC_API_KEY in environment variable.\n\n"
+            )
+        info = f"selected anthropic model. \n"
+        model = anthropic_model(model_name=model_name,
+                                api_key=env_dict["ANTHROPIC_API_KEY"],
+                                temperature=temperature,
+                                max_output_tokens=max_output_tokens)
 
     elif (model_type
           in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
@@ -675,10 +688,7 @@ def call_model(
             model_type = model._llm_type
         except:
             print_flag = False
-            try:
-                response = model._call(input_text)
-            except:
-                response = model._generate(input_text)
+            model_type = "unknown"
 
         if ("openai" in model_type):
             print_flag = False
@@ -700,7 +710,8 @@ def call_model(
             if isinstance(response, list):
                 response = '\n'.join(response)
 
-        if "huggingface" or "llama cpp" in model_type:
+        if ("huggingface" in model_type) or ("llama cpp" in model_type) or (
+                "gemini" in model_type) or ("anthropic" in model_type):
             print_flag = False
 
         if response is None or response == "":
@@ -790,14 +801,6 @@ def call_stream_model(
     response = None
     texts = ""
     try:
-        try:
-            model_type = model._llm_type
-        except:
-
-            try:
-                response = model.stream(input_text)
-            except:
-                response = model._call(input_text)
 
         try:
             response = model.stream(input_text)
@@ -840,6 +843,7 @@ def call_image_model(
             response = model.invoke(input_text)
 
         else:
+
             try:
                 response = model.call_image(input_text)
             except:
@@ -1235,6 +1239,13 @@ class myTokenizer(object):
         return num_tokens
 
     @staticmethod
+    def compute_tokens_anthropic(text: str, model_name: str) -> int:
+
+        num_tokens = get_num_tokens_anthropic(text)
+
+        return num_tokens
+
+    @staticmethod
     def compute_tokens_openai(text: str, model_name: str) -> int:
         """
         Compute the number of tokens in a given text using OpenAI tiktoken.
@@ -1323,6 +1334,9 @@ class myTokenizer(object):
             if save_tokenizer:
                 tkn.save(name=model_name.replace('/', '--'), path=model_path)
             return tkn.compute_tokens_huggingface(text)
+
+        elif model_type in ["anthropic", "anthropicai", "claude", "anthro"]:
+            return cls.compute_tokens_anthropic(text, model_name)
         else:
             encoding = tiktoken.get_encoding("cl100k_base")
             num_tokens = len(encoding.encode(text))
