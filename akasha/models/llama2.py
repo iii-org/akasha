@@ -47,7 +47,7 @@ class peft_Llama2(LLM):
 
     @property
     def _llm_type(self) -> str:
-        return "peft_Llama2"
+        return "peft_Llama2:"
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -105,7 +105,7 @@ class TaiwanLLaMaGPTQ(LLM):
 
     @property
     def _llm_type(self) -> str:
-        return "Taiwan_LLaMa"
+        return "Taiwan_LLaMa:"
 
     def _call(self, message: str, stop: Optional[List[str]] = None):
         prompt = message
@@ -188,7 +188,7 @@ class LlamaCPP(LLM):
         Returns:
             str: llm type
         """
-        return "llama cpp"
+        return "llama-cpp:" + self.model_id
 
     def stream(self,
                prompt: Union[list, str],

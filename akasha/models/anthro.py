@@ -1,5 +1,5 @@
-import google.generativeai as genai
-from google.generativeai import GenerationConfig
+import os
+from anthropic import Anthropic
 from langchain.llms.base import LLM
 from typing import Dict, List, Any, Optional, Callable, Generator, Union
 from pydantic import Field
@@ -7,14 +7,14 @@ import os
 import concurrent.futures
 
 
-class gemini_model(LLM):
+class anthropic_model(LLM):
     max_token: int = 4096
     max_output_tokens: int = 1024
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
-    model: genai.GenerativeModel = Field(default=None)
-    model_name: str = "gemini-1.5-flash"
+    model: Anthropic = Field(default=None)
+    model_name: str = "claude-3-5-sonnet-20241022"
 
     def __init__(self,
                  model_name: str,
@@ -27,18 +27,11 @@ class gemini_model(LLM):
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__()
-        genai.configure(api_key=api_key)
+        self.model = Anthropic(api_key=api_key)
+        self.model_name = model_name
         self.temperature = temperature
         if 'max_output_tokens' in kwargs:
             self.max_output_tokens = kwargs['max_output_tokens']
-
-        generation_config = GenerationConfig(
-            max_output_tokens=self.max_output_tokens,
-            temperature=temperature,
-        )
-        self.model = genai.GenerativeModel(model_name,
-                                           generation_config=generation_config)
-        self.model_name = model_name
 
     @property
     def _llm_type(self) -> str:
@@ -47,7 +40,7 @@ class gemini_model(LLM):
         Returns:
             str: llm type
         """
-        return f"gemini:{self.model_name}"
+        return f"anthropic:{self.model_name}"
 
     def stream(self,
                prompt: Union[str, List[Dict[str, Any]]],
@@ -60,19 +53,21 @@ class gemini_model(LLM):
         Yields:
             Generator: _description_
         """
-        if isinstance(prompt, list):
-            prompt = check_format_prompt(prompt)
+        if isinstance(prompt, str):
+            prompt = [{"role": "user", "content": prompt}]
 
-        generation_config = GenerationConfig(
-            max_output_tokens=self.max_output_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            stop_sequences=stop)
-        streaming_response = self.model.generate_content(
-            prompt, generation_config=generation_config, stream=True)
+        with self.model.messages.stream(
+                max_tokens=self.max_output_tokens,
+                messages=prompt,
+                model=self.model_name,
+                stop_sequences=stop,
+                temperature=self.temperature,
+                top_p=self.top_p,
+        ) as stream:
 
-        for s in streaming_response:
-            yield s.text
+            for text in stream.text_stream:
+                yield text
+
         return
 
     def _call(self,
@@ -89,22 +84,23 @@ class gemini_model(LLM):
             str: llm response
         """
 
-        if isinstance(prompt, list):
-            prompt = check_format_prompt(prompt)
-
-        generation_config = GenerationConfig(
-            max_output_tokens=self.max_output_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            stop_sequences=stop)
-
         ret = ""
-        streaming_response = self.model.generate_content(
-            prompt, generation_config=generation_config, stream=True)
+        if isinstance(prompt, str):
+            prompt = [{"role": "user", "content": prompt}]
 
-        for s in streaming_response:
-            print(s.text, end="", flush=True)
-            ret += s.text
+        with self.model.messages.stream(
+                max_tokens=self.max_output_tokens,
+                messages=prompt,
+                model=self.model_name,
+                stop_sequences=stop,
+                temperature=self.temperature,
+                top_p=self.top_p,
+        ) as stream:
+
+            for text in stream.text_stream:
+                ret += text
+                if verbose:
+                    print(text, end="", flush=True)
 
         return ret
 
@@ -165,25 +161,26 @@ class gemini_model(LLM):
         """
         return self.stream(messages, stop)
 
+    def call_image(self,
+                   prompt: list,
+                   stop: Optional[List[str]] = None) -> str:
+        """run llm and get the response
 
-def check_format_prompt(prompts: list):
-    """check and format the prompt to fit the correct gemini format"""
-    for idx, prompt in enumerate(prompts):
+        Args:
+            **prompt (str)**: user prompt
+            **stop (Optional[List[str]], optional)**: not use. Defaults to None.\n
 
-        if prompt['role'] != 'user':
-            prompts[idx]['role'] = 'model'
-        if ('parts' not in prompt) and ('content' in prompt):
-            prompts[idx]['parts'] = [prompts[idx]['content']]
-            prompts[idx].pop('content')
+        Returns:
+            str: llm response
+        """
 
-    return prompts
+        messages = self.model.messages.create(
+            max_tokens=self.max_output_tokens,
+            messages=prompt,
+            model=self.model_name,
+            stop_sequences=stop,
+            temperature=self.temperature,
+            top_p=self.top_p,
+        )
 
-
-def calculate_token(
-    prompt: str,
-    model_name: str = "gemini-1.5-flash",
-):
-
-    num_tokens = genai.GenerativeModel(model_name).count_tokens(prompt)
-
-    return num_tokens
+        return messages.content[0].text

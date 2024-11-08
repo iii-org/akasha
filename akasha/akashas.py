@@ -1286,9 +1286,11 @@ class Doc_QA(atman):
 
         ## check model ##
         model_prefix = self.model.split(":")[0]
-        if model_prefix in ["hf", "hugginface"] and self.stream == True:
+        if model_prefix in [
+                "hf", "hugginface", "anthropic", "claude", "anthro"
+        ] and self.stream == True:
             raise ValueError(
-                "Currently huggingface model does not support stream mode.\n\n"
+                f"Currently {model_prefix} model does not support stream mode.\n\n"
             )
 
         if model_prefix in [
@@ -1303,6 +1305,10 @@ class Doc_QA(atman):
         if model_prefix in ["hf", "huggingface"]:
             fnl_input = prompts.format_image_prompt(image_path, prompt,
                                                     "image_llama")
+
+        elif model_prefix in ["anthropic", "claude", "anthro"]:
+            fnl_input = prompts.format_image_prompt(image_path, prompt,
+                                                    "image_anthropic")
 
         else:
             fnl_input = prompts.format_image_prompt(image_path, prompt,

@@ -689,6 +689,41 @@ def format_image_llama_prompt(image_path: str, prompt: str) -> List[dict]:
     return [{"role": "user", "content": image_content}]
 
 
+def format_image_anthropic_prompt(image_path: str, prompt: str) -> List[dict]:
+
+    import base64
+    import httpx
+    if image_path.split('.')[-1] == "jpg":
+        image_media_type = "image/jpeg"
+    else:
+        image_media_type = f"image/{image_path.split('.')[-1]}"
+
+    if is_url(image_path):
+        url_content = base64.standard_b64encode(
+            httpx.get(image_path).content).decode("utf-8")
+
+    else:
+        url_content = base64.standard_b64encode(open(
+            image_path, "rb").read()).decode("utf-8")
+
+    image_content = [{
+        "role":
+        "user",
+        "content": [{
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": image_media_type,
+                "data": url_content
+            }
+        }, {
+            "type": "text",
+            "text": prompt
+        }]
+    }]
+    return image_content
+
+
 def format_image_gpt_prompt(image_path: str, prompt: str) -> List[dict]:
 
     url_content = {}
@@ -725,5 +760,7 @@ def format_image_prompt(image_path: str,
     if model_type == "image_llama":
         return format_image_llama_prompt(image_path, prompt)
 
+    elif model_type == "image_anthropic":
+        return format_image_anthropic_prompt(image_path, prompt)
     else:
         return format_image_gpt_prompt(image_path, prompt)
