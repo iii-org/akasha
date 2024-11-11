@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: akasha-rag
-          image: ccchang0518/akasha-lab:0.17 # Change this to the name of your image
+          image: ccchang0518/akasha-lab:0.19 # Change this to the name of your image
           imagePullPolicy: IfNotPresent
           args: []
           env: 

@@ -19,9 +19,11 @@ CHUNKSIZE = 3000
 SPINNER_MESSAGE = "Wait for api response..."
 HOST = os.getenv("API_HOST", "http://127.0.0.1")
 PORT = os.getenv("API_PORT", "8000")
+NEED_API_LIST = ["openai", "azure", "anthropic", "gemini"]
 
 api_urls = {
     "load_openai": f"{HOST}:{PORT}/openai/load_openai",
+    "load_single_api": f"{HOST}:{PORT}/load_single_api",
     "get_docs_path": f"{HOST}:{PORT}/get_docs_path",
     "get_config_path": f"{HOST}:{PORT}/get_base_config_path",
     "get_dataset": f"{HOST}:{PORT}/dataset/get",
@@ -46,7 +48,10 @@ api_urls = {
     "get_dataset_dcp": f"{HOST}:{PORT}/dataset/get_dcp",
     "test_openai": f"{HOST}:{PORT}/openai/test_openai",
     "test_azure": f"{HOST}:{PORT}/openai/test_azure",
+    "test_anthropic": f"{HOST}:{PORT}/anthropic/test_anthropic",
+    "test_gemini": f"{HOST}:{PORT}/gemini/test_gemini",
     "save_openai": f"{HOST}:{PORT}/openai/save",
+    "save_single_api": f"{HOST}:{PORT}/save_single_api",
     "choose_openai": f"{HOST}:{PORT}/openai/choose",
     "is_default_api": f"{HOST}:{PORT}/openai/is_default_api",
     "get_consult": f"{HOST}:{PORT}/expert/get_consult",
@@ -124,8 +129,8 @@ def ask_chat(
         time.sleep(3)
         return False
 
-    if (advanced_params["embedding_model"].split(":")[0] == "openai"
-            or advanced_params["model"].split(":")[0] == "openai"):
+    if (advanced_params["embedding_model"].split(":")[0] in NEED_API_LIST
+            or advanced_params["model"].split(":")[0] in NEED_API_LIST):
         openai_config = get_openai_config(username)
     else:
         openai_config = {}
@@ -158,8 +163,9 @@ def ask_chat(
         with st.spinner(SPINNER_MESSAGE):
             # using streaming mode #
             if "openai" in advanced_params["model"] or "hf:" in advanced_params[
-                    "model"] or "huggingface" in advanced_params[
-                        "model"] or "remote:" in advanced_params["model"]:
+                "model"] or "huggingface" in advanced_params[
+                "model"] or "remote:" in advanced_params["model"] or \
+                "gemini" in advanced_params["model"] or "anthropic" in advanced_params["model"]:
                 with col_answer.chat_message("user"):
                     st.markdown(prompt)
 
@@ -315,8 +321,8 @@ def ask_question(
         time.sleep(3)
         return False
 
-    if (advanced_params["embedding_model"].split(":")[0] == "openai"
-            or advanced_params["model"].split(":")[0] == "openai"):
+    if (advanced_params["embedding_model"].split(":")[0] in NEED_API_LIST
+            or advanced_params["model"].split(":")[0] in NEED_API_LIST):
         openai_config = get_openai_config(username)
     else:
         openai_config = {}
@@ -348,8 +354,9 @@ def ask_question(
         with st.spinner(SPINNER_MESSAGE):
 
             if "openai" in advanced_params["model"] or "hf:" in advanced_params[
-                    "model"] or "huggingface" in advanced_params[
-                        "model"] or "remote:" in advanced_params["model"]:
+                "model"] or "huggingface" in advanced_params[
+                "model"] or "remote:" in advanced_params["model"] or \
+                "gemini" in advanced_params["model"] or "anthropic" in advanced_params["model"]:
 
                 with col_answer.chat_message("assistant"):
                     placeholder = st.empty()
@@ -558,7 +565,7 @@ def create_expert(
                     f" Dataset '{k}' should select at least 1 file")
 
         ## get openai config if needed ##
-        if expert_embedding.split(":")[0] == "openai":
+        if expert_embedding.split(":")[0] in ["openai", "gemini"]:
             openai_config = get_openai_config(owner)
         else:
             openai_config = {}
@@ -1305,6 +1312,23 @@ def check_expert_use_shared_dataset(expert_datasets: list,
     return False
 
 
+def save_single_api_configuration(key: str, mtype: str) -> bool:
+
+    with st.spinner(SPINNER_MESSAGE):
+        response = requests.get(api_urls["test_" + mtype],
+                                json={
+                                    "api_key": key
+                                }).json()
+
+    if response["status"] != "success":
+        api_fail(response["response"])
+        return False
+
+    st.session_state[f"{mtype}_key"] = key
+    st.success(f"{mtype} configurations have been saved successfully")
+    return True
+
+
 # settings
 def _save_openai_configuration(key: str, add_session: bool = True) -> bool:
     """first check if openai api key is valid, then save openai api key to session state['openai_key'].
@@ -1434,6 +1458,38 @@ def save_openai_to_file(
         return False
 
     st.success("OpenAI configuration file has been saved successfully")
+    return True
+
+
+def save_single_api_to_file(
+    owner: str,
+    api_key: str,
+    type: str,
+) -> bool:
+    """call save_single_api api to save api configs to config file.
+
+    Args:
+        owner (str): owner name
+        api_key (str, optional): key value of openai_key. Defaults to ''.
+        type (str, optional): type of api key("anthropic", "gemini"). Defaults to ''.
+
+    Returns:
+        bool : True if save openai api configs to config file successfully, else return False.
+    """
+    data = {
+        "owner": owner,
+        "api_key": api_key,
+        "type": type,
+    }
+
+    with st.spinner(SPINNER_MESSAGE):
+        response = requests.post(api_urls["save_single_api"], json=data).json()
+
+    if response["status"] != "success":
+        api_fail(response["response"])
+        return False
+
+    st.success(f"{type} configuration file has been saved successfully")
     return True
 
 
@@ -1657,6 +1713,10 @@ def get_openai_config(owner: str) -> dict:
         "azure_base":
         st.session_state.azure_base
         if st.session_state.azure_openai_on else "",
+        "anthropic_key":
+        st.session_state.anthropic_key,
+        "gemini_key":
+        st.session_state.gemini_key,
     }
     with st.spinner(SPINNER_MESSAGE):
         response = requests.get(api_urls["choose_openai"], json=data).json()
@@ -1792,6 +1852,19 @@ def get_openai_from_file(username: str):
 
     return response["response"]["openai_key"], response["response"][
         "azure_key"], response["response"]["azure_base"]
+
+
+def get_single_api_from_file(username: str, type: str):
+
+    response = requests.get(api_urls["load_single_api"],
+                            json={
+                                "owner": username,
+                                "type": type
+                            }).json()
+    if response["status"] != "success":
+        api_fail(response["response"])
+        return ""
+    return response["response"]["api_key"]
 
 
 def run_command(command: str,
@@ -1967,7 +2040,7 @@ def get_doc_file_path(dataset_owner, dataset_name, file_name) -> str:
 def ask_summary(system_prompt: str, username: str, tmp_file_name: str,
                 language_model: str, summary_type: str, summary_len: int):
 
-    if (language_model.split(":")[0] == "openai"):
+    if (language_model.split(":")[0] in NEED_API_LIST):
         openai_config = get_openai_config(username)
     else:
         openai_config = {}

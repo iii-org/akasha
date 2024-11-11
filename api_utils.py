@@ -479,6 +479,8 @@ def choose_openai_key(
     openai_key: str = "",
     azure_key: str = "",
     azure_base: str = "",
+    anthropic_key: str = "",
+    gemini_key: str = "",
 ) -> dict:
     """test the openai key, azure openai key, or keys in openai.json file and choose it if valid
 
@@ -490,16 +492,22 @@ def choose_openai_key(
     openai_key = openai_key.replace(" ", "")
     azure_key = azure_key.replace(" ", "")
     azure_base = azure_base.replace(" ", "")
+    base = {}
+
+    if anthropic_key != "":
+        base["anthropic_key"] = anthropic_key
+
+    if gemini_key != "":
+        base["gemini_key"] = gemini_key
 
     if azure_key != "" and azure_base != "":
-        # res = requests.get(api_url['test_azure'], json = {'azure_key':azure_key, 'azure_base':azure_base}).json()
-        # if res['status'] == 'success':
-        return {"azure_key": azure_key, "azure_base": azure_base}
+        base["azure_key"] = azure_key
+        base["azure_base"] = azure_base
+        return base
 
     if openai_key != "":
-        # res = requests.get(api_url['test_openai'], json = {'openai_key':openai_key}).json()
-        # if res['status'] == 'success':
-        return {"openai_key": openai_key}
+        base["openai_key"] = openai_key
+        return base
 
     if Path(CONFIG_PATH).exists():
         file_path = Path(config_file_path)
@@ -507,20 +515,22 @@ def choose_openai_key(
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
+            if anthropic_key == "" and "anthropic_key" in data:
+                base["anthropic_key"] = data["anthropic_key"]
+
+            if gemini_key == "" and "gemini_key" in data:
+                base["gemini_key"] = data["gemini_key"]
+
             if "azure_key" in data and "azure_base" in data:
-                # res = requests.get(api_url['test_azure'], json = {'azure_key':data['azure_key'], 'azure_base':data['azure_base']}).json()
-                # if res['status'] == 'success':
-                return {
-                    "azure_key": data["azure_key"],
-                    "azure_base": data["azure_base"],
-                }
+                base["azure_key"] = data["azure_key"]
+                base["azure_base"] = data["azure_base"]
+                return base
 
             if "openai_key" in data:
-                # res = requests.get(api_url['test_openai'], json = {'openai_key':data['openai_key']}).json()
-                # if res['status'] == 'success':
-                return {"openai_key": data["openai_key"]}
+                base["openai_key"] = data["openai_key"]
+                return base
 
-    return {}
+    return base
 
 
 def load_openai(config: dict) -> bool:
@@ -542,6 +552,15 @@ def load_openai(config: dict) -> bool:
         del os.environ["AZURE_API_TYPE"]
     if "AZURE_API_VERSION" in os.environ:
         del os.environ["AZURE_API_VERSION"]
+    flag = False
+
+    if ("anthropic_key" in config and config["anthropic_key"] != ""):
+        os.environ["ANTHROPIC_API_KEY"] = config["anthropic_key"]
+        flag = True
+
+    if ("gemini_key" in config and config["gemini_key"] != ""):
+        os.environ["GEMINI_API_KEY"] = config["gemini_key"]
+        flag = True
 
     if "openai_key" in config and config["openai_key"] != "":
         os.environ["OPENAI_API_KEY"] = config["openai_key"]
@@ -556,7 +575,7 @@ def load_openai(config: dict) -> bool:
         os.environ["AZURE_API_VERSION"] = "2023-05-15"
         return True
 
-    return False
+    return flag
 
 
 def retri_history_messages(

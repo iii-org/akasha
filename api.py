@@ -18,6 +18,7 @@ from logging.handlers import TimedRotatingFileHandler
 from fastapi.responses import StreamingResponse, Response
 from langchain.llms.base import LLM
 ## if default_key.json exist, create a thread to keep checking if the key is valid
+NEED_API_LIST = ["openai", "azure", "anthropic", "gemini"]
 if not Path("./config").exists():
     os.mkdir("./config")
 if Path("./config/default_key.json").exists():
@@ -135,6 +136,14 @@ class OpenAIKey(BaseModel):
     openai_key: Optional[str] = ""
     azure_key: Optional[str] = ""
     azure_base: Optional[str] = ""
+    anthropic_key: Optional[str] = ""
+    gemini_key: Optional[str] = ""
+
+
+class SingleAPIKey(BaseModel):
+    owner: Optional[str] = ""
+    api_key: Optional[str] = ""
+    type: Optional[str] = ""
 
 
 class SummaryModel(BaseModel):
@@ -170,8 +179,8 @@ def regular_consult(user_input: ConsultModel):
         dict: status, response, logs
     """
     if user_input.model.split(
-            ':')[0] == "openai" or user_input.embedding_model.split(
-                ':')[0] == "openai":
+            ':')[0] in NEED_API_LIST or user_input.embedding_model.split(
+                ':')[0] in NEED_API_LIST:
         if not apu.load_openai(config=user_input.openai_config):
             return {
                 'status': 'fail',
@@ -318,12 +327,13 @@ def regular_consult_stream(user_input: ConsultModel):
     Returns:
         dict: status, response, logs
     """
+
     if user_input.model.split(
-            ':')[0] == "openai" or user_input.embedding_model.split(
-                ':')[0] == "openai":
+            ':')[0] in NEED_API_LIST or user_input.embedding_model.split(
+                ':')[0] in NEED_API_LIST:
         if not apu.load_openai(config=user_input.openai_config):
             return Response(
-                "load openai config failed.\n\n",
+                "load config failed.\n\n",
                 status_code=500,
                 media_type="text/event-plain",
             )
@@ -354,13 +364,10 @@ def chat_stream(user_input: ChatModel):
     """
 
     if user_input.model.split(
-            ':')[0] == "openai" or user_input.embedding_model.split(
-                ':')[0] == "openai":
+            ':')[0] in NEED_API_LIST or user_input.embedding_model.split(
+                ':')[0] in NEED_API_LIST:
         if not apu.load_openai(config=user_input.openai_config):
-            return {
-                'status': 'fail',
-                'response': 'load openai config failed.\n\n'
-            }
+            return {'status': 'fail', 'response': 'load config failed.\n\n'}
 
     try:
 
@@ -388,8 +395,8 @@ def chat(user_input: ChatModel):
     """
 
     if user_input.model.split(
-            ':')[0] == "openai" or user_input.embedding_model.split(
-                ':')[0] == "openai":
+            ':')[0] in NEED_API_LIST or user_input.embedding_model.split(
+                ':')[0] in NEED_API_LIST:
         if not apu.load_openai(config=user_input.openai_config):
             return {
                 'status': 'fail',
@@ -405,6 +412,7 @@ def chat(user_input: ChatModel):
 
         qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
             , model=user_input.model, temperature=user_input.temperature, embeddings=user_input.embedding_model\
+            ,max_input_tokens=user_input.max_input_tokens\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt, use_chroma = user_input.use_chroma,\
                  prompt_format_type = user_input.prompt_format_type,)
         response = qa.get_response(doc_path=user_input.data_path,
@@ -480,8 +488,8 @@ def deep_consult(user_input: ConsultModel):
         dict: status, response, logs
     """
     if user_input.model.split(
-            ':')[0] == "openai" or user_input.embedding_model.split(
-                ':')[0] == "openai":
+            ':')[0] in NEED_API_LIST or user_input.embedding_model.split(
+                ':')[0] in NEED_API_LIST:
         if not apu.load_openai(config=user_input.openai_config):
             return {
                 'status': 'fail',
@@ -546,7 +554,7 @@ def get_summary(user_input: SummaryModel):
         _type_: _description_
     """
 
-    if user_input.model.split(':')[0] == "openai":
+    if user_input.model.split(':')[0] in NEED_API_LIST:
         if not apu.load_openai(config=user_input.openai_config):
             return {
                 'status': 'fail',
@@ -647,6 +655,48 @@ def save_openai_key(user_input: OpenAIKey):
     }
 
 
+@app.post("/save_single_api")
+def save_single_api(user_input: SingleAPIKey):
+    """save openai key into config file
+
+    Args:
+        user_input (_type_, optional): _description_.
+        api_key : str
+        type : str
+        owner : str
+    """
+    owner = user_input.owner
+    save_path = Path(OPENAI_CONFIG_PATH) / (owner + "_" + "openai.json")
+    if not apu.check_config(OPENAI_CONFIG_PATH):
+        return {'status': 'fail', 'response': 'create config path failed.\n\n'}
+
+    if save_path.exists():
+        with open(save_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+    else:
+        data = {}
+
+    flag = False
+    user_input.api_key = user_input.api_key.replace(' ', '')
+    if user_input.api_key != "":
+        data[f'{user_input.type}_key'] = user_input.api_key
+        flag = True
+
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+    if not flag:
+        return {
+            'status': 'fail',
+            'response': 'can not save any API configuration.\n\n'
+        }
+    return {
+        'status': 'success',
+        'response': f'save {user_input.type} key successfully.\n\n'
+    }
+
+
 @app.get("/openai/test_openai")
 def test_openai_key(user_input: OpenAIKey):
     """test openai key is valid or not
@@ -681,6 +731,79 @@ def test_openai_key(user_input: OpenAIKey):
             }
 
     return {'status': 'fail', 'response': 'openai key empty.\n\n'}
+
+
+@app.get("/anthropic/test_anthropic")
+def test_anthropic_key(user_input: SingleAPIKey):
+    """test anthropic key is valid or not
+
+    Args:
+        user_input (SingleAPIKey): _description_
+        api_key : str
+    Returns:
+        dict: status, response
+    """
+    try:
+        from anthropic import Anthropic
+
+        test_model = Anthropic(api_key=user_input.api_key)
+
+        input_text = [{'role': 'user', 'content': "Hello World!"}]
+
+        token_count = test_model.beta.messages.count_tokens(
+            model="claude-3-5-sonnet-20241022", messages=input_text)
+        if isinstance(token_count.input_tokens, int):
+            return {
+                'status': 'success',
+                'response': 'anthropic key is valid.\n\n'
+            }
+    except Exception as e:
+        return {
+            'status': 'fail',
+            'response': e.__str__() + '\n\nanthropic model test failed.\n\n'
+        }
+    return {'status': 'fail', 'response': 'anthropic model test failed.\n\n'}
+
+
+@app.get("/gemini/test_gemini")
+def test_gemini_key(user_input: SingleAPIKey):
+    """test gemini key is valid or not
+
+    Args:
+        user_input (SingleAPIKey): _description_
+        api_key : str
+    Returns:
+        dict: status, response
+    """
+    try:
+        import google.generativeai as genai
+        from google.generativeai import GenerationConfig
+
+        genai.configure(api_key=user_input.api_key)
+        test_model = genai.GenerativeModel()
+
+        input_text = [{'role': 'user', 'parts': "Hello World!"}]
+
+        streaming_response = test_model.generate_content(input_text,
+                                                         stream=True)
+
+        for s in streaming_response:
+            if isinstance(s.text, str):
+                return {
+                    'status': 'success',
+                    'response': 'gemini key is valid.\n\n'
+                }
+            else:
+                return {
+                    'status': 'fail',
+                    'response': 'gemini model test failed.\n\n'
+                }
+    except Exception as e:
+        return {
+            'status': 'fail',
+            'response': e.__str__() + '\n\ngemini model test failed.\n\n'
+        }
+    return {'status': 'fail', 'response': 'anthropic model test failed.\n\n'}
 
 
 @app.get("/openai/test_azure")
@@ -754,7 +877,41 @@ def load_openai_from_file(user_input: UserBase):
 
                     ret["openai_key"] = data["openai_key"]
     except Exception as e:
-        return {'status': 'fail', 'response': ret}
+        return {'status': 'fail', 'response': e.__str__() + "\n\n" + ret}
+
+    return {'status': 'success', 'response': ret}
+
+
+@app.get("/load_single_api")
+def load_single_api_from_file(user_input: SingleAPIKey):
+    """load single api key from config file
+
+    Args:
+        user_name (str): user name
+    Returns:
+        dict: status, response
+    """
+    user_name = user_input.owner
+    openai_config_file_path = (Path(OPENAI_CONFIG_PATH) /
+                               (user_name + "_" + "openai.json")).__str__()
+    ret = {"api_key": ""}
+    try:
+        if Path(openai_config_file_path).exists():
+            file_path = Path(openai_config_file_path)
+            if file_path.exists():
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if (user_input.type == "anthropic") and ("anthropic_key"
+                                                         in data):
+
+                    ret["api_key"] = data["anthropic_key"]
+
+                elif (user_input.type == "gemini") and ("gemini_key" in data):
+
+                    ret["api_key"] = data["gemini_key"]
+
+    except Exception as e:
+        return {'status': 'fail', 'response': e.__str__() + "\n\n" + ret}
 
     return {'status': 'success', 'response': ret}
 
@@ -775,7 +932,8 @@ def choose_openai_key(user_input: OpenAIKey):
         Path(OPENAI_CONFIG_PATH) /
         (user_input.owner + "_" + "openai.json")).__str__()
     openai_key, azure_key, azure_base = "", "", ""
-
+    anthropic_key = user_input.anthropic_key
+    gemini_key = user_input.gemini_key
     if 'show_api_setting' in os.environ and os.environ[
             'show_api_setting'] == 'True':
         if 'default_openai_key' in os.environ:
@@ -790,7 +948,8 @@ def choose_openai_key(user_input: OpenAIKey):
         azure_base = user_input.azure_base
 
     config = apu.choose_openai_key(openai_config_file_path, openai_key,
-                                   azure_key, azure_base)
+                                   azure_key, azure_base, anthropic_key,
+                                   gemini_key)
 
     if len(config) == 0:
         return {

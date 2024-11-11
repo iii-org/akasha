@@ -12,10 +12,10 @@ from views.settings import settings_page
 from views.userguide import user_guide_page
 from views.signup import signup_page, non_verify_signup_page
 from views.forgetpwd import non_verify_forgetpwd_page, forgetpwd_page
-from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command, get_mail_credentials
+from utils import list_experts, list_datasets, list_models, get_openai_from_file, run_command, get_mail_credentials, get_single_api_from_file
 
 # info
-VERSION = '0.17'
+VERSION = '0.19'
 
 # get host ip
 if 'host_ip' not in st.session_state:
@@ -133,6 +133,16 @@ if url_params == {}:
                     and st.session_state.azure_base != ""):
                 st.session_state.save_openai = False
 
+        if ('anthropic_key' not in st.session_state):
+            st.session_state.anthropic_key = get_single_api_from_file(
+                username, 'anthropic')
+            st.session_state.save_anthropic = True
+
+        if ('gemini_key' not in st.session_state):
+            st.session_state.gemini_key = get_single_api_from_file(
+                username, 'gemini')
+            st.session_state.save_gemini = True
+
         EXPERTS = list_experts(
             username, name_only=True,
             include_shared=True)  # may filtered by logged-in user
@@ -142,7 +152,9 @@ if url_params == {}:
         EMBEDDING_MODELS = ['openai:text-embedding-ada-002', 'hf:shibing624/text2vec-base-chinese-paraphrase', \
             'hf:shibing624/text2vec-base-multilingual',"hf:BAAI/bge-large-en-v1.5", "hf:BAAI/bge-large-zh-v1.5"]
         SEARCH_TYPES = ['merge', 'svm', 'auto', 'tfidf', 'mmr', 'bm25']
-        PROMPT_FORMAT_TYPES = ["gpt", "llama", "chat_gpt", "chat_mistral"]
+        PROMPT_FORMAT_TYPES = [
+            "gpt", "llama", "chat_gpt", "chat_mistral", "chat_gemma"
+        ]
         LANGUAGE_MODELS = list_models()
 
         # layout after successfully login
