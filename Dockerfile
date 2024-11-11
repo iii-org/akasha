@@ -9,10 +9,11 @@ COPY main.py /app
 COPY utils.py /app
 COPY ./views /app/views
 COPY ./routers /app/routers
+COPY requirements.txt /app
 RUN chmod u+x *.sh
 EXPOSE 8000
-#RUN python -m pip install --upgrade pip && python -m pip install akasha-terminal==0.8.57
 
+RUN python -m pip install --upgrade pip && python -m pip install -r requirements.txt
 ENV PORT=8501
 ENV PREFIX=akasha-lab
 ENV USE_PREFIX=false
