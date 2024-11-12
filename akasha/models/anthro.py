@@ -33,6 +33,24 @@ class anthropic_model(LLM):
         if 'max_output_tokens' in kwargs:
             self.max_output_tokens = kwargs['max_output_tokens']
 
+        #### gcp vertex (need credentials) ####
+
+        # from anthropic import AnthropicVertex
+
+        # client = AnthropicVertex(region=os.environ['GCP_LOCATION'],
+        #                         project_id=os.environ['GCP_PROJECT_ID'])
+
+        # with client.messages.stream(
+        #         max_tokens=1024,
+        #         messages=[{
+        #             "role": "user",
+        #             "content": "Send me a recipe for banana bread.",
+        #         }],
+        #         model="claude-3-sonnet@20240229",
+        # ) as stream:
+        #     for text in stream.text_stream:
+        #         print(text)
+
     @property
     def _llm_type(self) -> str:
         """return llm type

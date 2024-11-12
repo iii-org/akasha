@@ -34,7 +34,7 @@ class ConsultModel(BaseModel):
     chunk_size: Optional[int] = 1000
     model: Optional[str] = "openai:gpt-3.5-turbo"
     embedding_model: Optional[str] = "openai:text-embedding-ada-002"
-    threshold: Optional[float] = 0.1
+    threshold: Optional[float] = 0.0
     search_type: Optional[str] = 'auto'
     system_prompt: Optional[str] = ""
     max_doc_len: Optional[int] = 1500
@@ -108,7 +108,7 @@ def get_response(user_input: ConsultModel):
         prompt: Union[str, List[str]]
         chunk_size:Optional[int]=1000
         model:Optional[str] = "openai:gpt-3.5-turbo"
-        threshold:Optional[float] = 0.1
+        threshold:Optional[float] (deprecated) = 0.0
         search_type:Optional[str] = 'auto'
         system_prompt:Optional[str] = ""
         temperature:Optional[float]=0.0
@@ -129,7 +129,7 @@ def get_response(user_input: ConsultModel):
             }
     try:
         clean()
-        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type\
             , model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt)
 
@@ -255,7 +255,7 @@ def ask_whole_file(user_input: ConsultModel):
         prompt: str
         chunk_size:Optional[int]=1000
         model:Optional[str] = "openai:gpt-3.5-turbo"
-        threshold:Optional[float] = 0.1
+        threshold:Optional[float](deprecated) = 0.0
         search_type:Optional[str] = 'auto'
         system_prompt:Optional[str] = ""
         max_input_tokens:Optional[int]=3000
@@ -282,7 +282,7 @@ def ask_whole_file(user_input: ConsultModel):
             }
     try:
         clean()
-        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type, threshold=user_input.threshold\
+        qa = akasha.Doc_QA(verbose=True, search_type=user_input.search_type\
             , model=user_input.model, temperature=user_input.temperature, max_input_tokens=user_input.max_input_tokens,embeddings=user_input.embedding_model\
             ,chunk_size=user_input.chunk_size, system_prompt=user_input.system_prompt)
 

@@ -241,7 +241,33 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         info = "selected gemini embeddings.\n"
 
     else:
-        embeddings = OpenAIEmbeddings()
+        import openai
+
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
+                == "azure") or ("OPENAI_API_TYPE" in env_dict
+                                and env_dict["OPENAI_API_TYPE"] == "azure"):
+            embedding_name = embedding_name.replace(".", "")
+            api_base, api_key, api_version = _handle_azure_env(env_dict)
+            embeddings = AzureOpenAIEmbeddings(azure_deployment=embedding_name,
+                                               azure_endpoint=api_base,
+                                               api_key=api_key,
+                                               api_version=api_version,
+                                               validate_base_url=False)
+
+        else:
+
+            if "OPENAI_API_KEY" not in env_dict:
+                raise Exception(
+                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
+                )
+            openai.api_type = "open_ai"
+            embeddings = OpenAIEmbeddings(
+                model=embedding_name,
+                openai_api_base="https://api.openai.com/v1",
+                api_key=env_dict["OPENAI_API_KEY"],
+                openai_api_type="open_ai",
+            )
+
         info = "can not find the embeddings, use openai as default.\n"
 
     if verbose:

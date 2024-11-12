@@ -18,6 +18,7 @@ import akasha.helper as helper
 from akasha.db import dbs
 import jieba
 from pydantic import Field
+from warnings import warn
 
 
 def _get_threshold_times(db: dbs):
@@ -243,9 +244,9 @@ def _merge_docs(docs_list: list,
 def get_retrivers(
     db: Union[dbs, list],
     embeddings,
-    use_rerank: bool,
-    threshold: float,
-    search_type: Union[str, Callable],
+    use_rerank: bool = False,
+    threshold: float = 0.0,
+    search_type: Union[str, Callable] = "auto",
     log: dict = {},
 ) -> List[BaseRetriever]:
     """get the retrivers based on given search_type, default is auto, which contain, 'svm', 'bm25'.
@@ -255,30 +256,30 @@ def get_retrivers(
         **db (Chromadb)**: chroma db\n
         **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
         **query (str)**: the query str used to search similar documents\n
-        **threshold (float)**: the similarity score threshold to select documents\n
+        **threshold (float)**: (deprecated) the similarity score threshold to select documents\n 
         **search_type (str)**: search type to find similar documents from db, .
             includes 'auto', 'merge', 'mmr', 'svm', 'tfidf', 'bm25'.\n
-        **verbose (bool)**: show log texts or not. Defaults to False.\n
+        **use_rerank (bool)**: use rerank model to search docs. Defaults to False.\n
 
     Returns:
         List[BaseRetriever]: selected list of retrievers that the search_type needed .
     """
 
-    ### if use rerank to get more accurate similar documents, set topK to 400 ###
+    ### if use rerank to get more accurate similar documents, set topK to 1000 ###
     if use_rerank:
-        topK = 400
+        topK = 1000
     else:
-        topK = 399
+        topK = 999
 
     retriver_list = []
     if isinstance(embeddings, str):
         return retriver_list
 
-    times = _get_threshold_times(db)
-    if search_type == "auto":
+    if threshold != 0.0:
         threshold = 0.0
-    elif times != 1:
-        threshold *= 0.3
+        warn(
+            "threshold is deprecated and will be removed in future 1.0.0 version",
+            DeprecationWarning)
 
     if callable(search_type):
 
@@ -328,10 +329,10 @@ def get_docs(
     embeddings,
     retriver_list: list,
     query: str,
-    use_rerank: bool,
-    language: str,
-    search_type: Union[str, Callable],
-    verbose: bool,
+    use_rerank: bool = False,
+    language: str = "ch",
+    search_type: Union[str, Callable] = "auto",
+    verbose: bool = False,
     model: str = "openai:gpt-3.5-turbo",
     max_input_tokens: int = 3000,
     compression: bool = False,
@@ -342,25 +343,25 @@ def get_docs(
     Args:
         **db (Chromadb)**: chroma db\n
         **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **retriver_list (list)**: list of retrievers that the search_type needed\n
         **query (str)**: the query str used to search similar documents\n
-        **topK (int)**: for each search type, return first topK documents\n
-        **threshold (float)**: the similarity score threshold to select documents\n
         **language (str)**: default to chinese 'ch', otherwise english, the language of documents and prompt,
             use to make sure docs won't exceed max token size of llm input.\n
         **search_type (str)**: search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.\n
         **verbose (bool)**: show log texts or not. Defaults to False.\n
         **model ()**: large language model object\n
+        **max_input_tokens (int)**: max token size of llm input.\n
 
     Returns:
         list: selected list of similar documents.
     """
 
-    ### if use rerank to get more accurate similar documents, set topK to 400 ###
+    ### if use rerank to get more accurate similar documents, set topK to 1000 ###
     if use_rerank:
-        topK = 400
+        topK = 1000
     else:
-        topK = 399
+        topK = 999
 
     final_docs = []
 
@@ -424,6 +425,7 @@ def retri_docs(
     Args:
         **db (Chromadb)**: chroma db\n
         **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **retriver_list (list)**: list of retrievers that the search_type needed\n
         **query (str)**: the query str used to search similar documents\n
         **topK (int)**: for each search type, return first topK documents\n
         **search_type (str)**: search type to find similar documents from db, default 'merge'.
@@ -508,7 +510,7 @@ class myMMRRetriever(BaseRetriever):
         db: dbs,
         embeddings: Embeddings,
         k: int = 3,
-        relevancy_threshold: float = 0.2,
+        relevancy_threshold: float = 0.0,
         log: dict = {},
         lambda_mult: float = 0.5,
     ):
@@ -589,6 +591,13 @@ class myMMRRetriever(BaseRetriever):
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]
 
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
+
 
 class customRetriever(BaseRetriever):
     embeddings: Embeddings = Field(default=None)
@@ -611,7 +620,7 @@ class customRetriever(BaseRetriever):
         embeddings: Embeddings,
         func: Callable,
         k: int = 3,
-        relevancy_threshold: float = 0.2,
+        relevancy_threshold: float = 0.0,
         log: dict = {},
     ):
         # db_data = _get_all_docs(db)
@@ -629,7 +638,7 @@ class customRetriever(BaseRetriever):
             log=log,
         )
 
-    def _gs(self, query: str) -> List[Document]:
+    def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
         """implement using custom function to find relevant documents, the custom function func should
         have four input.
             1. a np.array of embedding vectors of query query_embeds np.array)
@@ -659,12 +668,19 @@ class customRetriever(BaseRetriever):
                 Document(page_content=self.texts[idx],
                          metadata=self.metadata[idx]))
 
-        return top_k_results
+        return top_k_results, []
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
-        return self._gs(query)
+        return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
+
+        return self._gs(query)[0]
+
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
 
         return self._gs(query)
 
@@ -687,7 +703,7 @@ class myKNNRetriever(BaseRetriever):
         db: dbs,
         embeddings: Embeddings,
         k: int = 3,
-        relevancy_threshold: float = 0.2,
+        relevancy_threshold: float = 0.0,
         **kwargs: Any,
     ) -> KNNRetriever:
         # db_data = _get_all_docs(db)
@@ -738,6 +754,13 @@ class myKNNRetriever(BaseRetriever):
                 or normalized_similarities[row] >= self.relevancy_threshold)
         ]
         return top_k_results, top_k_scores
+
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
 
     def _aget_relevant_documents(self, query: str) -> List[Document]:
         """implement k-means search to find relevant documents
@@ -820,6 +843,20 @@ class myTFIDFRetriever(TFIDFRetriever):
 
         return return_docs, return_values
 
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
+
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
+
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
 
         return self._gs(query)[0]
@@ -843,7 +880,7 @@ class mySVMRetriever(BaseRetriever):
         db: dbs,
         embeddings: Embeddings,
         k: int = 3,
-        relevancy_threshold: float = 0.2,
+        relevancy_threshold: float = 0.0,
         **kwargs: Any,
     ) -> SVMRetriever:
 
@@ -920,6 +957,13 @@ class mySVMRetriever(BaseRetriever):
                 top_k_scores.append(normalized_similarities[row])
         return top_k_results, top_k_scores
 
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
+
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]
 
@@ -944,7 +988,7 @@ class myBM25Retriever(BaseRetriever):
         cls,
         docs: List[Document],
         k: int = 3,
-        relevancy_threshold: float = 0.2,
+        relevancy_threshold: float = 0.0,
         **kwargs: Any,
     ) -> BaseRetriever:
 
@@ -976,6 +1020,13 @@ class myBM25Retriever(BaseRetriever):
         top_k_results = [self.docs[i] for i in top_k_idx]
         top_k_scores = [docs_scores[i] for i in top_k_idx]
         return top_k_results, top_k_scores
+
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]

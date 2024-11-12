@@ -90,7 +90,7 @@ class Model_Eval(akasha.atman):
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
         topK: int = -1,
-        threshold: float = 0.1,
+        threshold: float = 0.0,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
@@ -116,7 +116,7 @@ class Model_Eval(akasha.atman):
             **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
             **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
             **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
-            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **threshold (float, optional)**: (deprecated) the similarity threshold of searching. Defaults to 0.2.\n
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.\n
             **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
@@ -726,7 +726,7 @@ class Model_Eval(akasha.atman):
             Defaults to 4.\n
                 **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                question_style, question_type, embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                question_style, question_type, embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.
             Raises:
                 Exception: _description_
@@ -885,7 +885,7 @@ class Model_Eval(akasha.atman):
             **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.\n
         """
 
@@ -1050,7 +1050,7 @@ class Model_Eval(akasha.atman):
             **embeddings_list (_type_, optional)**: list of embeddings models. Defaults to ["openai:text-embedding-ada-002"].\n
             **chunk_size_list (list, optional)**: list of chunk sizes. Defaults to [500].\n
             **model_list (_type_, optional)**: list of models. Defaults to ["openai:gpt-3.5-turbo"].\n
-            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **threshold (float, optional)**: (deprecated) the similarity threshold of searching. Defaults to 0.2.\n
             **search_type_list (list, optional)**: list of search types, currently have "merge", "svm", "knn", "tfidf", "mmr". Defaults to ['svm','tfidf','mmr'].
         Returns:
             (list,list): return best score combination and best cost-effective combination
@@ -1182,7 +1182,7 @@ class Model_Eval(akasha.atman):
             Defaults to 4.\n
                 **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                question_style, question_type, embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                question_style, question_type, embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.
             Raises:
                 Exception: _description_

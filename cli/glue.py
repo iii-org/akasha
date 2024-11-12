@@ -41,8 +41,8 @@ def akasha():
 @click.option(
     "--threshold",
     "-t",
-    default=0.2,
-    help="threshold score for selecting the relevant documents",
+    default=0.0,
+    help="(deprecated) threshold score for selecting the relevant documents",
 )
 @click.option(
     "--language",
@@ -95,7 +95,6 @@ def get_response(
         embeddings=embeddings,
         chunk_size=chunk_size,
         model=model,
-        threshold=threshold,
         language=language,
         search_type=search_type,
         record_exp=record_exp,
@@ -140,8 +139,8 @@ def get_response(
 @click.option(
     "--threshold",
     "-t",
-    default=0.2,
-    help="threshold score for selecting the relevant documents",
+    default=0.0,
+    help="(deprecated) threshold score for selecting the relevant documents",
 )
 @click.option(
     "--language",
@@ -254,8 +253,8 @@ def keep_responsing(
 @click.option(
     "--threshold",
     "-t",
-    default=0.2,
-    help="threshold score for selecting the relevant documents",
+    default=0.0,
+    help="(deprecated) threshold score for selecting the relevant documents",
 )
 @click.option(
     "--language",
@@ -308,7 +307,6 @@ def chain_of_thought(
         embeddings=embeddings,
         chunk_size=chunk_size,
         model=model,
-        threshold=threshold,
         language=language,
         search_type=search_type,
         record_exp=record_exp,
@@ -355,8 +353,8 @@ def chain_of_thought(
 @click.option(
     "--threshold",
     "-t",
-    default=0.2,
-    help="threshold score for selecting the relevant documents",
+    default=0.0,
+    help="(deprecated) threshold score for selecting the relevant documents",
 )
 @click.option(
     "--language",
@@ -399,7 +397,6 @@ def auto_create_questionset(
         chunk_size=chunk_size,
         model=model,
         verbose=False,
-        threshold=threshold,
         language=language,
         search_type=search_type,
         record_exp=record_exp,
@@ -449,8 +446,8 @@ def auto_create_questionset(
 @click.option(
     "--threshold",
     "-t",
-    default=0.2,
-    help="threshold score for selecting the relevant documents",
+    default=0.0,
+    help="(deprecated) threshold score for selecting the relevant documents",
 )
 @click.option(
     "--language",
@@ -505,7 +502,6 @@ def auto_evaluation(
             chunk_size=chunk_size,
             model=model,
             verbose=False,
-            threshold=threshold,
             language=language,
             search_type=search_type,
             record_exp=record_exp,
@@ -524,7 +520,6 @@ def auto_evaluation(
             chunk_size=chunk_size,
             model=model,
             verbose=False,
-            threshold=threshold,
             language=language,
             search_type=search_type,
             record_exp=record_exp,

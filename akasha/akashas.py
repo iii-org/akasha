@@ -181,7 +181,7 @@ class atman:
         model: str = DEFAULT_MODEL,
         verbose: bool = False,
         topK: int = -1,
-        threshold: float = 0.1,
+        threshold: float = 0.0,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
@@ -200,7 +200,7 @@ class atman:
             **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
             **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
             **topK (int, optional)**: search top k number of similar documents. Defaults to 2.\n
-            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **threshold (float, optional)**: (deprecated) the similarity threshold of searching. Defaults to 0.0.\n
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.\n
             **search_type (str, optional)**: search type to find similar documents from db, default 'merge'.
@@ -337,7 +337,6 @@ class atman:
         self.logs[timestamp]["model"] = self.model
         self.logs[timestamp]["chunk_size"] = self.chunk_size
         self.logs[timestamp]["topK"] = self.topK
-        self.logs[timestamp]["threshold"] = self.threshold
         self.logs[timestamp]["language"] = format.language_dict[self.language]
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_input_tokens"] = self.max_input_tokens
@@ -457,7 +456,7 @@ class Doc_QA(atman):
         model: str = DEFAULT_MODEL,
         verbose: bool = False,
         topK: int = -1,
-        threshold: float = 0.1,
+        threshold: float = 0.0,
         language: str = "ch",
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
@@ -483,7 +482,7 @@ class Doc_QA(atman):
             model (_type_, optional): language model. Defaults to "openai:gpt-3.5-turbo".
             verbose (bool, optional): print the processing text or not. Defaults to False.
             topK (int, optional): the number of documents to be selected. Defaults to 2.
-            threshold (float, optional): threshold of similarity for searching relavant documents. Defaults to 0.2.
+            threshold (float, optional): (deprecated) threshold of similarity for searching relavant documents. Defaults to 0.2.
             language (str, optional): "ch" chinese or "en" english. Defaults to "ch".
             search_type (Union[str, Callable], optional): _description_. Defaults to "svm".
             record_exp (str, optional): experiment name of aiido. Defaults to "".
@@ -620,7 +619,7 @@ class Doc_QA(atman):
                 **doc_path (str)**: documents directory path\n
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                embeddings, chunk_size, model, verbose, topK, language , search_type, record_exp,
                 system_prompt, max_doc_len, temperature.
 
             Returns:
@@ -746,7 +745,7 @@ class Doc_QA(atman):
            **doc_path (str)**: documents directory path\n
             **prompt (list)**:questions you want to ask.\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-            embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+            embeddings, chunk_size, model, verbose, topK, language , search_type, record_exp,
             system_prompt, max_input_tokens, temperature.
 
         Returns:
@@ -885,7 +884,7 @@ class Doc_QA(atman):
                 **file_path (str)**: document file path\n
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                embeddings, chunk_size, model, verbose, topK, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.
 
             Returns:
@@ -996,7 +995,7 @@ class Doc_QA(atman):
                 **info (str,list)**: document file path\n
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.
 
             Returns:
@@ -1117,7 +1116,7 @@ class Doc_QA(atman):
                 **doc_path (str)**: documents directory path\n
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                embeddings, chunk_size, model, verbose, topK, threshold, language , search_type, record_exp,
+                embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.
 
             Returns:
