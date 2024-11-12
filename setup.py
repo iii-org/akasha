@@ -54,7 +54,7 @@ install_requires.append("torch==2.2.0; platform_system=='Linux'")
 
 setup(
     name="akasha-terminal",
-    version="0.8.76",
+    version="0.8.77",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
