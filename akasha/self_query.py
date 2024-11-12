@@ -2,7 +2,7 @@
 from langchain_core.documents import Document
 #from langchain_openai import OpenAIEmbeddings
 from langchain.chains.query_constructor.base import AttributeInfo
-from typing import List, Union, Set, Any, Tuple, Optional, Callable
+from typing import List, Union, Set, Any, Tuple, Optional, Callable, Dict
 import json
 from pydantic import Field
 import operator
@@ -10,13 +10,14 @@ from langchain_core.language_models.base import BaseLanguageModel
 import akasha.helper as helper
 from akasha.db import dbs, extract_db_by_ids
 import re
+import logging
 
 
 def query_filter(
     prompt: str,
     model_obj: BaseLanguageModel,
     db: dbs,
-    metadata_field_info: List[AttributeInfo] = [],
+    metadata_field_info: List[Union[AttributeInfo, dict]] = [],
     document_content_description: str = "",
     custom_parser: Optional[Callable[[str], Tuple[str, dict]]] = None,
     loose_filter: bool = False,
@@ -27,7 +28,7 @@ def query_filter(
         prompt (str): user question to generate query and filter
         model_obj (BaseLanguageModel): llm object
         db (dbs): the documents dbs to be filtered
-        metadata_field_info (List[AttributeInfo], optional): the metadata attributes info . Defaults to [].
+        metadata_field_info (List[Union[AttributeInfo, dict]], optional): the metadata attributes info . Defaults to [].
         document_content_description (str, optional): the desciption of documents. Defaults to "".
         custom_parser (Optional[Callable[[str], Tuple[str, dict]]], optional): custom parser function. Defaults to None.
 
@@ -50,8 +51,41 @@ def query_filter(
     return new_dbs, query, matched_fields_dict
 
 
-def generate_query_constructor(metadata_info: List[AttributeInfo],
-                               document_content_description: str, prompt: str):
+def check_metadata_info(
+        metadata_info: List[Union[AttributeInfo,
+                                  dict]]) -> List[AttributeInfo]:
+    """check if the metadata_info is in the right format"""
+
+    new_metadata_info = []
+    if isinstance(metadata_info, list):
+
+        for i, attr in enumerate(metadata_info):
+            if isinstance(attr, dict):
+                if "name" in attr and "description" in attr and "type" in attr:
+                    new_metadata_info.append(AttributeInfo(**attr))
+                else:
+                    logging.warning(
+                        """The attribute info should be a dictionary with keys "name", "description" and "type"."""
+                    )
+            elif isinstance(attr, AttributeInfo):
+                new_metadata_info.append(attr)
+            else:
+                logging.warning(
+                    """The attribute info should be a dictionary or an instance of AttributeInfo."""
+                )
+    else:
+        logging.warning(
+            """The metadata info should be a list of dictionaries or instances of AttributeInfo."""
+        )
+    return new_metadata_info
+
+
+def generate_query_constructor(metadata_info: List[Union[AttributeInfo, dict]],
+                               document_content_description: str,
+                               prompt: str) -> tuple[str, dict]:
+    """generate a query constructor prompt based on metadata_info and document_content_description"""
+
+    new_metadata_info = check_metadata_info(metadata_info)
 
     data_source = {
         "content": document_content_description,
@@ -60,7 +94,7 @@ def generate_query_constructor(metadata_info: List[AttributeInfo],
                 "description": attr.description,
                 "type": attr.type
             }
-            for attr in metadata_info
+            for attr in new_metadata_info
         }
     }
     json_string = json.dumps(data_source, ensure_ascii=False, indent=4)
@@ -379,7 +413,7 @@ def translate_output(llm_res: str) -> tuple[str, dict]:
 def generate_query_filter(
     model_obj: BaseLanguageModel,
     prompt: str,
-    metadata_field_info: List[AttributeInfo] = [],
+    metadata_field_info: List[Union[AttributeInfo, dict]] = [],
     document_content_description: str = "",
     custom_parser: Optional[Callable[[str], Tuple[str, dict]]] = None,
 ) -> tuple[str, dict, dict[str, Any]]:
@@ -388,7 +422,7 @@ def generate_query_filter(
     Args:
         model_obj (BaseLanguageModel): llm object
         prompt (str): the user question to generate the query and filter
-        metadata_field_info (List[AttributeInfo], optional): _description_. Defaults to [].
+        metadata_field_info (List[Union[AttributeInfo, dict]], optional): _description_. Defaults to [].
         document_content_description (str, optional): _description_. Defaults to "".
         if custom_parser is not None, it will be used to parse the output of the model
     Returns:
