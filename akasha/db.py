@@ -994,6 +994,9 @@ def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
             ret_db.docs.append(db.docs[i])
             ret_db.vis.add(db.ids[i])
 
+    if len(ret_db.ids) == 0:
+        logging.warning("No document found.\n\n")
+
     return ret_db
 
 
@@ -1022,6 +1025,9 @@ def extract_db_by_keyword(db: dbs, keyword_list: List[str]) -> dbs:
                 ret_db.vis.add(db.ids[i])
                 vis_id.add(db.ids[i])
 
+    if len(ret_db.ids) == 0:
+        logging.warning("No document found.\n\n")
+
     return ret_db
 
 
@@ -1047,6 +1053,9 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
             ret_db.metadatas.append(db.metadatas[idx])
             ret_db.docs.append(db.docs[idx])
             ret_db.vis.add(db.ids[idx])
+
+    if len(ret_db.ids) == 0:
+        logging.warning("No document found.\n\n")
 
     return ret_db
 
@@ -1198,15 +1207,14 @@ def update_db_metadata(metadata_list: List[dict],
             file = pre_meta_source.split('/')[-1]
             storage_directory, exist = check_db_name(file, db_dir, embed_type,
                                                      embed_name, chunk_size)
-            if exist:
-                docsearch = Chroma(persist_directory=storage_directory)
-                data = docsearch.get(include=["metadatas"])
-                docsearch._collection.update(ids=data['ids'],
-                                             metadatas=cur_meta)
-                docsearch._client._system.stop()
-                docsearch = None
-                del docsearch
-                suc_count += 1
+            #if exist:
+            docsearch = Chroma(persist_directory=storage_directory)
+            data = docsearch.get(include=["metadatas"])
+            docsearch._collection.update(ids=data['ids'], metadatas=cur_meta)
+            docsearch._client._system.stop()
+            docsearch = None
+            del docsearch
+            suc_count += 1
 
             cur_meta = [meta]
             pre_meta_source = meta['source']
@@ -1222,6 +1230,7 @@ def update_db_metadata(metadata_list: List[dict],
         docsearch._client._system.stop()
         docsearch = None
         del docsearch
+        suc_count += 1
 
     print(f"update {suc_count} files metadata successfully.")
     return

@@ -162,7 +162,7 @@ if "search_type" not in st.session_state:
     st.session_state.search_type = st.session_state.search_list[0]
 
 if "threshold" not in st.session_state:
-    st.session_state.threshold = 0.2
+    st.session_state.threshold = 0.0
 
 if "temperature" not in st.session_state:
     st.session_state.temperature = 0.0

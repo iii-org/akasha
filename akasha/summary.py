@@ -63,7 +63,7 @@ class Summary(akasha.atman):
         chunk_overlap: int = 40,
         model: str = "openai:gpt-3.5-turbo",
         verbose: bool = False,
-        threshold: float = 0.1,
+        threshold: float = 0.0,
         language: str = "ch",
         record_exp: str = "",
         format_prompt: str = "",
@@ -85,7 +85,7 @@ class Summary(akasha.atman):
             **chunk_overlap (int, optional)**: chunk overlap of texts from documents. Defaults to 40.\n
             **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
             **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
-            **threshold (float, optional)**: the similarity threshold of searching. Defaults to 0.2.\n
+            **threshold (float, optional)**: (deprecated) the similarity threshold of searching. Defaults to 0.2.\n
             **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
                 max token size of llm input.\n
             **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set
@@ -155,7 +155,6 @@ class Summary(akasha.atman):
         self.logs[timestamp]["model"] = self.model
         self.logs[timestamp]["chunk_size"] = self.chunk_size
 
-        self.logs[timestamp]["threshold"] = self.threshold
         self.logs[timestamp]["language"] = akasha.format.language_dict[
             self.language]
         self.logs[timestamp]["temperature"] = self.temperature
@@ -382,7 +381,7 @@ class Summary(akasha.atman):
             **summary_len (int, optional)**: expected output length. Defaults to 500.\n
             **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
             **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
-                chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
+                chunk_size, chunk_overlap, model, verbose, language , record_exp,
                 system_prompt, max_input_tokens, temperature.
         Returns:
             str: the summary of the file
@@ -501,7 +500,7 @@ class Summary(akasha.atman):
             **summary_len (int, optional)**: _description_. Defaults to 500.\n
             **output_file_path (str, optional)**: the path of output file. Defaults to "".\n
             **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
-                chunk_size, chunk_overlap, model, verbose, topK, threshold, language , record_exp,
+                chunk_size, chunk_overlap, model, verbose, language , record_exp,
                 system_prompt, max_input_tokens, temperature.
         Returns:
             str: the summary of the file

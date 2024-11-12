@@ -99,19 +99,8 @@ def setting_page():
                     st.session_state.search_type)
             st.rerun()
 
-    thre, tem, mxt = st.columns([1, 1, 1])
+    tem, mxt = st.columns([1, 2])
 
-    with thre:
-        thres = st.number_input(
-            "Threshold",
-            value=st.session_state.threshold,
-            min_value=0.0,
-            step=0.05,
-            help="The threshold used to select top relevant chunks.",
-        )
-        if thres != st.session_state.threshold:
-            st.session_state.threshold = thres
-            st.rerun()
     with tem:
         tem = st.number_input(
             "Temperature",
