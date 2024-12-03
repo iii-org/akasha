@@ -8,6 +8,31 @@ sys_s = "[INST] <<SYS>> "
 sys_e = " <<SYS>> [/INST]\n\n"
 
 
+def _separate_name(name: str):
+    """separate type:name by ':'
+
+    Args:
+        **name (str)**: string with format "type:name" \n
+
+    Returns:
+        (str, str): res_type , res_name
+    """
+    sep = name.split(":")
+
+    if len(sep) > 2:
+        res_type = sep[0].lower()
+        res_name = ':'.join(sep[1:])
+    elif len(sep) < 2:
+        ### if the format type not equal to type:name ###
+        res_type = sep[0].lower()
+        res_name = ""
+    else:
+        res_type = sep[0].lower()
+        res_name = sep[1]
+
+    return res_type, res_name
+
+
 def format_chat_gemini_prompt(system_prompt: str, prompt: str) -> List[dict]:
     if system_prompt == "" and prompt == "":
         return []
@@ -116,20 +141,25 @@ def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> str:
 
 def format_sys_prompt(system_prompt: str,
                       prompt: str,
-                      model_type: str = "gpt"):
-    if model_type.lower() == "llama":
+                      prompt_format_type: str = "auto",
+                      model: str = "remote:xxx") -> Union[str, List[dict]]:
+
+    if prompt_format_type.lower() == "auto":
+        prompt_format_type = decide_auto_prompt_format_type(model)
+
+    if prompt_format_type.lower() == "llama":
         ret_text = format_llama_sys_prompt(system_prompt, prompt)
 
-    elif model_type.lower() == "chat_gpt":
+    elif prompt_format_type.lower() == "chat_gpt":
         ret_text = format_chat_gpt_prompt(system_prompt, prompt)
 
-    elif model_type.lower() == "chat_mistral":
+    elif prompt_format_type.lower() == "chat_mistral":
         ret_text = format_chat_mistral_prompt(system_prompt, prompt)
 
-    elif model_type.lower() == "chat_gemma":
+    elif prompt_format_type.lower() == "chat_gemma":
         ret_text = format_chat_gemma_prompt(system_prompt, prompt)
 
-    elif model_type.lower() == "chat_gemini":
+    elif prompt_format_type.lower() == "chat_gemini":
         ret_text = format_chat_gemini_prompt(system_prompt, prompt)
 
     else:
@@ -138,12 +168,38 @@ def format_sys_prompt(system_prompt: str,
     return ret_text
 
 
+def decide_auto_prompt_format_type(model: str = "remote:xxx") -> str:
+    """since prompt_format_type is "auto", so we based on the model name to decide which prompt format type to use
+
+    Args:
+        model (str, optional): model_type and model name. Defaults to "remote:xxx".
+
+    Returns:
+        str: _description_
+    """
+    model_type, model_name = _separate_name(model)
+
+    if "openai" in model_type or "openai" in model_name:
+        return "chat_gpt"
+    elif "gemini" in model_type or model_type in ["google", "gemi"]:
+        return "chat_gemini"
+    elif "anthropic" in model_type or "claude" in model_name or "mistral" in model_name or "mixtral" in model_name or "gemma" in model_name:
+        return "chat_mistral"
+
+    elif "llama" in model_type or "llama" in model_name:
+        return "llama"
+
+    return "gpt"
+
+
 def format_history_prompt(history_messages: list,
                           prompt_format_type: str = "chat_gpt",
                           user_tag="user",
                           assistant_tag="assistant") -> List[dict]:
 
     prod_history = []
+    if isinstance(history_messages, str):
+        history_messages = [history_messages]
 
     for idx, msg in enumerate(history_messages):
         if idx % 2 == 0:

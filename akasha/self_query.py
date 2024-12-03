@@ -197,6 +197,14 @@ Structured Request:
 
 
 class DocumentCP(Document):
+    """Document subclass for comparing equality based on page content only.
+
+    Args:
+        Document (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     ids: Union[int, str] = Field(default="")
     matched_fields: List[str] = Field(default=[])
 
@@ -213,8 +221,18 @@ class DocumentCP(Document):
             other, DocumentCP) and self.page_content == other.page_content
 
 
-def handle_attr(attr: Union[int, float, str], data_source: dict, keyword: str):
+def handle_attr(attr: Union[int, float, str], data_source: dict,
+                keyword: str) -> Union[int, float, str]:
+    """change attriubte type based on the data_source
 
+    Args:
+        attr (Union[int, float, str]): the attribute to be changed
+        data_source (dict): the dictionary which has the data type of each attributes from documents metadata
+        keyword (str): the attribute key name
+
+    Returns:
+        Union[int, float, str]:  changed type of the attribute
+    """
     if data_source['attributes'][keyword]['type'] == 'string':
         return str(attr)
     elif data_source['attributes'][keyword]['type'] == 'integer':
@@ -230,7 +248,17 @@ def find_subset(
     cur_docs: List[DocumentCP],
     data_source: dict,
 ) -> Set[DocumentCP]:
+    """base on the keyword value and operator, find the subset of documents
 
+    Args:
+        val (Union[int, float, str]): _description_
+        keyword (str): _description_
+        cur_docs (List[DocumentCP]): _description_
+        data_source (dict): _description_
+
+    Returns:
+        Set[DocumentCP]: _description_
+    """
     # Define a dictionary to map operators to functions
     operator_map = {
         '$eq': operator.eq,
@@ -279,7 +307,7 @@ def filter_docs(docs: Document,
                 filters: dict,
                 data_source: dict,
                 loose_filter: bool = False) -> List[DocumentCP]:
-    """_summary_
+    """filter the documents based on the filters
 
     Args:
         docs (Document): the documents to be filtered
@@ -320,6 +348,7 @@ def filter_docs(docs: Document,
 
 
 def translate(expr):
+    """Translate a logical expression to a nested dictionary format."""
     # Pattern to match logical operations (e.g., and(...), or(...))
     logical_op_pattern = re.compile(r'(and|or|AND|OR)\((.*)\)')
     # Pattern to match comparison operations (e.g., eq(公司名稱, a公司))

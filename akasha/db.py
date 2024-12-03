@@ -108,7 +108,7 @@ def change_text_to_doc(texts: list):
 
 
 def _load_file(file_path: str, extension: str):
-    """get the content and metadata of a text file (.pdf, .docx, .txt, .csv, .pptx) and return a Document object
+    """get the content and metadata of a text file (.pdf, .docx, .md, .txt, .csv, .pptx) and return a Document object
 
     Args:
         file_path (str): the path of the text file\n
@@ -141,7 +141,6 @@ def _load_file(file_path: str, extension: str):
             docs = TextLoader(file_path, encoding="utf-8").load()
             for i in range(len(docs)):
                 docs[i].metadata["page"] = i
-
         if len(docs) == 0:
             raise Exception
 
@@ -285,12 +284,6 @@ def get_chromadb_from_file(documents: list,
     else:
         docsearch = Chroma(persist_directory=storage_directory,
                            embedding_function=embeddings)
-        if embed_type == "openai":
-            # open_model = helper.handle_model("openai:gpt-3.5-turbo", False,
-            #                                  0.0)
-            open_model = None
-        else:
-            open_model = None
 
         while k < len(documents):
             cur_doc = documents[k:k + interval]
@@ -300,22 +293,6 @@ def get_chromadb_from_file(documents: list,
 
             ### if page_content is too long, use llm to summarize ###
             page_contents = [text.page_content for text in texts]
-            if open_model != None:
-                for ix, text in enumerate(texts):
-                    if open_model.get_num_tokens(text.page_content) > 2000:
-                        try:
-                            text_input = akasha.prompts.format_sys_prompt(
-                                "use traditional chinese to list details of below article:\n\n",
-                                text.page_content)
-                            page_contents[ix] = helper.call_model(
-                                open_model,
-                                text_input,
-                            )
-                            logging.warning(
-                                "\ncontent too long, using llm to summarize for embedding...\n\n"
-                            )
-                        except:
-                            pass
 
             try:
                 vectors = embeddings.embed_documents(page_contents)

@@ -72,7 +72,7 @@ class Summary(akasha.atman):
         temperature: float = 0.0,
         keep_logs: bool = False,
         auto_translate: bool = False,
-        prompt_format_type: str = "gpt",
+        prompt_format_type: str = "auto",
         consecutive_merge_failures: int = 5,
         max_output_tokens: int = 1024,
         max_input_tokens: int = 3000,
@@ -97,7 +97,7 @@ class Summary(akasha.atman):
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **auto_translate (bool, optional)**: auto translate the summary to target language since LLM may generate different language. 
             Defaults to False.\n
-            **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
+            **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
             **consecutive_merge_failures (int, optional)**: the number of consecutive merge failures before returning the current response list as the summary. Defaults to 5.
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
             **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n      
@@ -239,7 +239,8 @@ class Summary(akasha.atman):
                 prompt = akasha.prompts.format_reduce_summary_prompt(
                     cur_text, self.summary_len)
                 input_text = akasha.prompts.format_sys_prompt(
-                    self.system_prompt, "\n" + prompt, self.prompt_format_type)
+                    self.system_prompt, "\n" + prompt, self.prompt_format_type,
+                    self.model)
                 response = akasha.helper.call_model(
                     self.model_obj,
                     input_text,
@@ -257,7 +258,8 @@ class Summary(akasha.atman):
 
             prompt = akasha.prompts.format_reduce_summary_prompt(cur_text, 0)
             input_text = akasha.prompts.format_sys_prompt(
-                self.system_prompt, "\n" + prompt, self.prompt_format_type)
+                self.system_prompt, "\n" + prompt, self.prompt_format_type,
+                self.model)
             response = akasha.helper.call_model(self.model_obj, input_text)
 
             i = newi
@@ -305,7 +307,7 @@ class Summary(akasha.atman):
         tokens = 0
         response_list = []
         prod_sys_prompt = akasha.prompts.format_sys_prompt(
-            self.system_prompt, "", self.prompt_format_type)
+            self.system_prompt, "", self.prompt_format_type, self.model)
         ###
 
         ### get tqdm progress bar and handle merge fail###
@@ -325,7 +327,8 @@ class Summary(akasha.atman):
                 prompt = akasha.prompts.format_refine_summary_prompt(
                     cur_text, previous_summary, self.summary_len)
             text_input = akasha.prompts.format_sys_prompt(
-                self.system_prompt, "\n" + prompt, self.prompt_format_type)
+                self.system_prompt, "\n" + prompt, self.prompt_format_type,
+                self.model)
             response = akasha.helper.call_model(
                 self.model_obj,
                 text_input,
@@ -441,7 +444,7 @@ class Summary(akasha.atman):
 
             input_text = akasha.prompts.format_sys_prompt(
                 self.format_prompt, "\n\n" + self.summary,
-                self.prompt_format_type)
+                self.prompt_format_type, self.model)
             self.summary = akasha.helper.call_model(
                 self.model_obj,
                 input_text,
@@ -559,7 +562,7 @@ class Summary(akasha.atman):
         if self.format_prompt != "":
             text_input = akasha.prompts.format_sys_prompt(
                 self.format_prompt, "\n\n" + self.summary,
-                self.prompt_format_type)
+                self.prompt_format_type, self.model)
 
             self.summary = akasha.helper.call_model(
                 self.model_obj,

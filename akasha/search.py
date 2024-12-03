@@ -11,6 +11,7 @@ from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain.schema import BaseRetriever
+from langchain_core.language_models.base import BaseLanguageModel
 from langchain.embeddings.base import Embeddings
 from typing import Any, List, Optional, Callable, Union, Tuple, Dict, Iterable
 import numpy as np
@@ -243,7 +244,7 @@ def _merge_docs(docs_list: list,
 
 def get_retrivers(
     db: Union[dbs, list],
-    embeddings,
+    embeddings: Union[Embeddings, str],
     use_rerank: bool = False,
     threshold: float = 0.0,
     search_type: Union[str, Callable] = "auto",
@@ -254,7 +255,7 @@ def get_retrivers(
 
     Args:
         **db (Chromadb)**: chroma db\n
-        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **embeddings (Union[Embeddings, str])**: embeddings used to store vector and search documents\n
         **query (str)**: the query str used to search similar documents\n
         **threshold (float)**: (deprecated) the similarity score threshold to select documents\n 
         **search_type (str)**: search type to find similar documents from db, .
@@ -272,8 +273,11 @@ def get_retrivers(
         topK = 999
 
     retriver_list = []
-    if isinstance(embeddings, str):
+    if isinstance(embeddings, str) and "rerank" in embeddings:
         return retriver_list
+
+    embeddings, embed_name = helper.handle_embeddings_and_name(
+        embeddings, False)
 
     if threshold != 0.0:
         threshold = 0.0
@@ -326,14 +330,14 @@ def get_retrivers(
 
 def get_docs(
     db: Union[dbs, list],
-    embeddings,
+    embeddings: Union[Embeddings, str],
     retriver_list: list,
     query: str,
     use_rerank: bool = False,
     language: str = "ch",
     search_type: Union[str, Callable] = "auto",
     verbose: bool = False,
-    model: str = "openai:gpt-3.5-turbo",
+    model: Union[str, BaseLanguageModel] = "openai:gpt-3.5-turbo",
     max_input_tokens: int = 3000,
     compression: bool = False,
 ) -> Tuple[list, int, int]:
@@ -342,7 +346,7 @@ def get_docs(
 
     Args:
         **db (Chromadb)**: chroma db\n
-        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
+        **embeddings (Embeddings, str)**: embeddings used to store vector and search documents\n
         **retriver_list (list)**: list of retrievers that the search_type needed\n
         **query (str)**: the query str used to search similar documents\n
         **language (str)**: default to chinese 'ch', otherwise english, the language of documents and prompt,
@@ -350,7 +354,7 @@ def get_docs(
         **search_type (str)**: search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.\n
         **verbose (bool)**: show log texts or not. Defaults to False.\n
-        **model ()**: large language model object\n
+        **model ()**: large language model name\n
         **max_input_tokens (int)**: max token size of llm input.\n
 
     Returns:
@@ -364,6 +368,15 @@ def get_docs(
         topK = 999
 
     final_docs = []
+
+    embeddings, embed_name = helper.handle_embeddings_and_name(
+        embeddings, verbose)
+
+    if isinstance(model, BaseLanguageModel):
+        try:
+            model = model._llm_type
+        except:
+            model = "openai:gpt-3.5-turbo"
 
     if len(retriver_list) == 0:
         docs = rerank(query, db, 0.0, embeddings)
@@ -412,7 +425,7 @@ def get_docs(
 
 def retri_docs(
     db: Union[dbs, list],
-    embeddings,
+    embeddings: Union[Embeddings, str],
     retriver_list: List[BaseRetriever],
     query: str,
     search_type: Union[str, Callable],

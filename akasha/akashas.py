@@ -461,7 +461,7 @@ class Doc_QA(atman):
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
-        prompt_format_type: str = "gpt",
+        prompt_format_type: str = "auto",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         keep_logs: bool = False,
@@ -487,7 +487,7 @@ class Doc_QA(atman):
             search_type (Union[str, Callable], optional): _description_. Defaults to "svm".
             record_exp (str, optional): experiment name of aiido. Defaults to "".
             system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
-            prompt_format_type (str, optional): the prompt and system prompt format for the language model, including two types(gpt and llama). Defaults to "gpt".
+            prompt_format_type (str, optional): the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
             max_doc_len (int, optional): max total length of selected documents. Defaults to 1500. (will deprecated in 1.0.0)
             temperature (float, optional): temperature for language model. Defaults to 0.0.
             keep_logs (bool, optional): record logs or not. Defaults to False.
@@ -686,9 +686,11 @@ class Doc_QA(atman):
             self.system_prompt = prompts.default_doc_ask_prompt(self.language)
 
         text_input = helper.merge_history_and_prompt(
-            history_messages, self.system_prompt,
+            history_messages,
+            self.system_prompt,
             self._display_docs() + "User question: " + self.prompt,
-            self.prompt_format_type)
+            self.prompt_format_type,
+            model=self.model)
 
         end_time = time.time()
         if self.stream:
@@ -828,9 +830,11 @@ class Doc_QA(atman):
                     ## format prompt ##
 
                     text_input = helper.merge_history_and_prompt(
-                        history_messages, self.system_prompt,
+                        history_messages,
+                        self.system_prompt,
                         self._display_docs() + "User question: " + prompt,
-                        self.prompt_format_type)
+                        self.prompt_format_type,
+                        model=self.model)
 
                     response = helper.call_model(
                         self.model_obj,
@@ -921,7 +925,7 @@ class Doc_QA(atman):
         for d_count in range(len(cur_documents)):
             prod_sys_prompt = prompts.format_sys_prompt(
                 self.system_prompt + cur_documents[d_count], prompt,
-                self.prompt_format_type)
+                self.prompt_format_type, self.model)
             prod_sys_prompts.append(prod_sys_prompt)
 
         if len(cur_documents) == 1:
@@ -950,7 +954,8 @@ class Doc_QA(atman):
 
             fnl_input = akasha.prompts.format_sys_prompt(
                 prompts.default_conclusion_prompt(prompt, self.language),
-                "\n\n".join(batch_responses), self.prompt_format_type)
+                "\n\n".join(batch_responses), self.prompt_format_type,
+                self.model)
 
             if self.stream:
                 return helper.call_stream_model(
@@ -1032,9 +1037,11 @@ class Doc_QA(atman):
         for d_count in range(len(cur_documents)):
 
             prod_sys_prompt = helper.merge_history_and_prompt(
-                history_messages, self.system_prompt,
+                history_messages,
+                self.system_prompt,
                 cur_documents[d_count] + "\n\nUser question: " + self.prompt,
-                self.prompt_format_type)
+                self.prompt_format_type,
+                model=self.model)
             prod_sys_prompts.append(prod_sys_prompt)
 
         ### start to get response ###
@@ -1058,7 +1065,8 @@ class Doc_QA(atman):
                     fnl_conclusion_prompt, self.model), self.model)
             fnl_input = prompts.format_sys_prompt(fnl_conclusion_prompt,
                                                   "\n\n".join(batch_responses),
-                                                  self.prompt_format_type)
+                                                  self.prompt_format_type,
+                                                  self.model)
 
             if self.stream:
                 return helper.call_stream_model(
@@ -1070,9 +1078,12 @@ class Doc_QA(atman):
 
         else:
             prod_sys_prompt = helper.merge_history_and_prompt(
-                history_messages, self.system_prompt,
+                history_messages,
+                self.system_prompt,
                 '\n\n'.join(cur_documents) + "\n\nUser question: " +
-                self.prompt, self.prompt_format_type)
+                self.prompt,
+                self.prompt_format_type,
+                model=self.model)
             if self.stream:
                 return helper.call_stream_model(
                     self.model_obj,
@@ -1160,9 +1171,11 @@ class Doc_QA(atman):
             self_ask_sys_prompt = "用中文回答 "
         self_ask_sys_prompt += prompts.JSON_formatter(formatter)
         prod_sys_prompt = prompts.format_sys_prompt(self_ask_sys_prompt, "",
-                                                    self.prompt_format_type)
+                                                    self.prompt_format_type,
+                                                    self.model)
         prod_prompt = prompts.format_sys_prompt("", self_ask_prompt,
-                                                self.prompt_format_type)
+                                                self.prompt_format_type,
+                                                self.model)
 
         stream_status = self.stream
         ret = self.ask_self(prompt=prod_prompt,
