@@ -10,13 +10,14 @@ from typing import Callable, Union, Tuple, List, Generator
 from langchain.schema import Document
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
-from langchain_core.messages import HumanMessage, SystemMessage
+# from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_community.embeddings import (
     HuggingFaceEmbeddings,
     #SentenceTransformerEmbeddings,
     TensorflowHubEmbeddings,
 )
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
 from akasha.models.gemi import gemini_model
@@ -149,7 +150,7 @@ def _handle_azure_env(env_dict: dict) -> Tuple[str, str, str]:
 
 def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
                       verbose: bool = False,
-                      env_file: str = "") -> vars:
+                      env_file: str = "") -> Embeddings:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
@@ -235,7 +236,6 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         info = "selected tensorflow embeddings.\n"
 
     elif embedding_type in ["gemini", "gemi", "google"]:
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
         embeddings = GoogleGenerativeAIEmbeddings(
             model=embedding_name, google_api_key=os.environ["GEMINI_API_KEY"])
         info = "selected gemini embeddings.\n"
@@ -273,6 +273,33 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
     if verbose:
         print(info)
     return embeddings
+
+
+def handle_embeddings_and_name(embed: Union[
+    str, Embeddings, Callable] = "openai:text-embedding-ada-002",
+                               verbose: bool = False,
+                               env_file: str = "") -> Tuple[Embeddings, str]:
+    """get the embeddings object and embed name
+
+    Args:
+        embed (_type_, optional): _description_. Defaults to "openai:text-embedding-ada-002".
+        verbose (bool, optional): _description_. Defaults to False.
+        env_file (str, optional): _description_. Defaults to "".
+
+    Returns:
+        Tuple[Embeddings, str]: _description_
+    """
+    if isinstance(embed, Embeddings):
+        return embed, _decide_embedding_type(embed)
+
+    if callable(embed):
+        model_name = embed.__name__
+    else:
+        model_name = embed
+
+    model_obj = handle_embeddings(embed, verbose, env_file)
+
+    return model_obj, model_name
 
 
 def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
@@ -423,6 +450,38 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         print(info)
 
     return model
+
+
+def handle_model_and_name(model: Union[
+    str, Callable, BaseLanguageModel] = "openai:gpt-3.5-turbo",
+                          verbose: bool = False,
+                          temperature: float = 0.0,
+                          max_output_tokens: int = 1024,
+                          env_file: str = "") -> Tuple[BaseLanguageModel, str]:
+    """get the model object and model name
+
+    Args:
+        model (_type_, optional): _description_. Defaults to "openai:gpt-3.5-turbo".
+        verbose (bool, optional): _description_. Defaults to False.
+        temperature (float, optional): _description_. Defaults to 0.0.
+        max_output_tokens (int, optional): _description_. Defaults to 1024.
+        env_file (str, optional): _description_. Defaults to "".
+
+    Returns:
+        Tuple[BaseLanguageModel, str]: _description_
+    """
+    if isinstance(model, BaseLanguageModel):
+        return model, model._llm_type
+
+    if callable(model):
+        model_name = model.__name__
+    else:
+        model_name = model
+
+    model_obj = handle_model(model, verbose, temperature, max_output_tokens,
+                             env_file)
+
+    return model_obj, model_name
 
 
 def handle_search_type(search_type: Union[str, BaseLanguageModel, Embeddings],
@@ -708,6 +767,9 @@ def call_model(
 
     response = ""
     print_flag = True
+
+    model, model_name = handle_model_and_name(model)
+
     try:
         try:
             model_type = model._llm_type
@@ -778,6 +840,8 @@ def call_batch_model(
 
     response = ""
     responses = []
+    model, model_name = handle_model_and_name(model)
+
     try:
 
         response = model.batch(input_text)
@@ -825,6 +889,7 @@ def call_stream_model(
 
     response = None
     texts = ""
+    model, model_name = handle_model_and_name(model)
     try:
 
         try:
@@ -859,6 +924,7 @@ def call_image_model(
 
     response = ""
     print_flag = True
+    model, model_name = handle_model_and_name(model)
     try:
 
         model_type = model._llm_type
@@ -935,22 +1001,24 @@ def image_to_base64(image_path: str) -> str:
 
 def call_translator(model_obj: BaseLanguageModel,
                     texts: str,
-                    prompt_format_type: str = "gpt",
+                    prompt_format_type: str = "auto",
                     language: str = "zh") -> str:
     """translate texts to target language
 
     Args:
         model_obj (BaseLanguageModel): LLM that used to translate
         texts (str): texts that need to be translated
-        prompt_format_type (str, optional): system prompt format. Defaults to "gpt".
+        prompt_format_type (str, optional): system prompt format. Defaults to "auto".
         language (str, optional): target language. Defaults to "zh".
 
     Returns:
         str: translated texts
     """
+    model_obj, model_name = handle_model_and_name(model_obj)
     sys_prompt = akasha.prompts.default_translate_prompt(language)
     prod_prompt = akasha.prompts.format_sys_prompt(sys_prompt, texts,
-                                                   prompt_format_type)
+                                                   prompt_format_type,
+                                                   model_name)
 
     response = call_model(model_obj, prod_prompt)
 
@@ -961,7 +1029,7 @@ def call_JSON_formatter(
     model_obj: BaseLanguageModel,
     texts: str,
     keys: Union[str, list] = "",
-    prompt_format_type: str = "gpt",
+    prompt_format_type: str = "auto",
 ) -> Union[dict, None]:
     """use LLM to transfer texts into JSON format
 
@@ -969,7 +1037,7 @@ def call_JSON_formatter(
         model_obj (BaseLanguageModel): LLM that used to transfer
         texts (str): texts that need to be transferred
         keys (Union[str, list], optional): keys name of output dictionary. Defaults to "".
-        prompt_format_type (str, optional): system prompt format. Defaults to "gpt". Defaults to "gpt".
+        prompt_format_type (str, optional): system prompt format. Defaults to "auto".
 
     Returns:
         Union[dict, None]: return the JSON part of the string, if not found return None
@@ -983,9 +1051,12 @@ def call_JSON_formatter(
     if keys != "":
         sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
 
+    model_obj, model_name = handle_model_and_name(model_obj)
+
     prod_prompt = akasha.prompts.format_sys_prompt(sys_prompt,
                                                    "TEXTS: " + texts,
-                                                   prompt_format_type)
+                                                   prompt_format_type,
+                                                   model_name)
 
     response = call_model(model_obj, prod_prompt)
     return extract_json(response)
@@ -1056,6 +1127,9 @@ def _decide_embedding_type(embeddings: Embeddings) -> str:
     if isinstance(embeddings, custom_embed):
         return embeddings.model_name
 
+    elif isinstance(embeddings, GoogleGenerativeAIEmbeddings):
+        return "gemini:" + embeddings.model
+
     elif isinstance(embeddings, OpenAIEmbeddings) or isinstance(
             embeddings, AzureOpenAIEmbeddings):
         return "openai:" + embeddings.model
@@ -1076,7 +1150,7 @@ def self_RAG(model_obj: BaseLanguageModel,
              process_num: int = 10,
              earlyend_num: int = 8,
              max_view_num: int = 100,
-             prompt_format_type: str = "gpt") -> List[Document]:
+             prompt_format_type: str = "auto") -> List[Document]:
     """self RAG model to get the answer
 
     Args:
@@ -1095,13 +1169,14 @@ def self_RAG(model_obj: BaseLanguageModel,
     results = []
 
     count = 0
+    model_obj, model_name = handle_model_and_name(model_obj)
     while count < len(docs) and count < max_view_num:
 
         txts = []
         for idx in range(min(process_num, len(docs) - count)):
             prod_prompt = f"Retrieved document: \n\n {docs[count+idx].page_content} \n\n User question: {question}"
             input_text = akasha.prompts.format_sys_prompt(
-                sys_prompt, prod_prompt, prompt_format_type)
+                sys_prompt, prod_prompt, prompt_format_type, model_name)
             txts.append(input_text)
 
         irre_count = 0
@@ -1121,16 +1196,19 @@ def self_RAG(model_obj: BaseLanguageModel,
 
 
 def check_relevant_answer(model_obj: BaseLanguageModel,
-                          batch_responses: List[str], question: str,
-                          prompt_format_type: str) -> List[str]:
+                          batch_responses: List[str],
+                          question: str,
+                          prompt_format_type: str = "auto") -> List[str]:
     """ask LLM that each of the retrieved answers list is relevant to the question or not"""
     results = []
     txts = []
     sys_prompt = akasha.prompts.default_answer_grader_prompt()
+    model_obj, model_name = handle_model_and_name(model_obj)
     for idx in range(len(batch_responses)):
         prod_prompt = f"Retrieved answer: \n\n {batch_responses[idx]} \n\n User question: {question}"
         text_input = akasha.prompts.format_sys_prompt(sys_prompt, prod_prompt,
-                                                      prompt_format_type)
+                                                      prompt_format_type,
+                                                      model_name)
         txts.append(text_input)
 
     response_list = call_batch_model(model_obj, txts)
@@ -1141,19 +1219,43 @@ def check_relevant_answer(model_obj: BaseLanguageModel,
     return results
 
 
-def merge_history_and_prompt(
-        history_messages: list,
-        system_prompt: str,
-        prompt: str,
-        prompt_format_type: str = "gpt",
-        user_tag: str = "user",
-        assistant_tag: str = "assistant") -> Union[str, list]:
+def merge_history_and_prompt(history_messages: list,
+                             system_prompt: str,
+                             prompt: str,
+                             prompt_format_type: str = "auto",
+                             user_tag: str = "user",
+                             assistant_tag: str = "assistant",
+                             model: str = "remote:xxx") -> Union[str, list]:
+    """merge system prompt, history messages, and prompt based on the prompt format type, if history_messages is empty, return the prompt
+    if prompt_format_type is start with "chat_", it will become list of dictionary, otherwise it will become string
 
+    Args:
+        history_messages (list): _description_
+        system_prompt (str): _description_
+        prompt (str): _description_
+        prompt_format_type (str, optional): _description_. Defaults to "gpt".
+        user_tag (str, optional): _description_. Defaults to "user".
+        assistant_tag (str, optional): _description_. Defaults to "assistant".
+        model (_type_, optional): _description_. Defaults to "remote:xxx".
+
+    Returns:
+        Union[str, list]: _description_
+    """
+    ### decide prompt format type if auto###
+    if prompt_format_type == "auto":
+        prompt_format_type = akasha.prompts.decide_auto_prompt_format_type(
+            model)
+
+    ### if history_messages is empty, return the prompt ###
     if history_messages == [] or history_messages == None or history_messages == "":
         return akasha.prompts.format_sys_prompt(system_prompt, prompt,
                                                 prompt_format_type)
+    print(prompt_format_type)
+    if "chat_" in prompt_format_type and prompt_format_type != "chat_gemma":
 
-    if prompt_format_type == "chat_gpt":
+        if prompt_format_type == "chat_gemini":
+            assistant_tag = "model"
+
         text_input = akasha.prompts.format_sys_prompt(system_prompt, "",
                                                       prompt_format_type)
 
@@ -1167,6 +1269,7 @@ def merge_history_and_prompt(
 
         text_input.extend(prod_prompt)
 
+        print(text_input)
         return text_input
 
     else:
@@ -1187,6 +1290,11 @@ def merge_history_and_prompt(
 
 
 class myTokenizer(object):
+    """this class is for computing the number of tokens in a given text using different tokenizers.
+
+    Args:
+        object (_type_): _description_
+    """
 
     def __init__(self,
                  model_id: str,

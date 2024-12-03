@@ -45,18 +45,38 @@ For more information and to get started, please visit our Chinese manual [here](
 
 # Updates
 
+- 0.8.77
+
+    1. Added support for Anthropic language models and vision models
+    2. Deprecated the thoreshold parameter
+    3. Added the function get_relevant_documents_and_scores to the retriever, which outputs documents and their similarity scores with the query
+    4. self_query.query_filter metadata_field_info now accepts dictionary-type input
+
+- 0.8.73
+
+    1. Added the env_file parameter, allowing specification of .env file names for exporting API keys
+    2. Updated the parse function in self-query; added the custom_parser parameter for custom parser functions
+
 - 0.8.70
-  - add self_query module
-  - support gemini model and embedding api
-  - replace max_doc_len with max_input_tokens
+
+    1. Added support for Gemini language models and embedding models
+    2. Introduced the self_query module
+    3. Replaced max_doc_len with max_input_tokens and added the helper function Tokenizer.compute_tokens to calculate token length
+
+- 0.8.66
+
+    1. Enabled GPU inference for llama-cpp
+    2. remote now supports compatibility with vllm serve
 
 - 0.8.63
-  - add ask_image function to Doc_QA, which can use image as prompt to ask question.
-  - add max_output_tokens parameter.
-  - remote compatible with vllm serve.
+
+    1. add ask_image function to Doc_QA, which can use image as prompt to ask question.
+    2. add max_output_tokens parameter.
+    3. remote compatible with vllm serve.
 
 - 0.8.56
-  - add extract_db_by_file and extract_db_by_keyword functions.
+
+    1. add extract_db_by_file and extract_db_by_keyword functions.
 
 - 0.8.53
 

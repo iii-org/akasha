@@ -124,7 +124,7 @@ class test_agent:
         max_doc_len: int = 1800,
         max_past_observation: int = 10,
         retri_observation: bool = False,
-        prompt_format_type: str = "chat_gpt",
+        prompt_format_type: str = "auto",
         stream: bool = False,
         max_output_tokens: int = 1024,
         max_input_tokens: int = 3600,
@@ -142,6 +142,7 @@ class test_agent:
             ** max_round (int, optional)**: the maximum round of the conversation. Defaults to 20.\n
             ** max_doc_len (int, optional)**: the maximum length of the past thoughts and observations that will send to agent. Defaults to 1500.\n (deprecated in future 1.0.0 version)\n
             ** max_past_observation (int, optional)**: the maximum round of the past thoughts and observations that will send to agent. Defaults to 10.\n
+            ** prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
             ** retri_observation (bool, optional)**: if True, agent will ask LLM to retrieve the information from the past thoughts and observations. Defaults to False.\n
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
             **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3600.\n
@@ -337,7 +338,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         text_input = akasha.prompts.format_sys_prompt(
             self.REACT_PROMPT,
             "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.prompt_format_type)
+            self.prompt_format_type, self.model)
         response = akasha.helper.call_model(self.model_obj, text_input)
 
         txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
@@ -364,7 +365,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 text_input = akasha.prompts.format_sys_prompt(
                     self.REACT_PROMPT, "Question: " + question +
                     retri_messages + self.REMEMBER_PROMPT,
-                    self.prompt_format_type)
+                    self.prompt_format_type, self.model)
                 response = akasha.helper.call_model(self.model_obj, text_input)
                 round_count -= 1
                 txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
@@ -390,7 +391,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 response = cur_action['action_input']
                 text_input = akasha.prompts.format_sys_prompt(
                     f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
-                    retri_messages, self.prompt_format_type)
+                    retri_messages, self.prompt_format_type, self.model)
 
                 if self.stream:
                     return akasha.helper.call_stream_model(
@@ -424,7 +425,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                         self.RETRI_OBSERVATION_PROMPT,
                         "Question: " + question + "\n\nThought: " + thought +
                         "\n\nObservation: " + firsthand_observation,
-                        self.prompt_format_type)
+                        self.prompt_format_type, self.model)
                     observation = akasha.helper.call_model(
                         self.model_obj, text_input)
                     txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
@@ -458,7 +459,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
             text_input = akasha.prompts.format_sys_prompt(
                 self.REACT_PROMPT, "Question: " + question + retri_messages,
-                self.prompt_format_type)
+                self.prompt_format_type, self.model)
             response = akasha.helper.call_model(self.model_obj, text_input)
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += akasha.helper.get_doc_length(self.language, txt)

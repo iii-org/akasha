@@ -7,6 +7,8 @@ import warnings
 import akasha.prompts as prompts
 import akasha.helper
 import re
+from langchain_core.language_models.base import BaseLanguageModel
+from typing import Union
 
 warnings.filterwarnings("ignore")
 jieba.setLogLevel(
@@ -82,14 +84,28 @@ def get_rouge_score(candidate_str: str,
 
 def get_llm_score(candidate_str: str,
                   reference_str: str,
-                  model: str,
-                  prompt_format_type: str = "gpt",
+                  model: Union[BaseLanguageModel, str],
+                  prompt_format_type: str = "auto",
                   round_digit: int = 3):
+    """use LLM to calculate the score of the candidate string and reference string.
+
+    Args:
+        candidate_str (str): _description_
+        reference_str (str): _description_
+        model (Union[BaseLanguageModel, str]): _description_
+        prompt_format_type (str, optional): _description_. Defaults to "auto".
+        round_digit (int, optional): _description_. Defaults to 3.
+
+    Returns:
+        _type_: _description_
+    """
+
+    model, model_name = akasha.helper.handle_model_and_name(model)
     system_prompt, prompt = prompts.format_llm_score(candidate_str,
                                                      reference_str)
     input_text = prompts.format_sys_prompt(system_prompt, prompt,
-                                           prompt_format_type)
-    model = akasha.helper.handle_model(model, False, 0.0)
+                                           prompt_format_type, model_name)
+
     response = akasha.helper.call_model(model, input_text)
 
     # find the first float number in the response string and turn to float
@@ -102,6 +118,15 @@ def get_llm_score(candidate_str: str,
 
 
 def get_toxic_score(texts: str, round_digit: int = 3):
+    """check the toxic score of the input texts.
+
+    Args:
+        texts (str): _description_
+        round_digit (int, optional): _description_. Defaults to 3.
+
+    Returns:
+        _type_: _description_
+    """
     from transformers import pipeline
 
     pipe = pipeline("text-classification",

@@ -11,6 +11,7 @@ from langchain.schema import Document
 from langchain.chains.question_answering import load_qa_chain
 from typing import Callable, Union, Tuple, List
 from collections import defaultdict
+from langchain_core.language_models.base import BaseLanguageModel
 
 
 def _generate_single_choice_question(
@@ -95,7 +96,7 @@ class Model_Eval(akasha.atman):
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
-        prompt_format_type: str = "gpt",
+        prompt_format_type: str = "auto",
         max_doc_len: int = 1500,
         temperature: float = 0.0,
         keep_logs: bool = False,
@@ -127,6 +128,7 @@ class Model_Eval(akasha.atman):
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
                 in searching relevant documents. Defaults to "".\n
+            **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".\n
             **max_doc_len (int, optional)**: max document size of llm input. Defaults to 1500.\n (deprecated in 1.0.0)
             **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
@@ -559,7 +561,7 @@ class Model_Eval(akasha.atman):
         try:
             intput_text = akasha.prompts.format_sys_prompt(
                 prod_sys + self._display_docs(), query_with_prompt,
-                self.prompt_format_type)
+                self.prompt_format_type, self.model)
             response = akasha.helper.call_model(self.model_obj, intput_text)
             self.response.append(response)
             self.doc_length += docs_len
@@ -584,7 +586,7 @@ class Model_Eval(akasha.atman):
                 eval.scores.get_rouge_score(response, answer, self.language))
             self.score["llm_score"].append(
                 eval.scores.get_llm_score(response, answer, self.eval_model,
-                                          self.prompt_format_type))
+                                          "auto"))
 
             new_table = akasha.format.handle_table(
                 question + "\nAnswer:  " + answer, self.docs, response)
@@ -626,7 +628,7 @@ class Model_Eval(akasha.atman):
         prompt = "請對以下文件進行摘要: "
         intput_text = akasha.prompts.format_sys_prompt(
             self.system_prompt, prompt + "\n\n" + sum_doc,
-            self.prompt_format_type)
+            self.prompt_format_type, self.model)
 
         self.docs = [
             Document(page_content=sum_doc, metadata={
@@ -660,7 +662,7 @@ class Model_Eval(akasha.atman):
             eval.scores.get_rouge_score(response, answer, self.language))
         self.score["llm_score"].append(
             eval.scores.get_llm_score(response, answer, self.eval_model,
-                                      self.prompt_format_type))
+                                      "auto"))
 
         new_table = akasha.format.handle_table(prompt + "\nAnswer:  " + answer,
                                                self.docs, response)
@@ -871,7 +873,7 @@ class Model_Eval(akasha.atman):
         self,
         questionset_file: str,
         doc_path: Union[List[str], str],
-        eval_model: str = "openai:gpt-3.5-turbo",
+        eval_model: Union[BaseLanguageModel, str] = "openai:gpt-3.5-turbo",
         **kwargs,
     ) -> Union[Tuple[float, float, float, int], Tuple[float, int]]:
         """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response,
@@ -883,7 +885,7 @@ class Model_Eval(akasha.atman):
             Args:
             **questionset_flie (str)**: the path of question set txt file, accept .txt, .docx and .pdf.\n
             **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
-            **eval_model (str, optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
+            **eval_model (Union[BaseLanguageModel, str], optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
             **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.\n
