@@ -180,7 +180,7 @@ class custom_embed(BaseModel, Embeddings):
     """
 
     client: Any = Field(default=None)  #: :meta private:
-    model_name: str = "custom embedding model"
+    model_name: str = "custom:custom-embedding-model"
     """Model name to use."""
     # model_kwargs: Dict[str, Any] = Field(default_factory=dict)
     # """Keyword arguments to pass to the model."""

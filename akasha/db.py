@@ -9,6 +9,7 @@ from langchain.text_splitter import (
     CharacterTextSplitter,
     RecursiveCharacterTextSplitter,
 )
+from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
 from langchain.docstore.document import Document
 from pathlib import Path
@@ -662,7 +663,7 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
 
 
 def create_single_file_db(file_path: str,
-                          embeddings_name: str,
+                          embeddings: Union[str, Embeddings],
                           chunk_size: int,
                           sleep_time: int = 60,
                           env_file: str = ""):
@@ -682,8 +683,13 @@ def create_single_file_db(file_path: str,
         doc_path += "/"
     db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
     add_pic = True
+
+    if isinstance(embeddings, str):
+        embeddings_name = embeddings
+        embeddings = helper.handle_embeddings(embeddings, False, env_file)
+    else:
+        embeddings_name = helper._decide_embedding_type(embeddings)
     embed_type, embed_name = helper._separate_name(embeddings_name)
-    embeddings_obj = helper.handle_embeddings(embeddings_name, True, env_file)
 
     file_doc = _load_file(doc_path + file_name, file_name.split(".")[-1])
     if file_doc == "" or len(file_doc) == 0:
@@ -700,15 +706,15 @@ def create_single_file_db(file_path: str,
         "_" + str(chunk_size))
 
     db, add_pic = get_chromadb_from_file(file_doc, storage_directory,
-                                         chunk_size, embeddings_obj,
+                                         chunk_size, embeddings,
                                          doc_path + file_name, sleep_time,
                                          add_pic, embed_type)
 
     if isinstance(db, str):
-        del embeddings_obj
+
         logging.warning(f"create chromadb {db} failed.\n\n")
         return False, f"create chromadb {db} failed.\n\n"
-    del embeddings_obj, db
+    del db
 
     return True, storage_directory
 
@@ -838,7 +844,7 @@ def check_db_name(file, db_dir, embed_type, embed_name, chunk_size):
 
 def createDB_directory(doc_path: Union[List[str], str],
                        embeddings: Union[
-                           str, vars] = "openai:text-embedding-ada-002",
+                           str, Embeddings] = "openai:text-embedding-ada-002",
                        chunk_size: int = 500,
                        ignore_check: bool = False,
                        env_file: str = "") -> dbs:
@@ -863,8 +869,8 @@ def createDB_directory(doc_path: Union[List[str], str],
 
 
 def createDB_file(file_path: Union[List[str], str],
-                  embeddings: Union[str,
-                                    vars] = "openai:text-embedding-ada-002",
+                  embeddings: Union[
+                      str, Embeddings] = "openai:text-embedding-ada-002",
                   chunk_size: int = 500,
                   ignore_check: bool = False,
                   env_file: str = "") -> dbs:
@@ -1041,7 +1047,7 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
 
 def create_keyword_chromadb(
         doc_path: str,
-        embeddings: Union[str, vars] = "openai:text-embedding-ada-002",
+        embeddings: Union[str, Embeddings] = "openai:text-embedding-ada-002",
         chunk_size: int = 1000,
         keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
         env_file: str = "") -> Tuple[dbs, List[str]]:
@@ -1118,13 +1124,14 @@ def create_keyword_chromadb(
 
 
 def get_db_metadata(doc_path: str,
-                    embeddings: str = "openai:text-embedding-ada-002",
+                    embeddings: Union[
+                        str, Embeddings] = "openai:text-embedding-ada-002",
                     chunk_size: int = 1000) -> List[dict]:
     """get all metadata of chromadb from doc_path directory
 
     Args:
         doc_path (str): the directory of documents\n
-        embeddings (str, optional): the embedding type and name. Defaults to "openai:text-embedding-ada-002".
+        embeddings (Union[str, Embeddings], optional): the embedding type and name. Defaults to "openai:text-embedding-ada-002".
         chunk_size (int, optional): the chunk size of chromadb. Defaults to 1000.
 
     Returns:
@@ -1135,7 +1142,14 @@ def get_db_metadata(doc_path: str,
     if doc_path[-1] != "/":
         doc_path += "/"
     db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
-    embed_type, embed_name = helper._separate_name(embeddings)
+
+    if isinstance(embeddings, Embeddings):
+        embedding_name = helper._decide_embedding_type(embeddings)
+    else:
+        embedding_name = embeddings
+
+    embed_type, embed_name = helper._separate_name(embedding_name)
+
     txt_extensions = ["pdf", "md", "docx", "txt", "csv", "pptx"]
     for extension in txt_extensions:
         files.extend(_load_files(doc_path, extension))
@@ -1154,22 +1168,28 @@ def get_db_metadata(doc_path: str,
     return ret
 
 
-def update_db_metadata(metadata_list: List[dict],
-                       doc_path: str,
-                       embeddings: str = "openai:text-embedding-ada-002",
-                       chunk_size: int = 1000):
+def update_db_metadata(
+        metadata_list: List[dict],
+        doc_path: str,
+        embeddings: Union[str, Embeddings] = "openai:text-embedding-ada-002",
+        chunk_size: int = 1000):
     """for each metadata in metadata_list, update the metadata of the same source in chromadb
         *** need to use createDB_directory/processMultiDB to create chromadb first ***
     Args:
         metadata_list (List[dict]): list of metadata
         doc_path (str): the directory of documents
-        embeddings (_type_, optional): the full embedding name(type:name). Defaults to "openai:text-embedding-ada-002".
+        embeddings (Union[str, Embeddings], optional): the full embedding name(type:name). Defaults to "openai:text-embedding-ada-002".
         chunk_size (int, optional): chunk size. Defaults to 1000.
     """
     cur_meta = []
     pre_meta_source = ''
     suc_count = 0
-    embed_type, embed_name = helper._separate_name(embeddings)
+    if isinstance(embeddings, Embeddings):
+        embedding_name = helper._decide_embedding_type(embeddings)
+    else:
+        embedding_name = embeddings
+    embed_type, embed_name = helper._separate_name(embedding_name)
+
     if doc_path[-1] != "/":
         doc_path += "/"
     db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
