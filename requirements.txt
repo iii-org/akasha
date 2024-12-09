@@ -28,7 +28,7 @@ rank_bm25
 unstructured
 python-pptx
 wikipedia
-opencc==1.1.6
+opencc-python-reimplemented>=0.1.7
 google-cloud-aiplatform>=1.64
 google-generativeai
 langchain-google-genai
