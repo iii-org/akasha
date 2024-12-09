@@ -86,9 +86,9 @@ class Model_Eval(akasha.atman):
 
     def __init__(
         self,
-        embeddings: str = "openai:text-embedding-ada-002",
+        embeddings: str = akasha.akashas.DEFAULT_EMBED,
         chunk_size: int = 1000,
-        model: str = "openai:gpt-3.5-turbo",
+        model: str = akasha.akashas.DEFAULT_MODEL,
         verbose: bool = False,
         topK: int = -1,
         threshold: float = 0.0,
@@ -873,7 +873,8 @@ class Model_Eval(akasha.atman):
         self,
         questionset_file: str,
         doc_path: Union[List[str], str],
-        eval_model: Union[BaseLanguageModel, str] = "openai:gpt-3.5-turbo",
+        eval_model: Union[BaseLanguageModel,
+                          str] = akasha.akashas.DEFAULT_MODEL,
         **kwargs,
     ) -> Union[Tuple[float, float, float, int], Tuple[float, int]]:
         """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response,
@@ -1036,9 +1037,9 @@ class Model_Eval(akasha.atman):
         self,
         questionset_flie: str,
         doc_path: Union[List[str], str],
-        embeddings_list: list = ["openai:text-embedding-ada-002"],
+        embeddings_list: list = [akasha.akashas.DEFAULT_EMBED],
         chunk_size_list: list = [500],
-        model_list: list = ["openai:gpt-3.5-turbo"],
+        model_list: list = [akasha.akashas.DEFAULT_MODEL],
         search_type_list: list = ["svm", "tfidf", "mmr"],
         **kwargs,
     ) -> Tuple[list, list]:

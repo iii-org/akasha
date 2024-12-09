@@ -1,7 +1,8 @@
 import pathlib
 import time
 from typing import Callable, Union, List, Tuple, Generator
-from langchain.prompts import PromptTemplate
+from langchain_core.language_models.base import BaseLanguageModel
+from langchain_core.embeddings import Embeddings
 from langchain.schema import Document
 import akasha.helper as helper
 import akasha.search as search
@@ -15,6 +16,7 @@ from dotenv import load_dotenv
 from warnings import warn
 
 DEFAULT_MODEL = "openai:gpt-3.5-turbo"
+DEFAULT_EMBED = "openai:text-embedding-ada-002"
 _DEFAULT_MAX_DOC_LEN = 1500
 _DEFAULT_MAX_INPUT_TOKENS = 3000
 load_dotenv(pathlib.Path().cwd() / ".env")
@@ -452,9 +454,9 @@ class Doc_QA(atman):
 
     def __init__(
         self,
-        embeddings: str = "openai:text-embedding-ada-002",
+        embeddings: Union[str, Embeddings] = "",
         chunk_size: int = 1000,
-        model: str = DEFAULT_MODEL,
+        model: Union[str, BaseLanguageModel] = DEFAULT_MODEL,
         verbose: bool = False,
         topK: int = -1,
         threshold: float = 0.0,
@@ -518,11 +520,16 @@ class Doc_QA(atman):
                                              self.temperature,
                                              self.max_output_tokens,
                                              self.env_file)
-        self.embeddings_obj = helper.handle_embeddings(embeddings,
-                                                       self.verbose,
-                                                       self.env_file)
-        self.embeddings = helper.handle_search_type(embeddings)
         self.model = helper.handle_search_type(model)
+        if isinstance(embeddings, str) and embeddings == "":
+            self.embeddings_obj = None
+            self.embeddings = ""
+        else:
+            self.embeddings_obj = helper.handle_embeddings(
+                embeddings, self.verbose, self.env_file)
+
+            self.embeddings = helper.handle_search_type(embeddings)
+
         self.search_type = search_type
         self.db = None
         self.docs = []
@@ -607,6 +614,16 @@ class Doc_QA(atman):
 
         return ret, tot_len
 
+    def _check_default_embed(self, kwargs: dict):
+        """Check if embeddings are set, and if not, use the default embeddings."""
+        if isinstance(
+                self.embeddings,
+                str) and self.embeddings == "" and 'embeddings' not in kwargs:
+            print(
+                f"embeddings is empty, use default embeddings: {DEFAULT_EMBED}\n"
+            )
+            kwargs['embeddings'] = DEFAULT_EMBED
+
     def get_response(self,
                      doc_path: Union[List[str], str, akasha.db.dbs],
                      prompt: str,
@@ -626,7 +643,7 @@ class Doc_QA(atman):
             Returns:
                 response (str): the response from llm model.
         """
-
+        self._check_default_embed(kwargs)
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         if isinstance(doc_path, akasha.db.dbs):
@@ -754,7 +771,7 @@ class Doc_QA(atman):
         Returns:
             response (list): the responses from llm model.
         """
-
+        self._check_default_embed(kwargs)
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         if self.system_prompt.replace(' ', '') == "":
@@ -1134,6 +1151,7 @@ class Doc_QA(atman):
             Returns:
                 response (str): the response from llm model.
         """
+        self._check_default_embed(kwargs)
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
 

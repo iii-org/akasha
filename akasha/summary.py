@@ -61,7 +61,7 @@ class Summary(akasha.atman):
         self,
         chunk_size: int = 500,
         chunk_overlap: int = 40,
-        model: str = "openai:gpt-3.5-turbo",
+        model: str = akasha.akashas.DEFAULT_MODEL,
         verbose: bool = False,
         threshold: float = 0.0,
         language: str = "ch",
