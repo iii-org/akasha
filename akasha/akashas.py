@@ -16,6 +16,7 @@ from warnings import warn
 
 DEFAULT_MODEL = "openai:gpt-3.5-turbo"
 _DEFAULT_MAX_DOC_LEN = 1500
+_DEFAULT_MAX_INPUT_TOKENS = 3000
 load_dotenv(pathlib.Path().cwd() / ".env")
 
 
@@ -94,7 +95,7 @@ def openai_vision(
     pic_path: Union[str, List[str]],
     prompt: str,
     model: str = "gpt-4-vision-preview",
-    max_token: int = 3000,
+    max_token: int = _DEFAULT_MAX_INPUT_TOKENS,
     verbose: bool = False,
     record_exp: str = "",
 ):
@@ -186,11 +187,11 @@ class atman:
         search_type: Union[str, Callable] = "svm",
         record_exp: str = "",
         system_prompt: str = "",
-        max_doc_len: int = 1500,
+        max_doc_len: int = _DEFAULT_MAX_DOC_LEN,
         temperature: float = 0.0,
         keep_logs: bool = False,
         max_output_tokens: int = 1024,
-        max_input_tokens: int = 3000,
+        max_input_tokens: int = _DEFAULT_MAX_INPUT_TOKENS,
         env_file: str = "",
     ):
         """initials of atman class
@@ -462,7 +463,7 @@ class Doc_QA(atman):
         record_exp: str = "",
         system_prompt: str = "",
         prompt_format_type: str = "auto",
-        max_doc_len: int = 1500,
+        max_doc_len: int = _DEFAULT_MAX_DOC_LEN,
         temperature: float = 0.0,
         keep_logs: bool = False,
         max_output_tokens: int = 1024,
@@ -471,7 +472,7 @@ class Doc_QA(atman):
         use_rerank: bool = False,
         ignore_check: bool = False,
         stream: bool = False,
-        max_input_tokens: int = 3000,
+        max_input_tokens: int = _DEFAULT_MAX_INPUT_TOKENS,
         env_file: str = "",
     ):
         """initials of Doc_QA class

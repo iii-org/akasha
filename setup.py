@@ -18,6 +18,7 @@ install_requires = [
     "tiktoken",
     "scikit-learn<1.3.0",
     "jieba>=0.42.1",
+    "opencc-python-reimplemented==0.1.7",
     "sentence-transformers>=3.1.1",
     "transformers>=4.45.0",  #==4.41.1
     "auto-gptq>=0.3.1",
@@ -43,9 +44,9 @@ install_requires = [
 ]
 
 ### install different opencc version###\
-install_requires.append("opencc==1.1.1; platform_system=='Windows'")
-install_requires.append("opencc==0.2; platform_system=='Darwin'")
-install_requires.append("opencc==1.1.6; platform_system=='Linux'")
+install_requires.append("auto-gptq>=0.3.1; platform_system=='Windows'")
+install_requires.append("auto-gptq==0.3.1; platform_system=='Darwin'")
+install_requires.append("auto-gptq>=0.3.1; platform_system=='Linux'")
 
 ### install different torch version###
 install_requires.append("torch==2.2.0; platform_system=='Windows'")
@@ -57,7 +58,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha-terminal",
-    version="0.8.78",
+    version="0.8.79",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
