@@ -331,7 +331,7 @@ def get_keyword_chromadb_from_file(
         documents: list,
         storage_directory: str,
         chunk_size: int,
-        embeddings: vars,
+        embeddings: Embeddings,
         file_name: str,
         sleep_time: int = 60,
         keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
@@ -598,7 +598,7 @@ def create_chromadb(doc_path: str,
 
 
 def get_db_from_chromadb(db_path_list: list, embedding_name: str):
-    """_summary_
+    """load db from chromadb path names
 
     Args:
         db_path_list (list): list of chromadb path names
@@ -611,6 +611,9 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
 
     progress = tqdm(total=len(db_path_list), desc="Vec Storage")
     ignored_files = []
+    if isinstance(embedding_name, Embeddings):
+        embedding_name = helper._decide_embedding_type(embedding_name)
+
     if "rerank" in embedding_name:
         texts = []
         for doc_path in db_path_list:

@@ -958,7 +958,6 @@ class Model_Eval(akasha.atman):
 
             new_table = self._eval_get_res(question[i], answer[i], timestamp,
                                            retrivers_list)
-            total_docs.extend(self.docs)
             # ---- #
 
             for key in new_table:

@@ -39,6 +39,8 @@ import uuid
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
 
+cc = opencc.OpenCC("s2t")
+
 
 def del_path(path, tag="temp_c&r@md&"):
     p = Path(path)
@@ -713,7 +715,7 @@ def sim_to_trad(text: str) -> str:
     Returns:
         str: traditional chinese
     """
-    cc = opencc.OpenCC("s2t.json")
+    global cc
     return cc.convert(text)
 
 
