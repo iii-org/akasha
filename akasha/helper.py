@@ -39,7 +39,7 @@ import uuid
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
 
-cc = opencc.OpenCC("s2t")
+cc = opencc.OpenCC("s2twp")
 
 
 def del_path(path, tag="temp_c&r@md&"):
