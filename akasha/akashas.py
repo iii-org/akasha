@@ -130,7 +130,7 @@ def openai_vision(
     import os
     from langchain_openai import ChatOpenAI, AzureChatOpenAI
     from langchain.schema.messages import HumanMessage, SystemMessage
-    from langchain.callbacks import get_openai_callback
+    from langchain_community.callbacks.manager import get_openai_callback
 
     if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
             == "azure") or ("OPENAI_API_TYPE" in os.environ
