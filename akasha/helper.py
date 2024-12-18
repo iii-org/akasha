@@ -1491,3 +1491,25 @@ def get_mac_address() -> str:
         for elements in range(0, 2 * 6, 2)
     ][::-1])
     return get_text_md5(mac_address)
+
+
+def generate_keyword(
+        text: str,
+        keyword_num: int = 5,
+        keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2"):
+    """use keybert to extract keywords from texts
+
+    Args:
+        texts (str): _description_
+        keyword_model (str, optional): _description_. Defaults to "paraphrase-multilingual-MiniLM-L12-v2".
+    """
+
+    from keybert import KeyBERT
+
+    kw_model = KeyBERT(keyword_model)
+
+    kw_list = kw_model.extract_keywords(text, top_n=keyword_num)
+
+    keyword_list = [kwww[0] for kwww in kw_list]
+
+    return keyword_list

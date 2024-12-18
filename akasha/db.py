@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Union, List, Set, Tuple
+from typing import Union, List, Set, Tuple, Callable, Optional
 from tqdm import tqdm
 import time, os, shutil, traceback, logging, warnings
 import datetime
@@ -335,7 +335,8 @@ def get_keyword_chromadb_from_file(
         embeddings: Embeddings,
         file_name: str,
         sleep_time: int = 60,
-        keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
+        keyword_function: Callable[[str, Optional[int]],
+                                   List[str]] = helper.generate_keyword,
         keyword_num: int = 5):
     """load the existing chromadb of documents from storage_directory and return it, if not exist, create it.
 
@@ -355,9 +356,6 @@ def get_keyword_chromadb_from_file(
         chunk_size=chunk_size,
         chunk_overlap=100,
     )
-    from keybert import KeyBERT
-
-    kw_model = KeyBERT(keyword_model)
 
     k = 0
     cum_ids = 0
@@ -383,24 +381,22 @@ def get_keyword_chromadb_from_file(
 
             ### if page_content is too long, use llm to summarize ###
             page_contents = [text.page_content for text in texts]
-            keywords = kw_model.extract_keywords(page_contents,
-                                                 top_n=keyword_num)
 
-            for idx, kw in enumerate(keywords):
-                keyword_list = [kwww[0] for kwww in kw]
-
+            for idx, pc in enumerate(page_contents):
+                keywords = keyword_function(pc, keyword_num)
+                kn = len(keywords)
                 try:
-                    vectors = embeddings.embed_documents(keyword_list)
+                    vectors = embeddings.embed_documents(keywords)
                 except:
                     time.sleep(sleep_time)
-                    vectors = embeddings.embed_documents(keyword_list)
+                    vectors = embeddings.embed_documents(keywords)
 
                 if len(vectors) == 0:
                     continue
 
                 docsearch._collection.add(
-                    embeddings=vectors, metadatas=[texts[idx].metadata for _ in range(keyword_num)], documents=[texts[idx].page_content for _ in range(keyword_num)]\
-                        , ids=[formatted_date + "_" + str(cum_ids) + "_" + str(idx) + "_" + str(keyword_list[w])+ "_" + mac_address for w in range(keyword_num)]
+                    embeddings=vectors, metadatas=[texts[idx].metadata for _ in range(kn)], documents=[pc for _ in range(kn)]\
+                        , ids=[formatted_date + "_" + str(cum_ids) + "_" + str(idx) + "_" + str(keywords[w])+ "_" + mac_address for w in range(kn)]
                 )
             k += interval
             cum_ids += len(texts)
@@ -1052,7 +1048,8 @@ def create_keyword_chromadb(
         doc_path: str,
         embeddings: Union[str, Embeddings] = "openai:text-embedding-ada-002",
         chunk_size: int = 1000,
-        keyword_model: str = "paraphrase-multilingual-MiniLM-L12-v2",
+        keyword_function: Callable[[str, Optional[int]],
+                                   List[str]] = helper.generate_keyword,
         env_file: str = "") -> Tuple[dbs, List[str]]:
 
     if isinstance(embeddings, str):
@@ -1116,7 +1113,7 @@ def create_keyword_chromadb(
                 chunk_size,
                 embeddings,
                 doc_path + file,
-                keyword_model=keyword_model,
+                keyword_function=keyword_function,
             )
             if isinstance(db, str):
                 db_path_names.append(db)
