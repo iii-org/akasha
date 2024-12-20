@@ -45,6 +45,12 @@ For more information and to get started, please visit our Chinese manual [here](
 
 # Updates
 
+- 0.8.83
+    1. update sklearn, tqdm requirement version
+    2. only load embedding model in Doc_QA when needed
+    3. update db functions to allow either embeddings object or embeddings name as parameter
+    4. add create_keyword_chromadb in db module
+
 - 0.8.77
 
     1. Added support for Anthropic language models and vision models
