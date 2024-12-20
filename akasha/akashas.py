@@ -445,8 +445,13 @@ class atman:
 
     def _display_docs(self, ) -> str:
         splitter = '\n----------------\n'
-        return "----------------\n" + splitter.join(
+        found_ref = "----------------\n" + splitter.join(
             [doc.page_content for doc in self.docs]) + splitter
+
+        if self.verbose:
+            print("Reference: \n\n" + found_ref)
+
+        return found_ref
 
 
 class Doc_QA(atman):
