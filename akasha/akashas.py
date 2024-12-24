@@ -476,7 +476,6 @@ class Doc_QA(atman):
         max_output_tokens: int = 1024,
         compression: bool = False,
         use_chroma: bool = False,
-        use_rerank: bool = False,
         ignore_check: bool = False,
         stream: bool = False,
         max_input_tokens: int = _DEFAULT_MAX_INPUT_TOKENS,
@@ -501,7 +500,6 @@ class Doc_QA(atman):
             keep_logs (bool, optional): record logs or not. Defaults to False.
             compression (bool, optional): compress the selected documents or not. Defaults to False.
             use_chroma (bool, optional): use chroma db name instead of documents path to load data or not. Defaults to False.
-            use_rerank (bool, optional): use rerank model to re-rank the selected documents or not. Defaults to False.
             ignore_check (bool, optional): speed up loading data if the chroma db is already existed. Defaults to False.
             max_output_tokens (int, optional): max output tokens of llm model. Defaults to 1024.\n
             max_input_tokens (int, optional): max input tokens of llm model. Defaults to 3000.\n
@@ -517,7 +515,6 @@ class Doc_QA(atman):
         self.compression = compression
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
-        self.use_rerank = use_rerank
         self.prompt_format_type = prompt_format_type
         ### set variables ###
         self.logs = {}
@@ -667,7 +664,7 @@ class Doc_QA(atman):
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
+                self.chunk_size, self.ignore_check)
 
         start_time = time.time()
         self._check_db()
@@ -681,14 +678,12 @@ class Doc_QA(atman):
 
         ### start to get response ###
         retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
-                                              self.use_rerank, self.threshold,
-                                              self.search_type, search_dict)
+                                              self.threshold, self.search_type,
+                                              search_dict)
         self.docs, self.doc_length, self.doc_tokens = search.get_docs(
             self.db,
-            self.embeddings_obj,
             retrivers_list,
             self.prompt,
-            self.use_rerank,
             self.language,
             self.search_type,
             self.verbose,
@@ -798,7 +793,7 @@ class Doc_QA(atman):
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
+                self.chunk_size, self.ignore_check)
 
         start_time = time.time()
         self._check_db()
@@ -817,8 +812,8 @@ class Doc_QA(atman):
         self.prompt = []
         total_docs = []
         retrivers_list = search.get_retrivers(self.db, self.embeddings_obj,
-                                              self.use_rerank, self.threshold,
-                                              self.search_type, search_dict)
+                                              self.threshold, self.search_type,
+                                              search_dict)
 
         def recursive_get_response(prompt_list):
             pre_result = []
@@ -831,10 +826,8 @@ class Doc_QA(atman):
                     merge_prompts = ''.join(self.prompt)
                     docs, docs_len, tokens = search.get_docs(
                         self.db,
-                        self.embeddings_obj,
                         retrivers_list,
                         prompt,
-                        self.use_rerank,
                         self.language,
                         self.search_type,
                         self.verbose,
@@ -1273,7 +1266,7 @@ class Doc_QA(atman):
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
+                self.chunk_size, self.ignore_check)
 
         for each_follow_up in self.follow_up:
             #ret = self.ask_self(prompt=follow_up, system_prompt=self.system_prompt)

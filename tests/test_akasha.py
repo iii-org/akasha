@@ -162,6 +162,20 @@ def test_get_response(base_line: akasha.Doc_QA):
 
 
 @pytest.mark.akasha
+def test_rerank(base_line: akasha.Doc_QA):
+    ak = base_line
+    query = "五軸是甚麼?"
+
+    ## test rerank ##
+    assert (type(
+        ak.get_response(
+            doc_path="./docs/mic/",
+            prompt=query,
+            search_type="rerank",
+        )) == str)
+
+
+@pytest.mark.akasha
 def test_ask_whole_file(base_line: akasha.Doc_QA):
     ak = base_line
 
@@ -226,15 +240,12 @@ def test_self_rag():
     assert len(db2.docs) > 0
 
     ### test get docs ###
-    retrivers_list = akasha.search.get_retrivers(db2, emb_obj, False, 0.0,
-                                                 "auto", {})
+    retrivers_list = akasha.search.get_retrivers(db2, emb_obj, 0.0, "auto", {})
 
     docs, doc_length, doc_tokens = akasha.search.get_docs(
         db2,
-        emb_obj,
         retrivers_list,
         question,
-        False,
         "ch",
         "auto",
         False,

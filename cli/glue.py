@@ -132,10 +132,6 @@ def get_response(
     default="openai:gpt-3.5-turbo",
     help="llm model for generating the response",
 )
-@click.option("--use_rerank",
-              "-ur",
-              default=False,
-              help="use rerank to sort the documents")
 @click.option(
     "--threshold",
     "-t",
@@ -167,7 +163,6 @@ def keep_responsing(
     embeddings: str,
     chunk_size: int,
     model: str,
-    use_rerank: bool,
     threshold: float,
     language: str,
     search_type: str,
@@ -193,13 +188,15 @@ def keep_responsing(
 
     user_input = click.prompt(
         'Please input your question(type "exit()" to quit) ')
-    retrivers_list = search.get_retrivers(db, embeddings, use_rerank,
-                                          threshold, search_type, {})
+    retrivers_list = search.get_retrivers(db, embeddings, threshold,
+                                          search_type, {})
 
     while user_input != "exit()":
-        docs, docs_len, tokens = search.get_docs(
-            db, embeddings, retrivers_list, user_input, use_rerank, language,
-            search_type, False, model_name, max_input_tokens, False)
+        docs, docs_len, tokens = search.get_docs(db, retrivers_list,
+                                                 user_input, language,
+                                                 search_type, False,
+                                                 model_name, max_input_tokens,
+                                                 False)
         if docs is None:
             docs = []
 
