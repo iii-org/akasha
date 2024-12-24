@@ -104,7 +104,6 @@ class Model_Eval(akasha.atman):
         question_type: str = "fact",
         question_style: str = "essay",
         use_chroma: bool = False,
-        use_rerank: bool = False,
         ignore_check: bool = False,
         max_input_tokens: int = 3000,
         env_file: str = "",
@@ -134,7 +133,6 @@ class Model_Eval(akasha.atman):
             **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
             **question_style (str, optional)**: the style of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
             **question_type (str, optional)**: the type of question you want to generate, "fact", "summary", "irrelevant", "compared". Defaults to "fact".\n
-            **use_rerank (bool, optional)**: use rerank model to re-rank the selected documents or not. Defaults to False.
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
             **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
         """
@@ -171,7 +169,6 @@ class Model_Eval(akasha.atman):
         self.ignored_files = []
         self.use_chroma = use_chroma
         self.ignore_check = ignore_check
-        self.use_rerank = use_rerank
 
     def _add_result_log(self, timestamp: str, time: float):
         """add post-process log to self.logs
@@ -400,8 +397,8 @@ class Model_Eval(akasha.atman):
             self.logs[timestamp]["question_style"] = self.question_style
             self.logs[timestamp]["choice_num"] = choice_num
 
-        texts = [doc.page_content for doc in self.db]
-        metadata = [doc.metadata for doc in self.db]
+        texts = [pg_content for pg_content in self.db.docs]
+        metadata = [metadata for metadata in self.db.metadatas]
 
         progress = tqdm(total=self.question_num,
                         desc=f"Create Q({self.question_type})")
@@ -546,10 +543,8 @@ class Model_Eval(akasha.atman):
         ### get docs ###
         self.docs, docs_len, docs_token = akasha.search.get_docs(
             self.db,
-            self.embeddings_obj,
             retrivers_list,
             query,
-            self.use_rerank,
             self.language,
             self.search_type,
             self.verbose,
@@ -749,10 +744,10 @@ class Model_Eval(akasha.atman):
 
         if self.use_chroma:
             self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
-                self.doc_path, "use rerank to get docs")
+                self.doc_path, self.embeddings)
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
-                self.doc_path, self.verbose, "eval_get_doc", self.embeddings,
+                self.doc_path, self.verbose, self.embeddings_obj,
                 self.chunk_size, self.ignore_check)
         if not self._check_db():
             return [], []
@@ -786,8 +781,8 @@ class Model_Eval(akasha.atman):
             self.logs[timestamp]["question_style"] = self.question_style
             self.logs[timestamp]["choice_num"] = choice_num
 
-        texts = [doc.page_content for doc in self.db]
-        metadata = [doc.metadata for doc in self.db]
+        texts = [pg_content for pg_content in self.db.docs]
+        metadata = [metadata for metadata in self.db.metadatas]
 
         ## prevent doc_range - len of texts <= 0 ##
         doc_range = min(doc_range, len(texts) - 1)
@@ -915,8 +910,8 @@ class Model_Eval(akasha.atman):
                 doc_path, self.embeddings)
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
-                doc_path, self.verbose, self.embeddings_obj, self.embeddings,
-                self.chunk_size, self.ignore_check)
+                doc_path, self.verbose, self.embeddings_obj, self.chunk_size,
+                self.ignore_check)
         if not self._check_db():
             return ""
 
@@ -948,9 +943,11 @@ class Model_Eval(akasha.atman):
             self.logs[timestamp]["search_type"] = self.search_type_str
 
         ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
-        retrivers_list = akasha.search.get_retrivers(
-            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
-            self.search_type, search_dict)
+        retrivers_list = akasha.search.get_retrivers(self.db,
+                                                     self.embeddings_obj,
+                                                     self.threshold,
+                                                     self.search_type,
+                                                     search_dict)
 
         for i in range(self.question_num):
             print(" ")
@@ -1214,7 +1211,7 @@ class Model_Eval(akasha.atman):
         else:
             self.db, self.ignored_files = akasha.db.processMultiDB(
                 self.doc_path, self.verbose, self.embeddings_obj,
-                self.embeddings, self.chunk_size, self.ignore_check)
+                self.chunk_size, self.ignore_check)
         if not self._check_db():
             return [], []
 
@@ -1227,9 +1224,11 @@ class Model_Eval(akasha.atman):
         self.question, self.answer, self.docs = [], [], []
         table = {}
         search_dict = {}
-        retrivers_list = akasha.search.get_retrivers(
-            self.db, self.embeddings_obj, self.use_rerank, self.threshold,
-            self.search_type, search_dict)
+        retrivers_list = akasha.search.get_retrivers(self.db,
+                                                     self.embeddings_obj,
+                                                     self.threshold,
+                                                     self.search_type,
+                                                     search_dict)
         ## add logs ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         start_time = time.time()
@@ -1246,10 +1245,8 @@ class Model_Eval(akasha.atman):
         ## search related documents ##
         self.docs, docs_len, docs_token = akasha.search.get_docs(
             self.db,
-            self.embeddings_obj,
             retrivers_list,
             topic,
-            self.use_rerank,
             self.language,
             self.search_type,
             self.verbose,

@@ -130,7 +130,8 @@ def _load_file(file_path: str, extension: str):
                 docs[i].metadata["page"] = i
 
         elif extension == "csv":
-            docs = CSVLoader(file_path).load()
+            encoding = helper.detect_encoding(file_path)
+            docs = CSVLoader(file_path, encoding=encoding).load()
             for i in range(len(docs)):
                 docs[i].metadata["page"] = docs[i].metadata["row"]
                 del docs[i].metadata["row"]
@@ -418,7 +419,6 @@ def processMultiDB(
     doc_path_list: Union[List[str], str],
     verbose: bool,
     embeddings: vars,
-    embeddings_name: str,
     chunk_size: int,
     ignore_check: bool = False,
 ):
@@ -427,8 +427,7 @@ def processMultiDB(
     Args:
         doc_path_list (Union[List[str], str]): list of directory includes documents ["doc_dir1","doc_dir2",...] or a single string of directory "doc_dir1"\n
         verbose (bool): print out logs or not\n
-        embeddings (vars): the embeddings used in transfer documents into vector storage; if is rerank, embeddings should be a str\n
-        embeddings_name (str): the name of embeddings\n
+        embeddings (vars): the embeddings used in transfer documents into vector storage\n
         chunk_size (int): the chunk size of documents\n
 
     Returns:
@@ -442,27 +441,7 @@ def processMultiDB(
         logging.error("\nCannot get file path.\n\n")
         raise Exception("\nCannot get any file path.\n\n")
 
-    ## if using rerank, extend all the documents into one list ##
-    if isinstance(embeddings, str):
-        texts = []
-        for doc_path in doc_path_list:
-            cur_texts, cur_ignores = create_chromadb(doc_path,
-                                                     verbose,
-                                                     embeddings,
-                                                     embeddings_name,
-                                                     chunk_size,
-                                                     ignore_check=ignore_check)
-            # if isinstance(temp, tuple):
-            #     temp = temp[0]
-            ignored_files.extend(cur_ignores)
-            if cur_texts is not None:
-                texts.extend(cur_texts)
-        if len(texts) == 0:
-            logging.error("\nCannot get any document.\n\n")
-            raise Exception("\nCannot get any document.\n\n")
-        return texts, ignored_files
-
-    ## if not using rerank, create chromadb for each doc_path and merge them ##
+    ## create chromadb for each doc_path and merge them ##
 
     dby = dbs()  # list of dbs
     for doc_path in doc_path_list:
@@ -470,7 +449,6 @@ def processMultiDB(
         db2, db_names = create_chromadb(doc_path,
                                         verbose,
                                         embeddings,
-                                        embeddings_name,
                                         chunk_size,
                                         ignore_check=ignore_check)
 
@@ -491,7 +469,6 @@ def processMultiDB(
 def create_chromadb(doc_path: str,
                     verbose: bool,
                     embeddings: vars,
-                    embeddings_name: str,
                     chunk_size: int,
                     sleep_time: int = 60,
                     ignore_check: bool = False) -> vars:
@@ -524,11 +501,13 @@ def create_chromadb(doc_path: str,
     if doc_path[-1] != "/":
         doc_path += "/"
     db_dir = doc_path.split("/")[-2].replace(" ", "").replace(".", "")
-    embed_type, embed_name = helper._separate_name(embeddings_name)
-
-    ## if embeddings is a str, use rerank, so return docuemnts, not vectors ##
     if isinstance(embeddings, str):
-        return get_docs_from_doc(doc_path, chunk_size, ignore_check)
+        embeddings_name = embeddings
+        embeddings = helper.handle_embeddings(embeddings, False)
+    else:
+        embeddings_name = helper._decide_embedding_type(embeddings)
+
+    embed_type, embed_name = helper._separate_name(embeddings_name)
 
     if embed_type == "openai":
         add_pic = True
@@ -593,8 +572,11 @@ def create_chromadb(doc_path: str,
     return dby, db_path_names
 
 
-def get_db_from_chromadb(db_path_list: list, embedding_name: str):
-    """load db from chromadb path names
+def get_db_from_chromadb(
+    db_path_list: list,
+    embedding_name: Union[str, Embeddings] = "openai:text-embedding-ada-002"
+) -> Tuple[dbs, List[str]]:
+    """load db from chromadb path names, please make sure the chromadb path names already exist and correct.
 
     Args:
         db_path_list (list): list of chromadb path names
@@ -607,32 +589,6 @@ def get_db_from_chromadb(db_path_list: list, embedding_name: str):
 
     progress = tqdm(total=len(db_path_list), desc="Vec Storage")
     ignored_files = []
-    if isinstance(embedding_name, Embeddings):
-        embedding_name = helper._decide_embedding_type(embedding_name)
-
-    if "rerank" in embedding_name:
-        texts = []
-        for doc_path in db_path_list:
-            progress.update(1)
-            temp = Chroma(persist_directory=doc_path).get(
-                include=["documents", "metadatas"])
-            db = [
-                Document(page_content=temp["documents"][i],
-                         metadata=temp["metadatas"][i])
-                for i in range(len(temp["documents"]))
-            ]
-            if temp is None or ''.join([d.page_content for d in db]) == "":
-                ignored_files.append(doc_path)
-            else:
-                texts.extend(db)
-
-        if len(texts) == 0:
-            progress.close()
-            logging.error("\nCannot get any document.\n\n")
-            raise Exception("\nCannot get any document.\n\n")
-            #return None, []
-        progress.close()
-        return texts, ignored_files
 
     dby = dbs()
     for db_path in db_path_list:
@@ -859,8 +815,7 @@ def createDB_directory(doc_path: Union[List[str], str],
         embeddings_name = helper._decide_embedding_type(embeddings)
 
     ret_db, ret_ignored_files = processMultiDB(doc_path, False, embeddings,
-                                               embeddings_name, chunk_size,
-                                               ignore_check)
+                                               chunk_size, ignore_check)
 
     return ret_db
 
@@ -1040,6 +995,34 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
         logging.warning("No document found.\n\n")
 
     return ret_db
+
+
+def pop_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]):
+    """pop undesired data from  dbs based on ids
+
+    Args:
+        db (dbs): dbs object
+        id_list (Union[List[str], Set[str]]): list of ids
+
+    Returns:
+    """
+    if isinstance(id_list, list):
+        id_list = set(id_list)
+
+    # Filter the lists in place
+    db.ids = [id for id in db.ids if id not in id_list]
+    db.embeds = [
+        embed for id, embed in zip(db.ids, db.embeds) if id not in id_list
+    ]
+    db.metadatas = [
+        metadata for id, metadata in zip(db.ids, db.metadatas)
+        if id not in id_list
+    ]
+    db.docs = [doc for id, doc in zip(db.ids, db.docs) if id not in id_list]
+    db.vis = {id for id in db.vis if id not in id_list}
+
+    if len(db.ids) == 0:
+        logging.warning("No document found.\n\n")
 
 
 def create_keyword_chromadb(

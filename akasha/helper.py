@@ -35,6 +35,7 @@ import os
 from vertexai.preview import tokenization
 from dotenv import dotenv_values
 import uuid
+from charset_normalizer import detect
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -208,12 +209,6 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
             )
         info = "selected openai embeddings.\n"
 
-    elif embedding_type in ["rerank", "re"]:
-        if embedding_name == "":
-            embedding_name = "BAAI/bge-reranker-base"
-
-        embeddings = "rerank:" + embedding_name
-        info = "selected rerank embeddings.\n"
     elif embedding_type in [
             "huggingface",
             "huggingfaceembeddings",
@@ -1252,7 +1247,7 @@ def merge_history_and_prompt(history_messages: list,
     if history_messages == [] or history_messages == None or history_messages == "":
         return akasha.prompts.format_sys_prompt(system_prompt, prompt,
                                                 prompt_format_type)
-    print(prompt_format_type)
+
     if "chat_" in prompt_format_type and prompt_format_type != "chat_gemma":
 
         if prompt_format_type == "chat_gemini":
@@ -1271,7 +1266,6 @@ def merge_history_and_prompt(history_messages: list,
 
         text_input.extend(prod_prompt)
 
-        print(text_input)
         return text_input
 
     else:
@@ -1513,3 +1507,10 @@ def generate_keyword(
     keyword_list = [kwww[0] for kwww in kw_list]
 
     return keyword_list
+
+
+def detect_encoding(file_path: Union[str, Path]) -> str:
+    with open(file_path, 'rb') as file:
+        raw_data = file.read(1000)  # Read a portion of the file
+        result = detect(raw_data)
+        return result['encoding']

@@ -245,7 +245,6 @@ def _merge_docs(docs_list: list,
 def get_retrivers(
     db: Union[dbs, list],
     embeddings: Union[Embeddings, str],
-    use_rerank: bool = False,
     threshold: float = 0.0,
     search_type: Union[str, Callable] = "auto",
     log: dict = {},
@@ -266,15 +265,9 @@ def get_retrivers(
         List[BaseRetriever]: selected list of retrievers that the search_type needed .
     """
 
-    ### if use rerank to get more accurate similar documents, set topK to 1000 ###
-    if use_rerank:
-        topK = 1000
-    else:
-        topK = 999
+    topK = 1000
 
     retriver_list = []
-    if isinstance(embeddings, str) and "rerank" in embeddings:
-        return retriver_list
 
     embeddings, embed_name = helper.handle_embeddings_and_name(
         embeddings, False)
@@ -294,7 +287,9 @@ def get_retrivers(
     else:
         search_type = search_type.lower()
 
-        if search_type in ["merge", "tfidf", "auto", "auto_rerank", "bm25"]:
+        if search_type in [
+                "merge", "tfidf", "auto", "auto_rerank", "bm25", "rerank"
+        ]:
             docs_list = db.get_Documents()
 
         if search_type in ["mmr", "merge"]:
@@ -321,6 +316,19 @@ def get_retrivers(
                                                   threshold)
             retriver_list.append(knn_retriver)
 
+        if "rerank" in search_type:
+            if ":" in search_type:
+                search_type, rerank_type = search_type.split(":")
+            else:
+                rerank_type = "BAAI/bge-reranker-base"
+
+            rerank_retriver = myRerankRetriever.from_documents(
+                docs_list,
+                k=topK,
+                relevancy_threshold=threshold,
+                model_name=rerank_type)
+            retriver_list.append(rerank_retriver)
+
     if len(retriver_list) == 0:
         raise ValueError(
             f"cannot find search type {search_type}, end process\n")
@@ -330,10 +338,8 @@ def get_retrivers(
 
 def get_docs(
     db: Union[dbs, list],
-    embeddings: Union[Embeddings, str],
     retriver_list: list,
     query: str,
-    use_rerank: bool = False,
     language: str = "ch",
     search_type: Union[str, Callable] = "auto",
     verbose: bool = False,
@@ -346,7 +352,6 @@ def get_docs(
 
     Args:
         **db (Chromadb)**: chroma db\n
-        **embeddings (Embeddings, str)**: embeddings used to store vector and search documents\n
         **retriver_list (list)**: list of retrievers that the search_type needed\n
         **query (str)**: the query str used to search similar documents\n
         **language (str)**: default to chinese 'ch', otherwise english, the language of documents and prompt,
@@ -361,28 +366,14 @@ def get_docs(
         list: selected list of similar documents.
     """
 
-    ### if use rerank to get more accurate similar documents, set topK to 1000 ###
-    if use_rerank:
-        topK = 1000
-    else:
-        topK = 999
+    topK = 1000
 
     final_docs = []
-
-    embeddings, embed_name = helper.handle_embeddings_and_name(
-        embeddings, verbose)
-
     if isinstance(model, BaseLanguageModel):
         try:
             model = model._llm_type
         except:
             model = "openai:gpt-3.5-turbo"
-
-    if len(retriver_list) == 0:
-        docs = rerank(query, db, 0.0, embeddings)
-        docs, docs_len, tokens = _merge_docs([docs], topK, language, verbose,
-                                             max_input_tokens, model)
-        return docs, docs_len, tokens
 
     if not callable(search_type):
 
@@ -425,7 +416,6 @@ def get_docs(
 
 def retri_docs(
     db: Union[dbs, list],
-    embeddings: Union[Embeddings, str],
     retriver_list: List[BaseRetriever],
     query: str,
     search_type: Union[str, Callable],
@@ -437,7 +427,6 @@ def retri_docs(
 
     Args:
         **db (Chromadb)**: chroma db\n
-        **embeddings (Embeddings)**: embeddings used to store vector and search documents\n
         **retriver_list (list)**: list of retrievers that the search_type needed\n
         **query (str)**: the query str used to search similar documents\n
         **topK (int)**: for each search type, return first topK documents\n
@@ -467,11 +456,6 @@ def retri_docs(
                 res.append(adocs)
                 page_contents.add(adocs.page_content)
         return res
-
-    if len(retriver_list) == 0:
-        docs = rerank(query, db, 0.0, embeddings)
-
-        return docs
 
     if not callable(search_type):
 
@@ -1049,11 +1033,72 @@ class myBM25Retriever(BaseRetriever):
         return self._gs(query)[0]
 
 
-def rerank(query: str, docs: list, threshold: float, embed_name: str):
+class myRerankRetriever(BaseRetriever):
+    model_name: str = "BAAI/bge-reranker-base"
+    """rerank model to use."""
+    texts: List[str] = Field(default=None)
+    """List of texts to index."""
+    metadata: List[dict] = Field(default=None)
+    docs: List[Document] = Field(default=None)
+    k: int = 20
+    """Number of results to return."""
+    relevancy_threshold: Optional[float] = None
+
+    @classmethod
+    def from_documents(
+        cls,
+        docs: List[Document],
+        k: int = 20,
+        relevancy_threshold: float = 0.0,
+        model_name: str = "BAAI/bge-reranker-base",
+        **kwargs: Any,
+    ) -> BaseRetriever:
+
+        return cls(
+            model_name=model_name,
+            texts=[doc.page_content for doc in docs],
+            metadata=[doc.metadata for doc in docs],
+            k=k,
+            docs=docs,
+            relevancy_threshold=relevancy_threshold,
+            **kwargs,
+        )
+
+    def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
+        """implement rerank to find relevant documents
+
+        Args:
+            **query (str)**: query string that used to find relevant documents\n
+
+        Returns:
+            List[Document]: relevant documents
+        """
+
+        top_k_results, top_k_scores = rerank(query, self.docs,
+                                             self.relevancy_threshold,
+                                             self.model_name)
+
+        return top_k_results, top_k_scores
+
+    def get_relevant_documents_and_scores(
+        self,
+        query: str,
+    ) -> Tuple[List[Document], List[float]]:
+
+        return self._gs(query)
+
+    async def _aget_relevant_documents(self, query: str) -> List[Document]:
+        return self._gs(query)[0]
+
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+
+        return self._gs(query)[0]
+
+
+def rerank(query: str, docs: list, threshold: float, model_name: str):
     import torch, gc
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-    model_name = embed_name.split(":")[1]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name).to(
@@ -1096,7 +1141,7 @@ def rerank(query: str, docs: list, threshold: float, embed_name: str):
     gc.collect()
     torch.cuda.empty_cache()
 
-    return documents
+    return documents, score_list[:len(documents)]
 
 
 def rerank_reduce(query, docs, topK):
