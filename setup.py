@@ -11,6 +11,7 @@ install_requires = [
     "langchain>=0.3,<0.4",
     "langchain-community>=0.3,<0.4",
     "langchain_openai>=0.1.0",
+    "langchain-huggingface>=0.1.2",
     "langchain-chroma",
     "lark",
     "chromadb==0.4.14",
