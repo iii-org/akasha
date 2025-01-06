@@ -45,6 +45,11 @@ For more information and to get started, please visit our Chinese manual [here](
 
 # Updates
 
+- 0.8.85
+    1. fix error when calling openai embedding models other than ada-002
+    2. update huggingface embedding for support more sentense transformers models
+    3. change search type "auto", "auto" to use knn search
+
 - 0.8.83
     1. update sklearn, tqdm requirement version
     2. only load embedding model in Doc_QA when needed
@@ -283,16 +288,14 @@ Each embedding model has a different maximum sequence length. If the text exceed
 Here are the details of the different embedding and reranking models:
 
 ```python
-openai_emd = "openai:text-embedding-ada-002"  # Needs "OPENAI_API_KEY"; 8192 max sequence length
-huggingface_emd = "hf:all-MiniLM-L6-v2"
-text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"  # 128 max sequence length
-text2vec_mul_emd = "hf:shibing624/text2vec-base-multilingual"  # 256 max sequence length
-text2vec_ch_para_emd = "hf:shibing624/text2vec-base-chinese-paraphrase"  # Better for long text; 256 max sequence length
-bge_en_emd = "hf:BAAI/bge-base-en-v1.5"  # 512 max sequence length
-bge_ch_emd = "hf:BAAI/bge-base-zh-v1.5"  # 512 max sequence length
-
-rerank_base = "rerank:BAAI/bge-reranker-base"  # 512 max sequence length
-rerank_large = "rerank:BAAI/bge-reranker-large"  # 512 max sequence length
+openai_emb = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"  # 8192 max seq length
+openai_3l_emb = "openai:text-embedding-3-large"
+openai_3s_emb = "openai:text-embedding-3-small"
+gemini_emb = "gemini:models/text-embedding-004"
+huggingface_emb = "hf:all-MiniLM-L6-v2" 
+alibaba_bge_emb = "hf:Alibaba-NLP/gte-multilingual-base" #8192 max seq length
+bge_en_emb = "hf:BAAI/bge-base-en-v1.5"  # 512 max seq length
+bge_ch_emb = "hf:BAAI/bge-base-zh-v1.5"  # 512 max seq length
 ```
 
 
