@@ -12,11 +12,9 @@ from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHan
 from langchain_core.messages.ai import AIMessage
 # from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain_community.embeddings import (
-    HuggingFaceEmbeddings,
-    #SentenceTransformerEmbeddings,
-    TensorflowHubEmbeddings,
-)
+from langchain_community.embeddings import TensorflowHubEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
 from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
@@ -188,7 +186,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
                                 and env_dict["OPENAI_API_TYPE"] == "azure"):
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
-            embeddings = AzureOpenAIEmbeddings(azure_deployment=embedding_name,
+            embeddings = AzureOpenAIEmbeddings(model=embedding_name,
                                                azure_endpoint=api_base,
                                                api_key=api_key,
                                                api_version=api_version,
@@ -217,7 +215,9 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
             "hf",
     ]:
 
-        embeddings = HuggingFaceEmbeddings(model_name=embedding_name)
+        embeddings = HuggingFaceEmbeddings(
+            model_name=embedding_name,
+            model_kwargs={"trust_remote_code": True})
         info = "selected hugging face embeddings.\n"
 
     elif embedding_type in [
@@ -245,7 +245,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
                                 and env_dict["OPENAI_API_TYPE"] == "azure"):
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
-            embeddings = AzureOpenAIEmbeddings(azure_deployment=embedding_name,
+            embeddings = AzureOpenAIEmbeddings(model=embedding_name,
                                                azure_endpoint=api_base,
                                                api_key=api_key,
                                                api_version=api_version,

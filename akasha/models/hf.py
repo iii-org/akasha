@@ -196,6 +196,7 @@ class custom_embed(BaseModel, Embeddings):
 
         self.client = func
         self.encode_kwargs = encode_kwargs
+        self.model_name = f"custom:{func.__name__}"
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         """Compute doc embeddings using a HuggingFace transformer model.

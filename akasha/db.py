@@ -293,7 +293,6 @@ def get_chromadb_from_file(documents: list,
             formatted_date = datetime.datetime.now().strftime(
                 "%Y-%m-%d-%H_%M_%S_%f")
 
-            ### if page_content is too long, use llm to summarize ###
             page_contents = [text.page_content for text in texts]
 
             try:

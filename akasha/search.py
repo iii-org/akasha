@@ -51,9 +51,6 @@ def _get_relevant_doc_auto(
     Returns:
         list: list of selected relevant Documents
     """
-    rate = 1.0
-    if times != 1:
-        rate = 0.3
 
     # mmrR = retriver_list[0]
     # docs_mmr, mmr_scores = mmrR._gs(query)
@@ -61,8 +58,8 @@ def _get_relevant_doc_auto(
     #print(docs_mmr[:4])
 
     ### svm ###
-    svmR = retriver_list[0]
-    docs_svm, svm_scores = svmR._gs(query)
+    # svmR = retriver_list[0]
+    # docs_svm, svm_scores = svmR._gs(query)
     #print("SVM: ", svm_scores, docs_svm[0], "\n\n")
 
     # ### tfidf ###
@@ -72,8 +69,8 @@ def _get_relevant_doc_auto(
     #print("TFIDF", tf_scores, docs_tf[0], "\n\n")
 
     # ### knn ###
-    # knnR = myKNNRetriever.from_db(db, embeddings, k, 0.0)
-    # docs_knn, knn_scores = knnR._gs(query)
+    knnR = retriver_list[0]
+    docs_knn, knn_scores = knnR._gs(query)
     # print("KNN: ", knn_scores, len(knn_scores), "\n\n")
 
     ### bm25 ###
@@ -87,9 +84,9 @@ def _get_relevant_doc_auto(
     del bm25R
     ## backup_docs is all documents from docs_svm that svm_scores>0.2 ##
     low = 0
-    for i in range(len(svm_scores)):
-        if svm_scores[i] >= 0.2 * rate:
-            backup_docs.append(docs_svm[i])
+    for i in range(len(knn_scores)):
+        if knn_scores[i] >= 0.95:
+            backup_docs.append(docs_knn[i])
         else:
             low = i
             break
@@ -105,7 +102,7 @@ def _get_relevant_doc_auto(
         final_docs.extend(docs_bm25[:idx])
 
     final_docs.extend(backup_docs)
-    final_docs.extend(docs_svm[low:])
+    final_docs.extend(docs_knn[low:])
     return final_docs
 
 
@@ -128,20 +125,12 @@ def _get_relevant_doc_auto_rerank(
     Returns:
         list: list of selected relevant Documents
     """
-    rate = 1.0
-    if times != 1:
-        rate = 0.3
 
-    ### svm ###
-    svmR = retriver_list[0]
-    docs_svm, svm_scores = svmR._gs(query)
-    #print("SVM: ", svm_scores, docs_svm[0], "\n\n")
-
-    # ### tfidf ###
-
-    # tfretriever = retriver_list[1]
-    # docs_tf, tf_scores = tfretriever._gs(query)
-    #print("TFIDF", tf_scores, docs_tf[0], "\n\n")
+    ### knn ###
+    knnR = retriver_list[0]
+    docs_knn, knn_scores = knnR._gs(query)
+    pr = max(int(0.1 * len(docs_knn)), 10)
+    #print("KNN: ", knn_scores, docs_knn[0], "\n\n")
 
     ### bm25 ###
     bm25R = retriver_list[1]
@@ -151,12 +140,12 @@ def _get_relevant_doc_auto_rerank(
     ### decide which to use ###
     backup_docs = []
     final_docs = []  #docs_mmr[0]
-    del svmR, bm25R
+    del knnR, bm25R
     ## backup_docs is all documents from docs_svm that svm_scores>0.2 ##
 
-    for i in range(len(svm_scores)):
-        if svm_scores[i] >= 0.2 * rate:
-            backup_docs.append(docs_svm[i])
+    for i in range(len(knn_scores)):
+        if knn_scores[i] >= 0.9:
+            backup_docs.append(docs_knn[i])
         else:
             break
 
@@ -172,21 +161,16 @@ def _get_relevant_doc_auto_rerank(
                 break
         final_docs.extend(docs_bm25[:idx])
 
-    if svm_scores[0] >= 0.35 * rate:
+    if len(backup_docs) < pr:
         if verbose:
-            print("<<search>>go to svm\n\n")
+            print("<<search>>go to knn\n\n")
 
         final_docs.extend(backup_docs)
 
-    elif svm_scores[0] >= 0.2 * rate:
-        if verbose:
-            print("<<search>>go to svm+rerank\n\n")
-        final_docs.extend(rerank_reduce(query, backup_docs, k))
-
     else:
         if verbose:
-            print("<<search>>go to rerank\n\n")
-        final_docs.extend(rerank_reduce(query, docs_list, k))
+            print("<<search>>go to knn+rerank\n\n")
+        final_docs.extend(rerank_reduce(query, backup_docs, k))
 
     return final_docs
 
@@ -265,7 +249,7 @@ def get_retrivers(
         List[BaseRetriever]: selected list of retrievers that the search_type needed .
     """
 
-    topK = 1000
+    topK = 10000
 
     retriver_list = []
 
@@ -297,7 +281,7 @@ def get_retrivers(
                                                   threshold)
             retriver_list.append(mmr_retriver)
 
-        if search_type in ["svm", "merge", "auto", "auto_rerank"]:
+        if search_type in ["svm", "merge"]:
             svm_retriver = mySVMRetriever.from_db(db, embeddings, topK,
                                                   threshold)
             retriver_list.append(svm_retriver)
@@ -306,15 +290,15 @@ def get_retrivers(
             tfidf_retriver = myTFIDFRetriever.from_documents(docs_list, k=topK)
             retriver_list.append(tfidf_retriver)
 
+        if search_type in ["knn", "auto", "auto_rerank"]:
+            knn_retriver = myKNNRetriever.from_db(db, embeddings, topK,
+                                                  threshold)
+            retriver_list.append(knn_retriver)
+
         if search_type in ["bm25", "auto", "auto_rerank"]:
             bm25_retriver = myBM25Retriever.from_documents(
                 docs_list, topK, threshold)
             retriver_list.append(bm25_retriver)
-
-        if search_type == "knn":
-            knn_retriver = myKNNRetriever.from_db(db, embeddings, topK,
-                                                  threshold)
-            retriver_list.append(knn_retriver)
 
         if "rerank" in search_type:
             if ":" in search_type:
@@ -366,7 +350,7 @@ def get_docs(
         list: selected list of similar documents.
     """
 
-    topK = 1000
+    topK = 10000
 
     final_docs = []
     if isinstance(model, BaseLanguageModel):
@@ -446,15 +430,15 @@ def retri_docs(
     ):
         res = []
         page_contents = set()
-        for i in range(topK):
-            for adocs in docs_list:
-                if i >= len(docs_list):
-                    continue
 
-                if adocs.page_content in page_contents:
-                    continue
-                res.append(adocs)
-                page_contents.add(adocs.page_content)
+        for i, adocs in enumerate(docs_list):
+            if len(page_contents) >= topK:
+                break
+
+            if adocs.page_content in page_contents:
+                continue
+            res.append(adocs)
+            page_contents.add(adocs.page_content)
         return res
 
     if not callable(search_type):
