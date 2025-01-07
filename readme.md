@@ -49,6 +49,7 @@ For more information and to get started, please visit our Chinese manual [here](
     1. fix error when calling openai embedding models other than ada-002
     2. update huggingface embedding for support more sentense transformers models
     3. change search type "auto", "auto" to use knn search
+    4. .env file can use REMOTE_MODEL_NAME and REMOTE_API_KEY to set remote model name and api key
 
 - 0.8.83
     1. update sklearn, tqdm requirement version
