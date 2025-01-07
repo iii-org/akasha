@@ -93,7 +93,7 @@ class Model_Eval(akasha.atman):
         topK: int = -1,
         threshold: float = 0.0,
         language: str = "ch",
-        search_type: Union[str, Callable] = "svm",
+        search_type: Union[str, Callable] = "auto",
         record_exp: str = "",
         system_prompt: str = "",
         prompt_format_type: str = "auto",
