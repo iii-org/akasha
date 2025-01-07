@@ -186,7 +186,7 @@ class atman:
         topK: int = -1,
         threshold: float = 0.0,
         language: str = "ch",
-        search_type: Union[str, Callable] = "svm",
+        search_type: Union[str, Callable] = "auto",
         record_exp: str = "",
         system_prompt: str = "",
         max_doc_len: int = _DEFAULT_MAX_DOC_LEN,
@@ -466,7 +466,7 @@ class Doc_QA(atman):
         topK: int = -1,
         threshold: float = 0.0,
         language: str = "ch",
-        search_type: Union[str, Callable] = "svm",
+        search_type: Union[str, Callable] = "auto",
         record_exp: str = "",
         system_prompt: str = "",
         prompt_format_type: str = "auto",
@@ -491,7 +491,7 @@ class Doc_QA(atman):
             topK (int, optional): the number of documents to be selected. Defaults to 2.
             threshold (float, optional): (deprecated) threshold of similarity for searching relavant documents. Defaults to 0.2.
             language (str, optional): "ch" chinese or "en" english. Defaults to "ch".
-            search_type (Union[str, Callable], optional): _description_. Defaults to "svm".
+            search_type (Union[str, Callable], optional): _description_. Defaults to "auto".
             record_exp (str, optional): experiment name of aiido. Defaults to "".
             system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
             prompt_format_type (str, optional): the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
