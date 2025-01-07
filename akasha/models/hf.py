@@ -280,24 +280,34 @@ class remote_model(LLM):
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
+    model_name: str = "remote_model"
+    api_key: str = "123"
     tokenizer: Any = Field(default=None)
-    model: Any = Field(default=None)
+    model: OpenAI = Field(default=None)
     url: Any = Field(default=None)
 
-    def __init__(self, base_url: str, temperature: float = 0.001, **kwargs):
+    def __init__(self,
+                 base_url: str,
+                 temperature: float = 0.001,
+                 api_key: str = "123",
+                 model_name: str = "remote_model",
+                 **kwargs):
         """define custom model, input func and temperature
 
         Args:
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__()
-        self.url = base_url
+        self.url = handle_url(base_url)
         self.temperature = temperature
+        self.api_key = api_key
+        self.model_name = model_name
         if 'max_output_tokens' in kwargs:
             self.max_output_tokens = kwargs['max_output_tokens']
 
         if self.temperature == 0.0:
             self.temperature = 0.01
+        self.model = OpenAI(base_url=self.url, api_key=self.api_key)
 
     @property
     def _llm_type(self) -> str:
@@ -344,65 +354,6 @@ class remote_model(LLM):
 
         return self.invoke(prompt, stop, verbose)
 
-    def JSON_call(self,
-                  prompt: str,
-                  schema: dict = None,
-                  stop: Optional[List[str]] = None) -> str:
-
-        stop_list = get_stop_list(stop)
-        try:
-            client = InferenceClient(self.url)
-            response = client.text_generation(
-                prompt,
-                temperature=self.temperature,
-                max_new_tokens=self.max_output_tokens,
-                do_sample=True,
-                top_k=10,
-                top_p=0.95,
-                grammar={
-                    "type": "json",
-                    "value": schema
-                },
-                repetition_penalty=1.2,
-                stop_sequences=stop_list,
-            )
-
-        except Exception as e:
-            logging.error("call remote model in JSON_call mode failed\n\n",
-                          e.__str__())
-            raise e
-        return response  # response["generated_text"]
-
-    def REGEX_call(self,
-                   prompt: str,
-                   regex: str = r"(yes|no)",
-                   max_tokens: int = 1024,
-                   stop: Optional[List[str]] = None) -> str:
-
-        stop_list = get_stop_list(stop)
-        try:
-            client = InferenceClient(self.url)
-            response = client.text_generation(
-                prompt,
-                temperature=self.temperature,
-                max_new_tokens=max_tokens,
-                do_sample=True,
-                top_k=10,
-                top_p=0.95,
-                grammar={
-                    "type": "regex",
-                    "value": regex
-                },
-                repetition_penalty=1.2,
-                stop_sequences=stop_list,
-            )
-
-        except Exception as e:
-            logging.error("call remote model in JSON_call mode failed\n\n",
-                          e.__str__())
-            raise e
-        return response  # response["generated_text"]
-
     def _invoke_helper(self, args):
         messages, stop, verbose = args
         return self._call(messages, stop, verbose)
@@ -445,19 +396,12 @@ class remote_model(LLM):
             str: llm response
         """
         stop_list = get_stop_list(stop)
-        url = self.url
-        if url[-1] != "/":
-            url += "/"
-
-        if url[-3:] != "v1/":
-            url = url + "v1/"
-        client = OpenAI(base_url=url, api_key="123")
 
         response = ""
         try:
-            chat_completion = client.chat.completions.create(
+            chat_completion = self.model.chat.completions.create(
                 messages=messages,
-                model="remote_model",
+                model=self.model_name,
                 stream=True,
                 max_tokens=self.max_output_tokens,
                 temperature=self.temperature,
@@ -466,9 +410,11 @@ class remote_model(LLM):
                 frequency_penalty=1.2)
 
             for message in chat_completion:
-                if verbose:
-                    print(message.choices[0].delta.content, end="")
-                response += message.choices[0].delta.content
+                content = message.choices[0].delta.content
+                if type(content) == str:
+                    if verbose:
+                        print(message.choices[0].delta.content, end="")
+                    response += message.choices[0].delta.content
 
         except Exception as e:
             logging.error("call remote model failed\n\n", e.__str__())
@@ -494,12 +440,11 @@ class remote_model(LLM):
 
         if url[-3:] != "v1/":
             url = url + "v1/"
-        client = OpenAI(base_url=url, api_key="123")
 
         try:
-            chat_completion = client.chat.completions.create(
+            chat_completion = self.model.chat.completions.create(
                 messages=messages,
-                model="remote_model",
+                model=self.model_name,
                 stream=True,
                 max_tokens=self.max_output_tokens,
                 temperature=self.temperature,
@@ -508,7 +453,9 @@ class remote_model(LLM):
                 frequency_penalty=1.2)
 
             for message in chat_completion:
-                yield message.choices[0].delta.content
+                content = message.choices[0].delta.content
+                if type(content) == str:
+                    yield message.choices[0].delta.content
 
         except Exception as e:
             info = "call remote model failed\n\n"
@@ -747,3 +694,12 @@ def _url_requests(args):
     except Exception as e:
         logging.error("Call to remote model failed: ", e)
         return None
+
+
+def handle_url(url: str):
+    if url[-1] != "/":
+        url += "/"
+
+    if url[-3:] != "v1/":
+        url = url + "v1/"
+    return url
