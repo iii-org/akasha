@@ -3,7 +3,7 @@ pytest:
   stage: jobs
   before_script:
     - python -V # Print out python version for debugging
-    - pip install .
+    - pip install -r requirements.txt
     - pip install pytest
     - pip install pytest-cov
   script:
