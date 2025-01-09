@@ -103,7 +103,7 @@ def get_env_var(env_file: str = "") -> dict:
 
     require_env = ["OPENAI_API_KEY", "OPENAI_API_BASE", "OPENAI_API_VERSION","OPEANI_API_TYPE", \
         "AZURE_API_KEY", "AZURE_API_BASE", "AZURE_API_VERSION", "AZURE_API_TYPE", "SERPER_API_KEY",\
-            "GEMINI_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN","ANTHROPIC_API_KEY", "REMOTE_API_KEY", "REMOTE_MODEL_NAME"]
+            "GEMINI_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN","ANTHROPIC_API_KEY", "REMOTE_API_KEY"]
     if env_file == "" or not Path(env_file).exists():
         env_dict = {}
         os_env_dict = os.environ.copy()
@@ -329,12 +329,12 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
 
         remote_api_key = "123"
         remote_model_name = "remote_model"
+        base_url = model_name
         if "REMOTE_API_KEY" in env_dict:
             remote_api_key = env_dict["REMOTE_API_KEY"]
-        if "REMOTE_MODEL_NAME" in env_dict:
-            remote_model_name = env_dict["REMOTE_MODEL_NAME"]
+        if "@" in model_name:
+            base_url, remote_model_name = model_name.split("@")
 
-        base_url = model_name
         info = f"selected remote model. \n"
         model = remote_model(base_url,
                              temperature,
