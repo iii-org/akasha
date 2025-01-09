@@ -1,0 +1,12 @@
+pytest:
+  image: python:3.9
+  stage: jobs
+  before_script:
+    - python -V # Print out python version for debugging
+    - pip install -r requirements.txt
+    - pip install pytest
+    - pip install pytest-cov
+  script:
+    - pytest
+  only:
+    - ceres

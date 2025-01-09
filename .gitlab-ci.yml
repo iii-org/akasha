@@ -1,0 +1,81 @@
+include:
+  - project: iiidevops-templates/ci-template
+    ref: v2.5.5
+    file: ci/template.gitlab-ci.yml
+  - local: iiidevops/jobs/*.yml
+stages:
+  - initial
+  - scan
+  - build
+  - deploy
+  - test
+  - jobs
+Test--SonarQube source code scan:
+  variables:
+    iiidevops: sonarqube
+    CHART_TYPE: normal
+  only:
+    - ceres
+Test--Anchore SBOM source code scan:
+  variables:
+    iiidevops: anchore-code
+  only:
+    - skip
+Test--Checkmarx source code scan:
+  variables:
+    iiidevops: checkmarx
+  only:
+    - master
+Build image:
+  variables:
+    iiidevops: deployed-environments
+    DOCKERFILE_PATH: Dockerfile
+  only:
+    - skip
+Build--Scan docker image:
+  variables:
+    iiidevops: deployed-environments
+  only:
+    - skip
+Deploy--Set environment and wait deployment:
+  variables:
+    iiidevops: deployed-environments
+  only:
+    - skip
+Deploy--Web:
+  variables:
+    iiidevops: deployed-environments
+    CHART_WEB_PORT: 80
+    CHART_PROXY_BODY_SIZE: 1m
+    CHART_VOLUME_ENABLED: "false"
+    CHART_VOLUME_PATH: /usr/src
+  only:
+    - skip
+Test--Anchore SBOM:
+  variables:
+    iiidevops: anchore
+  only:
+    - skip
+Test--ZAP:
+  variables:
+    iiidevops: zap
+    CHART_WEB_PORT: 80
+  only:
+    - skip
+Test--WebInspect:
+  variables:
+    iiidevops: webinspect
+  only:
+    - skip
+Test--Postman:
+  variables:
+    iiidevops: postman
+    CHART_WEB_PORT: 80
+  only:
+    - skip
+Test--Sideex:
+  variables:
+    iiidevops: sideex
+    CHART_WEB_PORT: 80
+  only:
+    - skip
