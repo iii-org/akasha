@@ -1,3 +1,3 @@
-from .base import RAG
+from .ask import RAG
 
 __all__ = ['RAG']

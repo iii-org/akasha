@@ -87,6 +87,7 @@ def test_get_response(base_line: akasha.RAG):
         ak.system_prompt ==
         "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: "
     )
-    assert (ak.ask("./docs/mic", "123 hello world") == str)
+    response = ak.ask("./docs/mic", "123 hello world")
+    assert (response == str)
 
     return

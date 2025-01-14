@@ -1,4 +1,6 @@
 from langchain.docstore.document import Document
+from typing import Union, Tuple
+from pathlib import Path
 
 
 class dbs:
@@ -80,3 +82,36 @@ class dbs:
 
     def get_embeds(self):
         return self.embeds
+
+
+NO_PARENT_DIR_NAME = 'NoPaReNtDiR'
+FILE_LAST_CHANGE_FILE_NAME = 'file_last_changed.json'
+TEXT_EXTENSIONS = ["pdf", "md", "docx", "txt", "csv", "pptx"]
+ALREADY_BUILT = "already_built"
+NOT_BUILT = "not_built"
+OLD_BUILT = "old_built"
+HNSW_THRESHOLD = 400000
+
+
+def get_storage_directory(
+    dir_path: Union[Path, str],
+    chunk_size: int,
+    embed_type: str,
+    embed_name: str,
+) -> str:
+
+    if isinstance(dir_path, str):
+        dir_path = Path(dir_path)
+
+    if dir_path != Path('.'):
+        db_dir = '-'.join([
+            part.replace(' ', '').replace('_', '') for part in dir_path.parts
+            if part
+        ])
+    else:
+        db_dir = NO_PARENT_DIR_NAME
+
+    storage_directory = ("chromadb/" + db_dir + "_" + embed_type + "_" +
+                         embed_name.replace("/", "-") + "_" + str(chunk_size))
+
+    return storage_directory

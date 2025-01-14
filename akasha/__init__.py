@@ -6,5 +6,6 @@ warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 load_dotenv(pathlib.Path().cwd() / ".env")
 
 from .RAG import RAG
+from .utils import *
 
 __all__ = ['RAG']
