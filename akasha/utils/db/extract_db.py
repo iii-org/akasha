@@ -34,7 +34,7 @@ def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
 
     if len(ret_db.ids) == 0:
         logging.warning("No document found.\n\n")
-
+        print("No document found.\n\n")
     return ret_db
 
 
@@ -65,7 +65,7 @@ def extract_db_by_keyword(db: dbs, keyword_list: List[str]) -> dbs:
 
     if len(ret_db.ids) == 0:
         logging.warning("No document found.\n\n")
-
+        print("No document found.\n\n")
     return ret_db
 
 
@@ -94,7 +94,7 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
 
     if len(ret_db.ids) == 0:
         logging.warning("No document found.\n\n")
-
+        print("No document found.\n\n")
     return ret_db
 
 
@@ -124,3 +124,4 @@ def pop_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]):
 
     if len(db.ids) == 0:
         logging.warning("No document found.\n\n")
+        print("No document found.\n\n")

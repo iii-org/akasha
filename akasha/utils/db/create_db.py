@@ -15,7 +15,7 @@ from akasha.utils.db.delete_db import delete_documents_from_chroma_by_file_name
 
 
 def create_directory_db(directory_path: Union[str, Path],
-                        embeddings: Union[str, Embeddings],
+                        embeddings: Union[str, Embeddings, Callable],
                         chunk_size: int,
                         sleep_time: int = 60,
                         env_file: str = "",
@@ -25,7 +25,7 @@ def create_directory_db(directory_path: Union[str, Path],
 
     Args:
         directory_path (Union[str, Path]): _description_
-        embeddings (Union[str, Embeddings]): _description_
+        embeddings (Union[str, Embeddings, Callable]): _description_
         chunk_size (int): _description_
         sleep_time (int, optional): _description_. Defaults to 60.
         env_file (str, optional): _description_. Defaults to "".
@@ -39,6 +39,7 @@ def create_directory_db(directory_path: Union[str, Path],
 
     if not directory_path.exists():
         logging.warning(f"{directory_path} does not exist.\n\n")
+        print(f"{directory_path} does not exist.\n\n")
         return False, []
 
     ### get the chromadb directory name###
@@ -54,7 +55,7 @@ def create_directory_db(directory_path: Union[str, Path],
     for extension in TEXT_EXTENSIONS:
         files.extend(get_load_file_list(directory_path, extension))
 
-    progress = tqdm(total=len(files), desc="Vec Storage")
+    progress = tqdm(total=len(files), desc=f"db {directory_path.name}")
     docsearch = Chroma(
         persist_directory=storage_directory,
         embedding_function=embeddings,
@@ -74,6 +75,7 @@ def create_directory_db(directory_path: Union[str, Path],
         file_doc = load_file(whole_file_path, file.split(".")[-1])
         if file_doc == "" or len(file_doc) == 0:
             logging.warning(f"file {file} load failed or empty.\n\n")
+            print(f"file {file} load failed or empty.\n\n")
 
         status = create_chromadb_from_file(
             file_doc,
@@ -85,6 +87,7 @@ def create_directory_db(directory_path: Union[str, Path],
         )
         if not status:
             logging.warning(f"create chromadb for {file} failed.\n\n")
+            print(f"create chromadb for {file} failed.\n\n")
             db_path_names.append(file)
         else:
             suc += 1
@@ -101,6 +104,7 @@ def create_directory_db(directory_path: Union[str, Path],
     ### delete the storage directory if no vector created ###
     if id_len == 0:
         logging.warning(f"can no create any vector from {directory_path}.\n\n")
+        print(f"can no create any vector from {directory_path}.\n\n")
         shutil.rmtree(storage_directory)
         return False, db_path_names
 
@@ -116,7 +120,7 @@ def create_directory_db(directory_path: Union[str, Path],
 
 
 def create_single_file_db(file_path: Union[str, Path],
-                          embeddings: Union[str, Embeddings],
+                          embeddings: Union[str, Embeddings, Callable],
                           chunk_size: int,
                           sleep_time: int = 60,
                           env_file: str = "") -> bool:
@@ -139,6 +143,7 @@ def create_single_file_db(file_path: Union[str, Path],
         file_name = file_path.name
     except:
         logging.warning("file path error.\n\n")
+        print("file path error.\n\n")
         return False
 
     ### get the chromadb directory name###
@@ -159,6 +164,7 @@ def create_single_file_db(file_path: Union[str, Path],
     file_doc = load_file(doc_path / file_name, file_name.split(".")[-1])
     if file_doc == "" or len(file_doc) == 0:
         logging.warning("file load failed or empty.\n\n")
+        print("file load failed or empty.\n\n")
         return False
 
     docsearch = Chroma(
@@ -181,6 +187,7 @@ def create_single_file_db(file_path: Union[str, Path],
 
     if not status:
         logging.warning(f"create chromadb for {file_name} failed.\n\n")
+        print(f"create chromadb for {file_name} failed.\n\n")
 
         return False
 
@@ -193,7 +200,7 @@ def create_chromadb_from_file(
     documents: List[Document],
     docsearch: Chroma,
     chunk_size: int,
-    embeddings: vars,
+    embeddings: Embeddings,
     file_name: str,
     sleep_time: int = 60,
 ) -> bool:
@@ -235,7 +242,7 @@ def create_chromadb_from_file(
             vectors = embeddings.embed_documents(page_contents)
 
         if len(vectors) == 0:
-            #logging.warning(f" {file_name} has empty content, ignored.\n")
+
             k += interval
             cum_ids += len(texts)
             continue
@@ -250,6 +257,7 @@ def create_chromadb_from_file(
 
     if not is_added:
         logging.warning(f"\n{file_name} has empty content, ignored.\n")
+        print(f"\n{file_name} has empty content, ignored.\n")
         return False
     return True
 
@@ -274,6 +282,7 @@ def _is_doc_built(storage_directory: str, last_m_time: float,
             file_last_changed = json.load(json_file)
     except Exception as e:
         logging.warning(f"Error reading JSON file: {e}")
+        print(f"Error reading JSON file: {e}")
         return NOT_BUILT
 
     # Check if the file_name is in the dictionary
@@ -306,6 +315,7 @@ def _write_docs_built_time(storage_directory: str, last_m_time: List[float],
                 file_last_changed = json.load(json_file)
         except Exception as e:
             logging.warning(f"Error reading JSON file: {e}")
+            print(f"Error reading JSON file: {e}")
 
     # Update the dictionary
     for f_name, m_time in zip(file_name, last_m_time):
@@ -320,3 +330,4 @@ def _write_docs_built_time(storage_directory: str, last_m_time: List[float],
                       ensure_ascii=False)
     except Exception as e:
         logging.warning(f"Error writing JSON file: {e}")
+        print(f"Error writing JSON file: {e}")

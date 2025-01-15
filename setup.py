@@ -21,7 +21,7 @@ install_requires = [
     "jieba>=0.42.1",
     "opencc-python-reimplemented==0.1.7",
     "sentence-transformers>=3.1.1",
-    "transformers>=4.45.0",  #==4.41.1
+    "transformers>=4.45.0,<4.48",  #==4.41.1
     "tqdm>=4.65.0",
     "docx2txt==0.8",
     "rouge==1.0.1",

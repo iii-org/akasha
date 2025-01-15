@@ -4,6 +4,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from akasha.utils.models.hf import custom_embed
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.embeddings import Embeddings
+from typing import Union, Callable, Tuple
 
 
 def separate_name(name: str):
@@ -51,3 +52,19 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
 
     else:
         raise Exception("can not find the embeddings type.")
+
+
+def get_embedding_type_and_name(
+        embeddings: Union[Embeddings, str, Callable]) -> Tuple[str, str]:
+
+    if isinstance(embeddings, Embeddings):
+        embeddings_name = decide_embedding_type(embeddings)
+
+    if callable(embeddings):
+        embeddings_name = embeddings.__name__
+    else:
+        embeddings_name = embeddings
+
+    embed_type, embed_name = separate_name(embeddings_name)
+
+    return embed_type, embed_name
