@@ -88,6 +88,6 @@ def test_get_response(base_line: akasha.RAG):
         "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: "
     )
     response = ak("./docs/mic", query)
-    assert (response == str)
+    assert (type(response) == str)
 
     return
