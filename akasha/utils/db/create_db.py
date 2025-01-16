@@ -156,7 +156,7 @@ def create_single_file_db(file_path: Union[str, Path],
 
     is_doc_b = _is_doc_built(storage_directory, last_m_time, file_name)
     if is_doc_b == ALREADY_BUILT:
-        return True, storage_directory
+        return True
     elif is_doc_b == OLD_BUILT:
         delete_documents_from_chroma_by_file_name(docsearch, file_name)
 

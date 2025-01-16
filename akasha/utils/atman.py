@@ -140,7 +140,7 @@ class atman:
                 if key != "dbs":
                     logging.warning(f"argument {key} not exist")
 
-    def _check_doc_path(doc_path: Union[List[str], str, dbs]):
+    def _check_doc_path(self, doc_path: Union[List[str], str, dbs]):
         if isinstance(doc_path, dbs):
             return "use dbs object"
 
