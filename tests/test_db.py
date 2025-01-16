@@ -3,7 +3,7 @@ import akasha
 
 EMB_OBJ = akasha.handle_embeddings("openai:text-embedding-ada-002", False, "")
 CHUNK_SIZE = 1000
-CERTAIN_FILE = "mic/docs/20230224_製造業機廠鏈智慧應用發展態勢.pdf"
+CERTAIN_FILE = "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf"
 
 
 @pytest.mark.db
@@ -14,8 +14,7 @@ def test_create_db():
     assert suc == True
     assert ign == []
 
-    suc = akasha.create_single_file_db("mic/docs/20230224_製造業機廠鏈智慧應用發展態勢.pdf",
-                                       EMB_OBJ, CHUNK_SIZE)
+    suc = akasha.create_single_file_db(CERTAIN_FILE, EMB_OBJ, CHUNK_SIZE)
 
     assert suc == True
 
@@ -41,8 +40,8 @@ def test_load_extract_db():
 @pytest.mark.db
 def test_delete_file_db():
 
-    delete_num = akasha.delete_documents_by_file(
-        "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf", EMB_OBJ, CHUNK_SIZE)
+    delete_num = akasha.delete_documents_by_file(CERTAIN_FILE, EMB_OBJ,
+                                                 CHUNK_SIZE)
 
     assert delete_num > 0
 

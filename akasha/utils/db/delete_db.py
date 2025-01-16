@@ -3,9 +3,12 @@ import logging
 from pathlib import Path
 from typing import Union, Callable
 from langchain_core.embeddings import Embeddings
-from akasha.utils.db.db_structure import get_storage_directory
+from akasha.utils.db.db_structure import get_storage_directory, FILE_LAST_CHANGE_FILE_NAME
 from akasha.helper.base import get_embedding_type_and_name
-import shutil
+import shutil, time, gc, json
+from typing import List
+
+_LANGCHAIN_DEFAULT_COLLECTION_NAME = "langchain"
 
 
 def delete_documents_by_directory(
@@ -63,8 +66,9 @@ def delete_documents_by_file(
                                               embed_name)
 
     # Retrieve all documents in the collection
-    docsearch = Chroma(persist_directory=storage_directory)
+    docsearch = Chroma(persist_directory=storage_directory, )
     all_docs = docsearch._collection.get()
+    tot_ids_len = len(all_docs['ids'])
     # Filter documents by metadata
     ids_to_delete = [
         doci for doci, docm in zip(all_docs['ids'], all_docs['metadatas'])
@@ -73,16 +77,30 @@ def delete_documents_by_file(
     # Delete documents by IDs
     if len(ids_to_delete) > 0:
         docsearch._collection.delete(ids=ids_to_delete)
+
         logging.info(
             f"Deleted {len(ids_to_delete)} documents with file_name: {file_name}"
         )
     else:
-        logging.info(f"No documents found with file_name: {file_name}")
+        logging.warning(
+            f"No documents found with file_name: {file_name} to delete")
+        print(f"No documents found with file_name: {file_name} to delete")
 
-    docsearch._client._system.stop()
-    docsearch = None
-    del docsearch
+    if tot_ids_len == len(ids_to_delete) or tot_ids_len == 0:
+        del all_docs
+        gc.collect()
+        docsearch._client.delete_collection(_LANGCHAIN_DEFAULT_COLLECTION_NAME)
+        del docsearch
+        gc.collect()
+        shutil.rmtree(Path(storage_directory))
+        logging.info(f"Deleted all documents in the directory: {doc_path}")
+        print(f"Deleted all documents in the directory: {doc_path}")
+        return tot_ids_len
+    else:
+        _delete_docs_built_time(storage_directory, [file_name])
 
+    del docsearch, all_docs
+    gc.collect()
     return len(ids_to_delete)
 
 
@@ -113,3 +131,45 @@ def delete_documents_from_chroma_by_file_name(chroma: Chroma,
         logging.info(f"No documents found with file_name: {file_name}")
 
     return len(ids_to_delete)
+
+
+def _delete_docs_built_time(storage_directory: str, file_name: List[str]):
+
+    storage_path = Path(storage_directory)
+
+    # Path to the JSON file
+    json_file_path = storage_path / FILE_LAST_CHANGE_FILE_NAME
+
+    # Create the dictionary
+    file_last_changed = {}
+
+    # Check if the JSON file exists
+    if json_file_path.exists():
+        # Load the JSON file
+        try:
+            with open(json_file_path, 'r', encoding="utf-8") as json_file:
+                file_last_changed = json.load(json_file)
+        except Exception as e:
+            logging.warning(f"Error reading JSON file: {e}")
+            print(f"Error reading JSON file: {e}")
+    else:
+        logging.warning(f"JSON file not found: {json_file_path}")
+        print(f"JSON file not found: {json_file_path}")
+        return
+
+    # Update the dictionary
+    for f_name in file_name:
+        file_last_changed.pop(f_name, None)
+
+    # Write the dictionary to the JSON file
+    try:
+        with open(json_file_path, 'w', encoding="utf-8") as json_file:
+            json.dump(file_last_changed,
+                      json_file,
+                      indent=4,
+                      ensure_ascii=False)
+    except Exception as e:
+        logging.warning(f"Error writing JSON file: {e}")
+        print(f"Error writing JSON file: {e}")
+
+    return

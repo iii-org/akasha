@@ -6,7 +6,7 @@ from akasha.utils.db.extract_db import extract_db_by_file
 from akasha.utils.db.create_db import create_directory_db, create_single_file_db
 from akasha.helper import separate_name, handle_embeddings_and_name
 from langchain_chroma import Chroma
-import logging
+import logging, gc
 from collections import defaultdict
 
 
@@ -121,9 +121,8 @@ def load_db_by_chroma_name(
         else:
             tot_db.merge(new_dbs)
 
-        docsearch._client._system.stop()
-        docsearch = None
         del docsearch, new_dbs
+        gc.collect()
 
     return tot_db, ignored_files
 
@@ -147,9 +146,9 @@ def load_directory_db(directory_path: Union[str, Path],
 
     docsearch = Chroma(persist_directory=storage_directory)
     tot_dbs = dbs(docsearch)
-    docsearch._client._system.stop()
-    docsearch = None
+
     del docsearch
+    gc.collect()
 
     if len(tot_dbs.get_ids()) == 0:
         raise ValueError(
@@ -202,9 +201,8 @@ def load_files_db(
         new_dbs = extract_db_by_file(new_dbs, file_name_dict[st_dir])
         tot_dbs.merge(new_dbs)
 
-        docsearch._client._system.stop()
-        docsearch = None
         del docsearch, new_dbs
+        gc.collect()
 
     if len(tot_dbs.get_ids()) == 0:
         raise ValueError(

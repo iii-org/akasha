@@ -94,15 +94,16 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
     Returns:
         vars: embeddings client
     """
-    if isinstance(embedding_name, Embeddings):
-
-        return embedding_name
 
     if isinstance(embedding_name, Callable):
         embeddings = custom_embed(func=embedding_name)
         if verbose:
             print("selected custom embedding.")
         return embeddings
+    elif not isinstance(
+            embedding_name,
+            str):  # if embedding_name is not a string, is an Embeddings object
+        return embedding_name
 
     embedding_type, embedding_name = separate_name(embedding_name)
     env_dict = _get_env_var(env_file)
@@ -202,7 +203,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
     return embeddings
 
 
-def handle_embeddings_and_name(embed: Union[
+def handle_embeddings_and_name(embeddings: Union[
     str, Embeddings, Callable] = "openai:text-embedding-ada-002",
                                verbose: bool = False,
                                env_file: str = "") -> Tuple[Embeddings, str]:
@@ -216,15 +217,15 @@ def handle_embeddings_and_name(embed: Union[
     Returns:
         Tuple[Embeddings, str]: _description_
     """
-    if isinstance(embed, Embeddings):
-        return embed, decide_embedding_type(embed)
 
-    if callable(embed):
-        model_name = embed.__name__
+    if callable(embeddings):
+        model_name = embeddings.__name__
+    elif isinstance(embeddings, str):
+        model_name = embeddings
     else:
-        model_name = embed
+        return embeddings, decide_embedding_type(embeddings)
 
-    model_obj = handle_embeddings(embed, verbose, env_file)
+    model_obj = handle_embeddings(embeddings, verbose, env_file)
 
     return model_obj, model_name
 

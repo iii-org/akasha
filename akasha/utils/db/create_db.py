@@ -5,7 +5,7 @@ from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pathlib import Path
 import json
-import logging, datetime, time, shutil
+import logging, datetime, time, shutil, gc
 from tqdm import tqdm
 from akasha.helper import get_mac_address, separate_name, handle_embeddings_and_name
 from akasha.utils.db.file_loader import load_file, get_load_file_list
@@ -97,9 +97,8 @@ def create_directory_db(directory_path: Union[str, Path],
     progress.close()
     id_len = len(docsearch._collection.get()['ids'])
 
-    docsearch._client._system.stop()
-    docsearch = None
     del docsearch
+    gc.collect()
 
     ### delete the storage directory if no vector created ###
     if id_len == 0:
@@ -181,9 +180,8 @@ def create_single_file_db(file_path: Union[str, Path],
         sleep_time,
     )
 
-    docsearch._client._system.stop()
-    docsearch = None
     del docsearch
+    gc.collect()
 
     if not status:
         logging.warning(f"create chromadb for {file_name} failed.\n\n")

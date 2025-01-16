@@ -57,13 +57,12 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
 def get_embedding_type_and_name(
         embeddings: Union[Embeddings, str, Callable]) -> Tuple[str, str]:
 
-    if isinstance(embeddings, Embeddings):
-        embeddings_name = decide_embedding_type(embeddings)
-
     if callable(embeddings):
         embeddings_name = embeddings.__name__
-    else:
+    elif isinstance(embeddings, str):
         embeddings_name = embeddings
+    else:
+        embeddings_name = decide_embedding_type(embeddings)
 
     embed_type, embed_name = separate_name(embeddings_name)
 
