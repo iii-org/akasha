@@ -81,6 +81,53 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
     return tot_db, ignored_files
 
 
+def load_db_by_chroma_name(
+    chroma_name_list: Union[List[Union[str, Path]], Union[Path, str]]
+) -> Tuple[dbs, List[str]]:
+    """load dbs object from chroma db name
+
+    Args:
+        chroma_name_list (List[Union[str, Path]]): _description_
+
+    Returns:
+        Tuple[dbs, List[str]]: return dbs object and list of ignored files
+    """
+
+    if not isinstance(chroma_name_list, list):
+        chroma_name_list = [chroma_name_list]
+
+    ignored_files = []
+    tot_db = dbs()
+    for chroma_name in chroma_name_list:
+
+        if isinstance(chroma_name, Path):
+            chroma_name = chroma_name.__str__()
+
+        if not Path(chroma_name).exists():
+            logging.warning(f"File {chroma_name} not found")
+            print(f"File {chroma_name} not found")
+            ignored_files.append(chroma_name)
+            continue
+
+        docsearch = Chroma(persist_directory=chroma_name)
+        new_dbs = dbs(docsearch)
+
+        if len(new_dbs.get_ids()) == 0:
+            logging.warning(
+                f"No vectors found in the chromadb directory {chroma_name}")
+            print(f"No vectors found in the chromadb directory {chroma_name}")
+            ignored_files.append(chroma_name)
+            continue
+        else:
+            tot_db.merge(new_dbs)
+
+        docsearch._client._system.stop()
+        docsearch = None
+        del docsearch, new_dbs
+
+    return tot_db, ignored_files
+
+
 def load_directory_db(directory_path: Union[str, Path],
                       embeddings: Union[str, Embeddings, Callable],
                       chunk_size: int,

@@ -100,6 +100,7 @@ class RAG(atman):
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.data_source = self._check_doc_path(data_source)
+        self._get_db(data_source)  # create self.db and self.ignore_files
         self.prompt = prompt
         search_dict = {}
 

@@ -6,6 +6,7 @@ import datetime, traceback
 import warnings, logging
 from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_SEARCH_TYPE, DEFAULT_EMBED, DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
 from akasha.utils.db.db_structure import dbs
+from akasha.utils.db.load_db import process_db, load_db_by_chroma_name
 
 
 class atman:
@@ -163,12 +164,16 @@ class atman:
             self.db = data
             self.ignored_files = []
         elif self.use_chroma:
-            self.db, self.ignored_files = akasha.db.get_db_from_chromadb(
-                self.data_source, self.embeddings)
+            self.db, self.ignored_files = load_db_by_chroma_name(
+                self.data_source)
         else:
-            self.db, self.ignored_files = akasha.db.processMultiDB(
-                self.data_source, self.verbose, self.embeddings_obj,
-                self.chunk_size, self.ignore_check)
+            self.db, self.ignored_files = process_db(
+                data_source=data,
+                embeddings=self.embeddings_obj,
+                chunk_size=self.chunk_size,
+                verbose=self.verbose,
+                env_file=self.env_file)
+
         return
 
     def _add_basic_log(self, timestamp: str, fn_type: str):
