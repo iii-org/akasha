@@ -2,9 +2,18 @@ from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 from langchain_community.embeddings import TensorflowHubEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
 from akasha.utils.models.hf import custom_embed
+from akasha.utils.prompts.format import language_dict
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.embeddings import Embeddings
-from typing import Union, Callable, Tuple
+from typing import Union, Callable, Tuple, List
+from langchain.schema import Document
+import jieba
+
+jieba.setLogLevel(
+    jieba.logging.INFO)  ## ignore logging jieba model information
+import opencc
+
+cc = opencc.OpenCC("s2twp")
 
 
 def separate_name(name: str):
@@ -67,3 +76,50 @@ def get_embedding_type_and_name(
     embed_type, embed_name = separate_name(embeddings_name)
 
     return embed_type, embed_name
+
+
+def sim_to_trad(text: str) -> str:
+    """convert simplified chinese to traditional chinese
+
+    Args:
+        **text (str)**: simplified chinese\n
+
+    Returns:
+        str: traditional chinese
+    """
+    global cc
+    return cc.convert(text)
+
+
+def get_doc_length(language: str, text: str) -> int:
+    """calculate the length of terms in a giving Document
+
+    Args:
+        **language (str)**: 'ch' for chinese and 'en' for others, default 'ch'\n
+        **doc (Document)**: Document object\n
+
+    Returns:
+        doc_length: int Docuemtn length
+    """
+
+    if "chinese" in language_dict[language]:
+        doc_length = len(list(jieba.cut(text)))
+    else:
+        doc_length = len(text.split())
+    return doc_length
+
+
+def get_docs_length(language: str, docs: List[Document]) -> int:
+    """calculate the total length of terms in giving documents
+
+    Args:
+        language (str): 'ch' for chinese and 'en' for others, default 'ch'\n
+        docs (list): list of Documents\n
+
+    Returns:
+        docs_length: int total Document length
+    """
+    docs_length = 0
+    for doc in docs:
+        docs_length += get_doc_length(language, doc.page_content)
+    return docs_length

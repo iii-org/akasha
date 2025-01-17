@@ -1,12 +1,14 @@
+from langchain.docstore.document import Document
+from typing import Union, Tuple, List
+
+
 def handle_params(
     model: str,
-    embeddings: str,
-    chunk_size: int,
-    search_type: str,
-    topK: int,
-    threshold: float,
     language: str,
-    compression: bool = False,
+    search_type: str,
+    threshold: float = -1.0,
+    embeddings: str = "",
+    chunk_size: int = -1,
 ) -> dict:
     """save running parameters into dictionary in order to parse to aiido
 
@@ -15,11 +17,9 @@ def handle_params(
         **embeddings (str)**: embedding name\n
         **chunk_size (int)**: chunk size of texts from documents\n
         **search_type (str)**: search type of finding relevant documents\n
-        **topK (int)**: return top k documents\n
         **threshold (float)**: only return documents that has similarity score larger than threshold\n
         **language (str)**: 'ch' for chinese and 'en' for other.\n
-        **compression (bool)**: compress the relevant documents or not.\n
-
+        
     Returns:
         dict: parameter dictionary
     """
@@ -30,8 +30,6 @@ def handle_params(
         params["embeddings"] = embeddings
     if search_type != "":
         params["search_type"] = search_type
-    if topK != -1:
-        params["topK"] = topK
     if threshold != -1.0:
         params["threshold"] = threshold
     if language != "":
@@ -61,7 +59,8 @@ def handle_metrics(doc_length: int, time: float, tokens: int) -> dict:
     return metrics
 
 
-def handle_table(prompt: str, docs: list, response: str) -> dict:
+def handle_table(prompt: str, docs: List[Union[Document, str]],
+                 response: str) -> dict:
     """save running results into dictionary in order to parse to aiido
 
     Args:

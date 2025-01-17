@@ -1,6 +1,6 @@
 from typing import Callable, Union, List, Tuple, Generator
 from akasha.helper import handle_embeddings, handle_search_type, handle_model
-from akasha.utils.prompts.format import handle_language, language_dict
+from akasha.utils.prompts.format import handle_language, language_dict, handle_metrics, handle_params, handle_table
 
 import datetime, traceback
 import warnings, logging
@@ -185,6 +185,7 @@ class atman:
         """
         if self.keep_logs == False:
             return
+        self.timestamp_list.append(timestamp)
 
         if timestamp not in self.logs:
             self.logs[timestamp] = {}
@@ -210,10 +211,10 @@ class atman:
         self.logs[timestamp]["time"] = time
         self.logs[timestamp]["doc_length"] = self.doc_length
         self.logs[timestamp]["doc_tokens"] = self.doc_tokens
-        if hasattr(self, 'question') and self.question:
-            self.logs[timestamp]["question"] = self.question
-        if hasattr(self, 'answer') and self.answer:
-            self.logs[timestamp]["answer"] = self.answer
+        # if hasattr(self, 'question') and self.question:
+        #     self.logs[timestamp]["question"] = self.question
+        # if hasattr(self, 'answer') and self.answer:
+        #     self.logs[timestamp]["answer"] = self.answer
         try:
             self.logs[timestamp]["docs"] = "\n\n".join(
                 [doc.page_content for doc in self.docs])
@@ -231,6 +232,29 @@ class atman:
                 self.logs[timestamp]["docs"] = "\n\n".join(
                     [doc.page_content for doc in self.docs])
         self.logs[timestamp]["system_prompt"] = self.system_prompt
+
+    def _upload_logs(self,
+                     tot_time: float,
+                     doc_length: int = 0,
+                     doc_tokens: int = 0) -> str:
+
+        if self.record_exp == "":
+            return "no record_exp assigned, so no logs uploaded"
+
+        params = handle_params(
+            self.model,
+            self.language,
+            self.search_type_str,
+            self.threshold,
+            self.embeddings,
+            self.chunk_size,
+        )
+        metrics = handle_metrics(doc_length, tot_time, doc_tokens)
+        table = handle_table(self.prompt, self.docs, self.response)
+        from akasha.utils.upload import aiido_upload
+        aiido_upload(self.record_exp, params, metrics, table)
+
+        return "logs uploaded"
 
     def save_logs(self, file_name: str = "", file_type: str = "json"):
         """save logs into json or txt file

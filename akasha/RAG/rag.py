@@ -1,5 +1,5 @@
-import pathlib
-import time
+from pathlib import Path
+import time, datetime
 from typing import Callable, Union, List, Tuple, Generator
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
@@ -7,6 +7,12 @@ from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_EMBED, DEFAULT_MAX_INP
 
 from akasha.utils import atman
 from akasha.utils import dbs
+from akasha.helper.token_counter import myTokenizer
+from akasha.helper.run_llm import call_model, call_stream_model
+from akasha.helper.preprocess_prompts import merge_history_and_prompt
+from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt
+from akasha.utils.search.retrievers.base import get_retrivers
+from akasha.utils.search.search_doc import search_docs
 
 
 class RAG(atman):
@@ -73,13 +79,45 @@ class RAG(atman):
         self.response = ""
         self.prompt = ""
 
-    def _add_basic_log(self, timestamp: str, fn_type: str):
+    def _add_basic_log(self,
+                       timestamp: str,
+                       fn_type: str,
+                       history_messages: list = []):
+
+        if self.keep_logs == False:
+            return
 
         super()._add_basic_log(timestamp, fn_type)
-        self.logs[timestamp]["doc_path"] = self.doc_path
+
+        self.logs[timestamp]["prompt"] = self.prompt
+        self.logs[timestamp]["embeddings"] = self.embeddings
+        self.logs[timestamp]["history_messages"] = history_messages
+
+        cur_source = self.data_source
+        if not isinstance(cur_source, list):
+            cur_source = [cur_source]
+
+        self.logs[timestamp]["data_source"] = []
+
+        for data_path in cur_source:
+            if isinstance(data_path, Path):
+                self.logs[timestamp]["data_source"].append(data_path.__str__())
+            else:
+                self.logs[timestamp]["data_source"].append(data_path)
+
+        return
+
+    def _add_result_log(self, timestamp, time):
+
+        if self.keep_logs == False:
+            return
+
+        super()._add_result_log(timestamp, time)
+        self.logs[timestamp]["response"] = self.response
+        return
 
     def __call__(self,
-                 data_source: Union[List[str], str, dbs],
+                 data_source: Union[List[Union[str, Path]], Path, str, dbs],
                  prompt: str,
                  history_messages: list = [],
                  **kwargs):
@@ -88,7 +126,7 @@ class RAG(atman):
         llm model will use these documents to generate the response of the question.
 
             Args:
-                **data_source (Union[List[str], str, dbs])**: documents directory path\n
+                **data_source (Union[List[Union[str, Path]], Path, str, dbs])**: documents directory path\n
                 **prompt (str)**:question you want to ask.\n
                 **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
                 embeddings, chunk_size, model, verbose, topK, language , search_type, record_exp,
@@ -102,9 +140,57 @@ class RAG(atman):
         self.data_source = self._check_doc_path(data_source)
         self._get_db(data_source)  # create self.db and self.ignore_files
         self.prompt = prompt
-        search_dict = {}
 
         start_time = time.time()
         self._check_db()
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self._add_basic_log(timestamp, "RAG", history_messages)
 
-        return "miaoa"
+        ### start to get response ###
+        retrivers_list = get_retrivers(
+            self.db,
+            self.embeddings_obj,
+            self.threshold,
+            self.search_type,
+            self.env_file,
+        )
+        self.docs, self.doc_length, self.doc_tokens = search_docs(
+            retrivers_list, self.prompt, self.language, self.search_type,
+            self.verbose, self.model, self.max_input_tokens -
+            myTokenizer.compute_tokens(self.prompt, self.model) -
+            myTokenizer.compute_tokens('\n\n'.join(history_messages),
+                                       self.model))
+        if self.docs is None:
+
+            print("\n\nNo Relevant Documents.\n\n")
+            self.docs = []
+
+        ## format prompt ##
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = default_doc_ask_prompt(self.language)
+
+        text_input = merge_history_and_prompt(history_messages,
+                                              self.system_prompt,
+                                              self._display_docs() +
+                                              "User question: " + self.prompt,
+                                              self.prompt_format_type,
+                                              model=self.model)
+
+        end_time = time.time()
+        if self.stream:
+            return call_stream_model(
+                self.model_obj,
+                text_input,
+            )
+
+        self.response = call_model(
+            self.model_obj,
+            text_input,
+        )
+
+        self._add_result_log(timestamp, end_time - start_time)
+
+        self._upload_logs(end_time - start_time, self.doc_length,
+                          self.doc_tokens)
+
+        return self.response
