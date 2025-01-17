@@ -8,13 +8,13 @@ CERTAIN_FILE = "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf
 
 @pytest.mark.db
 def test_create_db():
-
-    suc, ign = akasha.create_directory_db("docs/mic", EMB_OBJ, CHUNK_SIZE)
+    from akasha.utils.db.create_db import create_directory_db, create_single_file_db
+    suc, ign = create_directory_db("docs/mic", EMB_OBJ, CHUNK_SIZE)
 
     assert suc == True
     assert ign == []
 
-    suc = akasha.create_single_file_db(CERTAIN_FILE, EMB_OBJ, CHUNK_SIZE)
+    suc = create_single_file_db(CERTAIN_FILE, EMB_OBJ, CHUNK_SIZE)
 
     assert suc == True
 

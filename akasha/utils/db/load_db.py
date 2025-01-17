@@ -8,6 +8,7 @@ from akasha.helper import separate_name, handle_embeddings_and_name
 from langchain_chroma import Chroma
 import logging, gc
 from collections import defaultdict
+from tqdm import tqdm
 
 
 def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
@@ -28,6 +29,12 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
         embeddings, False, env_file)
     tot_db = dbs()
 
+    direct_list = []
+    files_dict = defaultdict(list)
+    suc_files = []
+    link_list = []
+    import time
+    start_time = time.time()
     if not isinstance(data_source, list):
         data_source = [data_source]
 
@@ -41,25 +48,39 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
             ignored_files.append(data_path)
             continue
 
-        ### load dbs object based on file or directory ###
+        ### divide data_path into dir, files and links ###
         if data_path.is_dir():
-            try:
-                is_suc, cur_ignores = create_directory_db(data_path,
-                                                          embeddings,
-                                                          chunk_size,
-                                                          env_file=env_file,
-                                                          verbose=verbose)
-                ignored_files.extend(cur_ignores)
+            direct_list.append(data_path)
 
-                if is_suc:
-                    new_dbs = load_directory_db(data_path, embeddings,
-                                                chunk_size, verbose)
-                    tot_db.merge(new_dbs)
-            except Exception as e:
-                logging.warning(f"Error loading directory {data_path}: {e}")
-                print(f"Error loading directory {data_path}: {e}")
-                continue
-        else:
+        else:  # if files
+            files_dict[data_path.parent.__str__()].append(data_path)
+
+    ### load dbs object based on directories ###
+    for data_path in direct_list:
+        try:
+            is_suc, cur_ignores = create_directory_db(data_path,
+                                                      embeddings,
+                                                      chunk_size,
+                                                      env_file=env_file,
+                                                      verbose=verbose)
+            ignored_files.extend(cur_ignores)
+
+            if is_suc:
+                new_dbs = load_directory_db(data_path, embeddings, chunk_size,
+                                            verbose)
+                tot_db.merge(new_dbs)
+        except Exception as e:
+            logging.warning(f"Error loading directory {data_path}: {e}")
+            print(f"Error loading directory {data_path}: {e}")
+            continue
+
+    ### load dbs object based on files ###
+    for parent_dir, file_list in files_dict.items():
+
+        progress = tqdm(total=len(file_list), desc=f"db {parent_dir}")
+
+        for data_path in file_list:
+            progress.update(1)
             try:
                 is_suc = create_single_file_db(data_path,
                                                embeddings,
@@ -67,9 +88,7 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
                                                env_file=env_file)
 
                 if is_suc:
-                    new_dbs = load_files_db([data_path], embeddings,
-                                            chunk_size)
-                    tot_db.merge(new_dbs)
+                    suc_files.append(data_path)
                 else:
                     ignored_files.append(data_path)
             except Exception as e:
@@ -77,6 +96,11 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
                 print(f"Error loading file {data_path}: {e}")
                 ignored_files.append(data_path)
                 continue
+        progress.close()
+
+    if len(suc_files) > 0:
+        new_dbs = load_files_db(suc_files, embeddings, chunk_size)
+        tot_db.merge(new_dbs)
 
     return tot_db, ignored_files
 
