@@ -75,7 +75,6 @@ def get_relevant_doc_auto_rerank(
     retriver_list: list,
     query: str,
     k: int,
-    verbose: bool = False,
 ) -> list:
     """try every solution to get  to search relevant documents.
 
@@ -113,8 +112,8 @@ def get_relevant_doc_auto_rerank(
             break
 
     if bm25_scores[0] >= 70:
-        if verbose:
-            print("<<search>>go to bm25\n\n")
+        # if verbose:
+        #     print("<<search>>go to bm25\n\n")
 
         ## find out the idx that the sorted tf_scores is not 0
         idx = 0
@@ -125,14 +124,14 @@ def get_relevant_doc_auto_rerank(
         final_docs.extend(docs_bm25[:idx])
 
     if len(backup_docs) < pr:
-        if verbose:
-            print("<<search>>go to knn\n\n")
+        # if verbose:
+        #     print("<<search>>go to knn\n\n")
 
         final_docs.extend(backup_docs)
 
     else:
-        if verbose:
-            print("<<search>>go to knn+rerank\n\n")
+        # if verbose:
+        #     print("<<search>>go to knn+rerank\n\n")
         final_docs.extend(rerank_reduce(query, backup_docs, k))
 
     return final_docs

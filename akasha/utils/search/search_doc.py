@@ -10,7 +10,6 @@ from langchain_core.language_models.base import BaseLanguageModel
 def _merge_docs(docs_list: List[List[Document]],
                 topK: int,
                 language: str,
-                verbose: bool = False,
                 max_input_tokens: int = 3000,
                 model: str = "openai:gpt-3.5-turbo") -> Tuple[list, int]:
     """merge different search types documents, if total len of documents too large,
@@ -42,8 +41,7 @@ def _merge_docs(docs_list: List[List[Document]],
             #token_len = model.get_num_tokens(docs[i].page_content)
             token_len = myTokenizer.compute_tokens(docs[i].page_content, model)
             if cur_token + token_len > max_input_tokens:
-                if verbose:
-                    print("\nwords length: ", cur_count, "tokens: ", cur_token)
+
                 return res, cur_count, cur_token
 
             cur_count += words_len
@@ -51,20 +49,16 @@ def _merge_docs(docs_list: List[List[Document]],
             res.append(docs[i])
             page_contents.add(docs[i].page_content)
 
-    if verbose:
-        print("words length: ", cur_count, "tokens: ", cur_token)
-
     return res, cur_count, cur_token
 
 
 def search_docs(
     retriver_list: list,
     query: str,
-    language: str = "ch",
-    search_type: Union[str, Callable] = "auto",
-    verbose: bool = False,
     model: Union[str, BaseLanguageModel] = "openai:gpt-3.5-turbo",
     max_input_tokens: int = 3000,
+    search_type: Union[str, Callable] = "auto",
+    language: str = "ch",
 ) -> Tuple[list, int, int]:
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together.
@@ -76,7 +70,6 @@ def search_docs(
             use to make sure docs won't exceed max token size of llm input.\n
         **search_type (str)**: search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.\n
-        **verbose (bool)**: show log texts or not. Defaults to False.\n
         **model ()**: large language model name\n
         **max_input_tokens (int)**: max token size of llm input.\n
 
@@ -104,16 +97,17 @@ def search_docs(
                 query,
             )
             docs, docs_len, tokens = _merge_docs([docs], topK, language,
-                                                 verbose, max_input_tokens,
-                                                 model)
+                                                 max_input_tokens, model)
             return docs, docs_len, tokens
         elif search_type == "auto_rerank":
 
-            docs = get_relevant_doc_auto_rerank(retriver_list, query, topK,
-                                                verbose)
+            docs = get_relevant_doc_auto_rerank(
+                retriver_list,
+                query,
+                topK,
+            )
             docs, docs_len, tokens = _merge_docs([docs], topK, language,
-                                                 verbose, max_input_tokens,
-                                                 model)
+                                                 max_input_tokens, model)
             return docs, docs_len, tokens
 
     for retri in retriver_list:
@@ -121,7 +115,7 @@ def search_docs(
         docs = retri._get_relevant_documents(query)
         final_docs.append(docs)
 
-    docs, docs_len, tokens = _merge_docs(final_docs, topK, language, verbose,
+    docs, docs_len, tokens = _merge_docs(final_docs, topK, language,
                                          max_input_tokens, model)
 
     return docs, docs_len, tokens
@@ -132,7 +126,6 @@ def retri_docs(
     query: str,
     search_type: Union[str, Callable],
     topK: int,
-    verbose: bool = True,
 ) -> list:
     """search docs based on given search_type, default is merge, which contain 'mmr', 'svm', 'tfidf'
         and merge them together.
@@ -143,7 +136,6 @@ def retri_docs(
         **topK (int)**: for each search type, return first topK documents\n
         **search_type (str)**: search type to find similar documents from db, default 'merge'.
             includes 'merge', 'mmr', 'svm', 'tfidf'.\n
-        **verbose (bool)**: show log texts or not. Defaults to False.\n
 
     Returns:
         list: selected list of similar documents.
@@ -182,8 +174,11 @@ def retri_docs(
             return docs
         elif search_type == "auto_rerank":
 
-            docs = get_relevant_doc_auto_rerank(retriver_list, query, topK,
-                                                verbose)
+            docs = get_relevant_doc_auto_rerank(
+                retriver_list,
+                query,
+                topK,
+            )
             docs = merge_docs(docs, topK)
             return docs
 

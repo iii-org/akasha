@@ -154,12 +154,18 @@ class RAG(atman):
             self.search_type,
             self.env_file,
         )
-        self.docs, self.doc_length, self.doc_tokens = search_docs(
-            retrivers_list, self.prompt, self.language, self.search_type,
-            self.verbose, self.model, self.max_input_tokens -
-            myTokenizer.compute_tokens(self.prompt, self.model) -
+        left_tokens = self.max_input_tokens - \
+            myTokenizer.compute_tokens(self.prompt, self.model) - \
             myTokenizer.compute_tokens('\n\n'.join(history_messages),
-                                       self.model))
+                                       self.model)
+        self.docs, self.doc_length, self.doc_tokens = search_docs(
+            retrivers_list,
+            self.prompt,
+            self.model,
+            left_tokens,
+            self.search_type,
+            self.language,
+        )
         if self.docs is None:
 
             print("\n\nNo Relevant Documents.\n\n")
