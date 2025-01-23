@@ -715,46 +715,6 @@ def save_pdf_pic(file_path: str):
     return output_list, mid_names, pages
 
 
-def add_pic_summary_to_db(db, file_path, chunk_size):
-    """ use llm to get pic summary and add it to db
-
-    Args:
-        db (_type_): _description_
-        file_path (_type_): _description_
-        chunk_size (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    add_pic = True
-
-    file_pics, mid_names, pages = save_pdf_pic(file_path)
-    get_pic_sum_prompt = akasha.prompts.format_pic_summary_prompt(chunk_size)
-    try:
-        for i, file_pic in enumerate(file_pics):
-            cur_summary = akasha.openai_vision(file_pic, get_pic_sum_prompt)
-            db.add_texts(
-                [cur_summary],
-                metadatas=[{
-                    "source": mid_names[i],
-                    "page": pages[i]
-                }],
-                ids=[mid_names[i] + "_" + str(pages[i])],
-            )
-    except:
-        print("openai vision failed")
-        add_pic = False
-
-    db.persist()
-
-    ## delete temp_pic directory ##
-    import shutil
-
-    shutil.rmtree("temp_pic")
-
-    return db, add_pic
-
-
 def check_db_name(file, db_dir, embed_type, embed_name, chunk_size):
     """check if the db is existed, if existed, return the most recently built storage directory
 

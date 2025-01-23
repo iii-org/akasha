@@ -4,7 +4,14 @@ from typing import Callable, Union, List, Tuple, Generator
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 from langchain.schema import Document
-import akasha.helper as helper
+
+from akasha.helper import handle_search_type, handle_embeddings
+from akasha.helper import handle_model, handle_search_type, myTokenizer
+
+from akasha.helper import merge_history_and_prompt, call_stream_model, call_model
+from akasha.helper import get_doc_length, call_batch_model, check_relevant_answer
+from akasha.helper import call_image_model
+
 import akasha.search as search
 import akasha.format as format
 import akasha.prompts as prompts
@@ -55,124 +62,6 @@ def aiido_upload(
     if len(table) > 0:
         aiido.mlflow.log_table(table, "table.json")
     aiido.mlflow.end_run()
-
-
-def detect_exploitation(
-    texts: str,
-    model: str = DEFAULT_MODEL,
-    verbose: bool = False,
-):
-    """check the given texts have harmful or sensitive information
-
-    Args:
-        **texts (str)**: texts that we want llm to check.\n
-        **model (str, optional)**: llm model name. Defaults to "openai:gpt-3.5-turbo".\n
-        **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
-
-    Returns:
-        str: response from llm
-    """
-
-    model = helper.handle_model(model, verbose, 0.0)
-    sys_b, sys_e = "<<SYS>>\n", "\n<</SYS>>\n\n"
-    system_prompt = (
-        "[INST]" + sys_b +
-        "check if below texts have any of Ethical Concerns, discrimination, hate speech, "
-        +
-        "illegal information, harmful content, Offensive Language, or encourages users to share or access copyrighted materials"
-        + " And return true or false. Texts are: " + sys_e + "[/INST]")
-
-    template = system_prompt + f""" 
-    
-    Texts: {texts}
-    Answer: """
-
-    response = helper.call_model(model, template)
-
-    print(response)
-    return response
-
-
-def openai_vision(
-    pic_path: Union[str, List[str]],
-    prompt: str,
-    model: str = "gpt-4-vision-preview",
-    max_token: int = _DEFAULT_MAX_INPUT_TOKENS,
-    verbose: bool = False,
-    record_exp: str = "",
-):
-    start_time = time.time()
-
-    ### process input message ###
-    base64_pic = []
-    pic_message = []
-    if isinstance(pic_path, str):
-        pic_path = [pic_path]
-
-    for path in pic_path:
-        if not pathlib.Path(path).exists():
-            print(f"image path {path} not exist")
-        else:
-            base64_pic.append(helper.image_to_base64(path))
-
-    for pic in base64_pic:
-        pic_message.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{pic}",
-                "detail": "auto",
-            },
-        })
-    content = [{"type": "text", "text": prompt}]
-    content.extend(pic_message)
-
-    ### call model ###
-    import os
-    from langchain_openai import ChatOpenAI, AzureChatOpenAI
-    from langchain.schema.messages import HumanMessage, SystemMessage
-    from langchain_community.callbacks.manager import get_openai_callback
-
-    if ("AZURE_API_TYPE" in os.environ and os.environ["AZURE_API_TYPE"]
-            == "azure") or ("OPENAI_API_TYPE" in os.environ
-                            and os.environ["OPENAI_API_TYPE"] == "azure"):
-        modeln = model.replace(".", "")
-        api_base, api_key, api_version = helper._handle_azure_env()
-        chat = AzureChatOpenAI(
-            name=modeln,
-            deployment_name=modeln,
-            temperature=0.0,
-            base_url=api_base,
-            api_key=api_key,
-            api_version=api_version,
-            max_tokens=max_token,
-        )
-    else:
-        chat = ChatOpenAI(model=model,
-                          max_tokens=max_token,
-                          temperature=0.0,
-                          verbose=verbose)
-    input_message = [HumanMessage(content=content)]
-
-    with get_openai_callback() as cb:
-        try:
-            ret = chat.invoke(input_message).content
-        except:
-            chat = ChatOpenAI(model="gpt-4-vision-preview",
-                              max_tokens=max_token,
-                              temperature=0.0)
-            ret = chat.invoke(input_message).content
-
-        tokens, prices = cb.total_tokens, cb.total_cost
-
-    end_time = time.time()
-    if record_exp != "":
-        params = format.handle_params(model, "", "", "", "", "", "ch")
-        metrics = format.handle_metrics(0, end_time - start_time, tokens)
-        table = format.handle_table(prompt, "\n".join(pic_path), ret)
-        aiido_upload(record_exp, params, metrics, table)
-    print("\n\n\ncost:", round(prices, 3))
-
-    return ret
 
 
 class atman:
@@ -231,8 +120,7 @@ class atman:
         self.topK = topK
         self.threshold = threshold
         self.language = format.handle_language(language)
-        self.search_type_str = helper.handle_search_type(
-            search_type, self.verbose)
+        self.search_type_str = handle_search_type(search_type, self.verbose)
         self.record_exp = record_exp
         self.system_prompt = system_prompt
         self.max_doc_len = max_doc_len
@@ -251,8 +139,8 @@ class atman:
         """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
         ## check if we need to change db, model_obj or embeddings_obj ##
         if "search_type" in kwargs:
-            self.search_type_str = helper.handle_search_type(
-                kwargs["search_type"], self.verbose)
+            self.search_type_str = handle_search_type(kwargs["search_type"],
+                                                      self.verbose)
 
         if ("embeddings" in kwargs) or ("env_file" in kwargs):
             new_embeddings = self.embeddings
@@ -263,7 +151,7 @@ class atman:
                 new_env_file = kwargs["env_file"]
 
             if new_embeddings != self.embeddings or new_env_file != self.env_file:
-                self.embeddings_obj = helper.handle_embeddings(
+                self.embeddings_obj = handle_embeddings(
                     new_embeddings, self.verbose, new_env_file)
 
         if ("model" in kwargs) or ("temperature" in kwargs) or (
@@ -284,9 +172,9 @@ class atman:
                     new_tokens
                     != self.max_output_tokens) or (new_env_file
                                                    != self.env_file):
-                self.model_obj = helper.handle_model(new_model, self.verbose,
-                                                     new_temp, new_tokens,
-                                                     new_env_file)
+                self.model_obj = handle_model(new_model, self.verbose,
+                                              new_temp, new_tokens,
+                                              new_env_file)
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
@@ -299,7 +187,7 @@ class atman:
                     DeprecationWarning)
             if (key == "model"
                     or key == "embeddings") and key in self.__dict__:
-                self.__dict__[key] = helper.handle_search_type(value)
+                self.__dict__[key] = handle_search_type(value)
 
             elif key == "language":
                 self.language = format.handle_language(value)
@@ -518,19 +406,17 @@ class Doc_QA(atman):
         self.prompt_format_type = prompt_format_type
         ### set variables ###
         self.logs = {}
-        self.model_obj = helper.handle_model(model, self.verbose,
-                                             self.temperature,
-                                             self.max_output_tokens,
-                                             self.env_file)
-        self.model = helper.handle_search_type(model)
+        self.model_obj = handle_model(model, self.verbose, self.temperature,
+                                      self.max_output_tokens, self.env_file)
+        self.model = handle_search_type(model)
         if isinstance(embeddings, str) and embeddings == "":
             self.embeddings_obj = None
             self.embeddings = ""
         else:
-            self.embeddings_obj = helper.handle_embeddings(
-                embeddings, self.verbose, self.env_file)
+            self.embeddings_obj = handle_embeddings(embeddings, self.verbose,
+                                                    self.env_file)
 
-            self.embeddings = helper.handle_search_type(embeddings)
+            self.embeddings = handle_search_type(embeddings)
 
         self.search_type = search_type
         self.db = None
@@ -555,12 +441,12 @@ class Doc_QA(atman):
         idx = 2
         truncate_content = text[:(tot_len // idx)]
         # truncate_len = helper.get_doc_length(self.language, truncate_content)
-        truncated_token_len = helper.myTokenizer.compute_tokens(
+        truncated_token_len = myTokenizer.compute_tokens(
             truncate_content, self.model)
         while truncated_token_len > self.max_input_tokens:
             idx *= 2
             truncate_content = text[:(tot_len // idx)]
-            truncated_token_len = helper.myTokenizer.compute_tokens(
+            truncated_token_len = myTokenizer.compute_tokens(
                 truncate_content, self.model)
 
         rge = tot_len // idx
@@ -585,14 +471,14 @@ class Doc_QA(atman):
         tot_len = 0
         cur_len = 0
 
-        left_tokens = self.max_input_tokens - helper.myTokenizer.compute_tokens(
-            self.prompt, self.model) - helper.myTokenizer.compute_tokens(
+        left_tokens = self.max_input_tokens - myTokenizer.compute_tokens(
+            self.prompt, self.model) - myTokenizer.compute_tokens(
                 '\n\n'.join(history_messages), self.model)
         ret = [""]
         for db_doc in self.docs:
 
-            cur_token_len = helper.myTokenizer.compute_tokens(
-                db_doc.page_content, self.model)
+            cur_token_len = myTokenizer.compute_tokens(db_doc.page_content,
+                                                       self.model)
             if cur_len + cur_token_len > left_tokens:
                 if cur_token_len <= left_tokens:
                     cur_len = cur_token_len
@@ -689,9 +575,9 @@ class Doc_QA(atman):
             self.verbose,
             self.model,
             self.max_input_tokens -
-            helper.myTokenizer.compute_tokens(self.prompt, self.model) -
-            helper.myTokenizer.compute_tokens('\n\n'.join(history_messages),
-                                              self.model),
+            myTokenizer.compute_tokens(self.prompt, self.model) -
+            myTokenizer.compute_tokens('\n\n'.join(history_messages),
+                                       self.model),
             compression=self.compression,
         )
         if self.docs is None:
@@ -703,22 +589,22 @@ class Doc_QA(atman):
         if self.system_prompt.replace(' ', '') == "":
             self.system_prompt = prompts.default_doc_ask_prompt(self.language)
 
-        text_input = helper.merge_history_and_prompt(
-            history_messages,
-            self.system_prompt,
-            self._display_docs() + "User question: " + self.prompt,
-            self.prompt_format_type,
-            model=self.model)
+        text_input = merge_history_and_prompt(history_messages,
+                                              self.system_prompt,
+                                              self._display_docs() +
+                                              "User question: " + self.prompt,
+                                              self.prompt_format_type,
+                                              model=self.model)
 
         end_time = time.time()
         if self.stream:
-            return helper.call_stream_model(
+            return call_stream_model(
                 self.model_obj,
                 text_input,
             )
         else:
 
-            self.response = helper.call_model(
+            self.response = call_model(
                 self.model_obj,
                 text_input,
             )
@@ -833,9 +719,8 @@ class Doc_QA(atman):
                         self.verbose,
                         self.model,
                         self.max_input_tokens -
-                        helper.myTokenizer.compute_tokens(
-                            merge_prompts, self.model) -
-                        helper.myTokenizer.compute_tokens(
+                        myTokenizer.compute_tokens(merge_prompts, self.model) -
+                        myTokenizer.compute_tokens(
                             '\n\n'.join(history_messages), self.model),
                         compression=self.compression,
                     )
@@ -845,14 +730,14 @@ class Doc_QA(atman):
                     self.docs = docs + pre_result
                     ## format prompt ##
 
-                    text_input = helper.merge_history_and_prompt(
+                    text_input = merge_history_and_prompt(
                         history_messages,
                         self.system_prompt,
                         self._display_docs() + "User question: " + prompt,
                         self.prompt_format_type,
                         model=self.model)
 
-                    response = helper.call_model(
+                    response = call_model(
                         self.model_obj,
                         text_input,
                     )
@@ -930,8 +815,7 @@ class Doc_QA(atman):
         ### start to get response ###
         cur_documents, self.doc_tokens = self._separate_docs()
 
-        self.doc_length = helper.get_doc_length(self.language,
-                                                ''.join(cur_documents))
+        self.doc_length = get_doc_length(self.language, ''.join(cur_documents))
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
@@ -947,24 +831,23 @@ class Doc_QA(atman):
         if len(cur_documents) == 1:
 
             if self.stream:
-                return helper.call_stream_model(
+                return call_stream_model(
                     self.model_obj,
                     prod_sys_prompts[0],
                 )
             else:
-                self.response = helper.call_model(self.model_obj,
-                                                  prod_sys_prompts[0])
+                self.response = call_model(self.model_obj, prod_sys_prompts[0])
 
         else:
             ### call batch model ##
-            batch_responses = helper.call_batch_model(
+            batch_responses = call_batch_model(
                 self.model_obj,
                 prod_sys_prompts,
             )
 
             ## check relevant answer if batch_responses > 5 ##
             if len(batch_responses) > 5:
-                batch_responses = helper.check_relevant_answer(
+                batch_responses = check_relevant_answer(
                     self.model_obj, batch_responses, self.prompt,
                     self.prompt_format_type)
 
@@ -974,12 +857,12 @@ class Doc_QA(atman):
                 self.model)
 
             if self.stream:
-                return helper.call_stream_model(
+                return call_stream_model(
                     self.model_obj,
                     fnl_input,
                 )
 
-            self.response = helper.call_model(self.model_obj, fnl_input)
+            self.response = call_model(self.model_obj, fnl_input)
 
             end_time = time.time()
             if self.keep_logs == True:
@@ -1042,8 +925,7 @@ class Doc_QA(atman):
         ### start to get response ###
         cur_documents, self.doc_tokens = self._separate_docs(history_messages)
 
-        self.doc_length = helper.get_doc_length(self.language,
-                                                ''.join(cur_documents))
+        self.doc_length = get_doc_length(self.language, ''.join(cur_documents))
 
         ## format prompt ##
         if self.system_prompt.replace(' ', '') == "":
@@ -1052,7 +934,7 @@ class Doc_QA(atman):
 
         for d_count in range(len(cur_documents)):
 
-            prod_sys_prompt = helper.merge_history_and_prompt(
+            prod_sys_prompt = merge_history_and_prompt(
                 history_messages,
                 self.system_prompt,
                 cur_documents[d_count] + "\n\nUser question: " + self.prompt,
@@ -1063,7 +945,7 @@ class Doc_QA(atman):
         ### start to get response ###
         if len(cur_documents) > 1:
             ## call batch model ##
-            batch_responses = helper.call_batch_model(
+            batch_responses = call_batch_model(
                 self.model_obj,
                 prod_sys_prompts,
             )
@@ -1071,29 +953,29 @@ class Doc_QA(atman):
                 prompt, self.language)
             ## check relevant answer if batch_responses > 10 ##
             if len(batch_responses) > 10:
-                batch_responses = helper.check_relevant_answer(
+                batch_responses = check_relevant_answer(
                     self.model_obj, batch_responses, self.prompt,
                     self.prompt_format_type)
 
             batch_responses, cur_len = retri_max_texts(
-                batch_responses,
-                self.max_input_tokens - helper.myTokenizer.compute_tokens(
-                    fnl_conclusion_prompt, self.model), self.model)
+                batch_responses, self.max_input_tokens -
+                myTokenizer.compute_tokens(fnl_conclusion_prompt, self.model),
+                self.model)
             fnl_input = prompts.format_sys_prompt(fnl_conclusion_prompt,
                                                   "\n\n".join(batch_responses),
                                                   self.prompt_format_type,
                                                   self.model)
 
             if self.stream:
-                return helper.call_stream_model(
+                return call_stream_model(
                     self.model_obj,
                     fnl_input,
                 )
 
-            self.response = helper.call_model(self.model_obj, fnl_input)
+            self.response = call_model(self.model_obj, fnl_input)
 
         else:
-            prod_sys_prompt = helper.merge_history_and_prompt(
+            prod_sys_prompt = merge_history_and_prompt(
                 history_messages,
                 self.system_prompt,
                 '\n\n'.join(cur_documents) + "\n\nUser question: " +
@@ -1101,12 +983,12 @@ class Doc_QA(atman):
                 self.prompt_format_type,
                 model=self.model)
             if self.stream:
-                return helper.call_stream_model(
+                return call_stream_model(
                     self.model_obj,
                     prod_sys_prompt,
                 )
 
-            self.response = helper.call_model(self.model_obj, prod_sys_prompt)
+            self.response = call_model(self.model_obj, prod_sys_prompt)
 
         end_time = time.time()
         if self.keep_logs == True:
@@ -1344,12 +1226,12 @@ class Doc_QA(atman):
                                                     "image_gpt")
 
         if self.stream:
-            return helper.call_stream_model(
+            return call_stream_model(
                 self.model_obj,
                 fnl_input,
             )
 
-        self.response = helper.call_image_model(self.model_obj, fnl_input)
+        self.response = call_image_model(self.model_obj, fnl_input)
 
         return self.response
 
@@ -1370,7 +1252,7 @@ def retri_max_texts(
     ret = []
     cur_len = 0
     for text in texts_list:
-        txt_len = helper.myTokenizer.compute_tokens(text, model_name)
+        txt_len = myTokenizer.compute_tokens(text, model_name)
         if cur_len + txt_len > left_token_len:
             break
         cur_len += txt_len
