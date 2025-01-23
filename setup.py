@@ -43,11 +43,6 @@ install_requires = [
     "anthropic",
 ]
 
-### install different opencc version###\
-install_requires.append("auto-gptq>=0.3.1; platform_system=='Windows'")
-install_requires.append("auto-gptq==0.3.1; platform_system=='Darwin'")
-install_requires.append("auto-gptq>=0.3.1; platform_system=='Linux'")
-
 ### install different torch version###
 install_requires.append("torch==2.2.0; platform_system=='Windows'")
 install_requires.append("torch==2.0.1; platform_system=='Darwin'")
@@ -58,7 +53,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.8.86",
+    version="0.8.87",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -66,9 +61,12 @@ setup(
     url="https://github.com/iii-org/akasha",
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
-    extras_require={'llama-cpp': [
-        "llama-cpp-python>=0.3.1",
-    ]},
+    extras_require={
+        'llama-cpp': [
+            "llama-cpp-python>=0.3.1",
+        ],
+        'peft': ["auto-gptq==0.3.1"]
+    },
     packages=[
         "akasha",
         "akasha.models",

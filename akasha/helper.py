@@ -4,6 +4,7 @@ warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 import numpy as np
 import jieba
 import json, re, time
+
 from pathlib import Path
 import opencc
 from typing import Callable, Union, Tuple, List, Generator
@@ -11,26 +12,17 @@ from langchain.schema import Document
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.messages.ai import AIMessage
 # from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain_community.embeddings import TensorflowHubEmbeddings
-from langchain_huggingface import HuggingFaceEmbeddings
-
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from akasha.models.hf import chatGLM, hf_model, custom_model, custom_embed, remote_model, gptq
-from akasha.models.llama2 import peft_Llama2, TaiwanLLaMaGPTQ, LlamaCPP
-from akasha.models.gemi import gemini_model
-from akasha.models.anthro import anthropic_model
 import os, traceback, logging
 import shutil
+
 from langchain_core.language_models.base import BaseLanguageModel
+from langchain_openai import AzureOpenAIEmbeddings, OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI
 from langchain_core.embeddings import Embeddings
 import akasha.format as afr
 import akasha.prompts
 import tiktoken
-from transformers import AutoTokenizer
 from pathlib import Path
 import os
-from vertexai.preview import tokenization
 from dotenv import dotenv_values
 import uuid
 from charset_normalizer import detect
@@ -169,6 +161,8 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         return embedding_name
 
     if isinstance(embedding_name, Callable):
+
+        from akasha.models.custom import custom_embed
         embeddings = custom_embed(func=embedding_name)
         if verbose:
             print("selected custom embedding.")
@@ -184,6 +178,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
                 == "azure") or ("OPENAI_API_TYPE" in env_dict
                                 and env_dict["OPENAI_API_TYPE"] == "azure"):
+
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
             embeddings = AzureOpenAIEmbeddings(model=embedding_name,
@@ -198,6 +193,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
                 raise Exception(
                     "can not find the OPENAI_API_KEY in environment variable.\n\n"
                 )
+
             openai.api_type = "open_ai"
             embeddings = OpenAIEmbeddings(
                 model=embedding_name,
@@ -214,6 +210,8 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
             "transformer",
             "hf",
     ]:
+
+        from langchain_huggingface import HuggingFaceEmbeddings
 
         embeddings = HuggingFaceEmbeddings(
             model_name=embedding_name,
@@ -233,6 +231,9 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         info = "selected tensorflow embeddings.\n"
 
     elif embedding_type in ["gemini", "gemi", "google"]:
+
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
         embeddings = GoogleGenerativeAIEmbeddings(
             model=embedding_name, google_api_key=os.environ["GEMINI_API_KEY"])
         info = "selected gemini embeddings.\n"
@@ -243,6 +244,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
                 == "azure") or ("OPENAI_API_TYPE" in env_dict
                                 and env_dict["OPENAI_API_TYPE"] == "azure"):
+
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
             embeddings = AzureOpenAIEmbeddings(model=embedding_name,
@@ -258,6 +260,7 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
                     "can not find the OPENAI_API_KEY in environment variable.\n\n"
                 )
             openai.api_type = "open_ai"
+
             embeddings = OpenAIEmbeddings(
                 model=embedding_name,
                 openai_api_base="https://api.openai.com/v1",
@@ -318,6 +321,9 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         return model_name
 
     if isinstance(model_name, Callable):
+
+        from akasha.models.custom import custom_model
+
         model = custom_model(func=model_name, temperature=temperature)
         if verbose:
             print("selected custom model.")
@@ -326,6 +332,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
     model_type, model_name = _separate_name(model_name)
     env_dict = get_env_var(env_file)
     if model_type in ["remote", "server", "tgi", "text-generation-inference"]:
+
+        from akasha.models.remo import remote_model
 
         remote_api_key = "123"
         remote_model_name = "remote_model"
@@ -343,6 +351,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                              max_output_tokens=max_output_tokens)
 
     elif model_type in ["google", "gemini", "gemi"]:
+
+        from akasha.models.gemi import gemini_model
         if "GEMINI_API_KEY" not in env_dict:
             raise Exception(
                 "can not find the GEMINI_API_KEY in environment variable.\n\n")
@@ -358,6 +368,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                 "can not find the ANTHROPIC_API_KEY in environment variable.\n\n"
             )
         info = f"selected anthropic model. \n"
+
+        from akasha.models.anthro import anthropic_model
         model = anthropic_model(model_name=model_name,
                                 api_key=env_dict["ANTHROPIC_API_KEY"],
                                 temperature=temperature,
@@ -366,6 +378,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
     elif (model_type
           in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
           and model_name != ""):
+
+        from akasha.models.llamacpp2 import LlamaCPP
 
         model = LlamaCPP(
             model_name=model_name,
@@ -381,6 +395,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             "huggingface-hub",
             "hf",
     ]:
+        from akasha.models.hf import hf_model
+
         model = hf_model(model_name=model_name,
                          env_dict=env_dict,
                          temperature=temperature,
@@ -388,22 +404,32 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         info = f"selected huggingface model {model_name}.\n"
 
     elif model_type in ["chatglm", "chatglm2", "glm"]:
+        from akasha.models.chglm import chatGLM
+
         model = chatGLM(model_name=model_name,
                         temperature=temperature,
                         max_output_tokens=max_output_tokens)
         info = f"selected chatglm model {model_name}.\n"
 
     elif model_type in ["lora", "peft"]:
+
+        from akasha.models.gtq import peft_Llama2
+
         model = peft_Llama2(model_name_or_path=model_name,
                             temperature=temperature)
         info = f"selected peft model {model_name}.\n"
 
     elif model_type in ["gptq"]:
         if model_name.lower().find("taiwan-llama") != -1:
+
+            from akasha.models.gtq import TaiwanLLaMaGPTQ
+
             model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
                                     temperature=temperature)
 
         else:
+
+            from akasha.models.gtq import gptq
             model = gptq(
                 model_name_or_path=model_name,
                 temperature=temperature,
@@ -417,6 +443,7 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             model_name = "gpt-3.5-turbo"
             print(info)
         import openai
+
         if verbose:
             call_back = [StreamingStdOutCallbackHandler()]
         else:
@@ -427,6 +454,7 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
                                 and env_dict["OPENAI_API_TYPE"] == "azure"):
             model_name = model_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
+
             model = AzureChatOpenAI(
                 model=model_name,
                 deployment_name=model_name,
@@ -1130,24 +1158,29 @@ def retri_history_messages(
 
 def _decide_embedding_type(embeddings: Embeddings) -> str:
 
-    if isinstance(embeddings, custom_embed):
-        return embeddings.model_name
-
-    elif isinstance(embeddings, GoogleGenerativeAIEmbeddings):
-        return "gemini:" + embeddings.model
-
-    elif isinstance(embeddings, OpenAIEmbeddings) or isinstance(
+    if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
             embeddings, AzureOpenAIEmbeddings):
         return "openai:" + embeddings.model
-
-    elif isinstance(embeddings, HuggingFaceEmbeddings):
-        return "hf:" + embeddings.model_name
-
-    elif isinstance(embeddings, TensorflowHubEmbeddings):
-        return "tf:" + embeddings.model_url
-
     else:
-        raise Exception("can not find the embeddings type.")
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        if isinstance(embeddings, GoogleGenerativeAIEmbeddings):
+            return "gemini:" + embeddings.model
+
+        from akasha.models.custom import custom_embed
+        if isinstance(embeddings, custom_embed):
+            return embeddings.model_name
+
+        else:
+            from langchain_huggingface import HuggingFaceEmbeddings
+            if isinstance(embeddings, HuggingFaceEmbeddings):
+                return "hf:" + embeddings.model_name
+
+            from langchain_community.embeddings import TensorflowHubEmbeddings
+            if isinstance(embeddings, TensorflowHubEmbeddings):
+                return "tf:" + embeddings.model_url
+
+            else:
+                raise Exception("can not find the embeddings type.")
 
 
 def self_RAG(model_obj: BaseLanguageModel,
@@ -1317,51 +1350,6 @@ class myTokenizer(object):
         self.tokenizer = tokenizer
         self.path = path
 
-    @classmethod
-    def load(cls, model_id: str, path: str = './tokenizers'):
-        """
-        Load a tokenizer from local path or huggingface model hub.
-
-        Args:
-            model_id (str): The name of the model. only supported on Non-OpenAI models & gpt-2 model. 
-                            ex. 'google/gemma-2-2b-it', 'openai:gpt2'
-                            Reminder: model_id which includes '/' will be replaced by '--' to find the local path
-            path (str, optional): The path to the tokenizer. Defaults to './tokenizers'.
-        """
-
-        model_path = Path.joinpath(Path(path),
-                                   Path(model_id.replace('/', '--')))
-        if model_path.exists():
-            print('Loading tokenizer from local path...')
-            tokenizer = AutoTokenizer.from_pretrained(model_path)
-        else:
-            print('Loading tokenizer from huggingface model hub...')
-            hf_token = os.environ.get("HF_TOKEN")
-            if hf_token is None:
-                hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-            tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
-        return cls(model_id, tokenizer, path)
-
-    def save(self, name: str, path: str = None):
-        """
-        Save the tokenizer to local path.
-
-        Args:
-            name (str): The name of the tokenizer to be saved. 
-            path (str, optional): The path to the tokenizer. Defaults to the path given in `__init__`.
-        """
-        if self.tokenizer is None:
-            raise ValueError('Tokenizer is not initialized')
-        if path is None:
-            path = self.path
-        root_path = Path(path)
-        if not root_path.exists():
-            Path.mkdir(root_path)
-        model_path = Path.joinpath(root_path, Path(name))
-        if not model_path.exists():
-            Path.mkdir(model_path)
-        self.tokenizer.save_pretrained(model_path)
-
     def compute_tokens_huggingface(self, text: str) -> int:
         """
         Compute the number of tokens in a given text using huggingface tokenizer.
@@ -1414,30 +1402,6 @@ class myTokenizer(object):
         num_tokens = len(tokens)
         return num_tokens
 
-    @staticmethod
-    def compute_tokens_gemini(text: str, model_name: str) -> int:
-        """
-        Compute the number of tokens in a given text using Google Vertex AI.
-
-        Args:
-            text (str): The text to be tokenized.
-            model_name (str): The name of the Gemini model. ex. 'gemini:gemini-1.5-flash'
-                            
-
-        Returns:
-            int: The number of tokens in the text.
-
-        Raises:
-            ValueError: If the model_id is not a valid Gemini model.
-        """
-        if '/' in model_name:
-            model_name = model_name.split('/')[-1]
-        if model_name.lower().startswith('gemini:'):
-            model_name = model_name.lower().lstrip('gemini:')
-        tokenizer = tokenization.get_tokenizer_for_model(model_name)
-        num_tokens = tokenizer.count_tokens(text).total_tokens
-        return num_tokens
-
     @classmethod
     def compute_tokens(cls,
                        text: str,
@@ -1463,22 +1427,6 @@ class myTokenizer(object):
         model_type, model_name = _separate_name(model_id)
         if model_type in ["openai", "gpt-3.5", "gpt"]:
             return cls.compute_tokens_openai(text, model_name)
-        elif model_type in ["gemini", "google"]:
-            return cls.compute_tokens_gemini(text, model_name)
-        elif model_type in [
-                "huggingface",
-                "huggingfacehub",
-                "transformers",
-                "transformer",
-                "huggingface-hub",
-                "hf",
-        ]:
-            tkn = cls.load(model_name, model_path)
-            # tokenizer is storable if using Non-OpenAI model
-            if save_tokenizer:
-                tkn.save(name=model_name.replace('/', '--'), path=model_path)
-            return tkn.compute_tokens_huggingface(text)
-
         else:
             encoding = tiktoken.get_encoding("cl100k_base")
             num_tokens = len(encoding.encode(text))
