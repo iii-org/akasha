@@ -221,3 +221,27 @@ def call_image_model(
     if print_flag:
         print("llm response:", "\n\n" + response)
     return response
+
+
+def check_relevant_answer(model_obj: BaseLanguageModel,
+                          batch_responses: List[str],
+                          question: str,
+                          prompt_format_type: str = "auto") -> List[str]:
+    """ask LLM that each of the retrieved answers list is relevant to the question or not"""
+    from akasha.utils.prompts.gen_prompt import default_answer_grader_prompt, format_sys_prompt
+    results = []
+    txts = []
+    sys_prompt = default_answer_grader_prompt()
+    model_obj, model_name = handle_model_and_name(model_obj)
+    for idx in range(len(batch_responses)):
+        prod_prompt = f"Retrieved answer: \n\n {batch_responses[idx]} \n\n User question: {question}"
+        text_input = format_sys_prompt(sys_prompt, prod_prompt,
+                                       prompt_format_type, model_name)
+        txts.append(text_input)
+
+    response_list = call_batch_model(model_obj, txts)
+    for idx, response in enumerate(response_list):
+        if 'yes' in response.lower():
+            results.append(batch_responses[idx])
+
+    return results

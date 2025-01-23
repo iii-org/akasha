@@ -7,8 +7,9 @@ from pathlib import Path
 import json
 import logging, datetime, time, shutil, gc, re
 from tqdm import tqdm
-from akasha.helper import get_mac_address, separate_name, handle_embeddings_and_name
+from akasha.helper import get_mac_address, separate_name
 from akasha.helper.crawler import get_text_from_url
+from akasha.helper.handle_objects import handle_embeddings_and_name
 from akasha.utils.db.file_loader import load_file, get_load_file_list
 from akasha.utils.db.db_structure import TEXT_EXTENSIONS, get_storage_directory, FILE_LAST_CHANGE_FILE_NAME
 from akasha.utils.db.db_structure import OLD_BUILT, NOT_BUILT, ALREADY_BUILT, HNSW_THRESHOLD

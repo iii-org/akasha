@@ -1,9 +1,5 @@
 from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
-from langchain_community.embeddings import TensorflowHubEmbeddings
-from langchain_huggingface import HuggingFaceEmbeddings
-from akasha.utils.models.hf import custom_embed
 from akasha.utils.prompts.format import language_dict
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.embeddings import Embeddings
 from typing import Union, Callable, Tuple, List
 from langchain.schema import Document
@@ -11,6 +7,7 @@ import jieba
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
+
 import opencc
 
 cc = opencc.OpenCC("s2twp")
@@ -43,24 +40,29 @@ def separate_name(name: str):
 
 def decide_embedding_type(embeddings: Embeddings) -> str:
 
-    if isinstance(embeddings, custom_embed):
-        return embeddings.model_name
-
-    elif isinstance(embeddings, GoogleGenerativeAIEmbeddings):
-        return "gemini:" + embeddings.model
-
-    elif isinstance(embeddings, OpenAIEmbeddings) or isinstance(
+    if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
             embeddings, AzureOpenAIEmbeddings):
         return "openai:" + embeddings.model
-
-    elif isinstance(embeddings, HuggingFaceEmbeddings):
-        return "hf:" + embeddings.model_name
-
-    elif isinstance(embeddings, TensorflowHubEmbeddings):
-        return "tf:" + embeddings.model_url
-
     else:
-        raise Exception("can not find the embeddings type.")
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        if isinstance(embeddings, GoogleGenerativeAIEmbeddings):
+            return "gemini:" + embeddings.model
+
+        from akasha.utils.models.custom import custom_embed
+        if isinstance(embeddings, custom_embed):
+            return embeddings.model_name
+
+        else:
+            from langchain_huggingface import HuggingFaceEmbeddings
+            if isinstance(embeddings, HuggingFaceEmbeddings):
+                return "hf:" + embeddings.model_name
+
+            from langchain_community.embeddings import TensorflowHubEmbeddings
+            if isinstance(embeddings, TensorflowHubEmbeddings):
+                return "tf:" + embeddings.model_url
+
+            else:
+                raise Exception("can not find the embeddings type.")
 
 
 def get_embedding_type_and_name(

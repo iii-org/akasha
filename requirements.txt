@@ -15,7 +15,6 @@ sentence-transformers>=3.1.1
 torch==2.2.0
 torchvision==0.17.0
 transformers>=4.45.0,<4.48.0
-auto-gptq==0.3.1
 tqdm>=4.65.0
 docx2txt==0.8
 rouge==1.0.1

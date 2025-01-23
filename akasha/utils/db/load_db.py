@@ -4,7 +4,8 @@ from langchain_core.embeddings import Embeddings
 from akasha.utils.db.db_structure import dbs, get_storage_directory, is_url
 from akasha.utils.db.extract_db import extract_db_by_file
 from akasha.utils.db.create_db import create_directory_db, create_single_file_db, create_webpage_db
-from akasha.helper import separate_name, handle_embeddings_and_name
+from akasha.helper import separate_name
+from akasha.helper.handle_objects import handle_embeddings_and_name
 from langchain_chroma import Chroma
 import logging, gc
 from collections import defaultdict

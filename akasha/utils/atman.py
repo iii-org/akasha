@@ -1,23 +1,12 @@
 import time
-
-st = time.time()
 from typing import Callable, Union, List, Tuple, Generator
 from akasha.helper import handle_embeddings, handle_search_type, handle_model
-
-print(time.time() - st)
-st2 = time.time()
 from akasha.utils.prompts.format import handle_language, language_dict, handle_metrics, handle_params, handle_table
-
-print(time.time() - st2)
-
-st3 = time.time()
-import datetime, traceback
-import warnings, logging
+import datetime
+import logging
 from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_SEARCH_TYPE, DEFAULT_EMBED, DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
 from akasha.utils.db.db_structure import dbs
 from akasha.utils.db.load_db import process_db, load_db_by_chroma_name
-
-print(time.time() - st3)
 
 
 class basic_llm:
@@ -180,6 +169,21 @@ class basic_llm:
         self.logs[timestamp]["system_prompt"] = self.system_prompt
 
         return True
+
+    def _display_docs(self, show_num: int = 5):
+
+        if (not hasattr(self, 'docs')) or (self.verbose == False):
+            return
+        show_less = ""
+        if len(self.docs) > show_num:
+            show_less = f" (showing {show_num} of " + str(len(self.docs)) + ")"
+        splitter = '\n----------------\n'
+        found_ref = "----------------\n" + splitter.join(
+            [doc.page_content for doc in self.docs[:show_num]]) + splitter
+
+        print(f"Reference{show_less}: \n\n" + found_ref + "\n\n")
+
+        return
 
     def save_logs(self, file_name: str = "", file_type: str = "json"):
         """save logs into json or txt file
@@ -416,16 +420,10 @@ class atman(basic_llm):
 
         return "logs uploaded"
 
-    def _display_docs(self, ) -> str:
+    def _format_docs(self, ) -> str:
 
-        show_less = ""
-        if len(self.docs) > 5:
-            show_less = " (showing 5 of " + str(len(self.docs)) + ")"
         splitter = '\n----------------\n'
         found_ref = "----------------\n" + splitter.join(
-            [doc.page_content for doc in self.docs[:5]]) + splitter
-
-        if self.verbose:
-            print(f"Reference{show_less}: \n\n" + found_ref + "\n\n")
+            [doc.page_content for doc in self.docs]) + splitter
 
         return found_ref

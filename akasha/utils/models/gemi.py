@@ -3,7 +3,6 @@ from google.generativeai import GenerationConfig
 from langchain.llms.base import LLM
 from typing import Dict, List, Any, Optional, Callable, Generator, Union
 from pydantic import Field
-import os
 import concurrent.futures
 
 

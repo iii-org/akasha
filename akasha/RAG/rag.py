@@ -6,16 +6,9 @@ from langchain_core.language_models.base import BaseLanguageModel
 
 from langchain_core.embeddings import Embeddings
 
-DEFAULT_MODEL = "openai:gpt-3.5-turbo"
-DEFAULT_EMBED = "openai:text-embedding-ada-002"
-DEFAULT_MAX_INPUT_TOKENS = 3000
-DEFAULT_MAX_OUTPUT_TOKENS = 1024
-DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_SEARCH_TYPE = "auto"
-st = time.time()
-from akasha.utils.atman import atman
+from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_EMBED, DEFAULT_MAX_INPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MODEL, DEFAULT_SEARCH_TYPE
 
-print("rag: ", time.time() - st)
+from akasha.utils.atman import atman
 from akasha.utils.db.db_structure import dbs
 
 from akasha.helper.base import get_doc_length
@@ -26,6 +19,12 @@ from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
+import pathlib
+from dotenv import load_dotenv
+import warnings
+
+warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+load_dotenv(pathlib.Path().cwd() / ".env")
 
 
 class RAG(atman):
@@ -139,9 +138,9 @@ class RAG(atman):
 
         if self.verbose == False:
             return False
-        print(f"model: {self.model}, embeddings: {self.embeddings}")
+        print(f"Model: {self.model}, Embeddings: {self.embeddings}")
         print(
-            f"chunk_size: {self.chunk_size}, search_type: {self.search_type}")
+            f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
         print(
             f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
         )
@@ -170,6 +169,8 @@ class RAG(atman):
             Returns:
                 response (str): the response from llm model.
         """
+        ### set variables ###
+
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.data_source = self._check_doc_path(data_source)
@@ -220,9 +221,11 @@ class RAG(atman):
             self.docs = []
 
         self._display_info()  # display the information of the parameters
+        self._display_docs()
+
         text_input = merge_history_and_prompt(history_messages,
                                               self.system_prompt,
-                                              self._display_docs() +
+                                              self._format_docs() +
                                               "User question: " + self.prompt,
                                               self.prompt_format_type,
                                               model=self.model)

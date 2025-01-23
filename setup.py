@@ -43,11 +43,6 @@ install_requires = [
     "anthropic",
 ]
 
-### install different opencc version###\
-install_requires.append("auto-gptq>=0.3.1; platform_system=='Windows'")
-install_requires.append("auto-gptq==0.3.1; platform_system=='Darwin'")
-install_requires.append("auto-gptq>=0.3.1; platform_system=='Linux'")
-
 ### install different torch version###
 install_requires.append("torch==2.2.0; platform_system=='Windows'")
 install_requires.append("torch==2.0.1; platform_system=='Darwin'")
@@ -66,9 +61,12 @@ setup(
     url="https://github.com/iii-org/akasha",
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
-    extras_require={'llama-cpp': [
-        "llama-cpp-python>=0.3.1",
-    ]},
+    extras_require={
+        'llama-cpp': [
+            "llama-cpp-python>=0.3.1",
+        ],
+        'peft': ["auto-gptq==0.3.1"]
+    },
     packages=[
         "akasha",
         "akasha.agent",
