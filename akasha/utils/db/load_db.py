@@ -1,9 +1,9 @@
 from typing import Union, List, Set, Tuple, Callable, Optional
 from pathlib import Path
 from langchain_core.embeddings import Embeddings
-from akasha.utils.db.db_structure import dbs, get_storage_directory, NO_PARENT_DIR_NAME
+from akasha.utils.db.db_structure import dbs, get_storage_directory, is_url
 from akasha.utils.db.extract_db import extract_db_by_file
-from akasha.utils.db.create_db import create_directory_db, create_single_file_db
+from akasha.utils.db.create_db import create_directory_db, create_single_file_db, create_webpage_db
 from akasha.helper import separate_name, handle_embeddings_and_name
 from langchain_chroma import Chroma
 import logging, gc
@@ -33,13 +33,16 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
     files_dict = defaultdict(list)
     suc_files = []
     link_list = []
-    import time
-    start_time = time.time()
+    file_count = 0
     if not isinstance(data_source, list):
         data_source = [data_source]
 
     for data_path in data_source:
+
         if isinstance(data_path, str):
+            if is_url(data_path):
+                link_list.append(data_path)
+                continue
             data_path = Path(data_path)
 
         if not data_path.exists():
@@ -54,20 +57,25 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
 
         else:  # if files
             files_dict[data_path.parent.__str__()].append(data_path)
+            file_count += 1
 
     ### load dbs object based on directories ###
     for data_path in direct_list:
         try:
-            is_suc, cur_ignores = create_directory_db(data_path,
-                                                      embeddings,
-                                                      chunk_size,
-                                                      env_file=env_file,
-                                                      verbose=verbose)
+            is_suc, cur_ignores = create_directory_db(
+                data_path,
+                embeddings,
+                chunk_size,
+                env_file=env_file,
+            )
             ignored_files.extend(cur_ignores)
 
             if is_suc:
-                new_dbs = load_directory_db(data_path, embeddings, chunk_size,
-                                            verbose)
+                new_dbs = load_directory_db(
+                    data_path,
+                    embeddings,
+                    chunk_size,
+                )
                 tot_db.merge(new_dbs)
         except Exception as e:
             logging.warning(f"Error loading directory {data_path}: {e}")
@@ -101,6 +109,36 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
     if len(suc_files) > 0:
         new_dbs = load_files_db(suc_files, embeddings, chunk_size)
         tot_db.merge(new_dbs)
+
+    ### load dbs object based on links ###
+    progress = tqdm(total=len(link_list), desc=f"db http")
+    for url in link_list:
+        progress.update(1)
+        try:
+            is_suc = create_webpage_db(
+                url,
+                embeddings,
+                chunk_size,
+                env_file=env_file,
+            )
+
+            if is_suc:
+                new_dbs = load_directory_db(
+                    url,
+                    embeddings,
+                    chunk_size,
+                )
+                tot_db.merge(new_dbs)
+            else:
+                ignored_files.append(url)
+        except Exception as e:
+            logging.warning(f"Error loading directory {data_path}: {e}")
+            print(f"Error loading directory {data_path}: {e}")
+            continue
+    progress.close()
+
+    ### print the information ###
+    _display_db_num(len(direct_list), file_count, len(link_list), verbose)
 
     return tot_db, ignored_files
 
@@ -151,11 +189,12 @@ def load_db_by_chroma_name(
     return tot_db, ignored_files
 
 
-def load_directory_db(directory_path: Union[str, Path],
-                      embeddings: Union[str, Embeddings, Callable],
-                      chunk_size: int,
-                      env_file: Optional[str] = "",
-                      verbose: bool = False) -> dbs:
+def load_directory_db(
+    directory_path: Union[str, Path],
+    embeddings: Union[str, Embeddings, Callable],
+    chunk_size: int,
+    env_file: Optional[str] = "",
+) -> dbs:
 
     ### get the chromadb directory name###
     if not isinstance(embeddings, str):
@@ -233,3 +272,31 @@ def load_files_db(
             f"No vectors found in the chromadb directory {storage_directory}")
 
     return tot_dbs
+
+
+def _display_db_num(dir_num: int, file_num: int, link_num: int, verbose: bool):
+
+    if not verbose:
+        return
+
+    info = "\nload "
+    if dir_num > 0:
+        info += str(dir_num)
+        if dir_num > 1:
+            info += " directories, "
+        else:
+            info += " directory, "
+    if file_num > 0:
+        info += str(file_num)
+        if file_num > 1:
+            info += " files, "
+        else:
+            info += " file, "
+    if link_num > 0:
+        info += str(link_num)
+        if link_num > 1:
+            info += " links, "
+        else:
+            info += " link, "
+
+    print(info + "\n\n")

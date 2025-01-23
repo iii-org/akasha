@@ -26,8 +26,7 @@ def delete_documents_by_directory(
     Returns:
         int: _description_
     """
-    if isinstance(directory_path, str):
-        directory_path = Path(directory_path)
+
     try:
         embed_type, embed_name = get_embedding_type_and_name(embeddings)
         storage_directory = get_storage_directory(directory_path, chunk_size,

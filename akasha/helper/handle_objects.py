@@ -249,6 +249,7 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         return model_name
 
     if isinstance(model_name, Callable):
+
         model = custom_model(func=model_name, temperature=temperature)
         if verbose:
             print("selected custom model.")

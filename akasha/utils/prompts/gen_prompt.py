@@ -518,6 +518,11 @@ If you don't know the answer, just say that you don't know, don't try to make up
     return prompt
 
 
+def default_ask_prompt():
+
+    return "你是擅長回答問題的助手，若有提供參考資訊，根據參考資訊回答問題;若沒有則根據你的理解回答使用者的問題。\n"
+
+
 def default_conclusion_prompt(question: str, language: str = "zh"):
 
     prompt = f"""User will give you several pieces of answer about a question, use those context to answer the question: {question}. 

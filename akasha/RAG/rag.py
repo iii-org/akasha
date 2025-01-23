@@ -1,14 +1,27 @@
 from pathlib import Path
 import time, datetime
+
 from typing import Callable, Union, List, Tuple, Generator
 from langchain_core.language_models.base import BaseLanguageModel
-from langchain_core.embeddings import Embeddings
-from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_EMBED, DEFAULT_MAX_INPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MODEL, DEFAULT_SEARCH_TYPE
 
-from akasha.utils import atman
-from akasha.utils import dbs
+from langchain_core.embeddings import Embeddings
+
+DEFAULT_MODEL = "openai:gpt-3.5-turbo"
+DEFAULT_EMBED = "openai:text-embedding-ada-002"
+DEFAULT_MAX_INPUT_TOKENS = 3000
+DEFAULT_MAX_OUTPUT_TOKENS = 1024
+DEFAULT_CHUNK_SIZE = 1000
+DEFAULT_SEARCH_TYPE = "auto"
+st = time.time()
+from akasha.utils.atman import atman
+
+print("rag: ", time.time() - st)
+from akasha.utils.db.db_structure import dbs
+
+from akasha.helper.base import get_doc_length
 from akasha.helper.token_counter import myTokenizer
 from akasha.helper.run_llm import call_model, call_stream_model
+
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt
 from akasha.utils.search.retrievers.base import get_retrivers
@@ -74,23 +87,24 @@ class RAG(atman):
         ### set variables ###
 
         self.docs = []
-        self.doc_tokens = 0
-        self.doc_length = 0
         self.response = ""
         self.prompt = ""
+        self.prompt_tokens, self.prompt_length = 0, 0
+        self.doc_tokens, self.doc_length = 0, 0
+
+        ## set default RAG prompt ##
+        if self.system_prompt.replace(' ', '') == "":
+            self.system_prompt = default_doc_ask_prompt(self.language)
 
     def _add_basic_log(self,
                        timestamp: str,
                        fn_type: str,
-                       history_messages: list = []):
+                       history_messages: list = []) -> bool:
 
-        if self.keep_logs == False:
-            return
-
-        super()._add_basic_log(timestamp, fn_type)
+        if super()._add_basic_log(timestamp, fn_type) == False:
+            return False
 
         self.logs[timestamp]["prompt"] = self.prompt
-        self.logs[timestamp]["embeddings"] = self.embeddings
         self.logs[timestamp]["history_messages"] = history_messages
 
         cur_source = self.data_source
@@ -105,16 +119,37 @@ class RAG(atman):
             else:
                 self.logs[timestamp]["data_source"].append(data_path)
 
-        return
+        return True
 
-    def _add_result_log(self, timestamp, time):
+    def _add_result_log(self, timestamp, time) -> bool:
 
-        if self.keep_logs == False:
-            return
+        if super()._add_result_log(timestamp, time) == False:
+            return False
 
-        super()._add_result_log(timestamp, time)
+        ### add token information ###
         self.logs[timestamp]["response"] = self.response
-        return
+        self.logs[timestamp]["prompt_tokens"] = self.prompt_tokens
+        self.logs[timestamp]["prompt_length"] = self.prompt_length
+        self.logs[timestamp]["doc_tokens"] = self.doc_tokens
+        self.logs[timestamp]["doc_length"] = self.doc_length
+
+        return True
+
+    def _display_info(self) -> bool:
+
+        if self.verbose == False:
+            return False
+        print(f"model: {self.model}, embeddings: {self.embeddings}")
+        print(
+            f"chunk_size: {self.chunk_size}, search_type: {self.search_type}")
+        print(
+            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+        )
+        print(
+            f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n"
+        )
+
+        return True
 
     def __call__(self,
                  data_source: Union[List[Union[str, Path]], Path, str, dbs],
@@ -146,6 +181,20 @@ class RAG(atman):
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self._add_basic_log(timestamp, "RAG", history_messages)
 
+        ### check if prompt <= max_input_tokens ###
+        tot_prompts = self.prompt + self.system_prompt + '\n\n'.join(
+            history_messages)
+        self.prompt_length = get_doc_length(self.language, tot_prompts)
+        self.prompt_tokens = myTokenizer.compute_tokens(
+            tot_prompts, self.model) + 10
+
+        if self.prompt_tokens > self.max_input_tokens:
+            print(
+                "\n\nThe tokens of prompt is larger than max_input_tokens.\n\n"
+            )
+            raise ValueError(
+                "The tokens of prompt is larger than max_input_tokens.")
+
         ### start to get response ###
         retrivers_list = get_retrivers(
             self.db,
@@ -154,27 +203,23 @@ class RAG(atman):
             self.search_type,
             self.env_file,
         )
-        left_tokens = self.max_input_tokens - \
-            myTokenizer.compute_tokens(self.prompt, self.model) - \
-            myTokenizer.compute_tokens('\n\n'.join(history_messages),
-                                       self.model)
+
         self.docs, self.doc_length, self.doc_tokens = search_docs(
             retrivers_list,
             self.prompt,
             self.model,
-            left_tokens,
+            self.max_input_tokens - self.prompt_tokens,
             self.search_type,
             self.language,
         )
-        if self.docs is None:
+        if self.doc_tokens == 0:
 
-            print("\n\nNo Relevant Documents.\n\n")
+            print(
+                "Warning: Unable to retrieve any documents, possibly due to insufficient remaining tokens.\n\n"
+            )
             self.docs = []
 
-        ## format prompt ##
-        if self.system_prompt.replace(' ', '') == "":
-            self.system_prompt = default_doc_ask_prompt(self.language)
-
+        self._display_info()  # display the information of the parameters
         text_input = merge_history_and_prompt(history_messages,
                                               self.system_prompt,
                                               self._display_docs() +
