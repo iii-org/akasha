@@ -46,7 +46,6 @@ class RAG(atman):
         prompt_format_type: str = "auto",
         keep_logs: bool = False,
         use_chroma: bool = False,
-        ignore_check: bool = False,
         stream: bool = False,
         verbose: bool = False,
         env_file: str = "",
@@ -76,11 +75,10 @@ class RAG(atman):
         super().__init__(model, embeddings, chunk_size, search_type,
                          max_input_tokens, max_output_tokens, temperature,
                          threshold, language, record_exp, system_prompt,
-                         keep_logs, verbose, env_file)
+                         keep_logs, verbose, use_chroma, env_file)
         ### set argruments ###
         self.data_source = ""
         self.use_chroma = use_chroma
-        self.ignore_check = ignore_check
         self.prompt_format_type = prompt_format_type
         self.stream = stream
         ### set variables ###
@@ -149,6 +147,19 @@ class RAG(atman):
         )
 
         return True
+
+    def _display_stream(
+            self, text_input: Union[str,
+                                    List[str]]) -> Generator[str, None, None]:
+
+        ret = call_stream_model(
+            self.model_obj,
+            text_input,
+        )
+
+        for s in ret:
+            self.response += s
+            yield s
 
     def __call__(self,
                  data_source: Union[List[Union[str, Path]], Path, str, dbs],
@@ -232,10 +243,7 @@ class RAG(atman):
 
         end_time = time.time()
         if self.stream:
-            return call_stream_model(
-                self.model_obj,
-                text_input,
-            )
+            return self._display_stream(text_input, )
 
         self.response = call_model(
             self.model_obj,

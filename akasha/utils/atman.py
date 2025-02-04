@@ -146,10 +146,6 @@ class basic_llm:
             return False
 
         self.logs[timestamp]["time"] = time
-        # if hasattr(self, 'question') and self.question:
-        #     self.logs[timestamp]["question"] = self.question
-        # if hasattr(self, 'answer') and self.answer:
-        #     self.logs[timestamp]["answer"] = self.answer
         try:
             self.logs[timestamp]["docs"] = "\n\n".join(
                 [doc.page_content for doc in self.docs])

@@ -34,6 +34,8 @@ def load_docs_from_info(
 
     for si in info:
         if isinstance(si, str):
+            if si == "":
+                continue
             if is_url(si):
                 docs.append(load_url(si))
             else:

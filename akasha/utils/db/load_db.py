@@ -41,6 +41,8 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
     for data_path in data_source:
 
         if isinstance(data_path, str):
+            if data_path == "":
+                continue
             if is_url(data_path):
                 link_list.append(data_path)
                 continue

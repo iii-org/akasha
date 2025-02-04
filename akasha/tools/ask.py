@@ -1,6 +1,7 @@
 from akasha.utils.atman import basic_llm
 from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
 from akasha.utils.prompts.gen_prompt import default_ask_prompt, default_conclusion_prompt, format_sys_prompt
+from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table
 from akasha.utils.db.load_docs import load_docs_from_info
 from akasha.helper.base import get_doc_length
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
@@ -79,7 +80,7 @@ class ask(basic_llm):
             f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
         )
         print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}")
-        print(f"Batch:  {batch}\n\n")
+        print(f"Batch:  {max(batch,1)}\n\n")
 
         return True
 
@@ -133,7 +134,6 @@ class ask(basic_llm):
         start_time = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.docs = load_docs_from_info(info)
-
         ### check if prompt <= max_input_tokens ###
         tot_prompts = self.prompt + self.system_prompt + '\n\n'.join(
             history_messages)
@@ -186,29 +186,36 @@ class ask(basic_llm):
                                           self.prompt_format_type, self.model)
 
             if self.stream:
-                return call_stream_model(
-                    self.model_obj,
-                    fnl_input,
-                )
+                return self._display_stream(fnl_input, )
 
             self.response = call_model(self.model_obj, fnl_input)
 
         else:
 
             if self.stream:
-                return call_stream_model(
-                    self.model_obj,
-                    prod_sys_prompts[0],
-                )
+                return self._display_stream(prod_sys_prompts[0])
 
             self.response = call_model(self.model_obj, prod_sys_prompts[0])
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
 
-        # self._upload_logs(end_time - start_time, self.doc_length,
-        #                   self.doc_tokens)
+        self._upload_logs(end_time - start_time, self.doc_length,
+                          self.doc_tokens)
         return self.response
+
+    def _display_stream(
+            self, text_input: Union[str,
+                                    List[str]]) -> Generator[str, None, None]:
+
+        ret = call_stream_model(
+            self.model_obj,
+            text_input,
+        )
+
+        for s in ret:
+            self.response += s
+            yield s
 
     def _separate_docs(self, ) -> Tuple[List[str], int]:
         """separate documents if the total length of documents exceed the max_input_tokens
@@ -295,6 +302,17 @@ class ask(basic_llm):
         """
         prod_sys_prompts = []
 
+        if len(cur_documents) == 0:
+
+            prod_sys_prompt = merge_history_and_prompt(history_messages,
+                                                       self.system_prompt,
+                                                       "User question: " +
+                                                       self.prompt,
+                                                       self.prompt_format_type,
+                                                       model=self.model)
+            prod_sys_prompts.append(prod_sys_prompt)
+            return prod_sys_prompts
+
         for d_count in range(len(cur_documents)):
 
             prod_sys_prompt = merge_history_and_prompt(
@@ -307,6 +325,30 @@ class ask(basic_llm):
             prod_sys_prompts.append(prod_sys_prompt)
 
         return prod_sys_prompts
+
+    def _upload_logs(self, tot_time: float, doc_len: int,
+                     doc_tokens: int) -> str:
+        """_summary_
+
+        Args:
+            tot_time (float): _description_
+            doc_len (int): _description_
+            doc_tokens (int): _description_
+        """
+        if self.record_exp == "":
+            return "no record_exp assigned, so no logs uploaded"
+
+        params = handle_params(
+            self.model,
+            self.language,
+            "",
+        )
+        metrics = handle_metrics(doc_len, tot_time, doc_tokens)
+        table = handle_table(self.prompt, self.docs, self.response)
+        from akasha.utils.upload import aiido_upload
+        aiido_upload(self.record_exp, params, metrics, table)
+
+        return "logs uploaded"
 
 
 def _retri_max_texts(

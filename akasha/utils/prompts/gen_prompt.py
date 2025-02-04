@@ -241,7 +241,7 @@ def format_question_query(question: list, answer: str) -> Tuple[str, str]:
     return query, answer
 
 
-def format_llama_json(query):
+def format_llama_json(query: str):
     """insert system prompt for llm to generate JSON format of {"ans":selection number}
 
     Args:

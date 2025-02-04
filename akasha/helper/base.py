@@ -4,6 +4,7 @@ from langchain_core.embeddings import Embeddings
 from typing import Union, Callable, Tuple, List
 from langchain.schema import Document
 import jieba
+import json, re, traceback
 
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
@@ -125,3 +126,44 @@ def get_docs_length(language: str, docs: List[Document]) -> int:
     for doc in docs:
         docs_length += get_doc_length(language, doc.page_content)
     return docs_length
+
+
+def extract_json(s: str) -> Union[dict, None]:
+    """parse the JSON part of the string
+
+    Args:
+        s (str): string that contains JSON part
+
+    Returns:
+        Union[dict, None]: return the JSON part of the string, if not found return None
+    """
+    # Use a regular expression to find the JSON part of the string
+    match = re.search(r'\{.*\}', s, re.DOTALL)
+    stack = []
+    start = 0
+    s = s.replace("\n", " ").replace("\r", " ").strip()
+    if match is None:
+        return None
+
+    s = match.group()
+    for i, c in enumerate(s):
+        if c == '{':
+            stack.append(i)
+        elif c == '}':
+            if stack:
+                start = stack.pop()
+                if not stack:
+                    try:
+                        json_part = s[start:i + 1]
+                        json_part = json_part.replace("\n", "")
+                        json_part = json_part.replace("'", '"')
+                        # Try to parse the JSON part of the string
+                        return json.loads(json_part)
+                    except json.JSONDecodeError:
+                        traceback.print_exc()
+                        print(s[start:i + 1])
+                        print(
+                            "The JSON part of the string is not well-formatted"
+                        )
+                        return None
+    return None
