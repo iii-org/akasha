@@ -124,6 +124,7 @@ class eval(Model_Eval):
         if check_sum_type(self.question_type, self.question_style):
             return [], []
 
+        self._display_info()
         self._get_db(data_source)
         self._check_db()
 
@@ -203,7 +204,7 @@ class eval(Model_Eval):
         progress.close()  # end running llm progress bar
 
         end_time = time.time()
-
+        self._display_info_fnl()
         self._add_result_log(timestamp, end_time - start_time)
         self._upload_logs(end_time - start_time, table, sum(self.doc_length),
                           sum(self.doc_tokens))
@@ -251,6 +252,7 @@ class eval(Model_Eval):
         if check_sum_type(self.question_type, self.question_style):
             return [], []
 
+        self._display_info()
         self._get_db(data_source)
         self._check_db()
 
@@ -348,6 +350,7 @@ class eval(Model_Eval):
         end_time = time.time()
 
         ### record logs ###
+        self._display_info_fnl()
         self._upload_logs(end_time - start_time, table, sum(self.doc_length),
                           sum(self.doc_tokens))
 
@@ -361,15 +364,28 @@ class eval(Model_Eval):
         self,
         questionset_file: str,
         data_source: Union[List[str], str],
-        eval_model: Union[BaseLanguageModel, str] = DEFAULT_MODEL,
+        eval_model: Union[BaseLanguageModel, str] = "",
         **kwargs,
-    ) -> Union[Tuple[float, float, float, int], Tuple[float, int]]:
+    ) -> Union[Tuple[float, float, float, list], Tuple[float, list]]:
+        """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response,
+        evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score
+        and rouge_l to evaluate the response if you use essay type to generate questionset.  And use correct_count to evaluate
+        the response if you use single_choice type to generate questionset.  **Noted that the question_type must match the questionset_file's type**.
 
+
+            Args:
+            **questionset_flie (str)**: the path of question set txt file, accept .txt, .docx and .pdf.\n
+            **question_type (str, optional)**: the type of question you want to generate, "essay" or "single_choice". Defaults to "essay".\n
+            **eval_model (Union[BaseLanguageModel, str], optional)**: llm model use to score the response. Defaults to "gpt-3.5-turbo".\n
+            **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                embeddings, chunk_size, model, verbose, language , search_type, record_exp,
+                system_prompt, max_input_tokens, temperature.\n
+        """
         ## set class variables ##
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.data_source = self._check_doc_path(data_source)
-        self.eval_model = eval_model
+        self._decide_eval_model(eval_model)
 
         if check_sum_type(self.question_type, self.question_style):
             return 0.0, 0
@@ -379,6 +395,7 @@ class eval(Model_Eval):
             self.system_prompt) + self.system_prompt
 
         ## db ##
+        self._display_info()
         self._get_db(data_source)  # create self.db and self.ignore_files
         self._check_db()
 
@@ -430,7 +447,7 @@ class eval(Model_Eval):
         end_time = time.time()
         self.question = question
         self.answer = answer
-
+        self._display_info_fnl()
         self._add_result_log(timestamp, end_time - start_time)
 
         if self.question_style.lower() == "essay":
@@ -452,3 +469,14 @@ class eval(Model_Eval):
                               sum(self.doc_length), sum(self.doc_tokens))
 
             return correct_rate, self.doc_tokens
+
+    def _decide_eval_model(self, eval_model: Union[BaseLanguageModel, str]):
+        if isinstance(eval_model, str):
+            if eval_model == "":
+                pass
+            elif eval_model == self.model:
+                self.eval_model = self.model_obj
+            else:
+                self.eval_model = eval_model
+        else:
+            self.eval_model = eval_model

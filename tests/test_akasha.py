@@ -75,7 +75,7 @@ def base_line():
 
 
 @pytest.mark.akasha
-def test_get_response(base_line: akasha.RAG):
+def test_RAG(base_line: akasha.RAG):
     ak = base_line
     query = "五軸是甚麼?"
     assert ak.verbose == False
@@ -89,5 +89,23 @@ def test_get_response(base_line: akasha.RAG):
     )
     response = ak("./docs/mic", query)
     assert (type(response) == str)
+
+    return
+
+
+@pytest.mark.akasha
+def test_ask():
+
+    ak = akasha.ask(keep_logs=True,
+                    verbose=True,
+                    max_input_tokens=3000,
+                    stream=True)
+    res = ak("此requirement中torch的版本為何?", install_requires)
+    ret = ""
+    for r in res:
+        ret += r
+        continue
+    assert ak.max_input_tokens == 3000
+    assert "2.0" in ret
 
     return

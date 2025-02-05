@@ -122,7 +122,7 @@ class Model_Eval(atman):
         self.question_type = question_type
         self.question_style = question_style
         self.question_num = 10
-        self.eval_model = self.model
+        self.eval_model = self.model_obj
         ### set variables ###
 
         self.docs = []
@@ -151,7 +151,7 @@ class Model_Eval(atman):
             self.logs[timestamp]["doc_range"] = doc_range
             self.logs[timestamp]["choice_num"] = choice_num
         else:
-            self.logs[timestamp]["search_type"] = self.search_type_str
+            self.logs[timestamp]["search_type"] = self.search_type
             self.logs[timestamp]["questionset_path"] = questionset_file
         return True
 
@@ -179,6 +179,29 @@ class Model_Eval(atman):
             self.logs[timestamp]["llm_score"] = self.score["llm_score"]
         elif "correct_count" in self.score:
             self.logs[timestamp]["correct_count"] = self.score["correct_count"]
+
+        return True
+
+    def _display_info(self) -> bool:
+
+        if self.verbose == False:
+            return False
+        print(f"Model: {self.model}, Embeddings: {self.embeddings}")
+        print(
+            f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
+
+        return True
+
+    def _display_info_fnl(self) -> bool:
+
+        if self.verbose == False:
+            return False
+        print(
+            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+        )
+        print(
+            f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n"
+        )
 
         return True
 
@@ -399,6 +422,10 @@ class Model_Eval(atman):
                 self.doc_length.append(get_docs_length(self.language, docs))
                 self.doc_tokens.append(
                     self.model_obj.get_num_tokens(used_texts))
+                self.prompt_length.append(
+                    get_doc_length(self.language, q_prompt))
+                self.prompt_tokens.append(
+                    self.model_obj.get_num_tokens(q_prompt))
                 self.docs.extend(docs)
 
             except Exception as e:
@@ -467,7 +494,7 @@ class Model_Eval(atman):
             retrivers_list,
             query,
             self.model,
-            self.max_input_tokens - self.prompt_tokens,
+            self.max_input_tokens - query_tokens,
             self.search_type,
             self.language,
         )
