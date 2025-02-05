@@ -43,7 +43,7 @@ def test_Model_Eval(base_line: Tuple[akasha.eval, str]):
 
     ql, al = eva.create_questionset(doc_path,
                                     question_num=2,
-                                    quesion_type="fact",
+                                    question_type="fact",
                                     question_style="essay")
     f1_name = eva.logs[eva.timestamp_list[-1]]["questionset_path"]
     assert len(ql) == len(al)

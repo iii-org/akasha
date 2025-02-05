@@ -367,7 +367,7 @@ class eval(Model_Eval):
         eval_model: Union[BaseLanguageModel, str] = "",
         **kwargs,
     ) -> Union[Tuple[float, float, float, list], Tuple[float, list]]:
-        """parse the question set txt file generated from "auto_create_questionset" function and then use llm model to generate response,
+        """parse the question set txt file generated from "create_questionset" function and then use llm model to generate response,
         evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score
         and rouge_l to evaluate the response if you use essay type to generate questionset.  And use correct_count to evaluate
         the response if you use single_choice type to generate questionset.  **Noted that the question_type must match the questionset_file's type**.

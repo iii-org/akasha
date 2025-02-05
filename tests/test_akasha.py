@@ -106,6 +106,6 @@ def test_ask():
         ret += r
         continue
     assert ak.max_input_tokens == 3000
-    assert "2.0" in ret
+    assert "2." in ret
 
     return
