@@ -7,7 +7,7 @@ DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_SEARCH_TYPE = "auto"
 PROMPT = "akasha是甚麼?"
 
-#### create a RAG object and call it ###
+#### create a ask object and call it ###
 ak = akasha.ask(model="openai:gpt-4o",
                 max_input_tokens=8000,
                 keep_logs=True,

@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 import warnings
 
 warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
-load_dotenv(pathlib.Path().cwd() / ".env")
+load_dotenv(pathlib.Path().cwd() / ".env", override=True)
 
 
 class RAG(atman):
