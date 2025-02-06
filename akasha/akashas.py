@@ -26,7 +26,7 @@ DEFAULT_MODEL = "openai:gpt-3.5-turbo"
 DEFAULT_EMBED = "openai:text-embedding-ada-002"
 _DEFAULT_MAX_DOC_LEN = 1500
 _DEFAULT_MAX_INPUT_TOKENS = 3000
-load_dotenv(pathlib.Path().cwd() / ".env")
+load_dotenv(pathlib.Path().cwd() / ".env", override=True)
 
 
 def aiido_upload(
