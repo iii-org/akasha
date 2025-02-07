@@ -153,3 +153,49 @@ language_dict = {
     "cs": "czech",
     "hu": "hungarian",
 }
+
+websearch_language_dict = {
+    "en": {
+        "brave": "en",
+        "serper": "en",
+        "wiki": "en"
+    },
+    "ch": {
+        "brave": "zh-hant",
+        "serper": "zh-TW",
+        "wiki": "zh-TW"
+    },
+    "jp": {
+        "brave": "ja",
+        "serper": "ja",
+        "wiki": "jp"
+    },
+    "ja": {
+        "brave": "ja",
+        "serper": "ja",
+        "wiki": "jp"
+    },
+}
+
+websearch_country_dict = {
+    "en": {
+        "brave": "us",
+        "serper": "us",
+        "wiki": "us"
+    },
+    "ch": {
+        "brave": "tw",
+        "serper": "tw",
+        "wiki": "tw"
+    },
+    "jp": {
+        "brave": "jp",
+        "serper": "jp",
+        "wiki": "jp"
+    },
+    "ja": {
+        "brave": "jp",
+        "serper": "jp",
+        "wiki": "jp"
+    },
+}

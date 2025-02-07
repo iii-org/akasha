@@ -60,7 +60,7 @@ class basic_llm:
         self.max_input_tokens = max_input_tokens
         self.env_file = env_file
         self.timestamp_list = []
-        self.logs = {}
+        self.logs: dict[dict] = {}
 
         ### set model and embeddings ###
         self.model_obj = handle_model(model, self.verbose, self.temperature,
