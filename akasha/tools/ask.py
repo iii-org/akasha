@@ -1,11 +1,11 @@
 from akasha.utils.atman import basic_llm
 from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
-from akasha.utils.prompts.gen_prompt import default_ask_prompt, default_conclusion_prompt, format_sys_prompt
+from akasha.utils.prompts.gen_prompt import default_ask_prompt, default_conclusion_prompt, format_sys_prompt, format_image_prompt
 from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table
 from akasha.utils.db.load_docs import load_docs_from_info
 from akasha.helper.base import get_doc_length
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
-from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model, check_relevant_answer
+from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model, call_image_model, check_relevant_answer
 from typing import Callable, Union, List, Tuple, Generator
 from pathlib import Path
 from langchain.schema import Document
@@ -110,6 +110,19 @@ class ask(basic_llm):
 
         return True
 
+    def _add_result_log_vision(self, timestamp, time, image_path: str) -> bool:
+
+        if super()._add_result_log(timestamp, time) == False:
+            return False
+
+        ### add token information ###
+        self.logs[timestamp]["image_path"] = image_path
+        self.logs[timestamp]["response"] = self.response
+        self.logs[timestamp]["prompt_tokens"] = self.prompt_tokens
+        self.logs[timestamp]["prompt_length"] = self.prompt_length
+
+        return True
+
     def __call__(self,
                  prompt: str,
                  info: Union[str, list, Path, Document] = "",
@@ -202,6 +215,67 @@ class ask(basic_llm):
 
         self._upload_logs(end_time - start_time, self.doc_length,
                           self.doc_tokens)
+        return self.response
+
+    def vision(self, prompt: str, image_path: Union[str, Path],
+               **kwargs) -> str:
+        """ask model with image and prompt
+
+        Args:
+            image_path (str): image path or url (recommand jpeg or png file)
+            prompt (str): user question
+
+        Returns:
+            str: _description_
+        """
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.prompt = prompt
+        fnl_input = []
+        start_time = time.time()
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self._add_basic_log(timestamp, "vision")
+
+        ## check model ##
+        model_prefix = self.model.split(":")[0]
+        if model_prefix in [
+                "hf", "hugginface", "anthropic", "claude", "anthro"
+        ] and self.stream == True:
+            raise ValueError(
+                f"Currently {model_prefix} model does not support stream mode.\n\n"
+            )
+
+        if model_prefix in [
+                "llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp",
+                "chatglm", "chatglm2", "glm", "lora", "peft", "gptq", "gptq2"
+        ]:
+            raise ValueError(
+                f"Currently {self.model} model does not support image input.\n\n"
+            )
+
+        ## count prompt tokens ##
+        self.prompt_tokens = myTokenizer.compute_tokens(
+            self.prompt, self.model)
+        self.prompt_length = get_doc_length(self.language, self.prompt)
+
+        ## decide prompt format ##
+        if model_prefix in ["hf", "huggingface"]:
+            fnl_input = format_image_prompt(image_path, prompt, "image_llama")
+
+        elif model_prefix in ["anthropic", "claude", "anthro"]:
+            fnl_input = format_image_prompt(image_path, prompt,
+                                            "image_anthropic")
+
+        else:
+            fnl_input = format_image_prompt(image_path, prompt, "image_gpt")
+
+        if self.stream:
+            return self._display_stream(fnl_input, )
+
+        self.response = call_image_model(self.model_obj, fnl_input)
+        self._add_result_log_vision(timestamp,
+                                    time.time() - start_time, image_path)
+
         return self.response
 
     def _display_stream(

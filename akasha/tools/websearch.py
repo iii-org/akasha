@@ -2,17 +2,13 @@ from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_
 from .ask import ask, _retri_max_texts
 from akasha.utils.prompts.gen_prompt import default_ask_prompt, default_conclusion_prompt, format_sys_prompt
 import time, datetime
-from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table, websearch_language_dict, websearch_country_dict
-from akasha.utils.db.load_docs import load_docs_from_info
+from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table
 from akasha.helper.base import get_doc_length
-from akasha.helper.preprocess_prompts import merge_history_and_prompt
-from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model, check_relevant_answer
+from akasha.helper.run_llm import call_model, call_batch_model, check_relevant_answer
+from akasha.helper.web_engine import load_docs_from_webengine
 from typing import Callable, Union, List, Tuple, Generator
-from pathlib import Path
-from langchain.schema import Document
-import time, datetime, os
+import time, datetime
 from akasha.helper.token_counter import myTokenizer
-from dotenv import dotenv_values
 
 
 class websearch(ask):
@@ -66,7 +62,7 @@ class websearch(ask):
         )
         self.prompt = ""
         self.response = ""
-        self.search_engine = search_engine
+        self.search_engine = search_engine.lower()
         self.search_num = search_num
         self.docs = []
         self.prompt_tokens, self.prompt_length = 0, 0
@@ -167,7 +163,10 @@ class websearch(ask):
 
         start_time = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        self._get_search_results()
+        self._add_basic_log(timestamp, "websearch")
+        self.docs = load_docs_from_webengine(self.prompt, self.search_engine,
+                                             self.search_num, self.language,
+                                             self.env_file)
 
         ### check if prompt <= max_input_tokens ###
         tot_prompts = self.prompt + self.system_prompt
@@ -181,8 +180,6 @@ class websearch(ask):
             )
             raise ValueError(
                 "The tokens of prompt is larger than max_input_tokens.")
-
-        self._add_basic_log(timestamp, "websearch")
 
         ### separate documents and count tokens ###
         cur_documents, self.doc_tokens = self._separate_docs()
@@ -236,70 +233,3 @@ class websearch(ask):
         self._upload_logs(end_time - start_time, self.doc_length,
                           self.doc_tokens)
         return self.response
-
-    def _get_search_results(self) -> List[Document]:
-        """get the search results based on the prompt and search engine"""
-
-        if self.search_engine == "wiki":
-            api_key = ""
-        else:
-            api_key = self._get_search_api_key()
-
-        if self.search_engine == "wiki":
-            from langchain_community.document_loaders import WikipediaLoader
-            self.docs = WikipediaLoader(
-                query=self.prompt,
-                load_max_docs=self.search_num,
-                lang=websearch_language_dict[self.language][
-                    self.search_engine]).load()
-
-        elif self.search_engine == "serper":
-            from langchain_community.utilities import GoogleSerperAPIWrapper
-            google_serper = GoogleSerperAPIWrapper(
-                serper_api_key=api_key,
-                gl=websearch_country_dict[self.language][self.search_engine],
-                hl=websearch_language_dict[self.language][self.search_engine],
-                k=self.search_num)
-            search_res = google_serper.run(self.prompt)
-
-            self.docs = [Document(page_content=search_res)]
-
-        elif self.search_engine == "brave":
-            from langchain_community.document_loaders import BraveSearchLoader
-            loader = BraveSearchLoader(
-                query=self.prompt,
-                api_key=api_key,
-                search_kwargs={
-                    "count":
-                    self.search_num,
-                    "country":
-                    "all",
-                    "search_lang":
-                    websearch_language_dict[self.language][self.search_engine]
-                })
-            self.docs = loader.load()
-        else:
-            raise ValueError(
-                f"search_engine {self.search_engine} is not supported")
-        return self.docs
-
-    def _get_search_api_key(self):
-        """get the search api key based on the search engine"""
-        if self.env_file == "" or not os.path.exists(self.env_file):
-
-            if self.search_engine == "serper":
-                return os.environ["SERPER_API_KEY"]
-            elif self.search_engine == "brave":
-                return os.environ["BRAVE_API_KEY"]
-            else:
-                return ""
-
-        else:
-            env_dict = dotenv_values(self.env_file)
-
-            if self.search_engine == "serper":
-                return env_dict["SERPER_API_KEY"]
-            elif self.search_engine == "brave":
-                return env_dict["BRAVE_API_KEY"]
-            else:
-                return ""

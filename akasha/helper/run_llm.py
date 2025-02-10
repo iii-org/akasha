@@ -4,7 +4,8 @@ from langchain_core.messages.ai import AIMessage
 import traceback, logging
 from langchain_core.language_models.base import BaseLanguageModel
 from akasha.helper.handle_objects import handle_model_and_name
-from akasha.helper.base import sim_to_trad
+from akasha.helper.base import sim_to_trad, extract_json
+from akasha.utils.prompts.gen_prompt import format_sys_prompt, default_translate_prompt
 
 
 def call_model(
@@ -245,3 +246,63 @@ def check_relevant_answer(model_obj: BaseLanguageModel,
             results.append(batch_responses[idx])
 
     return results
+
+
+def call_translator(model_obj: BaseLanguageModel,
+                    texts: str,
+                    prompt_format_type: str = "auto",
+                    language: str = "zh") -> str:
+    """translate texts to target language
+
+    Args:
+        model_obj (BaseLanguageModel): LLM that used to translate
+        texts (str): texts that need to be translated
+        prompt_format_type (str, optional): system prompt format. Defaults to "auto".
+        language (str, optional): target language. Defaults to "zh".
+
+    Returns:
+        str: translated texts
+    """
+    model_obj, model_name = handle_model_and_name(model_obj)
+    sys_prompt = default_translate_prompt(language)
+    prod_prompt = format_sys_prompt(sys_prompt, texts, prompt_format_type,
+                                    model_name)
+
+    response = call_model(model_obj, prod_prompt)
+
+    return response
+
+
+def call_JSON_formatter(
+    model_obj: BaseLanguageModel,
+    texts: str,
+    keys: Union[str, list] = "",
+    prompt_format_type: str = "auto",
+) -> Union[dict, None]:
+    """use LLM to transfer texts into JSON format
+
+    Args:
+        model_obj (BaseLanguageModel): LLM that used to transfer
+        texts (str): texts that need to be transferred
+        keys (Union[str, list], optional): keys name of output dictionary. Defaults to "".
+        prompt_format_type (str, optional): system prompt format. Defaults to "auto".
+
+    Returns:
+        Union[dict, None]: return the JSON part of the string, if not found return None
+    """
+
+    if keys == "":
+        sys_prompt = "Format the following TEXTS into a single JSON instance that conforms to the JSON schema."
+    elif isinstance(keys, str):
+        keys = [keys]
+
+    if keys != "":
+        sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
+
+    model_obj, model_name = handle_model_and_name(model_obj)
+
+    prod_prompt = format_sys_prompt(sys_prompt, "TEXTS: " + texts,
+                                    prompt_format_type, model_name)
+
+    response = call_model(model_obj, prod_prompt)
+    return extract_json(response)

@@ -21,6 +21,14 @@ res = ak(
     info=["https://github.com/iii-org/akasha"],
 )
 
+### use vision to ask question about image ###
+### image_path can be a local file or an url ###
+res = ak.vision(
+    prompt="這張圖片是什麼?",
+    image_path=
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+)
+
 # save the logs or turn verbose on to see the details
 ak.save_logs("logs_ask.json")
 
