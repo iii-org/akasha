@@ -1,4 +1,4 @@
-from .base import separate_name, decide_embedding_type, get_embedding_type_and_name, get_doc_length, get_docs_length
+from .base import separate_name, decide_embedding_type, get_embedding_type_and_name, get_doc_length, get_docs_length, sim_to_trad
 from .handle_objects import handle_search_type, handle_embeddings, handle_model
 from .token_counter import myTokenizer
 from .encoding import detect_encoding, get_mac_address, get_text_md5

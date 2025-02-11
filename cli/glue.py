@@ -1,7 +1,6 @@
 import click
 import uvicorn
 import akasha as ak
-import akasha.eval.eval as eval
 
 
 @click.group()
@@ -11,10 +10,10 @@ def akasha():
 
 @click.command()
 @click.option(
-    "--doc_path",
+    "--data_source",
     "-d",
     help=
-    "document directory path, parse all .txt, .pdf, .docx files in the directory",
+    "document directory path, or url, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option("--prompt",
@@ -37,13 +36,6 @@ def akasha():
     default="openai:gpt-3.5-turbo",
     help="llm model for generating the response",
 )
-@click.option("--topk", "-k", default=2, help="select topK relevant documents")
-@click.option(
-    "--threshold",
-    "-t",
-    default=0.0,
-    help="(deprecated) threshold score for selecting the relevant documents",
-)
 @click.option(
     "--language",
     "-l",
@@ -53,8 +45,8 @@ def akasha():
 @click.option(
     "--search_type",
     "-s",
-    default="merge",
-    help="search type for the documents, include merge, svm, mmr, tfidf",
+    default="auto",
+    help="search type for the documents, include auto, knn, mmr, tfidf",
 )
 @click.option(
     "--record_exp",
@@ -67,30 +59,23 @@ def akasha():
               "-sys",
               default="",
               help="system prompt for the llm model")
-@click.option("--max_doc_len",
-              "-md",
-              default=1500,
-              help="max doc len for the llm model input (deprecated)")
 @click.option("--max_input_tokens",
               "-md",
               default=3000,
               help="max token for the llm model input")
-def get_response(
-    doc_path: str,
+def rag(
+    data_source: str,
     prompt: str,
     embeddings: str,
     chunk_size: int,
     model: str,
-    topk: int,
-    threshold: float,
     language: str,
     search_type: str,
     record_exp: str,
     system_prompt: str,
-    max_doc_len: int,
     max_input_tokens: int,
 ):
-    gr = ak.Doc_QA(
+    gr = ak.RAG(
         verbose=False,
         embeddings=embeddings,
         chunk_size=chunk_size,
@@ -101,7 +86,7 @@ def get_response(
         system_prompt=system_prompt,
         max_input_tokens=max_input_tokens,
     )
-    res = gr.get_response(doc_path, prompt)
+    res = gr(data_source, prompt)
 
     print(res)
 
@@ -110,10 +95,10 @@ def get_response(
 
 @click.command()
 @click.option(
-    "--doc_path",
+    "--data_source",
     "-d",
     help=
-    "document directory path, parse all .txt, .pdf, .docx files in the directory",
+    "document directory path, or urls, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
@@ -133,12 +118,6 @@ def get_response(
     help="llm model for generating the response",
 )
 @click.option(
-    "--threshold",
-    "-t",
-    default=0.0,
-    help="(deprecated) threshold score for selecting the relevant documents",
-)
-@click.option(
     "--language",
     "-l",
     default="ch",
@@ -158,28 +137,26 @@ def get_response(
               "-md",
               default=3000,
               help="max token for the llm model input")
-def keep_responsing(
-    doc_path: str,
+def keep_rag(
+    data_source: str,
     embeddings: str,
     chunk_size: int,
     model: str,
-    threshold: float,
     language: str,
     search_type: str,
     system_prompt: str,
     max_input_tokens: int,
 ):
     import akasha.helper as helper
-    import akasha.search as search
     from langchain.chains.question_answering import load_qa_chain
-
-    embeddings_name = embeddings
+    import akasha.utils.db as dd
+    from akasha.utils.search.retrievers.base import get_retrivers
+    from akasha.utils.search.search_doc import search_docs
     embeddings = helper.handle_embeddings(embeddings, False)
     model_name = model
     model = helper.handle_model(model, False)
 
-    db = helper.create_chromadb(doc_path, False, embeddings, embeddings_name,
-                                chunk_size)
+    db, ign = dd.process_db(data_source, embeddings, chunk_size)
 
     if db is None:
         info = "document path not exist\n"
@@ -188,15 +165,17 @@ def keep_responsing(
 
     user_input = click.prompt(
         'Please input your question(type "exit()" to quit) ')
-    retrivers_list = search.get_retrivers(db, embeddings, threshold,
-                                          search_type, {})
+    retrivers_list = get_retrivers(db, embeddings, 0.0, search_type)
 
     while user_input != "exit()":
-        docs, docs_len, tokens = search.get_docs(db, retrivers_list,
-                                                 user_input, language,
-                                                 search_type, False,
-                                                 model_name, max_input_tokens,
-                                                 False)
+        docs, docs_len, tokens = search_docs(
+            retrivers_list,
+            user_input,
+            model_name,
+            max_input_tokens,
+            search_type,
+            language,
+        )
         if docs is None:
             docs = []
 
@@ -214,113 +193,9 @@ def keep_responsing(
     del db, model, embeddings
 
 
-@click.command("chain-of-thought", short_help="chain of thought")
-@click.option(
-    "--doc_path",
-    "-d",
-    help=
-    "document directory path, parse all .txt, .pdf, .docx files in the directory",
-    required=True,
-)
-@click.option(
-    "--prompt",
-    "-p",
-    multiple=True,
-    help=
-    "prompt you want to ask to llm, if you want to ask multiple questions, use -p multiple times",
-    required=True,
-)
-@click.option(
-    "--embeddings",
-    "-e",
-    default="openai:text-embedding-ada-002",
-    help="embeddings for storing the documents",
-)
-@click.option("--chunk_size",
-              "-c",
-              default=1000,
-              help="chunk size for storing the documents")
-@click.option(
-    "--model",
-    "-m",
-    default="openai:gpt-3.5-turbo",
-    help="llm model for generating the response",
-)
-@click.option("--topk", "-k", default=2, help="select topK relevant documents")
-@click.option(
-    "--threshold",
-    "-t",
-    default=0.0,
-    help="(deprecated) threshold score for selecting the relevant documents",
-)
-@click.option(
-    "--language",
-    "-l",
-    default="ch",
-    help="language for the documents, default is 'ch' for chinese",
-)
-@click.option(
-    "--search_type",
-    "-s",
-    default="merge",
-    help="search type for the documents, include merge, svm, mmr, tfidf",
-)
-@click.option(
-    "--record_exp",
-    "-r",
-    default="",
-    help=
-    "input the experiment name if you want to record the experiment using aiido",
-)
-@click.option("--system_prompt",
-              "-sys",
-              default="",
-              help="system prompt for the llm model")
-@click.option("--max_doc_len",
-              "-md",
-              default=1500,
-              help="max word length for the llm model input (deprecated)")
-@click.option("--max_input_tokens",
-              "-mt",
-              default=3000,
-              help="max token for the llm model input")
-def chain_of_thought(
-    doc_path: str,
-    prompt,
-    embeddings: str,
-    chunk_size: int,
-    model: str,
-    topk: int,
-    threshold: float,
-    language: str,
-    search_type: str,
-    record_exp: str,
-    system_prompt: str,
-    max_doc_len: int,
-    max_input_tokens: int,
-):
-    gr = ak.Doc_QA(
-        verbose=False,
-        embeddings=embeddings,
-        chunk_size=chunk_size,
-        model=model,
-        language=language,
-        search_type=search_type,
-        record_exp=record_exp,
-        system_prompt=system_prompt,
-        max_intput_token=max_input_tokens,
-    )
-
-    res = gr.chain_of_thought(doc_path, prompt)
-    for r in res:
-        print(r)
-
-    del gr
-
-
 @click.command()
 @click.option(
-    "--doc_path",
+    "--data_source",
     "-d",
     help=
     "document directory path, parse all .txt, .pdf, .docx files in the directory",
@@ -346,13 +221,6 @@ def chain_of_thought(
               "-c",
               default=1000,
               help="chunk size for storing the documents")
-@click.option("--topk", "-k", default=2, help="select topK relevant documents")
-@click.option(
-    "--threshold",
-    "-t",
-    default=0.0,
-    help="(deprecated) threshold score for selecting the relevant documents",
-)
 @click.option(
     "--language",
     "-l",
@@ -372,27 +240,26 @@ def chain_of_thought(
     help=
     "input the experiment name if you want to record the experiment using aiido",
 )
-def auto_create_questionset(
-    doc_path: str,
+def create_questionset(
+    data_source: str,
     question_num: int,
     question_type: str,
     embeddings: str,
     chunk_size: int,
-    topk: int,
-    threshold: float,
     language: str,
     search_type: str,
     record_exp: str,
 ):
     model = "openai:gpt-3.5-turbo"
-    eva = eval.Model_Eval()
-    eva.auto_create_questionset(
-        doc_path,
+    eva = ak.eval(
+        model=model,
+        embeddings=embeddings,
+    )
+    eva.create_questionset(
+        data_source,
         question_num,
         question_type=question_type,
-        embeddings=embeddings,
         chunk_size=chunk_size,
-        model=model,
         verbose=False,
         language=language,
         search_type=search_type,
@@ -411,7 +278,7 @@ def auto_create_questionset(
     required=True,
 )
 @click.option(
-    "--doc_path",
+    "--data_source",
     "-d",
     help=
     "document directory path, parse all .txt, .pdf, .docx files in the directory",
@@ -441,12 +308,6 @@ def auto_create_questionset(
 )
 @click.option("--topk", "-k", default=2, help="select topK relevant documents")
 @click.option(
-    "--threshold",
-    "-t",
-    default=0.0,
-    help="(deprecated) threshold score for selecting the relevant documents",
-)
-@click.option(
     "--language",
     "-l",
     default="ch",
@@ -465,39 +326,30 @@ def auto_create_questionset(
     help=
     "input the experiment name if you want to record the experiment using aiido",
 )
-@click.option("--max_doc_len",
-              "-md",
-              default=1500,
-              help="max doc length for the llm model input (deprecated)")
 @click.option("--max_input_tokens",
               "-md",
               default=3000,
               help="max token for the llm model input")
-def auto_evaluation(
+def evaluation(
     question_path: str,
-    doc_path: str,
+    data_source: str,
     question_type: str,
     embeddings: str,
     chunk_size: int,
     model: str,
-    topk: int,
-    threshold: float,
     language: str,
     search_type: str,
     record_exp: str,
-    max_doc_len: int,
     max_input_tokens: int,
 ):
-    eva = eval.Model_Eval()
+    eva = ak.eval(model=model, embeddings=embeddings)
 
     if question_type.lower() == "single_choice":
-        cor_rate, tokens = eva.auto_evaluation(
+        cor_rate, tokens = eva.evaluation(
             question_path,
-            doc_path,
+            data_source,
             question_type=question_type,
-            embeddings=embeddings,
             chunk_size=chunk_size,
-            model=model,
             verbose=False,
             language=language,
             search_type=search_type,
@@ -509,13 +361,11 @@ def auto_evaluation(
         print("total tokens: ", tokens)
 
     else:
-        avg_bert, avg_rouge, avg_llm, tokens = eva.auto_evaluation(
+        avg_bert, avg_rouge, avg_llm, tokens = eva.evaluation(
             question_path,
-            doc_path,
+            data_source,
             question_type=question_type,
-            embeddings=embeddings,
             chunk_size=chunk_size,
-            model=model,
             verbose=False,
             language=language,
             search_type=search_type,
@@ -595,11 +445,10 @@ def start_fastapi(workers: int, host: str, port: str):
     uvicorn.run("akasha.api:app", host=host, port=port, workers=workers)
 
 
-akasha.add_command(keep_responsing)
-akasha.add_command(get_response)
-akasha.add_command(chain_of_thought)
-akasha.add_command(auto_create_questionset)
-akasha.add_command(auto_evaluation)
+akasha.add_command(keep_rag)
+akasha.add_command(rag)
+akasha.add_command(create_questionset)
+akasha.add_command(evaluation)
 akasha.add_command(ui)
 akasha.add_command(start_fastapi)
 

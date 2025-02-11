@@ -53,7 +53,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.8.86",
+    version="0.9.0b",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -80,6 +80,7 @@ setup(
         "akasha.utils.db",
         "akasha.utils.prompts",
         "akasha.utils.search",
+        "akasha.utils.search.retrievers",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
     python_requires=">=3.9",

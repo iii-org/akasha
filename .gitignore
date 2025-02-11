@@ -38,3 +38,5 @@ default.pdf
 whole_readme.md
 query_info.json
 tokenizers/
+*.egg-info/
+build/
