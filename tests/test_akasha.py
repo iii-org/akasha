@@ -64,6 +64,8 @@ def base_embed(texts: list) -> list:
 @pytest.fixture
 def base_line():
     ak = akasha.RAG(
+        embeddings="hf:all-MiniLM-L6-v2",
+        model="openai:gpt-4o",
         verbose=False,
         chunk_size=500,
         max_input_tokens=3010,
@@ -96,10 +98,13 @@ def test_RAG(base_line: akasha.RAG):
 @pytest.mark.akasha
 def test_ask():
 
-    ak = akasha.ask(keep_logs=True,
-                    verbose=True,
-                    max_input_tokens=3000,
-                    stream=True)
+    ak = akasha.ask(
+        keep_logs=True,
+        verbose=True,
+        max_input_tokens=3000,
+        stream=True,
+        embeddings="hf:all-MiniLM-L6-v2",
+    )
     res = ak("此requirement中torch的版本為何?", install_requires)
     ret = ""
     for r in res:

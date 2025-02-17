@@ -6,6 +6,8 @@ from typing import Tuple
 @pytest.fixture
 def base_line():
     eva = akasha.eval(
+        embeddings="hf:all-MiniLM-L6-v2",
+        model="openai:gpt-4o",
         verbose=True,
         search_type="tfidf",
         chunk_size=500,

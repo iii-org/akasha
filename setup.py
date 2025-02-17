@@ -70,6 +70,7 @@ setup(
     packages=[
         "akasha",
         "akasha.agent",
+        "akasha.interface",
         "cli",
         "akasha.eval",
         "akasha.helper",

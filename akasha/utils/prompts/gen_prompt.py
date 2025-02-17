@@ -831,3 +831,11 @@ def format_image_prompt(image_path: str,
         return format_image_anthropic_prompt(image_path, prompt)
     else:
         return format_image_gpt_prompt(image_path, prompt)
+
+
+def default_get_reference_prompt():
+
+    return "User will give you a Reference: and a Response:, you have to return only yes or no \
+        based on if the reference is used to answer the response or not. \
+        If the reference is used to answer the response, return yes, \
+        else return no. Remember, you can only return yes or no."

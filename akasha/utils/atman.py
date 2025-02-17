@@ -155,20 +155,29 @@ class basic_llm:
             ])
         except:
             try:
-                self.logs[timestamp]["doc_metadata"] = "none"
-                self.logs[timestamp]["docs"] = "\n\n".join(
-                    [doc for doc in self.docs])
+                self.logs[timestamp]["doc_metadata"] = "\n\n".join([
+                    doc.metadata["url"] + "    title: " +
+                    str(doc.metadata["title"]) for doc in self.docs
+                ])
             except:
-                self.logs[timestamp]["doc_metadata"] = "none"
-                self.logs[timestamp]["docs"] = "\n\n".join(
-                    [doc.page_content for doc in self.docs])
+
+                try:
+                    self.logs[timestamp]["doc_metadata"] = "none"
+                    self.logs[timestamp]["docs"] = "\n\n".join(
+                        [doc for doc in self.docs])
+                except:
+                    self.logs[timestamp]["doc_metadata"] = "none"
+                    self.logs[timestamp]["docs"] = "\n\n".join(
+                        [doc.page_content for doc in self.docs])
+
         self.logs[timestamp]["system_prompt"] = self.system_prompt
 
         return True
 
     def _display_docs(self, show_num: int = 5):
 
-        if (not hasattr(self, 'docs')) or (self.verbose == False):
+        if (not hasattr(self, 'docs')) or (self.verbose == False) or (self.docs
+                                                                      == []):
             return
         show_less = ""
         if len(self.docs) > show_num:

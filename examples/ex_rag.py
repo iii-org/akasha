@@ -43,6 +43,9 @@ res = ak(
     prompt=PROMPT,
 )
 
+## get the reference document source dictionary that were used to answer the question##
+ref_dict = ak.reference()
+
 # save the logs or turn verbose on to see the details
 ak.save_logs("logs.json")
 

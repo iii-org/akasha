@@ -5,7 +5,7 @@ import pytest
 @pytest.mark.summary
 def test_Summary():
     summ = akasha.summary(
-        "openai:gpt-35-turbo-16k",
+        "openai:gpt-4o",
         sum_type="map_reduce",
         sum_len=1000,
         language="en",

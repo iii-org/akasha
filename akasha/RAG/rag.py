@@ -13,15 +13,16 @@ from akasha.utils.db.db_structure import dbs
 
 from akasha.helper.base import get_doc_length
 from akasha.helper.token_counter import myTokenizer
-from akasha.helper.run_llm import call_model, call_stream_model
+from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model
 
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
-from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt
+from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt, format_sys_prompt, default_get_reference_prompt
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
 import pathlib
 from dotenv import load_dotenv
-import warnings
+import warnings, logging
+from collections import defaultdict
 
 warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 load_dotenv(pathlib.Path().cwd() / ".env", override=True)
@@ -256,3 +257,90 @@ class RAG(atman):
                           self.doc_tokens)
 
         return self.response
+
+    def reference(self) -> dict:
+        """reference docs after calling the rag function, will return the reference file names of the response."""
+
+        if self.response == "":
+            logging.warning(
+                "Response empty. Please call the RAG function first.")
+            print("Response empty. Please call the RAG function first.")
+            return set()
+
+        if self.docs == []:
+            logging.warning(
+                "No documents found. Please call the RAG function first.")
+            print("No documents found. Please call the RAG function first.")
+            return set()
+        ## sort out self.docs ##
+        self.ref_files = defaultdict(set)
+        meta_content_dict = defaultdict(str)
+        for doc in self.docs:
+
+            #doc.page_content
+            if "source" in doc.metadata and "page" in doc.metadata:
+                meta_content_dict[(doc.metadata["source"],
+                                   doc.metadata["page"])] += doc.page_content
+
+            elif "url" in doc.metadata and "title" in doc.metadata:
+                meta_content_dict[(doc.metadata["url"],
+                                   doc.metadata["title"])] += doc.page_content
+
+            else:
+                continue
+
+        ## format whole prompt list ##
+        prod_sys_prompts = []
+        m_key_list = []
+
+        left_tokens = self.max_input_tokens - myTokenizer.compute_tokens(
+            default_get_reference_prompt() + "Reference: \n\n" + "Response: " +
+            self.response, self.model)
+        for m_key, m_content in meta_content_dict.items():
+            m_content_tokens = myTokenizer.compute_tokens(
+                m_content, self.model)
+
+            ## separate m_content if m_content_tokens larger than left_tokens
+            if m_content_tokens >= left_tokens:
+
+                pre_content = m_content[:len(m_content) // 2]
+                m_content = m_content[len(m_content) // 2:]
+
+                pre_sys_prompt = format_sys_prompt(
+                    default_get_reference_prompt(),
+                    "Reference: " + pre_content + "\n\n" + "response: " +
+                    self.response,
+                    self.prompt_format_type,
+                    model=self.model)
+                prod_sys_prompts.append(pre_sys_prompt)
+                m_key_list.append(m_key)
+
+            prod_sys_prompt = format_sys_prompt(default_get_reference_prompt(),
+                                                "Reference: " + m_content +
+                                                "\n\n" + "response: " +
+                                                self.response,
+                                                self.prompt_format_type,
+                                                model=self.model)
+            prod_sys_prompts.append(prod_sys_prompt)
+            m_key_list.append(m_key)
+
+        ## call batch model ##
+        batch_responses = call_batch_model(
+            self.model_obj,
+            prod_sys_prompts,
+        )
+        print(batch_responses)  ##
+        for idx, res in enumerate(batch_responses):
+            res = res.lower()
+            if "yes" in res:
+                cur_m_key = m_key_list[idx]
+                self.ref_files[cur_m_key[0]].add(cur_m_key[1])
+
+        if self.verbose:
+            print(
+                "\n\nReference files: ", "\n".join([
+                    f"{ref}: {', '.join([str(c) for c in sorted(sub)])}"
+                    for ref, sub in self.ref_files.items()
+                ]))
+
+        return self.ref_files
