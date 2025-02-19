@@ -397,7 +397,6 @@ class atman(basic_llm):
 
         if super()._add_result_log(timestamp, time) == False:
             return False
-
         self.logs[timestamp]["time"] = time
 
         return True

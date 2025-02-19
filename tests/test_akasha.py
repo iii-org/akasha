@@ -65,7 +65,7 @@ def base_embed(texts: list) -> list:
 def base_line():
     ak = akasha.RAG(
         embeddings="hf:all-MiniLM-L6-v2",
-        model="openai:gpt-4o",
+        model="openai:gpt-3.5-turbo",
         verbose=False,
         chunk_size=500,
         max_input_tokens=3010,
@@ -103,7 +103,6 @@ def test_ask():
         verbose=True,
         max_input_tokens=3000,
         stream=True,
-        embeddings="hf:all-MiniLM-L6-v2",
     )
     res = ak("此requirement中torch的版本為何?", install_requires)
     ret = ""

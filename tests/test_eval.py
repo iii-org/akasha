@@ -7,7 +7,7 @@ from typing import Tuple
 def base_line():
     eva = akasha.eval(
         embeddings="hf:all-MiniLM-L6-v2",
-        model="openai:gpt-4o",
+        model="openai:gpt-3.5-turbo",
         verbose=True,
         search_type="tfidf",
         chunk_size=500,

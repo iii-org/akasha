@@ -14,7 +14,7 @@ from akasha.utils.db.db_structure import dbs
 from akasha.helper.base import get_doc_length
 from akasha.helper.token_counter import myTokenizer
 from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model
-
+from .self_ask import self_ask_f
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt, format_sys_prompt, default_get_reference_prompt
 from akasha.utils.search.retrievers.base import get_retrivers
@@ -124,8 +124,11 @@ class RAG(atman):
         if super()._add_result_log(timestamp, time) == False:
             return False
 
-        ### add token information ###
+        if self.logs[timestamp]["fn_type"] == "selfask_RAG":
+            self.logs[timestamp]["follow_up"] = self.follow_up
         self.logs[timestamp]["response"] = self.response
+        ### add token information ###
+
         self.logs[timestamp]["prompt_tokens"] = self.prompt_tokens
         self.logs[timestamp]["prompt_length"] = self.prompt_length
         self.logs[timestamp]["doc_tokens"] = self.doc_tokens
@@ -344,3 +347,51 @@ class RAG(atman):
                 ]))
 
         return self.ref_files
+
+    def selfask_RAG(self, data_source: Union[List[Union[str, Path]], Path, str,
+                                             dbs], prompt: str, **kwargs):
+        """input the documents directory path and question, will first store the documents
+        into vectors db (chromadb), then search similar documents based on the prompt question.
+        question will use self-ask with search to solve complex question.
+        llm model will use these documents to generate the response of the question.
+
+            Args:
+                **data_source (Union[List[Union[str, Path]], Path, str, dbs])**: documents directory path\n
+                **prompt (str)**:question you want to ask.\n
+                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                embeddings, chunk_size, model, verbose, language , search_type, record_exp,
+                system_prompt, max_input_tokens, temperature.
+
+            Returns:
+                response (str): the response from llm model.
+        """
+
+        ### set variables ###
+
+        self._set_model(**kwargs)
+        self._change_variables(**kwargs)
+        self.data_source = self._check_doc_path(data_source)
+        self._get_db(data_source)  # create self.db and self.ignore_files
+        self.prompt = prompt
+
+        start_time = time.time()
+        self._check_db()
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        self._add_basic_log(timestamp, "selfask_RAG")
+
+        ### check if prompt <= max_input_tokens ###
+        tot_prompts = self.prompt + self.system_prompt
+        self.prompt_length = get_doc_length(self.language, tot_prompts)
+        self.prompt_tokens = myTokenizer.compute_tokens(
+            tot_prompts, self.model) + 10
+
+        if self.prompt_tokens > self.max_input_tokens:
+            print(
+                "\n\nThe tokens of prompt is larger than max_input_tokens.\n\n"
+            )
+            raise ValueError(
+                "The tokens of prompt is larger than max_input_tokens.")
+
+        self.response = self_ask_f(self, start_time, timestamp)
+
+        return self.response
