@@ -217,7 +217,7 @@ class ask(basic_llm):
                           self.doc_tokens)
         return self.response
 
-    def vision(self, prompt: str, image_path: Union[str, Path],
+    def vision(self, prompt: str, image_path: Union[List[str], str],
                **kwargs) -> str:
         """ask model with image and prompt
 

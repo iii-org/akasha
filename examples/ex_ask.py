@@ -23,6 +23,7 @@ res = ak(
 
 ### use vision to ask question about image ###
 ### image_path can be a local file or an url ###
+### please noted that most of the models can not process high quality images (e.g. 3mb) ###
 res = ak.vision(
     prompt="這張圖片是什麼?",
     image_path=

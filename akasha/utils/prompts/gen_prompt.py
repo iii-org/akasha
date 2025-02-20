@@ -749,76 +749,92 @@ def is_url(path):
     return parsed_url.scheme in ('http', 'https', 'ftp')
 
 
-def format_image_llama_prompt(image_path: str, prompt: str) -> List[dict]:
+def format_image_llama_prompt(image_path: Union[List[str], str],
+                              prompt: str) -> List[dict]:
 
-    image_content = [{"type": image_path}, {"type": "text", "text": prompt}]
+    image_content = []
 
+    if isinstance(image_path, str):
+        image_path = [image_path]
+
+    for imgP in image_path:
+        image_content.append({"type": image_path})
+
+    image_content.append({"type": "text", "text": prompt})
     return [{"role": "user", "content": image_content}]
 
 
-def format_image_anthropic_prompt(image_path: str, prompt: str) -> List[dict]:
+def format_image_anthropic_prompt(image_path: Union[List[str], str],
+                                  prompt: str) -> List[dict]:
 
     import base64
     import httpx
-    if image_path.split('.')[-1] == "jpg":
-        image_media_type = "image/jpeg"
-    else:
-        image_media_type = f"image/{image_path.split('.')[-1]}"
+    image_content = [{"role": "user", "content": []}]
+    if isinstance(image_path, str):
+        image_path = [image_path]
+    image_count = 0
 
-    if is_url(image_path):
-        url_content = base64.standard_b64encode(
-            httpx.get(image_path).content).decode("utf-8")
+    for imgP in image_path:
+        image_count += 1
+        if imgP.split('.')[-1] == "jpg":
+            image_media_type = "image/jpeg"
+        else:
+            image_media_type = f"image/{imgP.split('.')[-1]}"
 
-    else:
-        url_content = base64.standard_b64encode(open(
-            image_path, "rb").read()).decode("utf-8")
+        if is_url(imgP):
+            url_content = base64.standard_b64encode(
+                httpx.get(imgP).content).decode("utf-8")
 
-    image_content = [{
-        "role":
-        "user",
-        "content": [{
+        else:
+            url_content = base64.standard_b64encode(open(
+                imgP, "rb").read()).decode("utf-8")
+
+        # image_content[0]["content"].append({
+        #     "type": "text",
+        #     "text": f"Image {image_count}:"
+        # })
+        image_content[0]["content"].append({
             "type": "image",
             "source": {
                 "type": "base64",
                 "media_type": image_media_type,
                 "data": url_content
             }
-        }, {
-            "type": "text",
-            "text": prompt
-        }]
-    }]
+        })
+
+    image_content[0]["content"].append({"type": "text", "text": prompt})
+
     return image_content
 
 
-def format_image_gpt_prompt(image_path: str, prompt: str) -> List[dict]:
+def format_image_gpt_prompt(image_path: Union[str, List[str]],
+                            prompt: str) -> List[dict]:
 
     url_content = {}
+    image_content = [{"type": "text", "text": prompt}]
+    if isinstance(image_path, str):
+        image_path = [image_path]
 
-    if is_url(image_path):
-        url_content = {"url": image_path}
-    else:
-        import base64
-        # Get the image extension
-        _, ext = os.path.splitext(image_path)
-        ext = ext.lstrip(
-            '.').lower()  # Remove the leading dot and convert to lowercase
-        base64_image = base64.b64encode(open(image_path,
-                                             "rb").read()).decode("utf-8")
-        url_content = {"url": f"data:image/{ext};base64,{base64_image}"}
+    for imgP in image_path:
 
-    image_content = [{
-        "type": "text",
-        "text": prompt
-    }, {
-        "type": "image_url",
-        "image_url": url_content
-    }]
+        if is_url(imgP):
+            url_content = {"url": imgP}
+        else:
+            import base64
+            # Get the image extension
+            _, ext = os.path.splitext(imgP)
+            ext = ext.lstrip(
+                '.').lower()  # Remove the leading dot and convert to lowercase
+            base64_image = base64.b64encode(open(imgP,
+                                                 "rb").read()).decode("utf-8")
+            url_content = {"url": f"data:image/{ext};base64,{base64_image}"}
+
+        image_content.append({"type": "image_url", "image_url": url_content})
 
     return [{"role": "user", "content": image_content}]
 
 
-def format_image_prompt(image_path: str,
+def format_image_prompt(image_path: Union[List[str], str],
                         prompt: str,
                         model_type: str = "image_gpt"):
 
