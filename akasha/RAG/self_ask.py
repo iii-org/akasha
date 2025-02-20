@@ -6,8 +6,18 @@ from akasha.helper.run_llm import call_model
 from akasha.helper.base import extract_json
 
 
-def self_ask_f(self: atman, start_time: float, timestamp: str):
+def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
+    """implement the self ask rag function, first get the follow up questions by user prompt, 
+    then answer all follow up questions, then use the follow up information to answer the user prompt.
 
+    Args:
+        self (atman): _description_
+        start_time (float): _description_
+        timestamp (str): _description_
+
+    Returns:
+        _type_: _description_
+    """
     final_prompt = self.prompt
 
     self_ask_prompt = default_self_ask_prompt() + "Question: " + final_prompt
@@ -87,7 +97,16 @@ def self_ask_f(self: atman, start_time: float, timestamp: str):
     return self.response
 
 
-def get_inter_info(inter_q, inter_a) -> str:
+def get_inter_info(inter_q: list, inter_a: list) -> str:
+    """format the follow up question and answer to a string
+
+    Args:
+        inter_q (_type_): _description_
+        inter_a (_type_): _description_
+
+    Returns:
+        str: _description_
+    """
     inter_info = []
     for i in range(len(inter_q)):
         inter_info.append(f"{inter_q[i]}  {inter_a[i]}")

@@ -1,6 +1,6 @@
 import time
 from typing import Callable, Union, List, Tuple, Generator
-from akasha.helper import handle_embeddings, handle_search_type, handle_model
+from akasha.helper import handle_embeddings, handle_model_type, handle_model
 from akasha.utils.prompts.format import handle_language, language_dict, handle_metrics, handle_params, handle_table
 import datetime
 import logging
@@ -65,7 +65,7 @@ class basic_llm:
         ### set model and embeddings ###
         self.model_obj = handle_model(model, self.verbose, self.temperature,
                                       self.max_output_tokens, self.env_file)
-        self.model = handle_search_type(model)
+        self.model = handle_model_type(model)
 
     def _set_model(self, **kwargs):
         """change model, temperature if user use **kwargs to change them."""
@@ -100,7 +100,7 @@ class basic_llm:
 
             if (key == "model"
                     or key == "embeddings") and key in self.__dict__:
-                self.__dict__[key] = handle_search_type(value)
+                self.__dict__[key] = handle_model_type(value)
 
             elif key == "language":
                 self.language = handle_language(value)
@@ -305,7 +305,7 @@ class atman(basic_llm):
 
         self.chunk_size = chunk_size
         self.threshold = threshold
-        self.search_type = handle_search_type(search_type, self.verbose)
+        self.search_type = handle_model_type(search_type, self.verbose)
         self.use_chroma = use_chroma
 
         self.db = None
@@ -314,7 +314,7 @@ class atman(basic_llm):
 
         self.embeddings_obj = handle_embeddings(embeddings, self.verbose,
                                                 self.env_file)
-        self.embeddings = handle_search_type(embeddings)
+        self.embeddings = handle_model_type(embeddings)
 
     def _set_model(self, **kwargs):
         """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
@@ -322,8 +322,8 @@ class atman(basic_llm):
         super()._set_model(**kwargs)
 
         if "search_type" in kwargs:
-            self.search_type_str = handle_search_type(kwargs["search_type"],
-                                                      self.verbose)
+            self.search_type_str = handle_model_type(kwargs["search_type"],
+                                                     self.verbose)
 
         if ("embeddings" in kwargs) or ("env_file" in kwargs):
             new_embeddings = self.embeddings

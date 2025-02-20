@@ -440,8 +440,8 @@ def handle_model_and_name(model: Union[
     return model_obj, model_name
 
 
-def handle_search_type(search_type: Union[str, BaseLanguageModel, Embeddings],
-                       verbose: bool = False) -> str:
+def handle_model_type(search_type: Union[str, BaseLanguageModel, Embeddings],
+                      verbose: bool = False) -> str:
 
     if isinstance(search_type, BaseLanguageModel):
         search_type_str = search_type._llm_type

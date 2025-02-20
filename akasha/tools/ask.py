@@ -69,7 +69,7 @@ class ask(basic_llm):
             self.system_prompt = default_ask_prompt(self.language)
 
     def _display_info(self, batch: int = 1) -> bool:
-
+        """display the information of the parameters if verbose is True"""
         if self.verbose == False:
             return False
         print(f"Model: {self.model}, Temperature: {self.temperature}")
@@ -88,7 +88,7 @@ class ask(basic_llm):
                        timestamp: str,
                        fn_type: str,
                        history_messages: list = []) -> bool:
-
+        """ add to logs for function if keep_logs is True"""
         if super()._add_basic_log(timestamp, fn_type) == False:
             return False
 
@@ -96,8 +96,8 @@ class ask(basic_llm):
         self.logs[timestamp]["history_messages"] = history_messages
         return True
 
-    def _add_result_log(self, timestamp, time) -> bool:
-
+    def _add_result_log(self, timestamp: str, time: float) -> bool:
+        """ add to logs for ask function if keep_logs is True"""
         if super()._add_result_log(timestamp, time) == False:
             return False
 
@@ -110,8 +110,9 @@ class ask(basic_llm):
 
         return True
 
-    def _add_result_log_vision(self, timestamp, time, image_path: str) -> bool:
-
+    def _add_result_log_vision(self, timestamp: str, time: float,
+                               image_path: str) -> bool:
+        """ add to logs for vision function if keep_logs is True"""
         if super()._add_result_log(timestamp, time) == False:
             return False
 
@@ -128,15 +129,18 @@ class ask(basic_llm):
                  info: Union[str, list, Path, Document] = "",
                  history_messages: List[str] = [],
                  **kwargs) -> str:
-        """_summary_
+        """the function to ask model with prompt and info documents,
+        the info can be file path, url, directory path, or list of Document object
+        if the info has too many tokens, it will be separated into multiple documents and ask model batchly
 
         Args:
-            prompt (str): _description_
-            info (Union[str, list], optional): _description_. Defaults to "".
-            history_messages (list, optional): _description_. Defaults to [].
+            prompt (str): the user question
+            info (Union[str, list], optional): the support information for llm to answer the question. Defaults to "".
+            history_messages (list, optional): the chat history, record them and add to here for memory.
+            Defaults to []. ex: ["hello! how are you?", "I am fine, thank you!"]
 
         Returns:
-            str: _description_
+            str: the answer from llm
         """
 
         self._set_model(**kwargs)
@@ -219,7 +223,7 @@ class ask(basic_llm):
 
     def vision(self, prompt: str, image_path: Union[List[str], str],
                **kwargs) -> str:
-        """ask model with image and prompt
+        """ask model with image and prompt, image_path can be list of image path or url
 
         Args:
             image_path (str): image path or url (recommand jpeg or png file)

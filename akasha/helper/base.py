@@ -40,7 +40,17 @@ def separate_name(name: str):
 
 
 def decide_embedding_type(embeddings: Embeddings) -> str:
+    """check the embedding type and return the type:name
 
+    Args:
+        embeddings (Embeddings): embedding class
+
+    Raises:
+        Exception: _description_
+
+    Returns:
+        str: type:name
+    """
     if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
             embeddings, AzureOpenAIEmbeddings):
         return "openai:" + embeddings.model
@@ -68,6 +78,7 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
 
 def get_embedding_type_and_name(
         embeddings: Union[Embeddings, str, Callable]) -> Tuple[str, str]:
+    """get the type and name of the embeddings"""
 
     if callable(embeddings):
         embeddings_name = embeddings.__name__
