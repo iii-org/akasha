@@ -8,7 +8,9 @@ PROMPT = "工業4.0是什麼?"
 #### create a websearch object and call it, it will use the prompt to search in the web, and based on the information
 # to answer the question.  ###
 ### language will determine the language and region of search engine is used. "en" or "ch" ###
-### search_engine is the search api to use, include "wiki", "serper" and "brave" ###
+### search_engine is the search api to use, include "wiki", "serper" "tavily" and "brave" ###
+### to use "tavily" api, you need to apply the api key (https://tavily.com/) and set the environment
+# variable TAVILY_API_KEY in .env file ###
 ### to use "brave" api, you need to apply the api key (https://brave.com/search/api/) and set the environment
 # variable BRAVE_API_KEY in .env file ###
 ### to use google "serper" api, you need to apply the api key (https://serper.dev/) and set the environment

@@ -41,6 +41,7 @@ install_requires = [
     "google-generativeai",
     "langchain-google-genai",
     "anthropic",
+    "tavily-python",
 ]
 
 ### install different torch version###

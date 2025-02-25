@@ -12,7 +12,10 @@ def load_docs_from_webengine(
     language: str = "ch",
     env_file: str = "",
 ) -> List[Document]:
-    """get the search results based on the prompt and search engine"""
+    """get the search results based on the prompt and search engine
+    search_engine include : wiki, serper, brave, tavily
+    
+    """
 
     search_engine = search_engine.lower()
 
@@ -50,6 +53,17 @@ def load_docs_from_webengine(
                 "search_lang": websearch_language_dict[language][search_engine]
             })
         docs = loader.load()
+
+    elif search_engine == "tavily":
+        from tavily import TavilyClient
+        loader = TavilyClient(api_key=api_key)
+
+        results = loader.search(prompt, "advanced", max_results=search_num)
+        docs = [
+            Document(page_content=doc_dict['title'] + "\n" +
+                     doc_dict['content']) for doc_dict in results['results']
+        ]
+
     else:
         raise ValueError(f"search_engine {search_engine} is not supported")
     return docs
@@ -64,6 +78,8 @@ def _get_search_api_key(search_engine: str = "wiki",
             return os.environ["SERPER_API_KEY"]
         elif search_engine == "brave":
             return os.environ["BRAVE_API_KEY"]
+        elif search_engine == "tavily":
+            return os.environ["TAVILY_API_KEY"]
         else:
             return ""
 
@@ -74,5 +90,7 @@ def _get_search_api_key(search_engine: str = "wiki",
             return env_dict["SERPER_API_KEY"]
         elif search_engine == "brave":
             return env_dict["BRAVE_API_KEY"]
+        elif search_engine == "tavily":
+            return env_dict["TAVILY_API_KEY"]
         else:
             return ""

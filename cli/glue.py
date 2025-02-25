@@ -379,7 +379,7 @@ def evaluation(
         print("total tokens: ", tokens)
 
 
-@click.command("ui", short_help="simple ui for akasha")
+@click.command("toy", short_help="simple toy for akasha")
 def ui():
 
     import os, sys

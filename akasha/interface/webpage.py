@@ -5,13 +5,13 @@ import sys
 sys.path.append("../")
 
 
-def response_page():
-    """implement rag ui"""
+def websearch_page():
+    """implement get response ui"""
 
     if "prompt_list" not in st.session_state:
         st.session_state.prompt_list = []
 
-    st.title("RAG")
+    st.title("Web Search")
     response_board, para_set = st.columns([3, 1])
 
     with para_set:
@@ -20,6 +20,24 @@ def response_page():
             st.session_state.sys_prompt,
             help="The special instruction you want to give to the model.",
         )
+
+        s_eng, s_num = st.columns([1, 1])
+
+        with s_eng:
+            st.session_state.search_engine = st.selectbox(
+                "Search Engine",
+                ["wiki", "tavily", "serper", "brave"],
+                help="The search engine you want to use.",
+            )
+
+        with s_num:
+            st.session_state.search_num = st.number_input(
+                "Search Number",
+                min_value=1,
+                max_value=20,
+                value=st.session_state.search_num,
+                help="The maximum number of search result.",
+            )
 
         sb1, sb2 = st.columns([1, 1])
         with sb1:
@@ -53,33 +71,29 @@ def response_page():
         ## check if the object is created correctly ##
         with response_board.chat_message("user"):
             st.markdown(prompt)
-        if not isinstance(st.session_state.akasha_obj, akasha.RAG):
-            st.session_state.akasha_obj = akasha.RAG(
-                embeddings=st.session_state.embed,
-                chunk_size=st.session_state.chunksize,
+        if not isinstance(st.session_state.akasha_obj, akasha.websearch):
+            st.session_state.akasha_obj = akasha.websearch(
                 model=st.session_state.model,
-                search_type=st.session_state.search_type,
                 language="ch",
                 verbose=True,
-                record_exp="",
+                search_engine=st.session_state.search_engine,
+                search_num=st.session_state.search_num,
                 max_input_tokens=st.session_state.max_input_tokens,
                 temperature=st.session_state.temperature,
                 env_file=st.session_state.env_path,
             )
 
         ans = st.session_state.akasha_obj(
-            st.session_state.chose_doc_path,
             prompt,
-            embeddings=st.session_state.embed,
-            chunk_size=st.session_state.chunksize,
             model=st.session_state.model,
-            search_type=st.session_state.search_type,
             system_prompt=st.session_state.sys_prompt,
             max_input_tokens=st.session_state.max_input_tokens,
             temperature=st.session_state.temperature,
             keep_logs=True,
             env_file=st.session_state.env_path,
             stream=st.session_state.stream,
+            search_engine=st.session_state.search_engine,
+            search_num=st.session_state.search_num,
         )
 
         with response_board.chat_message("assistant"):

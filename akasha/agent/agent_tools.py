@@ -14,7 +14,7 @@ def websearch_tool(search_engine: str = "wiki",
     """return the tool to use search engine to search information for user
 
     Args:
-        search_engine (str, optional): the search_engine options, includes "wiki", "serper" and "brave". Defaults to "wiki".
+        search_engine (str, optional): the search_engine options, includes "wiki", "serper" "tavily" and "brave". Defaults to "wiki".
         language (str, optional): the language options, includes "ch" and "en". Defaults to "ch".
         env_file (str, optional): the .env file save the api keys. Defaults to "".
 

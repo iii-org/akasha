@@ -5,12 +5,25 @@ from interface.res_page import response_page
 from interface.upload_file import upload_page
 from interface.setting import setting_page, set_model_dir
 from interface.sum_page import summary_page
+from interface.webpage import websearch_page
 import datetime
 
 st.set_page_config(layout="wide")
+st.markdown(
+    """
+    <style>
+        div[data-testid="stChatInput"] {
+            position: fixed;
+            bottom: 40px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 menu_list = [
     "RAG",
     "Summary",
+    "Web Search",
     "Upload Files",
     "Setting",
 ]
@@ -18,6 +31,7 @@ menu_list = [
 icon_list = [
     "chat-left-text",
     "chat-quote",
+    "search",
     "upload",
     "gear",
 ]
@@ -169,6 +183,15 @@ if "logs" not in st.session_state:
 if "akasha_obj" not in st.session_state:
     st.session_state.akasha_obj = ""
 
+if "stream" not in st.session_state:
+    st.session_state.stream = False
+
+if "search_engine" not in st.session_state:
+    st.session_state.search_engine = "wiki"
+
+if "search_num" not in st.session_state:
+    st.session_state.search_num = 5
+
 ################
 
 with st.sidebar:
@@ -216,3 +239,5 @@ elif user_menu == "Setting":
     setting_page()
 elif user_menu == "Summary":
     summary_page()
+elif user_menu == "Web Search":
+    websearch_page()
