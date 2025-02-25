@@ -37,7 +37,7 @@ import akasha.agent.agent_tools as at
 tool_list = [at.websearch_tool(search_engine="brave"), at.saveJSON_tool()]
 
 agnt = akasha.agents(tools=tool_list,
-                     model="openai:gpt-4o",
+                     model=MODEL,
                      temperature=1.0,
                      max_input_tokens=8000,
                      verbose=True,
