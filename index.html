@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<!-- Page Credit By Kenny Chen kenny@iii.org.tw -->
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akasha - 文件智能問答與檢索增強生成平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+        .code-block {
+            background-color: #1e293b;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 bg-gray-50">
+    <!-- 頂部導航欄 -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center">
+                <img src="/api/placeholder/50/50" alt="Akasha Logo" class="h-10 w-10 mr-3">
+                <span class="text-2xl font-bold text-blue-600">Akasha</span>
+            </div>
+            <div class="hidden md:flex space-x-8">
+                <a href="#features" class="text-gray-700 hover:text-blue-600 font-medium">功能特色</a>
+                <a href="#usecases" class="text-gray-700 hover:text-blue-600 font-medium">應用場景</a>
+                <a href="#models" class="text-gray-700 hover:text-blue-600 font-medium">支援模型</a>
+                <a href="#installation" class="text-gray-700 hover:text-blue-600 font-medium">安裝指南</a>
+                <a href="#documentation" class="text-gray-700 hover:text-blue-600 font-medium">技術文件</a>
+            </div>
+            <div class="md:hidden">
+                <button class="text-gray-700 focus:outline-none">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄區塊 -->
+    <section class="gradient-bg text-white py-20">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row items-center">
+            <div class="md:w-1/2 mb-8 md:mb-0">
+                <h1 class="text-4xl md:text-5xl font-bold mb-6">智能文件問答<br>檢索增強生成平台</h1>
+                <p class="text-xl mb-8">Akasha 利用先進大型語言模型技術，幫助您從複雜文件中快速找到精確答案，提升工作效率與決策品質。</p>
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <a href="#installation" class="bg-white text-blue-600 hover:bg-blue-50 font-medium py-3 px-6 rounded-lg text-center">開始使用</a>
+                    <a href="https://github.com/iii-org/akasha" target="_blank" class="bg-transparent border border-white text-white hover:bg-white hover:text-blue-600 font-medium py-3 px-6 rounded-lg text-center">查看源碼</a>
+                </div>
+            </div>
+            <div class="md:w-1/2">
+                <img src="/api/placeholder/600/400" alt="Akasha 展示" class="rounded-lg shadow-xl">
+            </div>
+        </div>
+    </section>
+
+    <!-- 功能特色 -->
+    <section id="features" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">主要功能特色</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">智能文件問答</h3>
+                    <p class="text-gray-600">針對特定文件集提出問題，自動搜索相關內容並生成精確答案，支援PDF、Word、TXT等多種檔案格式。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">多種檢索策略</h3>
+                    <p class="text-gray-600">支援SVM、TF-IDF、BM25、MMR等多種檢索方法，智能選擇最適合您問題的檢索策略，提升回答精準度。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">檔案摘要生成</h3>
+                    <p class="text-gray-600">自動將冗長文件摘要成精簡內容，支援map-reduce和refine等摘要策略，幫助您快速掌握關鍵資訊。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">模型評估與優化</h3>
+                    <p class="text-gray-600">內建問題集生成和模型評估功能，輕鬆測試不同模型和參數配置的效能，找出最適合您應用場景的設定。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">代理模式功能</h3>
+                    <p class="text-gray-600">支援工具使用功能，讓語言模型可以呼叫維基百科搜索、文件儲存等外部工具，實現更複雜的任務處理流程。</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3">靈活模型選擇</h3>
+                    <p class="text-gray-600">支援OpenAI、Azure OpenAI、Hugging Face、Google Gemini、Anthropic等多家大型語言模型，以及本地LLaMA-cpp模型。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 應用場景 -->
+    <section id="usecases" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">應用場景</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">企業知識庫問答</h3>
+                    <p class="mb-4">將公司內部文件、報告、手冊整合成智能知識庫，讓員工可以直接提問並獲得精確答案，提升資訊檢索效率。</p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-blue-800 font-medium">應用案例</p>
+                        <p class="text-blue-700">某科技公司將內部技術文件整合至Akasha系統，減少80%的文件搜尋時間，顯著提升研發團隊效率。</p>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">研究資料分析</h3>
+                    <p class="mb-4">快速從大量研究論文、報告中提取關鍵資訊，輔助研究人員進行文獻綜述、資料比對和趨勢分析。</p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-blue-800 font-medium">應用案例</p>
+                        <p class="text-blue-700">某研究機構利用Akasha分析上千篇學術論文，幫助學者快速識別研究趨勢並發現創新研究方向。</p>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">法規遵循與審查</h3>
+                    <p class="mb-4">將複雜法規文件轉化為易於理解的問答系統，協助企業確保營運符合最新法規要求，降低合規風險。</p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-blue-800 font-medium">應用案例</p>
+                        <p class="text-blue-700">某金融機構透過Akasha建立法規問答系統，幫助員工迅速理解複雜法規，合規審查效率提升65%。</p>
+                    </div>
+                </div>
+                <div class="bg-white p-8 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">教育與培訓輔助</h3>
+                    <p class="mb-4">將教材、課程內容轉換為互動式學習助手，提供個人化問答支援，幫助學生更有效理解和掌握知識點。</p>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-blue-800 font-medium">應用案例</p>
+                        <p class="text-blue-700">某教育機構為學生提供基於教材的AI問答系統，學生可隨時提問並獲得即時解答，學習成效提升30%。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 支援模型 -->
+    <section id="models" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">支援模型</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div>
+                    <h3 class="text-2xl font-semibold mb-6">語言模型</h3>
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="OpenAI Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">OpenAI 模型</p>
+                                <p class="text-gray-600 text-sm">GPT-3.5-Turbo, GPT-4, GPT-4o</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Azure OpenAI Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">Azure OpenAI 模型</p>
+                                <p class="text-gray-600 text-sm">Azure GPT-3.5-Turbo, Azure GPT-4</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Google Gemini Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">Google Gemini 模型</p>
+                                <p class="text-gray-600 text-sm">Gemini Pro, Gemini Ultra</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Anthropic Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">Anthropic Claude 模型</p>
+                                <p class="text-gray-600 text-sm">Claude 3 Opus, Claude 3 Sonnet, Claude 3 Haiku</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="HuggingFace Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">Hugging Face 模型</p>
+                                <p class="text-gray-600 text-sm">Llama-2, Taiwan-LLaMa, ChatGLM, Mistral等</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Local Model Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">本地LLaMA-cpp模型</p>
+                                <p class="text-gray-600 text-sm">支援GGUF格式本地模型，CPU/GPU推理</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-semibold mb-6">嵌入模型</h3>
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="OpenAI Embedding Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">OpenAI 嵌入模型</p>
+                                <p class="text-gray-600 text-sm">text-embedding-ada-002, text-embedding-3-large, text-embedding-3-small</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Google Embedding Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">Google 嵌入模型</p>
+                                <p class="text-gray-600 text-sm">text-embedding-004</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="BAAI Embedding Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">BAAI BGE 嵌入模型</p>
+                                <p class="text-gray-600 text-sm">bge-base-en-v1.5, bge-base-zh-v1.5</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Sentence Transformer Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">Sentence Transformers</p>
+                                <p class="text-gray-600 text-sm">all-MiniLM-L6-v2, text2vec-base-chinese等</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center">
+                            <img src="/api/placeholder/40/40" alt="Rerank Logo" class="w-10 h-10 mr-4">
+                            <div>
+                                <p class="font-semibold">重排序模型</p>
+                                <p class="text-gray-600 text-sm">BAAI/bge-reranker-base, BAAI/bge-reranker-large</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 快速開始 -->
+    <section id="installation" class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">快速開始</h2>
+            <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+                <h3 class="text-2xl font-semibold mb-6">安裝</h3>
+                <div class="code-block mb-8">
+                    <pre><code>pip install akasha-terminal</code></pre>
+                </div>
+                
+                <h3 class="text-2xl font-semibold mb-6">基本使用</h3>
+                <div class="code-block mb-8">
+                    <pre><code>import akasha
+import os
+
+# 設置 API 金鑰
+os.environ["OPENAI_API_KEY"] = "your_api_key"
+
+# 初始化 Doc_QA 對象
+ak = akasha.Doc_QA(search_type="auto")
+
+# 進行文件問答
+response = ak.get_response(
+    doc_path="your_documents_folder/",
+    prompt="你的問題",
+)
+
+print(response)</code></pre>
+                </div>
+
+                <h3 class="text-2xl font-semibold mb-6">啟動網頁介面</h3>
+                <div class="code-block mb-8">
+                    <pre><code>akasha ui</code></pre>
+                </div>
+
+                <div class="bg-blue-50 p-6 rounded-lg">
+                    <h4 class="text-lg font-semibold text-blue-800 mb-2">更多資源</h4>
+                    <ul class="list-disc list-inside space-y-2 text-blue-700">
+                        <li><a href="https://github.com/iii-org/akasha" class="underline hover:text-blue-900">GitHub 源碼倉庫</a></li>
+                        <li><a href="https://tea9297.github.io/" class="underline hover:text-blue-900">完整中文使用手冊</a></li>
+                        <li><a href="https://pypi.org/project/akasha-terminal/" class="underline hover:text-blue-900">PyPI 套件頁面</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 技術文件 -->
+    <section id="documentation" class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">技術文件</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">Doc_QA 類</h3>
+                    <p class="text-gray-600 mb-4">文件問答核心類，支援多種文件格式、檢索策略和語言模型。</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">查看文件 →</a>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">Summary 類</h3>
+                    <p class="text-gray-600 mb-4">提供文件摘要功能，支援多種摘要策略和長度控制。</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">查看文件 →</a>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">Model_Eval 類</h3>
+                    <p class="text-gray-600 mb-4">模型評估工具，可生成測試問題集並評估不同模型和參數配置。</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">查看文件 →</a>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">Agent 類</h3>
+                    <p class="text-gray-600 mb-4">實現代理模式功能，讓語言模型可以調用外部工具完成複雜任務。</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">查看文件 →</a>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">搜索策略</h3>
+                    <p class="text-gray-600 mb-4">了解各種搜索策略的差異與適用場景，包括SVM、TF-IDF、BM25等。</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">查看文件 →</a>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">API 參考</h3>
+                    <p class="text-gray-600 mb-4">完整的 API 參考文件，包含所有類、方法與參數的詳細說明。</p>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">查看文件 →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 常見問題 -->
+    <section class="py-20 bg-gray-100">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">常見問題</h2>
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
+                    <button class="w-full py-4 px-6 text-left font-semibold hover:bg-gray-50 focus:outline-none flex justify-between items-center">
+                        <span>Akasha 與其他 RAG 工具有何不同？</span>
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="px-6 pb-4">
+                        <p class="text-gray-600">Akasha 的主要特點是靈活性與全面性。它支援多種語言模型、嵌入模型和搜索策略，可以根據不同需求自由調整。同時，Akasha 不僅僅是 RAG 工具，還包含文件摘要、模型評估和代理功能等多種功能，能夠滿足企業和研究機構的多樣化需求。</p>
+                    </div>
+                </div>
+                <div class="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
+                    <button class="w-full py-4 px-6 text-left font-semibold hover:bg-gray-50 focus:outline-none flex justify-between items-center">
+                        <span>如何選擇適合我的語言模型？</span>
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="px-6 pb-4">
+                        <p class="text-gray-600">選擇語言模型時需考慮幾個因素：預算、性能需求、隱私需求和部署環境。對於追求高性能且預算充足的情況，可選擇 OpenAI 的 GPT-4 或 Anthropic 的 Claude 3 Opus；如果資料隱私敏感或需要本地部署，可選擇 Hugging Face 模型或 LLaMA-cpp 本地模型；若需中文處理能力較強的模型，可優先考慮 Taiwan-LLaMa 或 ChatGLM 等模型。</p>
+                    </div>
+                </div>
+                <div class="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
+                    <button class="w-full py-4 px-6 text-left font-semibold hover:bg-gray-50 focus:outline-none flex justify-between items-center">
+                        <span>Akasha 支援哪些檔案格式？</span>
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="px-6 pb-4">
+                        <p class="text-gray-600">Akasha 支援多種常見文件格式，包括：PDF、Word (DOCX)、純文本 (TXT)、Markdown (MD)、CSV 和 PowerPoint (PPTX) 等。系統會自動處理檔案格式，提取內容並進行分塊索引，無需額外轉換步驟。</p>
+                    </div>
+                </div>
+                <div class="bg-white shadow-md rounded-lg mb-6 overflow-hidden">
+                    <button class="w-full py-4 px-6 text-left font-semibold hover:bg-gray-50 focus:outline-none flex justify-between items-center">
+                        <span>使用 Akasha 需要多少計算資源？</span>
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="px-6 pb-4">
+                        <p class="text-gray-600">資源需求主要取決於所選模型和文件量。使用雲端 API 如 OpenAI、Anthropic 時，本地資源需求較低，普通筆電即可。使用本地模型如 LLaMA-cpp 時，需要較強的 CPU 或 GPU 資源。大型文件集檢索時，至少需要 8GB RAM，建議 16GB 以上；使用本地大型語言模型時，建議配備 NVIDIA GPU 且 VRAM 至少 8GB。</p>
+                    </div>
+                </div>
+                <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <button class="w-full py-4 px-6 text-left font-semibold hover:bg-gray-50 focus:outline-none flex justify-between items-center">
+                        <span>Akasha 可以處理非中英文的文件嗎？</span>
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="px-6 pb-4">
+                        <p class="text-gray-600">Akasha 支援多語言處理，除了中文和英文外，還可處理日文、德文、法文等多種語言的文件。不過處理效果取決於所選的語言模型和嵌入模型對該語言的支援程度。對於特定語言的優化處理，可以選擇專為該語言訓練的嵌入模型，如日文可選擇支援日文的 Sentence Transformers 模型。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 聯絡我們 -->
+    <section class="py-20">
+        <div class="container mx-auto px-4">
+            <h2 class="text-3xl font-bold text-center mb-16">聯絡我們</h2>
+            <div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-4">關於我們</h3>
+                        <p class="text-gray-600 mb-4">Akasha 由財團法人資訊工業策進會開發，致力於推動台灣資訊產業的技術策進與發展。我們專注於資通訊領域的技術研究、企劃與服務應用。</p>
+                        <div class="mt-6">
+                            <p class="font-medium">財團法人資訊工業策進會</p>
+                            <p class="text-gray-600">軟體院</p>
+                            <p class="text-gray-600">地址：台北市松山區民生東路四段133號</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold mb-4">取得支援</h3>
+                        <p class="text-gray-600 mb-4">如有任何問題或需要技術支援，歡迎透過以下方式聯絡我們：</p>
+                        <ul class="space-y-2">
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                                <a href="mailto:today@iii.org.tw" class="text-blue-600 hover:text-blue-800">today@iii.org.tw</a>
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                </svg>
+                                <a href="https://github.com/iii-org/akasha/issues" target="_blank" class="text-blue-600 hover:text-blue-800">GitHub Issues</a>
+                            </li>
+                        </ul>
+                        <div class="mt-8">
+                            <h4 class="font-medium mb-2">關注我們</h4>
+                            <div class="flex space-x-4">
+                                <a href="#" class="text-gray-600 hover:text-blue-600">
+                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                                    </svg>
+                                </a>
+                                <a href="#" class="text-gray-600 hover:text-blue-600">
+                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.047 10.047 0 01-3.127 1.195 4.92 4.92 0 00-8.384 4.48C7.69 8.095 4.067 6.13 1.64 3.16a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.82 4.996 4.996 0 01-2.212.085 4.937 4.937 0 004.604 3.417 9.868 9.868 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.054 0 13.999-7.496 13.999-13.986 0-.209 0-.42-.015-.63a9.936 9.936 0 002.46-2.548l-.047-.02z"/>
+                                    </svg>
+                                </a>
+                                <a href="#" class="text-gray-600 hover:text-blue-600">
+                                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-2 16h-2v-6h2v6zm-1-6.891c-.607 0-1.1-.496-1.1-1.109 0-.612.492-1.109 1.1-1.109s1.1.497 1.1 1.109c0 .613-.493 1.109-1.1 1.109zm8 6.891h-1.998v-2.861c0-1.881-2.002-1.722-2.002 0V16h-2v-6h2v1.093c.872-1.616 4-1.736 4 1.548V16z"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 頁尾 -->
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center mb-4">
+                        <img src="/api/placeholder/50/50" alt="Akasha Logo" class="h-10 w-10 mr-3">
+                        <span class="text-2xl font-bold">Akasha</span>
+                    </div>
+                    <p class="text-gray-400">智能文件問答與檢索增強生成平台</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">產品</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#features" class="text-gray-400 hover:text-white">功能特色</a></li>
+                        <li><a href="#usecases" class="text-gray-400 hover:text-white">應用場景</a></li>
+                        <li><a href="#models" class="text-gray-400 hover:text-white">支援模型</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">資源</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#documentation" class="text-gray-400 hover:text-white">技術文件</a></li>
+                        <li><a href="https://github.com/iii-org/akasha" class="text-gray-400 hover:text-white">GitHub</a></li>
+                        <li><a href="https://tea9297.github.io/" class="text-gray-400 hover:text-white">中文手冊</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">關於</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">關於我們</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">聯絡我們</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">隱私政策</a></li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="border-gray-700 my-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-400 text-sm">© 2025 財團法人資訊工業策進會. 保留所有權利.</p>
+                <div class="flex space-x-4 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-400 hover:text-white">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723 10.047 10.047 0 01-3.127 1.195 4.92 4.92 0 00-8.384 4.48C7.69 8.095 4.067 6.13 1.64 3.16a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.82 4.996 4.996 0 01-2.212.085 4.937 4.937 0 004.604 3.417 9.868 9.868 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.054 0 13.999-7.496 13.999-13.986 0-.209 0-.42-.015-.63a9.936 9.936 0 002.46-2.548l-.047-.02z"/>
+                        </svg>
+                    </a>
+                    <a href="#" class="text-gray-400 hover:text-white">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-2 16h-2v-6h2v6zm-1-6.891c-.607 0-1.1-.496-1.1-1.109 0-.612.492-1.109 1.1-1.109s1.1.497 1.1 1.109c0 .613-.493 1.109-1.1 1.109zm8 6.891h-1.998v-2.861c0-1.881-2.002-1.722-2.002 0V16h-2v-6h2v1.093c.872-1.616 4-1.736 4 1.548V16z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 簡單的導航平滑滾動
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+        
+        // FAQ 切換顯示
+        document.querySelectorAll('section:nth-of-type(6) button').forEach(button => {
+            button.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                content.style.display = content.style.display === 'block' ? 'none' : 'block';
+            });
+        });
+    </script>
+</body>
+<!-- Page Credit By Kenny Chen kenny@iii.org.tw -->
+</html>
