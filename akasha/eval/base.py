@@ -2,6 +2,7 @@ from typing import Union
 import numpy as np
 from akasha.utils.prompts.format import language_dict
 from pathlib import Path
+import json
 
 
 ### sub func###
@@ -24,13 +25,15 @@ def check_sum_type(question_type: str,
             'compare', 'comparison', 'comparisons', '比較', 'compared'
     ]:
         print("compare can not be used in related_questionset\n\n")
-        return True
+        raise ValueError("compare can not be used in related_questionset")
+        #return True
     if question_type.lower() in [
             "summary", "sum", "summarization", "summarize", "summaries", "摘要"
     ] and question_style.lower() == "single_choice":
         print("summary can not be used in single_choice question_type\n\n")
-
-        return True
+        raise ValueError(
+            "summary can not be used in single_choice question_type")
+        #return True
 
     return False
 
@@ -115,36 +118,55 @@ def get_question_from_file(path: str, question_style: str):
         list: list of question list
     """
     f_path = Path(path)
+
+    # Ensure the file exists
+    if not f_path.exists():
+        raise FileNotFoundError(f"The file {path} does not exist.")
+
+    # Read the JSON file
     with f_path.open(mode="r", encoding="utf-8") as file:
-        content = file.read()
-    questions = []
+        content = json.load(file)
+
+    # Validate the JSON structure
+    if not all(key in content for key in ["question", "answer"]):
+        raise ValueError(
+            "The JSON file does not contain 'question' and 'answer' keys.")
+
+    questions = content['question']
     answers = []
 
     if question_style.lower() == "essay":
-        content = content.split("\n\n")
-        for i in range(len(content)):
-            if content[i] == "":
-                continue
+        # content = content.split("\n\n")
+        # for i in range(len(content)):
+        #     if content[i] == "":
+        #         continue
 
-            try:
-                process = "".join(content[i].split("問題：")).split("答案：")
-                if len(process) < 2:
-                    raise SyntaxError("Question Format Error")
-            except:
-                process = "".join(content[i].split("問題:")).split("答案:")
-                if len(process) < 2:
-                    continue
+        #     try:
+        #         process = "".join(content[i].split("問題：")).split("答案：")
+        #         if len(process) < 2:
+        #             raise SyntaxError("Question Format Error")
+        #     except:
+        #         process = "".join(content[i].split("問題:")).split("答案:")
+        #         if len(process) < 2:
+        #             continue
 
-            questions.append(process[0])
-            answers.append(process[1])
+        #     questions.append(process[0])
+        #     answers.append(process[1])
+        # return questions, answers
+        answers = content['answer']
         return questions, answers
+    else:
+        for idx, words in enumerate(content['answer']):
+            questions[idx] = [questions[idx]]
+            questions[idx].extend(words[:-1])
+            answers.append(words[-1])
+    # for con in content.split("\n"):
+    #     if con == "":
+    #         continue
+    #     words = [word for word in con.split("\t") if word != ""]
 
-    for con in content.split("\n"):
-        if con == "":
-            continue
-        words = [word for word in con.split("\t") if word != ""]
+    #     questions.append(words[:-1])
+    #     answers.append(words[-1])
 
-        questions.append(words[:-1])
-        answers.append(words[-1])
-
+    # return questions, answers
     return questions, answers

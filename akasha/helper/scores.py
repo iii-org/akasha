@@ -1,7 +1,7 @@
 # coding:utf-8
 from rouge import Rouge
 import rouge_chinese
-from bert_score import score
+# from bert_score import score
 import jieba
 import warnings
 from akasha.utils.prompts.gen_prompt import format_sys_prompt, format_llm_score
@@ -15,6 +15,13 @@ from typing import Union
 warnings.filterwarnings("ignore")
 jieba.setLogLevel(
     jieba.logging.INFO)  ## ignore logging jieba model information
+
+import importlib
+
+
+def get_bert_pack():
+    bert_score = importlib.import_module("bert_score")
+    return bert_score.score
 
 
 def get_bert_score(candidate_str: str,
@@ -33,6 +40,8 @@ def get_bert_score(candidate_str: str,
     Returns:
         float: bert score
     """
+
+    score = get_bert_pack()
     try:
         if "chinese" in language_dict[language]:
             P, R, F1 = score([candidate_str], [reference_str],

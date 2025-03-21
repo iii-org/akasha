@@ -6,3 +6,4 @@ from .run_llm import call_model, call_batch_model, call_stream_model, call_image
 from .preprocess_prompts import merge_history_and_prompt
 from .scores import get_llm_score, get_toxic_score, get_bert_score, get_rouge_score
 from .web_engine import load_docs_from_webengine
+from .crawler import get_text_from_url

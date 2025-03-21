@@ -10,7 +10,7 @@ from .base import get_non_repeat_rand_int, find_same_category
 
 import numpy as np
 from tqdm import tqdm
-import torch, gc
+import json, importlib
 from collections import defaultdict
 
 from typing import Union, Callable
@@ -20,6 +20,11 @@ from langchain_core.embeddings import Embeddings
 from langchain.schema import Document
 
 
+def get_torch():
+    ttorch = importlib.import_module("torch")
+    return ttorch
+
+
 def _generate_single_choice_question(
     doc_text: str,
     question: str,
@@ -27,7 +32,7 @@ def _generate_single_choice_question(
     model,
     system_prompt: str,
     choice_num: int,
-) -> str:
+) -> list:
     """Based on gernerated question and answer, generate wrong answers for single choice question
 
     Args:
@@ -42,9 +47,9 @@ def _generate_single_choice_question(
         Exception: if the format of the response is not correct, raise exception
 
     Returns:
-        str: choice_num of wrong answers and a correct answer, and the index of correct answer, separated by "\t"
+        list: choice_num of wrong answers and a correct answer, and the index of correct answer
     """
-    res = ""
+    res = []
     count = 0
     random_index = np.random.randint(choice_num)
     q_prompt = format_wrong_answer(choice_num - 1, doc_text, question, cor_ans)
@@ -70,18 +75,18 @@ def _generate_single_choice_question(
         if wrong_ans == "":
             continue
         elif count == random_index:
-            res += "\t" + str(count + 1) + '.' + cor_ans.replace("\n", "")
+            res.append(str(count + 1) + '.' + cor_ans.replace("\n", ""))
             count += 1
 
         wrong_ans = str(count + 1) + '.' + wrong_ans.replace("\n", "").replace(
             "錯誤答案", "")
-        res += "\t" + wrong_ans
+        res.append(wrong_ans)
         count += 1
 
     if count < choice_num:
-        res += "\t" + str(count + 1) + '.' + cor_ans.replace("\n", "")
+        res.append(str(count + 1) + '.' + cor_ans.replace("\n", ""))
 
-    res += "\t" + str(random_index + 1)
+    res.append(str(random_index + 1))
 
     return res
 
@@ -221,21 +226,19 @@ class Model_Eval(atman):
             now = datetime.datetime.now()
             date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
             output_file_path = ("questionset/" + str(date_time_string) +
-                                ".txt")
-        elif output_file_path[-4:] != ".txt":
-            output_file_path = output_file_path + ".txt"
+                                ".json")
+        elif not output_file_path.endswith(".json"):
+            output_file_path = output_file_path + ".json"
+
+        data = {
+            "question_style": self.question_style,
+            "question_type": self.question_type,
+            "question": self.question,
+            "answer": self.answer,
+        }
+
         with open(output_file_path, "w", encoding="utf-8") as f:
-            for w in range(len(self.question)):
-                if self.question_style == "essay":
-                    f.write(self.question[w].replace("\n", "") + "\n" +
-                            self.answer[w].replace("\n", "") + "\n\n")
-                else:
-                    if w == len(self.question) - 1:
-                        f.write(self.question[w].replace("\n", "") +
-                                self.answer[w].replace("\n", ""))
-                    else:
-                        f.write(self.question[w].replace("\n", "") +
-                                self.answer[w].replace("\n", "") + "\n")
+            json.dump(data, f, indent=4, ensure_ascii=False)
 
         print("\nquestion set saved in ", output_file_path, "\n\n")
         if self.keep_logs == True:
@@ -271,9 +274,9 @@ class Model_Eval(atman):
                 return False
 
         process[0] = process[0].replace("根據文件", "")
-        self.question.append("問題： " + source_file_name + process[0])
+        self.question.append(source_file_name + process[0])
         if self.question_style == "essay":
-            self.answer.append("答案： " + process[1])
+            self.answer.append(process[1])
 
         else:
             anss = _generate_single_choice_question(
@@ -285,7 +288,6 @@ class Model_Eval(atman):
                 choice_num,
             )
             self.answer.append(anss)
-            response = process[0] + "\n" + "選項:\n" + anss + "\n\n"
 
         return True
 
@@ -309,8 +311,8 @@ class Model_Eval(atman):
             if len(process) < 2:
                 return False
 
-        self.question.append("問題：  " + doc_text.replace("\n", "") + "\n")
-        self.answer.append("答案： " + process[-1].replace("\n", ""))
+        self.question.append(doc_text.replace("\n", "") + "\n")
+        self.answer.append(process[-1].replace("\n", ""))
 
         return True
 
@@ -522,6 +524,7 @@ class Model_Eval(atman):
         except Exception as e:
             traceback.print_exc()
             #response = ["running model error"]
+            torch = get_torch()
             torch.cuda.empty_cache()
             logging.error(f"running model error\n {e}")
             raise e
@@ -602,6 +605,7 @@ class Model_Eval(atman):
         except Exception as e:
             traceback.print_exc()
             #response = ["running model error"]
+            torch = get_torch()
             torch.cuda.empty_cache()
             logging.error(f"running model error\n {e}")
             raise e

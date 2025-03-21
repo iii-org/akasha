@@ -189,6 +189,7 @@ class eval(Model_Eval):
                 self.docs.extend(docs)
 
             except Exception as e:
+                print(e)
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
@@ -388,7 +389,7 @@ class eval(Model_Eval):
         self._decide_eval_model(eval_model)
 
         if check_sum_type(self.question_type, self.question_style):
-            return 0.0, 0
+            return 0.0, []
 
         self.system_prompt = check_essay_system_prompt(
             self.question_style, self.language,

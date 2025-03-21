@@ -520,8 +520,7 @@ If you don't know the answer, just say that you don't know, don't try to make up
 
 def default_ask_prompt(language: str = "zh"):
 
-    prompt = """你是擅長回答問題的助手，若有提供參考文件，根據參考文件回答問題，若無法從參考文件中回答問題，則回答不知道
-;若沒有參考文件，則根據你的理解回答使用者的問題。\n"""
+    prompt = """你是擅長回答問題的助手，若有提供參考文件，只根據參考文件回答問題;若沒有參考文件，則根據你的理解回答使用者的問題。\n"""
 
     if "chinese" in language_dict[language]:
         prompt += "用中文回答下列問題：\n"

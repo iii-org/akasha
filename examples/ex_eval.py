@@ -20,7 +20,7 @@ ev = akasha.eval(model="openai:gpt-4o",
 questions, answers = ev.create_questionset(data_source=["docs/mic"],
                                            question_num=3,
                                            choice_num=4,
-                                           output_file_path="cq3.txt")
+                                           output_file_path="cq3.json")
 # save the logs or turn verbose on to see the details
 ev.save_logs("log_cq.json")
 
@@ -30,7 +30,7 @@ questions, answers = ev.create_topic_questionset(
     topic="工業 4.0",
     question_num=3,
     choice_num=4,
-    output_file_path="4-0topic.txt")
+    output_file_path="4-0topic.json")
 
 #assign the quesion set file name, and evaluate the model performance of the question set, it will return the evaluation result and the totken usage.
-print(ev.evaluation(questionset_file="cq3.txt", data_source=["docs/mic"]))
+print(ev.evaluation(questionset_file="cq3.json", data_source=["docs/mic"]))
