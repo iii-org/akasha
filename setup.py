@@ -13,7 +13,6 @@ install_requires = [
     "langchain_openai>=0.1.0",
     "langchain-huggingface>=0.1.2",
     "langchain-chroma",
-    "lark",
     "chromadb==0.4.14",
     "openai>=0.27",
     "tiktoken",
@@ -42,6 +41,7 @@ install_requires = [
     "langchain-google-genai",
     "anthropic",
     "tavily-python",
+    "faiss-cpu",
 ]
 
 ### install different torch version###
@@ -85,5 +85,5 @@ setup(
         "akasha.utils.search.retrievers",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
-    python_requires=">=3.9",
+    python_requires=">=3.10",
 )

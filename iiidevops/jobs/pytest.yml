@@ -1,5 +1,5 @@
 pytest:
-  image: python:3.9
+  image: python:3.10
   stage: jobs
   before_script:
     - python -V # Print out python version for debugging

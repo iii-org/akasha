@@ -5,6 +5,7 @@ from .retri_mmr import myMMRRetriever
 from .retri_rerank import myRerankRetriever
 from .retri_svm import mySVMRetriever
 from .retri_tfidf import myTFIDFRetriever
+from .retri_faiss import myFAISSRetriever
 
 from typing import List, Union, Callable
 from akasha.utils.db.db_structure import dbs
@@ -70,6 +71,11 @@ def get_retrivers(
         if search_type in ["tfidf", "merge"]:
             tfidf_retriver = myTFIDFRetriever.from_documents(docs_list, k=topK)
             retriver_list.append(tfidf_retriver)
+
+        if search_type in ["faiss", "FAISS", "meta", "facebook"]:
+            faiss_retriver = myFAISSRetriever.from_db(db, embeddings, topK,
+                                                      threshold)
+            retriver_list.append(faiss_retriver)
 
         if search_type in ["knn", "auto", "auto_rerank"]:
             knn_retriver = myKNNRetriever.from_db(db, embeddings, topK,
