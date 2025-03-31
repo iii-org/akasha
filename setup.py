@@ -64,7 +64,7 @@ setup(
     install_requires=install_requires,
     extras_require={
         'llama-cpp': [
-            "llama-cpp-python>=0.3.1",
+            "llama-cpp-python>=0.3.8",
         ],
         'peft': ["auto-gptq==0.3.1"]
     },

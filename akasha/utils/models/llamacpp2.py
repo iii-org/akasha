@@ -26,8 +26,6 @@ class LlamaCPP(LLM):
         """
         super().__init__(model_id=model_name)
         from llama_cpp import Llama
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
 
         if temperature == 0.0:
             temperature = 0.01
@@ -36,21 +34,27 @@ class LlamaCPP(LLM):
         if 'verbose' in kwargs:
             self.verbose = kwargs['verbose']
         self.temperature = temperature
-        if self.device == 'cuda':
-            # chat_format="llama-2",
-            self.model = Llama(model_path=model_name,
-                               n_ctx=self.max_token,
-                               n_gpu_layers=-1,
-                               n_threads=16,
-                               n_batch=512,
-                               verbose=self.verbose)
 
-        else:
-            self.model = Llama(model_path=model_name,
-                               n_ctx=self.max_token,
+        try:
+            self.model = Llama(self.model_id,
+                               n_ctx=8192,
                                n_threads=16,
                                n_batch=512,
-                               verbose=self.verbose)
+                               verbose=False)
+        except:
+            try:
+                repo_id = "/".join(self.model_id.split("/")[:-1])
+                file_name = self.model_id.split("/")[-1]
+                self.model = Llama.from_pretrained(repo_id=repo_id,
+                                                   filename=file_name,
+                                                   n_ctx=8192,
+                                                   n_threads=16,
+                                                   n_batch=512,
+                                                   verbose=self.verbose)
+            except:
+                print(f"model {model_name} not found.")
+                raise Exception(f"model {model_name} not found.")
+
         # Register the cleanup function
         atexit.register(self.cleanup)
 
@@ -76,30 +80,24 @@ class LlamaCPP(LLM):
                stop: Optional[List[str]] = None) -> Generator[str, None, None]:
 
         stop_list = get_stop_list(stop)
-        if isinstance(prompt, str):
-            prompt = [{
-                "role": "system",
-                "content": "you are a helpful assistant"
-            }, {
-                "role": "user",
-                "content": prompt
-            }]
 
-        output = self.model.create_chat_completion(
-            prompt,
-            stream=True,
-            stop=stop_list,
-            temperature=self.temperature,
-            max_tokens=self.max_output_tokens,
-            presence_penalty=1,
-            frequency_penalty=1)
+        if isinstance(prompt, list):
+
+            for pp in prompt:
+                input_text += pp['content']
+        else:
+            input_text = prompt
+        output = self.model(input_text,
+                            stream=True,
+                            stop=stop_list,
+                            temperature=self.temperature,
+                            max_tokens=self.max_output_tokens,
+                            presence_penalty=1,
+                            frequency_penalty=1)
 
         for text in output:
-            delta = text['choices'][0]['delta']
-            if 'role' in delta:
-                yield delta['role'] + ': '
-            elif 'content' in delta:
-                yield delta['content']
+            delta = text['choices'][0]['text']
+            yield delta
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         """run llm and get the response
@@ -112,36 +110,27 @@ class LlamaCPP(LLM):
             str: llm response
         """
         stop_list = get_stop_list(stop)
-        if isinstance(prompt, str):
-            prompt = [{
-                "role": "system",
-                "content": "you are a helpful assistant"
-            }, {
-                "role": "user",
-                "content": prompt
-            }]
+        input_text = ""
+        if isinstance(prompt, list):
 
-        output = self.model.create_chat_completion(
-            prompt,
-            stream=True,
-            stop=stop_list,
-            temperature=self.temperature,
-            max_tokens=self.max_output_tokens,
-            presence_penalty=1,
-            frequency_penalty=1)
+            for pp in prompt:
+                input_text += pp['content']
+        else:
+            input_text = prompt
+
+        output = self.model(input_text,
+                            stream=True,
+                            stop=stop_list,
+                            temperature=self.temperature,
+                            max_tokens=self.max_output_tokens,
+                            presence_penalty=1,
+                            frequency_penalty=1)
 
         ret = ""
         for text in output:
-            delta = text['choices'][0]['delta']
-            if 'role' in delta:
-                sp = delta['role']
-                print(sp, end=': ', flush=True)
-                ret += (sp + ": ")
-
-            elif 'content' in delta:
-                sp = delta['content']
-                print(sp, end='', flush=True)
-                ret += sp
+            delta = text['choices'][0]['text']
+            print(delta, end=': ', flush=True)
+            ret += delta
 
         return ret
 
@@ -155,7 +144,7 @@ def get_stop_list(stop: Optional[List[str]]) -> List[str]:
     Returns:
         List[str]: stop list
     """
-    ret = ["<|eot_id|>", "<|end_header_id|>", "</s>"]
+    ret = ["<|eot_id|>", "<|end_header_id|>", "</s>", "<|end_of_text|>"]
     if stop is not None:
         ret = stop
     return ret
