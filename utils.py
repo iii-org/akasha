@@ -2047,7 +2047,7 @@ def ask_summary(system_prompt: str, username: str, tmp_file_name: str,
 
     data = {
         "file_path": tmp_file_name,
-        "language_model": language_model,
+        "model": language_model,
         "summary_type": summary_type,
         "summary_len": summary_len,
         "system_prompt": system_prompt,

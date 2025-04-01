@@ -1,4 +1,4 @@
 fastapi>=0.103.2
-akasha-terminal>=0.8.76
+akasha-terminal==0.8.76
 streamlit_authenticator<=0.2.3
 streamlit>=1.33.0

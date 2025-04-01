@@ -558,7 +558,7 @@ def get_summary(user_input: SummaryModel):
         if not apu.load_openai(config=user_input.openai_config):
             return {
                 'status': 'fail',
-                'response': 'load openai config failed.\n\n'
+                'response': f'load openai config failed.\n\n{user_input.model}'
             }
     try:
         clean()
