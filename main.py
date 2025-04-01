@@ -65,7 +65,7 @@ if 'forg_username' not in st.session_state:
 
 # page config
 st.set_page_config(
-    page_title="akasha",
+    page_title="akasha-lab",
     layout="wide",
 )
 
@@ -85,7 +85,7 @@ url_params = st.query_params.to_dict()
 _, col_title, _ = st.columns([2, 6, 1])
 placeholder_title = col_title.empty()
 with placeholder_title:
-    st.title('_:rainbow[akasha: Your Personal Domain Expert]_')
+    st.title('_:rainbow[akasha-lab: Your Personal Domain Expert]_')
 
 _, col_version, _ = st.columns([6, 1, 6])
 placeholder_version = col_version.empty()
@@ -164,7 +164,7 @@ if url_params == {}:
         placeholder_version.empty()
         with st.sidebar:
             st.markdown(
-                "<h1 style='text-align: center; color: black;'>akasha</h1>",
+                "<h1 style='text-align: center; color: black;'>akasha-lab</h1>",
                 unsafe_allow_html=True)
             st.markdown(
                 "<h5 style='text-align: center; color: black;'>Your Personal Domain Expert</h1>",
