@@ -129,7 +129,7 @@ class LlamaCPP(LLM):
         ret = ""
         for text in output:
             delta = text['choices'][0]['text']
-            print(delta, end=': ', flush=True)
+            print(delta, end='', flush=True)
             ret += delta
 
         return ret

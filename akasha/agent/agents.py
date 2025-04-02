@@ -168,7 +168,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return True
 
-    def __call__(self, question: str, messages: List[dict] = None):
+    async def acall(self, question: str, messages: List[dict] = None):
+        """Asynchronous version of agent."""
         """run agent to get response
         """
         start_time = time.time()
@@ -269,8 +270,178 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             elif cur_action['action'] in self.tools:
                 tool_name = cur_action['action']
                 tool_input = cur_action['action_input']
+
                 tool = self.tools[tool_name]
-                firsthand_observation = tool._run(**tool_input)
+                try:
+                    firsthand_observation = await tool.ainvoke(tool_input)
+                except Exception as e:
+                    print("Error in tool invocation, retrying...\n\n\n\n", e)
+                    firsthand_observation = tool._run(**tool_input)
+
+                if self.retri_observation:
+                    text_input = format_sys_prompt(
+                        self.RETRI_OBSERVATION_PROMPT,
+                        "Question: " + question + "\n\nThought: " + thought +
+                        "\n\nObservation: " + firsthand_observation,
+                        self.prompt_format_type, self.model)
+                    observation = call_model(self.model_obj, text_input)
+                    txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
+                    self.input_len += get_doc_length(self.language, txt)
+                    self.tokens += self.model_obj.get_num_tokens(txt)
+                else:
+                    observation = firsthand_observation
+
+                if self.verbose:
+                    print("\nObservation: " + observation)
+            else:
+                raise ValueError(f"Cannot find tool {cur_action['action']}")
+
+            cur_action['action_input'].pop('run_manager', None)
+            self.messages.append({
+                "role":
+                "Action",
+                "content":
+                json.dumps(cur_action, ensure_ascii=False)
+            })
+            self.messages.append({
+                "role": "Observation",
+                "content": observation
+            })
+
+            retri_messages, messages_len = retri_history_messages(
+                self.messages, self.max_past_observation,
+                self.max_input_tokens, self.model, "Action", "Observation")
+            if retri_messages != "":
+                retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
+
+            text_input = format_sys_prompt(
+                self.REACT_PROMPT, "Question: " + question + retri_messages,
+                self.prompt_format_type, self.model)
+            response = call_model(self.model_obj, text_input)
+            txt = "Question: " + question + retri_messages + self.REACT_PROMPT
+            self.input_len += get_doc_length(self.language, txt)
+            self.tokens += self.model_obj.get_num_tokens(txt)
+
+            round_count -= 1
+
+        end_time = time.time()
+        print("\n-------------------------------------\nSpend Time: ",
+              end_time - start_time, "s\n")
+        self.response = response
+        self._add_result_log(timestamp, end_time - start_time)
+
+        return response
+
+    def __call__(self, question: str, messages: List[dict] = None):
+        """run agent to get response
+        """
+        start_time = time.time()
+        round_count = self.max_round
+        if messages is None:
+            self.messages = []
+        else:
+            self.messages = messages
+        self.thoughts = []
+        observation = ""
+        thought = ""
+        retri_messages = ""
+        self._display_info()
+        ### call model to get response ###
+        retri_messages, messages_len = retri_history_messages(
+            self.messages, self.max_past_observation, self.max_input_tokens,
+            self.model, "Action", "Observation")
+        if retri_messages != "":
+            retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
+
+        text_input = format_sys_prompt(
+            self.REACT_PROMPT,
+            "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+            self.prompt_format_type, self.model)
+
+        response = call_model(self.model_obj, text_input)
+
+        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
+        self.input_len = get_doc_length(self.language, txt)
+        self.tokens = self.model_obj.get_num_tokens(txt)
+
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        if self.keep_logs == True:
+            self.timestamp_list.append(timestamp)
+            self._add_basic_log(timestamp, "agent_call")
+
+        ### start to run agent ###
+        while round_count > 0:
+            try:
+                cur_action = extract_json(response)
+                if (not isinstance(cur_action["action"], str)) or (
+                    (not isinstance(cur_action["action_input"], dict) and
+                     (cur_action["action"] != "Answer"))):
+                    raise ValueError(
+                        "Cannot find correct action from response")
+            except:
+                logging.warning(
+                    "Cannot extract JSON format action from response, retry.")
+                text_input = format_sys_prompt(
+                    self.REACT_PROMPT, "Question: " + question +
+                    retri_messages + self.REMEMBER_PROMPT,
+                    self.prompt_format_type, self.model)
+                response = call_model(self.model_obj, text_input)
+                round_count -= 1
+                txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
+                self.input_len += get_doc_length(self.language, txt)
+                self.tokens += self.model_obj.get_num_tokens(txt)
+                continue
+
+            ### get thought from response ###
+            thought = ''.join(
+                response.split('Thought:')[1:]).split('Action:')[0]
+            if thought.replace(" ", "").replace("\n", "") == "":
+                thought = "None."
+            self.thoughts.append(thought)
+
+            if cur_action is None:
+                raise ValueError("Cannot find correct action from response")
+            if cur_action['action'].lower() in [
+                    'final answer', 'final_answer', 'final', 'answer'
+            ]:
+                retri_messages = retri_messages.replace(
+                    self.OBSERVATION_PROMPT, "")
+                response = cur_action['action_input']
+                text_input = format_sys_prompt(
+                    f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
+                    retri_messages, self.prompt_format_type, self.model)
+
+                if self.stream:
+                    return self._display_stream(text_input)
+
+                response = call_model(self.model_obj, text_input)
+
+                txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                self.input_len += get_doc_length(self.language, txt)
+                self.tokens += self.model_obj.get_num_tokens(txt)
+                self.messages.append({
+                    "role":
+                    "Action",
+                    "content":
+                    json.dumps(cur_action, ensure_ascii=False)
+                })
+                self.messages.append({
+                    "role": "Observation",
+                    "content": response
+                })
+                break
+
+            elif cur_action['action'] in self.tools:
+                tool_name = cur_action['action']
+                tool_input = cur_action['action_input']
+
+                tool = self.tools[tool_name]
+                try:
+
+                    firsthand_observation = tool._run(**tool_input)
+                except Exception as e:
+                    print("Error in tool invocation, retrying...\n\n\n\n", e)
+                    firsthand_observation = tool.ainvoke(tool_input)
 
                 if self.retri_observation:
                     text_input = format_sys_prompt(

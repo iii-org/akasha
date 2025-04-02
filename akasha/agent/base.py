@@ -46,8 +46,20 @@ def create_tool(tool_name: str, tool_description: str,
             description: str
             para_des: str
 
+            async def ainvoke(self, tool_input: dict, **kwargs):
+                """Asynchronous invocation of the tool."""
+                if inspect.iscoroutinefunction(func):
+                    # If func is asynchronous, await it
+                    return await func(**tool_input, **kwargs)
+                else:
+                    # If func is synchronous, run it directly
+                    return func(**tool_input, **kwargs)
+
             def _run(self, *args, **kwargs):
                 return func(*args, **kwargs)
+
+            def run(self, *args, **kwargs):
+                return self._run(*args, **kwargs)
 
         sig = inspect.signature(func)
         params = sig.parameters

@@ -148,33 +148,49 @@ def extract_json(s: str) -> Union[dict, None]:
     Returns:
         Union[dict, None]: return the JSON part of the string, if not found return None
     """
-    # Use a regular expression to find the JSON part of the string
-    match = re.search(r'\{.*\}', s, re.DOTALL)
-    stack = []
-    start = 0
-    s = s.replace("\n", " ").replace("\r", " ").strip()
-    if match is None:
+
+    match = re.search(r'\{(?:[^{}]*|{[^{}]*})*\}', s, re.DOTALL)
+
+    if not match:
         return None
 
-    s = match.group()
-    for i, c in enumerate(s):
-        if c == '{':
-            stack.append(i)
-        elif c == '}':
-            if stack:
-                start = stack.pop()
-                if not stack:
-                    try:
-                        json_part = s[start:i + 1]
-                        json_part = json_part.replace("\n", "")
-                        json_part = json_part.replace("'", '"')
-                        # Try to parse the JSON part of the string
-                        return json.loads(json_part)
-                    except json.JSONDecodeError:
-                        traceback.print_exc()
-                        print(s[start:i + 1])
-                        print(
-                            "The JSON part of the string is not well-formatted"
-                        )
-                        return None
-    return None
+    json_part = match.group()
+
+    try:
+        # Attempt to parse JSON
+        return json.loads(json_part)
+    except json.JSONDecodeError:
+        traceback.print_exc()
+        print(f"Invalid JSON extracted: {json_part}")
+        return None
+
+    # # Use a regular expression to find the JSON part of the string
+    # match = re.search(r'\{.*\}', s, re.DOTALL)
+    # stack = []
+    # start = 0
+    # s = s.replace("\n", " ").replace("\r", " ").strip()
+    # if match is None:
+    #     return None
+
+    # s = match.group()
+    # for i, c in enumerate(s):
+    #     if c == '{':
+    #         stack.append(i)
+    #     elif c == '}':
+    #         if stack:
+    #             start = stack.pop()
+    #             if not stack:
+    #                 try:
+    #                     json_part = s[start:i + 1]
+    #                     json_part = json_part.replace("\n", "")
+    #                     json_part = json_part.replace("'", '"')
+    #                     # Try to parse the JSON part of the string
+    #                     return json.loads(json_part)
+    #                 except json.JSONDecodeError:
+    #                     traceback.print_exc()
+    #                     print(s[start:i + 1])
+    #                     print(
+    #                         "The JSON part of the string is not well-formatted"
+    #                     )
+    #                     return None
+    # return None

@@ -42,6 +42,7 @@ install_requires = [
     "anthropic",
     "tavily-python",
     "faiss-cpu",
+    "langchain-mcp-adapters",
 ]
 
 ### install different torch version###
