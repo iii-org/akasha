@@ -4,7 +4,7 @@ pytest:
   before_script:
     - python -V # Print out python version for debugging
     - uv pip install --system -r requirements.txt
-    - uv pip install pytest pytest-cov
+    - uv pip install --system pytest pytest-cov
   script:
     - pytest
   only:
