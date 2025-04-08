@@ -1,11 +1,10 @@
 pytest:
-  image: python:3.10
+  image: ghcr.io/astral-sh/uv:0.6.13-python3.10-bookworm-slim
   stage: jobs
   before_script:
     - python -V # Print out python version for debugging
-    - pip install -r requirements.txt
-    - pip install pytest
-    - pip install pytest-cov
+    - uv pip install –system -r requirements.txt
+    - uv pip install pytest pytest-cov
   script:
     - pytest
   only:
