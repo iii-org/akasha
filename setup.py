@@ -1,4 +1,5 @@
 from setuptools import setup
+
 # read the contents of your README file
 from pathlib import Path
 
@@ -20,7 +21,7 @@ install_requires = [
     "jieba>=0.42.1",
     "opencc-python-reimplemented==0.1.7",
     "sentence-transformers>=3.1.1",
-    "transformers>=4.45.0,<4.48",  #==4.41.1
+    "transformers>=4.45.0,<4.48",  # ==4.41.1
     "tqdm>=4.65.0",
     "docx2txt==0.8",
     "rouge==1.0.1",
@@ -64,10 +65,10 @@ setup(
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
     extras_require={
-        'llama-cpp': [
+        "llama-cpp": [
             "llama-cpp-python>=0.3.8",
         ],
-        'peft': ["auto-gptq==0.3.1"]
+        "peft": ["auto-gptq==0.3.1"],
     },
     packages=[
         "akasha",

@@ -1,18 +1,25 @@
-from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
+from akasha.utils.base import (
+    DEFAULT_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_INPUT_TOKENS,
+)
 from .ask import ask, _retri_max_texts
-from akasha.utils.prompts.gen_prompt import default_ask_prompt, default_conclusion_prompt, format_sys_prompt
-import time, datetime
+from akasha.utils.prompts.gen_prompt import (
+    default_ask_prompt,
+    default_conclusion_prompt,
+    format_sys_prompt,
+)
+import time
+import datetime
 from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table
 from akasha.helper.base import get_doc_length
 from akasha.helper.run_llm import call_model, call_batch_model, check_relevant_answer
 from akasha.helper.web_engine import load_docs_from_webengine
-from typing import Callable, Union, List, Tuple, Generator
-import time, datetime
+
 from akasha.helper.token_counter import myTokenizer
 
 
 class websearch(ask):
-
     def __init__(
         self,
         model: str = DEFAULT_MODEL,
@@ -32,20 +39,20 @@ class websearch(ask):
     ):
         """websearch class will search the user prompt in the web and based on the results to answer the question.
 
-            Args:
-                model (str, optional): _description_. Defaults to DEFAULT_MODEL.
-                max_input_tokens (int, optional): _description_. Defaults to DEFAULT_MAX_INPUT_TOKENS.
-                max_output_tokens (int, optional): _description_. Defaults to DEFAULT_MAX_OUTPUT_TOKENS.
-                temperature (float, optional): _description_. Defaults to 0.0.
-                language (str, optional): _description_. Defaults to "ch".
-                search_engine (str, optional): the search api methods, includes "serper", "brave","wiki" . Defaults to "wiki".
-                search_num (int, optional): the number of search results. Defaults to 5.
-                record_exp (str, optional): _description_. Defaults to "".
-                system_prompt (str, optional): _description_. Defaults to "".
-                keep_logs (bool, optional): _description_. Defaults to False.
-                verbose (bool, optional): _description_. Defaults to False.
-                env_file (str, optional): _description_. Defaults to "".
-            """
+        Args:
+            model (str, optional): _description_. Defaults to DEFAULT_MODEL.
+            max_input_tokens (int, optional): _description_. Defaults to DEFAULT_MAX_INPUT_TOKENS.
+            max_output_tokens (int, optional): _description_. Defaults to DEFAULT_MAX_OUTPUT_TOKENS.
+            temperature (float, optional): _description_. Defaults to 0.0.
+            language (str, optional): _description_. Defaults to "ch".
+            search_engine (str, optional): the search api methods, includes "serper", "brave","wiki" . Defaults to "wiki".
+            search_num (int, optional): the number of search results. Defaults to 5.
+            record_exp (str, optional): _description_. Defaults to "".
+            system_prompt (str, optional): _description_. Defaults to "".
+            keep_logs (bool, optional): _description_. Defaults to False.
+            verbose (bool, optional): _description_. Defaults to False.
+            env_file (str, optional): _description_. Defaults to "".
+        """
         super().__init__(
             model=model,
             max_input_tokens=max_input_tokens,
@@ -69,27 +76,22 @@ class websearch(ask):
         self.doc_tokens, self.doc_length = 0, 0
 
         ## set default RAG prompt ##
-        if self.system_prompt.replace(' ', '') == "":
+        if self.system_prompt.replace(" ", "") == "":
             self.system_prompt = default_ask_prompt(self.language)
 
     def _display_info(self, batch: int = 1) -> bool:
-
-        if self.verbose == False:
+        if self.verbose is False:
             return False
 
         print(f"Model: {self.model}, Temperature: {self.temperature}")
-        print(
-            f"Search engine: {self.search_engine}, Search num: {self.search_num}"
-        )
+        print(f"Search engine: {self.search_engine}, Search num: {self.search_num}")
         print(
             f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
         )
         print(
             f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
         )
-        print(
-            f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n"
-        )
+        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
 
         return True
 
@@ -98,8 +100,7 @@ class websearch(ask):
         timestamp: str,
         fn_type: str,
     ) -> bool:
-
-        if super()._add_basic_log(timestamp, fn_type) == False:
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["prompt"] = self.prompt
@@ -109,8 +110,7 @@ class websearch(ask):
         return True
 
     def _add_result_log(self, timestamp, time) -> bool:
-
-        if super()._add_result_log(timestamp, time) == False:
+        if super()._add_result_log(timestamp, time) is False:
             return False
 
         ### add token information ###
@@ -121,8 +121,7 @@ class websearch(ask):
         self.logs[timestamp]["doc_length"] = self.doc_length
         return True
 
-    def _upload_logs(self, tot_time: float, doc_len: int,
-                     doc_tokens: int) -> str:
+    def _upload_logs(self, tot_time: float, doc_len: int, doc_tokens: int) -> str:
         """_summary_
 
         Args:
@@ -143,6 +142,7 @@ class websearch(ask):
         metrics = handle_metrics(doc_len, tot_time, doc_tokens)
         table = handle_table(self.prompt, self.docs, self.response)
         from akasha.utils.upload import aiido_upload
+
         aiido_upload(self.record_exp, params, metrics, table)
 
         return "logs uploaded"
@@ -164,31 +164,32 @@ class websearch(ask):
         start_time = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self._add_basic_log(timestamp, "websearch")
-        self.docs = load_docs_from_webengine(self.prompt, self.search_engine,
-                                             self.search_num, self.language,
-                                             self.env_file)
+        self.docs = load_docs_from_webengine(
+            self.prompt,
+            self.search_engine,
+            self.search_num,
+            self.language,
+            self.env_file,
+        )
 
         ### check if prompt <= max_input_tokens ###
         tot_prompts = self.prompt + self.system_prompt
         self.prompt_length = get_doc_length(self.language, tot_prompts)
-        self.prompt_tokens = myTokenizer.compute_tokens(
-            tot_prompts, self.model)
+        self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model)
 
         if self.prompt_tokens > self.max_input_tokens:
-            print(
-                "\n\nThe tokens of prompt is larger than max_input_tokens.\n\n"
-            )
-            raise ValueError(
-                "The tokens of prompt is larger than max_input_tokens.")
+            print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
+            raise ValueError("The tokens of prompt is larger than max_input_tokens.")
 
         ### separate documents and count tokens ###
         cur_documents, self.doc_tokens = self._separate_docs()
-        self.doc_length = get_doc_length(self.language, ''.join(cur_documents))
+        self.doc_length = get_doc_length(self.language, "".join(cur_documents))
 
         prod_sys_prompts = self._process_batch_prompts(cur_documents)
 
         self._display_info(
-            len(cur_documents))  # display the information of the parameters
+            len(cur_documents)
+        )  # display the information of the parameters
         self._display_docs()
 
         ### start to ask llm ###
@@ -198,30 +199,38 @@ class websearch(ask):
                 self.model_obj,
                 prod_sys_prompts,
             )
-            fnl_conclusion_prompt = default_conclusion_prompt(
-                prompt, self.language)
+            fnl_conclusion_prompt = default_conclusion_prompt(prompt, self.language)
             ## check relevant answer if batch_responses > 10 ##
             if len(batch_responses) > 10:
                 batch_responses = check_relevant_answer(
-                    self.model_obj, batch_responses, self.prompt,
-                    self.prompt_format_type)
+                    self.model_obj,
+                    batch_responses,
+                    self.prompt,
+                    self.prompt_format_type,
+                )
 
             batch_responses, cur_len = _retri_max_texts(
-                batch_responses, self.max_input_tokens -
-                myTokenizer.compute_tokens(fnl_conclusion_prompt, self.model),
-                self.model)
+                batch_responses,
+                self.max_input_tokens
+                - myTokenizer.compute_tokens(fnl_conclusion_prompt, self.model),
+                self.model,
+            )
 
-            fnl_input = format_sys_prompt(fnl_conclusion_prompt,
-                                          "\n\n".join(batch_responses),
-                                          self.prompt_format_type, self.model)
+            fnl_input = format_sys_prompt(
+                fnl_conclusion_prompt,
+                "\n\n".join(batch_responses),
+                self.prompt_format_type,
+                self.model,
+            )
 
             if self.stream:
-                return self._display_stream(fnl_input, )
+                return self._display_stream(
+                    fnl_input,
+                )
 
             self.response = call_model(self.model_obj, fnl_input)
 
         else:
-
             if self.stream:
                 return self._display_stream(prod_sys_prompts[0])
 
@@ -230,6 +239,5 @@ class websearch(ask):
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
 
-        self._upload_logs(end_time - start_time, self.doc_length,
-                          self.doc_tokens)
+        self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
         return self.response

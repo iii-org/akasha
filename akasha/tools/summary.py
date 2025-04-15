@@ -1,21 +1,36 @@
 from akasha.utils.atman import basic_llm
-from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS, DEFAULT_CHUNK_SIZE
-from akasha.utils.prompts.gen_prompt import format_refine_summary_prompt, format_reduce_summary_prompt, format_sys_prompt
-from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table, language_dict
+from akasha.utils.base import (
+    DEFAULT_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_INPUT_TOKENS,
+)
+from akasha.utils.prompts.gen_prompt import (
+    format_refine_summary_prompt,
+    format_reduce_summary_prompt,
+    format_sys_prompt,
+)
+from akasha.utils.prompts.format import (
+    handle_params,
+    handle_metrics,
+    handle_table,
+    language_dict,
+)
 from akasha.utils.db.load_docs import load_docs_from_info
 from akasha.helper.base import get_doc_length, get_docs_length
-from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model, check_relevant_answer
-from typing import Callable, Union, List, Tuple, Generator
+from akasha.helper.run_llm import call_model
+from typing import Union, Tuple
 from pathlib import Path
 from langchain.schema import Document
-import time, datetime, math, logging
+import time
+import datetime
+import math
+import logging
 from akasha.helper.token_counter import myTokenizer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tqdm import tqdm
 
 
 class summary(basic_llm):
-
     def __init__(
         self,
         model: str = DEFAULT_MODEL,
@@ -35,7 +50,7 @@ class summary(basic_llm):
         verbose: bool = False,
         env_file: str = "",
     ):
-        """"initials of Summary class
+        """ "initials of Summary class
 
         Args:
             **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
@@ -54,8 +69,8 @@ class summary(basic_llm):
             **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
             **consecutive_merge_failures (int, optional)**: the number of consecutive merge failures before returning the current response list as the summary. Defaults to 5.
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
-            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n      
-            **env_file (str, optional)**: the path of env file. Defaults to "".\n  
+            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
+            **env_file (str, optional)**: the path of env file. Defaults to "".\n
         """
         super().__init__(
             model=model,
@@ -82,8 +97,7 @@ class summary(basic_llm):
         self.chunk_overlap = chunk_overlap
 
     def _display_info(self, batch: int = 1) -> bool:
-
-        if self.verbose == False:
+        if self.verbose is False:
             return False
         print(
             f"Model: {self.model}, Temperature: {self.temperature}, Summary Type: {self.sum_type}"
@@ -98,27 +112,24 @@ class summary(basic_llm):
 
         return True
 
-    def _add_basic_log(self,
-                       timestamp: str,
-                       fn_type: str,
-                       history_messages: list = []) -> bool:
-
-        if super()._add_basic_log(timestamp, fn_type) == False:
+    def _add_basic_log(
+        self, timestamp: str, fn_type: str, history_messages: list = []
+    ) -> bool:
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["sum_type"] = self.sum_type
         self.logs[timestamp]["sum_len"] = self.sum_len
-        self.logs[timestamp][
-            "consecutive_merge_failures"] = self.consecutive_merge_failures
+        self.logs[timestamp]["consecutive_merge_failures"] = (
+            self.consecutive_merge_failures
+        )
         self.logs[timestamp]["chunk_size"] = self.chunk_size
         self.logs[timestamp]["chunk_overlap"] = self.chunk_overlap
 
         return True
 
-    def _add_result_log(self, timestamp: str, time: float,
-                        reponse_list: list) -> bool:
-
-        if super()._add_result_log(timestamp, time) == False:
+    def _add_result_log(self, timestamp: str, time: float, reponse_list: list) -> bool:
+        if super()._add_result_log(timestamp, time) is False:
             return False
 
         ### add token information ###
@@ -131,8 +142,9 @@ class summary(basic_llm):
 
         return True
 
-    def _upload_logs(self, tot_time: float, doc_len: int, doc_tokens: int,
-                     response_list: list) -> str:
+    def _upload_logs(
+        self, tot_time: float, doc_len: int, doc_tokens: int, response_list: list
+    ) -> str:
         """_summary_
 
         Args:
@@ -150,18 +162,24 @@ class summary(basic_llm):
             chunk_size=self.chunk_size,
         )
         params["chunk_overlap"] = self.chunk_overlap
-        params["summary_type"] = ("refine" if self.sum_type == "refine" else
-                                  "map_reduce")
+        params["summary_type"] = "refine" if self.sum_type == "refine" else "map_reduce"
         metrics = handle_metrics(doc_len, tot_time, doc_tokens)
         table = handle_table(self.system_prompt, response_list, self.summary)
         from akasha.utils.upload import aiido_upload
+
         aiido_upload(self.record_exp, params, metrics, table)
 
         return "logs uploaded"
 
-    def _reduce_summary(self, texts: list, tokens: int, total_list: list,
-                        progress: tqdm, pre_response_list_len: int,
-                        consecutive_merge_fail: int):
+    def _reduce_summary(
+        self,
+        texts: list,
+        tokens: int,
+        total_list: list,
+        progress: tqdm,
+        pre_response_list_len: int,
+        consecutive_merge_fail: int,
+    ):
         """Summarize each chunk and merge them until the combined chunks are smaller than the maximum token limit.
         Then, generate the final summary. This method is faster and requires fewer tokens than the refine method.
 
@@ -176,9 +194,9 @@ class summary(basic_llm):
         response_list = []
         i = 0
         while i < len(texts):
-            token, cur_text, newi = _get_text(texts, "", i,
-                                              self.max_input_tokens,
-                                              self.model)
+            token, cur_text, newi = _get_text(
+                texts, "", i, self.max_input_tokens, self.model
+            )
             tokens += token
 
             progress.update(1)
@@ -186,10 +204,12 @@ class summary(basic_llm):
             ### do the final summary if all chunks can be fits into llm model ###
             if i == 0 and newi == len(texts):
                 prompt = format_reduce_summary_prompt(cur_text, self.sum_len)
-                input_text = format_sys_prompt(self.system_prompt,
-                                               "\n" + prompt,
-                                               self.prompt_format_type,
-                                               self.model)
+                input_text = format_sys_prompt(
+                    self.system_prompt,
+                    "\n" + prompt,
+                    self.prompt_format_type,
+                    self.model,
+                )
                 response = call_model(
                     self.model_obj,
                     input_text,
@@ -200,8 +220,9 @@ class summary(basic_llm):
                 return total_list, tokens
 
             prompt = format_reduce_summary_prompt(cur_text, 0)
-            input_text = format_sys_prompt(self.system_prompt, "\n" + prompt,
-                                           self.prompt_format_type, self.model)
+            input_text = format_sys_prompt(
+                self.system_prompt, "\n" + prompt, self.prompt_format_type, self.model
+            )
             response = call_model(self.model_obj, input_text)
 
             i = newi
@@ -220,16 +241,21 @@ class summary(basic_llm):
                 print(
                     "Cannot summarize due to texts too long, return current response_list as summary."
                 )
-                total_list.append('\n\n'.join(response_list))
+                total_list.append("\n\n".join(response_list))
                 return total_list, tokens
         else:
             consecutive_merge_fail = 0
 
         pre_response_list_len = len(response_list)
 
-        return self._reduce_summary(response_list, tokens, total_list,
-                                    progress, pre_response_list_len,
-                                    consecutive_merge_fail)
+        return self._reduce_summary(
+            response_list,
+            tokens,
+            total_list,
+            progress,
+            pre_response_list_len,
+            consecutive_merge_fail,
+        )
 
     def _refine_summary(self, texts: list) -> Union[list, int]:
         """refine summary summarizing a chunk at a time and using the previous summary as a prompt for
@@ -255,17 +281,19 @@ class summary(basic_llm):
 
         while i < len(texts):
             prei = i
-            token, cur_text, i = _get_text(texts, previous_summary, i,
-                                           self.max_input_tokens, self.model)
+            token, cur_text, i = _get_text(
+                texts, previous_summary, i, self.max_input_tokens, self.model
+            )
             tokens += token
             if previous_summary == "":
                 prompt = format_reduce_summary_prompt(cur_text, self.sum_len)
             else:
-                prompt = format_refine_summary_prompt(cur_text,
-                                                      previous_summary,
-                                                      self.sum_len)
-            text_input = format_sys_prompt(self.system_prompt, "\n" + prompt,
-                                           self.prompt_format_type, self.model)
+                prompt = format_refine_summary_prompt(
+                    cur_text, previous_summary, self.sum_len
+                )
+            text_input = format_sys_prompt(
+                self.system_prompt, "\n" + prompt, self.prompt_format_type, self.model
+            )
             response = call_model(
                 self.model_obj,
                 text_input,
@@ -292,13 +320,11 @@ class summary(basic_llm):
         progress.close()
         ## merge the failed summaries ##
         if len(fnsh_sum_list) > 0:
-            response_list[-1] = '\n\n'.join(
-                fnsh_sum_list) + '\n\n' + response_list[-1]
+            response_list[-1] = "\n\n".join(fnsh_sum_list) + "\n\n" + response_list[-1]
 
         return response_list, tokens
 
-    def __call__(self, content: Union[str, list, Path, Document],
-                 **kwargs) -> str:
+    def __call__(self, content: Union[str, list, Path, Document], **kwargs) -> str:
         """input one or multiple content/source and return a summary of the content
         content can be a string, a list of strings, a path of file, a list of paths of files, a Document object, or a list of Document objects.
         Args:
@@ -320,10 +346,10 @@ class summary(basic_llm):
         self.docs = load_docs_from_info(content)
         self.doc_length = get_docs_length(self.language, self.docs)
         self.doc_tokens = myTokenizer.compute_tokens(
-            ''.join([d.page_content for d in self.docs]), self.model)
+            "".join([d.page_content for d in self.docs]), self.model
+        )
         self.prompt_length = get_doc_length(self.language, self.system_prompt)
-        self.prompt_tokens = myTokenizer.compute_tokens(
-            self.system_prompt, self.model)
+        self.prompt_tokens = myTokenizer.compute_tokens(self.system_prompt, self.model)
 
         ### check if docs do not has any content ###
         if self.doc_tokens == 0:
@@ -350,18 +376,19 @@ class summary(basic_llm):
 
         else:
             per_sum_chunks = _calculate_per_summary_chunks(
-                self.language, self.max_input_tokens, self.sum_len,
-                self.chunk_size)
+                self.language, self.max_input_tokens, self.sum_len, self.chunk_size
+            )
             approx_sum_times = _calculate_approx_sum_times(
-                len(split_texts), per_sum_chunks)
+                len(split_texts), per_sum_chunks
+            )
 
             response_list_len = len(split_texts)
             consecutive_merge_fail = 0
 
             progress = tqdm(total=approx_sum_times, desc="Reduce_map Summary")
             response_list, self.doc_tokens = self._reduce_summary(
-                split_texts, 0, [], progress, response_list_len,
-                consecutive_merge_fail)
+                split_texts, 0, [], progress, response_list_len, consecutive_merge_fail
+            )
             progress.close()
 
         self.summary = response_list[-1]
@@ -370,8 +397,9 @@ class summary(basic_llm):
 
         self._add_result_log(timestamp, end_time - start_time, response_list)
 
-        self._upload_logs(end_time - start_time, self.doc_length,
-                          self.doc_tokens, response_list)
+        self._upload_logs(
+            end_time - start_time, self.doc_length, self.doc_tokens, response_list
+        )
 
         return self.summary
 
@@ -393,8 +421,9 @@ def _calculate_approx_sum_times(chunks: int, per_sum_chunks: int) -> int:
     return times
 
 
-def _calculate_per_summary_chunks(language: str, max_input_tokens: int,
-                                  summary_len: int, chunk_size: int) -> int:
+def _calculate_per_summary_chunks(
+    language: str, max_input_tokens: int, summary_len: int, chunk_size: int
+) -> int:
     """calculate the estimation of chunks that can fit into llm each time
 
     Args:
@@ -414,18 +443,18 @@ def _calculate_per_summary_chunks(language: str, max_input_tokens: int,
     else:
         token_to_text = 1
 
-    ret = max(ret,
-              (token_to_text * max_input_tokens - summary_len) // chunk_size)
+    ret = max(ret, (token_to_text * max_input_tokens - summary_len) // chunk_size)
 
     return ret
 
 
 def _get_text(
-        texts: list,
-        previous_summary: str,
-        i: int,
-        max_input_tokens: int,
-        model_name: str = "openai:gpt-3.5-turbo") -> Tuple[int, str, int]:
+    texts: list,
+    previous_summary: str,
+    i: int,
+    max_input_tokens: int,
+    model_name: str = "openai:gpt-3.5-turbo",
+) -> Tuple[int, str, int]:
     """used in summary, combine chunks of texts into one chunk that can fit into llm model
 
     Args:

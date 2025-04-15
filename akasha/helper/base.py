@@ -4,12 +4,13 @@ from langchain_core.embeddings import Embeddings
 from typing import Union, Callable, Tuple, List
 from langchain.schema import Document
 import jieba
-import json, re, traceback
-
-jieba.setLogLevel(
-    jieba.logging.INFO)  ## ignore logging jieba model information
-
+import json
+import re
+import traceback
 import opencc
+
+jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
+
 
 cc = opencc.OpenCC("s2twp")
 
@@ -27,7 +28,7 @@ def separate_name(name: str):
 
     if len(sep) > 2:
         res_type = sep[0].lower()
-        res_name = ':'.join(sep[1:])
+        res_name = ":".join(sep[1:])
     elif len(sep) < 2:
         ### if the format type not equal to type:name ###
         res_type = sep[0].lower()
@@ -52,23 +53,28 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
         str: type:name
     """
     if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
-            embeddings, AzureOpenAIEmbeddings):
+        embeddings, AzureOpenAIEmbeddings
+    ):
         return "openai:" + embeddings.model
     else:
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
         if isinstance(embeddings, GoogleGenerativeAIEmbeddings):
             return "gemini:" + embeddings.model
 
         from akasha.utils.models.custom import custom_embed
+
         if isinstance(embeddings, custom_embed):
             return embeddings.model_name
 
         else:
             from langchain_huggingface import HuggingFaceEmbeddings
+
             if isinstance(embeddings, HuggingFaceEmbeddings):
                 return "hf:" + embeddings.model_name
 
             from langchain_community.embeddings import TensorflowHubEmbeddings
+
             if isinstance(embeddings, TensorflowHubEmbeddings):
                 return "tf:" + embeddings.model_url
 
@@ -77,7 +83,8 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
 
 
 def get_embedding_type_and_name(
-        embeddings: Union[Embeddings, str, Callable]) -> Tuple[str, str]:
+    embeddings: Union[Embeddings, str, Callable],
+) -> Tuple[str, str]:
     """get the type and name of the embeddings"""
 
     if callable(embeddings):
@@ -149,7 +156,7 @@ def extract_json(s: str) -> Union[dict, None]:
         Union[dict, None]: return the JSON part of the string, if not found return None
     """
 
-    match = re.search(r'\{(?:[^{}]*|{[^{}]*})*\}', s, re.DOTALL)
+    match = re.search(r"\{(?:[^{}]*|{[^{}]*})*\}", s, re.DOTALL)
 
     if not match:
         return None

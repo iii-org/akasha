@@ -24,10 +24,10 @@ def response_page():
         sb1, sb2 = st.columns([1, 1])
         with sb1:
             if st.button(
-                    "Clear",
-                    type="primary",
-                    use_container_width=True,
-                    help="Clear the prompt and response history.",
+                "Clear",
+                type="primary",
+                use_container_width=True,
+                help="Clear the prompt and response history.",
             ):
                 st.session_state.prompt_list = []
                 st.session_state.response_list = []
@@ -47,7 +47,9 @@ def response_page():
 
     prompt_borad, para_set2 = st.columns([3, 1])
     with prompt_borad:
-        prompt = st.chat_input("Ask your question here", )
+        prompt = st.chat_input(
+            "Ask your question here",
+        )
 
     if prompt:
         ## check if the object is created correctly ##
@@ -92,5 +94,4 @@ def response_page():
         st.session_state.response_list.append(ans)
         timesp = st.session_state.akasha_obj.timestamp_list[-1]
         if timesp in st.session_state.akasha_obj.logs:
-            st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[
-                timesp]
+            st.session_state.logs[timesp] = st.session_state.akasha_obj.logs[timesp]

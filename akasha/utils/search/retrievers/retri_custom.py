@@ -63,14 +63,15 @@ class customRetriever(BaseRetriever):
         query_embeds = np.array(self.embeddings.embed_query(query))
         docs_embeds = self.index
 
-        relevant_docs_idx = self.func(query_embeds, docs_embeds, self.k,
-                                      self.relevancy_threshold)
+        relevant_docs_idx = self.func(
+            query_embeds, docs_embeds, self.k, self.relevancy_threshold
+        )
 
         ### from index rebuild the documents ###
-        for idx in relevant_docs_idx[:self.k]:
+        for idx in relevant_docs_idx[: self.k]:
             top_k_results.append(
-                Document(page_content=self.texts[idx],
-                         metadata=self.metadata[idx]))
+                Document(page_content=self.texts[idx], metadata=self.metadata[idx])
+            )
 
         return top_k_results, []
 
@@ -78,12 +79,10 @@ class customRetriever(BaseRetriever):
         return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
-
         return self._gs(query)[0]
 
     def get_relevant_documents_and_scores(
         self,
         query: str,
     ) -> Tuple[List[Document], List[float]]:
-
         return self._gs(query)

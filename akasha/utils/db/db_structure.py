@@ -1,13 +1,11 @@
 from langchain.docstore.document import Document
-from typing import Union, Tuple
+from typing import Union
 from pathlib import Path
 import re
 
 
 class dbs:
-
     def __init__(self, chrdb=[]):
-
         self.ids = []
         self.embeds = []
         self.metadatas = []
@@ -34,8 +32,7 @@ class dbs:
             else:
                 self.docs = ["" for _ in range(len(data["ids"]))]
 
-    def merge(self, db: 'dbs'):
-
+    def merge(self, db: "dbs"):
         for i in range(len(db.ids)):
             if db.ids[i] not in self.vis:
                 self.ids.append(db.ids[i])
@@ -85,8 +82,8 @@ class dbs:
         return self.embeds
 
 
-NO_PARENT_DIR_NAME = 'NoPaReNtDiR'
-FILE_LAST_CHANGE_FILE_NAME = 'file_last_changed.json'
+NO_PARENT_DIR_NAME = "NoPaReNtDiR"
+FILE_LAST_CHANGE_FILE_NAME = "file_last_changed.json"
 TEXT_EXTENSIONS = ["pdf", "md", "docx", "txt", "csv", "pptx"]
 ALREADY_BUILT = "already_built"
 NOT_BUILT = "not_built"
@@ -100,38 +97,49 @@ def get_storage_directory(
     embed_type: str,
     embed_name: str,
 ) -> str:
-
     if isinstance(dir_path, str):
-
         if is_url(dir_path):
             sanitized_dir_path = _sanitize_path_string(dir_path)
-            storage_directory = ("chromadb/" + sanitized_dir_path + "_" +
-                                 embed_type + "_" +
-                                 embed_name.replace("/", "-") + "_" +
-                                 str(chunk_size))
+            storage_directory = (
+                "chromadb/"
+                + sanitized_dir_path
+                + "_"
+                + embed_type
+                + "_"
+                + embed_name.replace("/", "-")
+                + "_"
+                + str(chunk_size)
+            )
             return storage_directory
         else:
             dir_path = Path(dir_path)
 
-    if dir_path != Path('.'):
-        db_dir = '-'.join([
-            part.replace(' ', '').replace('_', '') for part in dir_path.parts
-            if part
-        ])
+    if dir_path != Path("."):
+        db_dir = "-".join(
+            [part.replace(" ", "").replace("_", "") for part in dir_path.parts if part]
+        )
     else:
         db_dir = NO_PARENT_DIR_NAME
 
-    storage_directory = ("chromadb/" + db_dir + "_" + embed_type + "_" +
-                         embed_name.replace("/", "-") + "_" + str(chunk_size))
+    storage_directory = (
+        "chromadb/"
+        + db_dir
+        + "_"
+        + embed_type
+        + "_"
+        + embed_name.replace("/", "-")
+        + "_"
+        + str(chunk_size)
+    )
 
     return storage_directory
 
 
 def _sanitize_path_string(path: str, max_len: int = 30) -> str:
     # Remove special characters and limit length to 30
-    sanitized = re.sub(r'[^a-zA-Z0-9]', '', path)[:max_len]
+    sanitized = re.sub(r"[^a-zA-Z0-9]", "", path)[:max_len]
     return sanitized
 
 
 def is_url(pattern: str) -> bool:
-    return bool(re.match(r'^(http|https)://', pattern))
+    return bool(re.match(r"^(http|https)://", pattern))

@@ -1,19 +1,36 @@
-from typing import Union, List, Set, Tuple, Callable, Optional
+from typing import Union, List, Tuple, Callable
 from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pathlib import Path
 import json
-import logging, datetime, time, shutil, gc, re
+import logging
+import datetime
+import time
+import shutil
+import gc
+import re
 from tqdm import tqdm
 from akasha.helper import get_mac_address, separate_name
 from akasha.helper.crawler import get_text_from_url
 from akasha.helper.handle_objects import handle_embeddings_and_name
 from akasha.utils.db.file_loader import load_file, get_load_file_list
-from akasha.utils.db.db_structure import TEXT_EXTENSIONS, get_storage_directory, FILE_LAST_CHANGE_FILE_NAME
-from akasha.utils.db.db_structure import OLD_BUILT, NOT_BUILT, ALREADY_BUILT, HNSW_THRESHOLD
-from akasha.utils.db.delete_db import delete_documents_from_chroma_by_file_name, delete_documents_by_directory
+from akasha.utils.db.db_structure import (
+    TEXT_EXTENSIONS,
+    get_storage_directory,
+    FILE_LAST_CHANGE_FILE_NAME,
+)
+from akasha.utils.db.db_structure import (
+    OLD_BUILT,
+    NOT_BUILT,
+    ALREADY_BUILT,
+    HNSW_THRESHOLD,
+)
+from akasha.utils.db.delete_db import (
+    delete_documents_from_chroma_by_file_name,
+    delete_documents_by_directory,
+)
 
 
 def create_directory_db(
@@ -47,11 +64,13 @@ def create_directory_db(
 
     ### get the chromadb directory name###
     embeddings, embeddings_name = handle_embeddings_and_name(
-        embeddings, False, env_file)
+        embeddings, False, env_file
+    )
     embed_type, embed_name = separate_name(embeddings_name)
 
-    storage_directory = get_storage_directory(directory_path, chunk_size,
-                                              embed_type, embed_name)
+    storage_directory = get_storage_directory(
+        directory_path, chunk_size, embed_type, embed_name
+    )
     files, db_path_names = [], []
     suc = 0
     m_time_list, suc_file_list = [], []
@@ -62,7 +81,8 @@ def create_directory_db(
     docsearch = Chroma(
         persist_directory=storage_directory,
         embedding_function=embeddings,
-        collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD})
+        collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
+    )
 
     for file in files:
         progress.update(1)
@@ -98,7 +118,7 @@ def create_directory_db(
             m_time_list.append(last_m_time)
 
     progress.close()
-    id_len = len(docsearch._collection.get()['ids'])
+    id_len = len(docsearch._collection.get()["ids"])
 
     del docsearch
     gc.collect()
@@ -116,11 +136,13 @@ def create_directory_db(
     return True, db_path_names
 
 
-def create_single_file_db(file_path: Union[str, Path],
-                          embeddings: Union[str, Embeddings, Callable],
-                          chunk_size: int,
-                          sleep_time: int = 60,
-                          env_file: str = "") -> bool:
+def create_single_file_db(
+    file_path: Union[str, Path],
+    embeddings: Union[str, Embeddings, Callable],
+    chunk_size: int,
+    sleep_time: int = 60,
+    env_file: str = "",
+) -> bool:
     """create chromadb based on a single file. It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
 
     Args:
@@ -138,17 +160,19 @@ def create_single_file_db(file_path: Union[str, Path],
             file_path = Path(file_path)
         doc_path = file_path.parent
         file_name = file_path.name
-    except:
+    except Exception:
         logging.warning("file path error.\n\n")
         print("file path error.\n\n")
         return False
 
     ### get the chromadb directory name###
     embeddings, embeddings_name = handle_embeddings_and_name(
-        embeddings, False, env_file)
+        embeddings, False, env_file
+    )
     embed_type, embed_name = separate_name(embeddings_name)
-    storage_directory = get_storage_directory(doc_path, chunk_size, embed_type,
-                                              embed_name)
+    storage_directory = get_storage_directory(
+        doc_path, chunk_size, embed_type, embed_name
+    )
 
     last_m_time = file_path.stat().st_mtime
     loaded = False
@@ -159,7 +183,8 @@ def create_single_file_db(file_path: Union[str, Path],
         docsearch = Chroma(
             persist_directory=storage_directory,
             embedding_function=embeddings,
-            collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD})
+            collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
+        )
         loaded = True
         delete_documents_from_chroma_by_file_name(docsearch, file_name)
 
@@ -173,7 +198,8 @@ def create_single_file_db(file_path: Union[str, Path],
         docsearch = Chroma(
             persist_directory=storage_directory,
             embedding_function=embeddings,
-            collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD})
+            collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
+        )
 
     status = create_chromadb_from_file(
         file_doc,
@@ -198,11 +224,13 @@ def create_single_file_db(file_path: Union[str, Path],
     return True
 
 
-def create_webpage_db(url: str,
-                      embeddings: Union[str, Embeddings, Callable],
-                      chunk_size: int,
-                      sleep_time: int = 60,
-                      env_file: str = "") -> bool:
+def create_webpage_db(
+    url: str,
+    embeddings: Union[str, Embeddings, Callable],
+    chunk_size: int,
+    sleep_time: int = 60,
+    env_file: str = "",
+) -> bool:
     """create chromadb from a webpage. It will create a directory chromadb/ and save documents db in chromadb/{doc directory name}
 
     Args:
@@ -221,7 +249,7 @@ def create_webpage_db(url: str,
         print("url error, url must be string.\n\n")
         return False
 
-    web_link_pattern = re.compile(r'^(http|https)://')
+    web_link_pattern = re.compile(r"^(http|https)://")
     if not web_link_pattern.match(url):
         logging.warning("url error.\n\n")
         print("url error, url must be a valid url.\n\n")
@@ -229,10 +257,10 @@ def create_webpage_db(url: str,
 
     ### get the chromadb directory name###
     embeddings, embeddings_name = handle_embeddings_and_name(
-        embeddings, False, env_file)
+        embeddings, False, env_file
+    )
     embed_type, embed_name = separate_name(embeddings_name)
-    storage_directory = get_storage_directory(url, chunk_size, embed_type,
-                                              embed_name)
+    storage_directory = get_storage_directory(url, chunk_size, embed_type, embed_name)
 
     cur_time = datetime.datetime.now()
     last_m_time = cur_time.strftime("%Y-%m-%d %H:%M:%S:%f")
@@ -248,17 +276,14 @@ def create_webpage_db(url: str,
         print("file load failed or empty.\n\n")
         return False
     file_doc = [
-        Document(page_content=file_doc,
-                 metadata={
-                     "title": file_title,
-                     "url": url
-                 })
+        Document(page_content=file_doc, metadata={"title": file_title, "url": url})
     ]
 
     docsearch = Chroma(
         persist_directory=storage_directory,
         embedding_function=embeddings,
-        collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD})
+        collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
+    )
 
     status = create_chromadb_from_file(
         file_doc,
@@ -300,7 +325,7 @@ def create_chromadb_from_file(
         embeddings (vars): the embeddings used in transfer documents into vector storage
         file_name (str): the path and name of the file
         sleep_time (int, optional): waiting time if exceed api calls. Defaults to 60.
-       
+
     Returns:
         (chromadb object): return the dbs object
     """
@@ -315,27 +340,30 @@ def create_chromadb_from_file(
     mac_address = get_mac_address()
     is_added = False
     while k < len(documents):
-        cur_doc = documents[k:k + interval]
+        cur_doc = documents[k : k + interval]
         texts = text_splitter.split_documents(cur_doc)
-        formatted_date = datetime.datetime.now().strftime(
-            "%Y-%m-%d-%H_%M_%S_%f")
+        formatted_date = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S_%f")
 
         page_contents = [text.page_content for text in texts]
 
         try:
             vectors = embeddings.embed_documents(page_contents)
-        except:
+        except Exception:
             time.sleep(sleep_time)
             vectors = embeddings.embed_documents(page_contents)
 
         if len(vectors) == 0:
-
             k += interval
             cum_ids += len(texts)
             continue
         docsearch._collection.add(
-            embeddings=vectors, metadatas=[text.metadata for text in texts], documents=[text.page_content for text in texts]\
-                , ids=[formatted_date + "_" + str(cum_ids + i) + "_" + mac_address for i in range(len(texts))]
+            embeddings=vectors,
+            metadatas=[text.metadata for text in texts],
+            documents=[text.page_content for text in texts],
+            ids=[
+                formatted_date + "_" + str(cum_ids + i) + "_" + mac_address
+                for i in range(len(texts))
+            ],
         )
         is_added = True
 
@@ -349,9 +377,7 @@ def create_chromadb_from_file(
     return True
 
 
-def _is_doc_built(storage_directory: str, last_m_time: float,
-                  file_name: str) -> str:
-
+def _is_doc_built(storage_directory: str, last_m_time: float, file_name: str) -> str:
     storage_path = Path(storage_directory)
     if not storage_path.exists():
         return NOT_BUILT
@@ -365,7 +391,7 @@ def _is_doc_built(storage_directory: str, last_m_time: float,
 
     # Load the JSON file
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as json_file:
+        with open(json_file_path, "r", encoding="utf-8") as json_file:
             file_last_changed = json.load(json_file)
     except Exception as e:
         logging.warning(f"Error reading JSON file: {e}")
@@ -383,9 +409,9 @@ def _is_doc_built(storage_directory: str, last_m_time: float,
     return ALREADY_BUILT
 
 
-def _is_url_built(storage_directory: str, cur_time: datetime.datetime,
-                  file_name: str) -> str:
-
+def _is_url_built(
+    storage_directory: str, cur_time: datetime.datetime, file_name: str
+) -> str:
     storage_path = Path(storage_directory)
     if not storage_path.exists():
         return NOT_BUILT
@@ -399,7 +425,7 @@ def _is_url_built(storage_directory: str, cur_time: datetime.datetime,
 
     # Load the JSON file
     try:
-        with open(json_file_path, 'r', encoding='utf-8') as json_file:
+        with open(json_file_path, "r", encoding="utf-8") as json_file:
             file_last_changed = json.load(json_file)
     except Exception as e:
         logging.warning(f"Error reading JSON file: {e}")
@@ -413,11 +439,11 @@ def _is_url_built(storage_directory: str, cur_time: datetime.datetime,
     # Check if the last modify time matches
     import os
 
-    reload_url_days = int(os.getenv('RELOAD_URL_DAYS', 30))
+    reload_url_days = int(os.getenv("RELOAD_URL_DAYS", 30))
     file_last_changed_time = datetime.datetime.strptime(
-        file_last_changed[file_name], "%Y-%m-%d %H:%M:%S:%f")
-    threshold_date = file_last_changed_time + datetime.timedelta(
-        days=reload_url_days)
+        file_last_changed[file_name], "%Y-%m-%d %H:%M:%S:%f"
+    )
+    threshold_date = file_last_changed_time + datetime.timedelta(days=reload_url_days)
 
     if threshold_date < cur_time:
         return OLD_BUILT
@@ -425,10 +451,9 @@ def _is_url_built(storage_directory: str, cur_time: datetime.datetime,
     return ALREADY_BUILT
 
 
-def _write_docs_built_time(storage_directory: str,
-                           last_m_time: List[Union[float, str]],
-                           file_name: List[str]):
-
+def _write_docs_built_time(
+    storage_directory: str, last_m_time: List[Union[float, str]], file_name: List[str]
+):
     storage_path = Path(storage_directory)
 
     # Path to the JSON file
@@ -441,7 +466,7 @@ def _write_docs_built_time(storage_directory: str,
     if json_file_path.exists():
         # Load the JSON file
         try:
-            with open(json_file_path, 'r', encoding="utf-8") as json_file:
+            with open(json_file_path, "r", encoding="utf-8") as json_file:
                 file_last_changed = json.load(json_file)
         except Exception as e:
             logging.warning(f"Error reading JSON file: {e}")
@@ -453,11 +478,8 @@ def _write_docs_built_time(storage_directory: str,
 
     # Write the dictionary to the JSON file
     try:
-        with open(json_file_path, 'w', encoding="utf-8") as json_file:
-            json.dump(file_last_changed,
-                      json_file,
-                      indent=4,
-                      ensure_ascii=False)
+        with open(json_file_path, "w", encoding="utf-8") as json_file:
+            json.dump(file_last_changed, json_file, indent=4, ensure_ascii=False)
     except Exception as e:
         logging.warning(f"Error writing JSON file: {e}")
         print(f"Error writing JSON file: {e}")

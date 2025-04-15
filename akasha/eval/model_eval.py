@@ -1,20 +1,45 @@
-from akasha.utils.prompts.gen_prompt import format_wrong_answer, format_sys_prompt, format_category_prompt, compare_question_prompt, default_doc_ask_prompt, format_question_query, format_llama_json
+from akasha.utils.prompts.gen_prompt import (
+    format_wrong_answer,
+    format_sys_prompt,
+    format_category_prompt,
+    compare_question_prompt,
+    default_doc_ask_prompt,
+    format_question_query,
+    format_llama_json,
+)
 from akasha.helper import call_model
 from akasha.helper.base import extract_json, get_docs_length, get_doc_length
 from akasha.helper.scores import get_bert_score, get_llm_score, get_rouge_score
-from akasha.utils.prompts.format import handle_table, handle_score_table, handle_metrics, handle_params, handle_table
+from akasha.utils.prompts.format import (
+    handle_score_table,
+    handle_metrics,
+    handle_params,
+    handle_table,
+)
 from akasha.utils.atman import atman
 from akasha.utils.search.search_doc import search_docs
-from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_EMBED, DEFAULT_MAX_INPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MODEL, DEFAULT_SEARCH_TYPE
+from akasha.utils.base import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_EMBED,
+    DEFAULT_MAX_INPUT_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MODEL,
+    DEFAULT_SEARCH_TYPE,
+)
 from .base import get_non_repeat_rand_int, find_same_category
 
 import numpy as np
 from tqdm import tqdm
-import json, importlib
+import json
+import importlib
 from collections import defaultdict
 
 from typing import Union, Callable
-import os, datetime, time, traceback, logging
+import os
+import datetime
+import time
+import traceback
+import logging
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 from langchain.schema import Document
@@ -63,28 +88,29 @@ def _generate_single_choice_question(
         process = process[1:]
         if len(process) != choice_num - 1:
             raise Exception("Answer Format Error")
-    except:
+    except Exception:
         try:
             process = response.split("：")[1:]
             if len(process) != choice_num - 1:
                 raise Exception("Answer Format Error")
-        except:
+        except Exception:
             process = response.split(":")[1:]
     ### combine the wrong answers and correct answer into a single choice question ###
     for wrong_ans in process:
         if wrong_ans == "":
             continue
         elif count == random_index:
-            res.append(str(count + 1) + '.' + cor_ans.replace("\n", ""))
+            res.append(str(count + 1) + "." + cor_ans.replace("\n", ""))
             count += 1
 
-        wrong_ans = str(count + 1) + '.' + wrong_ans.replace("\n", "").replace(
-            "錯誤答案", "")
+        wrong_ans = (
+            str(count + 1) + "." + wrong_ans.replace("\n", "").replace("錯誤答案", "")
+        )
         res.append(wrong_ans)
         count += 1
 
     if count < choice_num:
-        res.append(str(count + 1) + '.' + cor_ans.replace("\n", ""))
+        res.append(str(count + 1) + "." + cor_ans.replace("\n", ""))
 
     res.append(str(random_index + 1))
 
@@ -115,11 +141,23 @@ class Model_Eval(atman):
         verbose: bool = False,
         env_file: str = "",
     ):
-
-        super().__init__(model, embeddings, chunk_size, search_type,
-                         max_input_tokens, max_output_tokens, temperature,
-                         threshold, language, record_exp, system_prompt,
-                         keep_logs, verbose, use_chroma, env_file)
+        super().__init__(
+            model,
+            embeddings,
+            chunk_size,
+            search_type,
+            max_input_tokens,
+            max_output_tokens,
+            temperature,
+            threshold,
+            language,
+            record_exp,
+            system_prompt,
+            keep_logs,
+            verbose,
+            use_chroma,
+            env_file,
+        )
 
         ### set argruments ###
         self.data_source = ""
@@ -138,14 +176,15 @@ class Model_Eval(atman):
         self.response = []
         self.score = {}
 
-    def _add_basic_log(self,
-                       timestamp: str,
-                       fn_type: str,
-                       doc_range: int = -1,
-                       choice_num: int = -1,
-                       questionset_file: str = "") -> bool:
-
-        if super()._add_basic_log(timestamp, fn_type) == False:
+    def _add_basic_log(
+        self,
+        timestamp: str,
+        fn_type: str,
+        doc_range: int = -1,
+        choice_num: int = -1,
+        questionset_file: str = "",
+    ) -> bool:
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["question_num"] = self.question_num
@@ -162,13 +201,13 @@ class Model_Eval(atman):
 
     def _add_result_log(self, timestamp: str, time: float) -> bool:
         """add post-process log to self.logs
-        
+
         Args:
             timestamp (str): timestamp of this run
             time (float): spent time of this run
         """
 
-        if super()._add_result_log(timestamp, time) == False:
+        if super()._add_result_log(timestamp, time) is False:
             return False
 
         self.logs[timestamp]["prompt_length"] = self.prompt_length
@@ -188,25 +227,20 @@ class Model_Eval(atman):
         return True
 
     def _display_info(self) -> bool:
-
-        if self.verbose == False:
+        if self.verbose is False:
             return False
         print(f"Model: {self.model}, Embeddings: {self.embeddings}")
-        print(
-            f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
+        print(f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
 
         return True
 
     def _display_info_fnl(self) -> bool:
-
-        if self.verbose == False:
+        if self.verbose is False:
             return False
         print(
             f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
         )
-        print(
-            f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n"
-        )
+        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
 
         return True
 
@@ -225,8 +259,7 @@ class Model_Eval(atman):
         if output_file_path == "":
             now = datetime.datetime.now()
             date_time_string = now.strftime("%Y-%m-%d_%H-%M-%S-%f")
-            output_file_path = ("questionset/" + str(date_time_string) +
-                                ".json")
+            output_file_path = "questionset/" + str(date_time_string) + ".json"
         elif not output_file_path.endswith(".json"):
             output_file_path = output_file_path + ".json"
 
@@ -241,19 +274,17 @@ class Model_Eval(atman):
             json.dump(data, f, indent=4, ensure_ascii=False)
 
         print("\nquestion set saved in ", output_file_path, "\n\n")
-        if self.keep_logs == True:
+        if self.keep_logs is True:
             self.logs[timestamp]["question"] = self.question
             self.logs[timestamp]["answer"] = self.answer
             self.logs[timestamp]["questionset_path"] = output_file_path
 
         return
 
-    def _process_fact(self,
-                      response: str,
-                      doc_text: str,
-                      choice_num: int,
-                      source_file_name: str = "") -> bool:
-        """parse the question and answer from the llm response, and save it into question and answer list. 
+    def _process_fact(
+        self, response: str, doc_text: str, choice_num: int, source_file_name: str = ""
+    ) -> bool:
+        """parse the question and answer from the llm response, and save it into question and answer list.
         if can not parse the response, return False
 
         Args:
@@ -268,7 +299,7 @@ class Model_Eval(atman):
             process = "".join(response.split("問題：")).split("答案：")
             if len(process) < 2:
                 raise SyntaxError("Question Format Error")
-        except:
+        except Exception:
             process = "".join(response.split("問題:")).split("答案:")
             if len(process) < 2:
                 return False
@@ -292,7 +323,7 @@ class Model_Eval(atman):
         return True
 
     def _process_summary(self, response: str, doc_text: str) -> bool:
-        """parse the question and answer from the llm response, and save it into question and answer list. 
+        """parse the question and answer from the llm response, and save it into question and answer list.
         if can not parse the response, return False
 
         Args:
@@ -306,7 +337,7 @@ class Model_Eval(atman):
             process = response.split("答案：")
             if len(process) < 2:
                 raise SyntaxError("Question Format Error")
-        except:
+        except Exception:
             process = response.split("答案:")
             if len(process) < 2:
                 return False
@@ -316,25 +347,25 @@ class Model_Eval(atman):
 
         return True
 
-    def _process_response(self,
-                          response: str,
-                          doc_text: str,
-                          choice_num: int,
-                          source_file_name: str = ""):
+    def _process_response(
+        self, response: str, doc_text: str, choice_num: int, source_file_name: str = ""
+    ):
         """process the response from llm model, and generate question and answer pair
-            based on the question type and question style
+        based on the question type and question style
         """
         if self.question_type.lower() in [
-                "summary", "sum", "summarization", "summarize", "summaries",
-                "摘要"
+            "summary",
+            "sum",
+            "summarization",
+            "summarize",
+            "summaries",
+            "摘要",
         ]:
             return self._process_summary(response, doc_text)
 
-        return self._process_fact(response, doc_text, choice_num,
-                                  source_file_name)
+        return self._process_fact(response, doc_text, choice_num, source_file_name)
 
-    def _create_compare_questionset(self, choice_num: int,
-                                    output_file_path: str):
+    def _create_compare_questionset(self, choice_num: int, output_file_path: str):
         """create compare question set, first randomly select documents and label the category of some proper nouns in the documents,
         can use the documents and proper nouns that have same category to generate compare question and answer pair.
 
@@ -357,14 +388,12 @@ class Model_Eval(atman):
 
         ## add logs ##
 
-        self._add_basic_log(timestamp, "create_questionset", doc_range,
-                            choice_num)
+        self._add_basic_log(timestamp, "create_questionset", doc_range, choice_num)
 
         texts = [pg_content for pg_content in self.db.docs]
         metadata = [metadata for metadata in self.db.metadatas]
 
-        progress = tqdm(total=self.question_num,
-                        desc=f"Create Q({self.question_type})")
+        progress = tqdm(total=self.question_num, desc=f"Create Q({self.question_type})")
         print("\n")
         regenerate_limit = self.question_num
         category = defaultdict(list)
@@ -379,18 +408,20 @@ class Model_Eval(atman):
             ### if the value of any category large than category threshold, then we can use the category to create compare question ###
             compare_resource = find_same_category(category, cate_threshold)
             while not isinstance(compare_resource, list):
-                random_index = get_non_repeat_rand_int(vis_doc_range,
-                                                       len(texts) - doc_range,
-                                                       doc_range)
+                random_index = get_non_repeat_rand_int(
+                    vis_doc_range, len(texts) - doc_range, doc_range
+                )
                 doc_text = texts[random_index]
                 docs.append(
-                    Document(page_content=texts[random_index],
-                             metadata=metadata[random_index]))
+                    Document(
+                        page_content=texts[random_index],
+                        metadata=metadata[random_index],
+                    )
+                )
                 count = 3
                 try:
                     ## ask model to get category & nouns, add to category ##
-                    category_prompt = format_category_prompt(
-                        doc_text, self.language)
+                    category_prompt = format_category_prompt(doc_text, self.language)
                     response = call_model(self.model_obj, category_prompt)
 
                     json_response = extract_json(response)
@@ -401,8 +432,7 @@ class Model_Eval(atman):
                         if k not in set_category[v]:
                             category[v].append([k, doc_text])
                             set_category[v].add(k)
-                    compare_resource = find_same_category(
-                        category, cate_threshold)
+                    compare_resource = find_same_category(category, cate_threshold)
 
                 except Exception as e:
                     print("error during generate categories\n", e)
@@ -413,21 +443,18 @@ class Model_Eval(atman):
             used_texts = "\n".join(set(used_texts))
             nouns = ", ".join(nouns)
             try:
-                q_prompt = compare_question_prompt(self.question_style, topic,
-                                                   nouns, used_texts)
+                q_prompt = compare_question_prompt(
+                    self.question_style, topic, nouns, used_texts
+                )
                 response = call_model(self.model_obj, q_prompt)
 
-                if not self._process_response(response, used_texts, choice_num,
-                                              ""):
+                if not self._process_response(response, used_texts, choice_num, ""):
                     raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length.append(get_docs_length(self.language, docs))
-                self.doc_tokens.append(
-                    self.model_obj.get_num_tokens(used_texts))
-                self.prompt_length.append(
-                    get_doc_length(self.language, q_prompt))
-                self.prompt_tokens.append(
-                    self.model_obj.get_num_tokens(q_prompt))
+                self.doc_tokens.append(self.model_obj.get_num_tokens(used_texts))
+                self.prompt_length.append(get_doc_length(self.language, q_prompt))
+                self.prompt_tokens.append(self.model_obj.get_num_tokens(q_prompt))
                 self.docs.extend(docs)
 
             except Exception as e:
@@ -454,16 +481,22 @@ class Model_Eval(atman):
         end_time = time.time()
 
         ### record logs ###
-        self._upload_logs(end_time - start_time, sum(self.doc_length),
-                          sum(self.doc_tokens))
+        self._upload_logs(
+            end_time - start_time, sum(self.doc_length), sum(self.doc_tokens)
+        )
         self._add_result_log(timestamp, end_time - start_time)
 
         self._save_questionset(timestamp, output_file_path)
 
         return self.question, self.answer
 
-    def _eval_get_res_fact(self, question: Union[str, list], answer: str,
-                           timestamp: str, retrivers_list: list) -> dict:
+    def _eval_get_res_fact(
+        self,
+        question: Union[str, list],
+        answer: str,
+        timestamp: str,
+        retrivers_list: list,
+    ) -> dict:
         """generate fact resposne from the question, can evaluate with reference answer
 
         Args:
@@ -478,8 +511,7 @@ class Model_Eval(atman):
         ### format question ###
         if self.question_style.lower() == "essay":
             query = question
-            prod_sys = self.system_prompt + default_doc_ask_prompt(
-                self.language)
+            prod_sys = self.system_prompt + default_doc_ask_prompt(self.language)
             query_with_prompt = question
 
         else:
@@ -501,7 +533,6 @@ class Model_Eval(atman):
             self.language,
         )
         if self.doc_tokens == 0:
-
             print(
                 "Warning: Unable to retrieve any documents, possibly due to insufficient remaining tokens.\n\n"
             )
@@ -511,10 +542,12 @@ class Model_Eval(atman):
 
         try:
             self._display_docs()
-            intput_text = format_sys_prompt(prod_sys + self._format_docs(),
-                                            query_with_prompt,
-                                            self.prompt_format_type,
-                                            self.model)
+            intput_text = format_sys_prompt(
+                prod_sys + self._format_docs(),
+                query_with_prompt,
+                self.prompt_format_type,
+                self.model,
+            )
             response = call_model(self.model_obj, intput_text)
             self.response.append(response)
             self.doc_length.append(doc_length)
@@ -523,28 +556,27 @@ class Model_Eval(atman):
             self.prompt_tokens.append(query_tokens)
         except Exception as e:
             traceback.print_exc()
-            #response = ["running model error"]
+            # response = ["running model error"]
             torch = get_torch()
             torch.cuda.empty_cache()
             logging.error(f"running model error\n {e}")
             raise e
 
         if self.question_style.lower() == "essay":
-
             if self.verbose:
                 print("Question: ", question, "\n\n")
                 print("Reference Answer: ", answer, "\n\n")
                 print("Generated Response: ", response, "\n\n")
 
-            self.score["bert"].append(
-                get_bert_score(response, answer, self.language))
-            self.score["rouge"].append(
-                get_rouge_score(response, answer, self.language))
+            self.score["bert"].append(get_bert_score(response, answer, self.language))
+            self.score["rouge"].append(get_rouge_score(response, answer, self.language))
             self.score["llm_score"].append(
-                get_llm_score(response, answer, self.eval_model, "auto"))
+                get_llm_score(response, answer, self.eval_model, "auto")
+            )
 
-            new_table = handle_table(question + "\nAnswer:  " + answer,
-                                     self.docs, response)
+            new_table = handle_table(
+                question + "\nAnswer:  " + answer, self.docs, response
+            )
             new_table = handle_score_table(
                 new_table,
                 self.score["bert"][-1],
@@ -558,18 +590,16 @@ class Model_Eval(atman):
                 print("Reference Answer: ", ans, "\n\n")
                 print("Generated Response: ", response, "\n\n")
 
-            new_table = handle_table(query + "\nAnswer:  " + ans, self.docs,
-                                     response)
+            new_table = handle_table(query + "\nAnswer:  " + ans, self.docs, response)
             new_table = {}
             result = extract_result(response)
 
-            if str(ans).replace(' ', '') in str(result):
+            if str(ans).replace(" ", "") in str(result):
                 self.score["correct_count"] += 1
 
         return new_table
 
-    def _eval_get_res_summary(self, sum_doc: str, answer: str,
-                              timestamp: str) -> dict:
+    def _eval_get_res_summary(self, sum_doc: str, answer: str, timestamp: str) -> dict:
         """generate summary resposne from the question, can evaluate with reference answer
 
         Args:
@@ -582,19 +612,16 @@ class Model_Eval(atman):
         """
 
         prompt = "請對以下文件進行摘要: "
-        intput_text = format_sys_prompt(self.system_prompt,
-                                        prompt + "\n\n" + sum_doc,
-                                        self.prompt_format_type, self.model)
+        intput_text = format_sys_prompt(
+            self.system_prompt,
+            prompt + "\n\n" + sum_doc,
+            self.prompt_format_type,
+            self.model,
+        )
 
-        self.docs = [
-            Document(page_content=sum_doc, metadata={
-                "source": "",
-                "page": 0
-            })
-        ]
+        self.docs = [Document(page_content=sum_doc, metadata={"source": "", "page": 0})]
 
         try:
-
             response = call_model(self.model_obj, intput_text)
             self.response.append(response)
             self.doc_length.append(get_doc_length(self.language, sum_doc))
@@ -604,7 +631,7 @@ class Model_Eval(atman):
 
         except Exception as e:
             traceback.print_exc()
-            #response = ["running model error"]
+            # response = ["running model error"]
             torch = get_torch()
             torch.cuda.empty_cache()
             logging.error(f"running model error\n {e}")
@@ -615,12 +642,11 @@ class Model_Eval(atman):
             print("Reference Answer: ", answer, "\n\n")
             print("Generated Response: ", response, "\n\n")
 
-        self.score["bert"].append(
-            get_bert_score(response, answer, self.language))
-        self.score["rouge"].append(
-            get_rouge_score(response, answer, self.language))
+        self.score["bert"].append(get_bert_score(response, answer, self.language))
+        self.score["rouge"].append(get_rouge_score(response, answer, self.language))
         self.score["llm_score"].append(
-            get_llm_score(response, answer, self.eval_model, "auto"))
+            get_llm_score(response, answer, self.eval_model, "auto")
+        )
 
         # new_table = akasha.format.handle_table(prompt + "\nAnswer:  " + answer,
         #                                        self.docs, response)
@@ -634,8 +660,13 @@ class Model_Eval(atman):
 
         return new_table
 
-    def _eval_get_res(self, question: Union[list, str], answer: str,
-                      timestamp: str, retrivers_list: list) -> dict:
+    def _eval_get_res(
+        self,
+        question: Union[list, str],
+        answer: str,
+        timestamp: str,
+        retrivers_list: list,
+    ) -> dict:
         """separate the question type and call different function to generate response
 
         Args:
@@ -646,15 +677,23 @@ class Model_Eval(atman):
         Returns:
             dict: _description_
         """
-        if self.question_type.lower() in ["fact", "facts", "factoid", "factoids", "事實"] or \
-            self.question_type.lower() in ["irre", "irrelevant", "irrelevance", "無關"] or\
-            self.question_type.lower() in ["compared", "compare", "comparison", "comparisons", "比較"]:
-            return self._eval_get_res_fact(question, answer, timestamp,
-                                           retrivers_list)
+        if (
+            self.question_type.lower()
+            in ["fact", "facts", "factoid", "factoids", "事實"]
+            or self.question_type.lower()
+            in ["irre", "irrelevant", "irrelevance", "無關"]
+            or self.question_type.lower()
+            in ["compared", "compare", "comparison", "comparisons", "比較"]
+        ):
+            return self._eval_get_res_fact(question, answer, timestamp, retrivers_list)
 
         elif self.question_type.lower() in [
-                "summary", "sum", "summarization", "summarize", "summaries",
-                "摘要"
+            "summary",
+            "sum",
+            "summarization",
+            "summarize",
+            "summaries",
+            "摘要",
         ]:
             return self._eval_get_res_summary(question, answer, timestamp)
 
@@ -677,12 +716,9 @@ class Model_Eval(atman):
                 table[key] = []
             table[key].append(new_table[key])
 
-    def _upload_logs(self,
-                     table: dict,
-                     tot_time: float,
-                     doc_length: int = 0,
-                     doc_tokens: int = 0) -> str:
-
+    def _upload_logs(
+        self, table: dict, tot_time: float, doc_length: int = 0, doc_tokens: int = 0
+    ) -> str:
         if self.record_exp == "":
             return "no record_exp assigned, so no logs uploaded"
 
@@ -697,21 +733,21 @@ class Model_Eval(atman):
         metrics = handle_metrics(doc_length, tot_time, doc_tokens)
 
         if self.question_style.lower() == "essay":
-            avg_bert = round(
-                sum(self.score["bert"]) / len(self.score["bert"]), 3)
-            avg_rouge = round(
-                sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
+            avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
+            avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(
-                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3)
+                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
+            )
 
             metrics["avg_bert"] = avg_bert
             metrics["avg_rouge"] = avg_rouge
             metrics["avg_llm_score"] = avg_llm_score
         else:
-            correct_rate = (self.score["correct_count"] / self.question_num)
-            metrics["correct_rate"] = (correct_rate)
+            correct_rate = self.score["correct_count"] / self.question_num
+            metrics["correct_rate"] = correct_rate
 
         from akasha.utils.upload import aiido_upload
+
         aiido_upload(self.record_exp, params, metrics, table)
 
         return "logs uploaded"
@@ -728,11 +764,11 @@ def extract_result(response: str):
     """
     try:
         res = extract_json(response)
-        #res = str(json.loads(response)["ans"]).replace(" ", "")
-        if res == None:
+        # res = str(json.loads(response)["ans"]).replace(" ", "")
+        if res is None:
             raise Exception("can not find the json format in the response")
         res = res["ans"]
-    except:
+    except Exception:
         res = -1
         for c in response:
             if c.isdigit():

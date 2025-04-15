@@ -1,22 +1,29 @@
-from typing import Union, List, Set, Tuple, Callable, Optional
+from typing import Union, List, Tuple, Callable, Optional
 from pathlib import Path
 from langchain_core.embeddings import Embeddings
 from akasha.utils.db.db_structure import dbs, get_storage_directory, is_url
 from akasha.utils.db.extract_db import extract_db_by_file
-from akasha.utils.db.create_db import create_directory_db, create_single_file_db, create_webpage_db
+from akasha.utils.db.create_db import (
+    create_directory_db,
+    create_single_file_db,
+    create_webpage_db,
+)
 from akasha.helper import separate_name
 from akasha.helper.handle_objects import handle_embeddings_and_name
 from langchain_chroma import Chroma
-import logging, gc
+import logging
+import gc
 from collections import defaultdict
 from tqdm import tqdm
 
 
-def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
-               embeddings: Union[str, Embeddings, Callable],
-               chunk_size: int,
-               verbose: bool = False,
-               env_file: str = "") -> Tuple[dbs, List[str]]:
+def process_db(
+    data_source: Union[List[Union[str, Path]], Union[Path, str]],
+    embeddings: Union[str, Embeddings, Callable],
+    chunk_size: int,
+    verbose: bool = False,
+    env_file: str = "",
+) -> Tuple[dbs, List[str]]:
     """create and load dbs object from data_source
 
     Args:
@@ -27,7 +34,8 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
     """
     ignored_files = []
     embeddings, embeddings_name = handle_embeddings_and_name(
-        embeddings, False, env_file)
+        embeddings, False, env_file
+    )
     tot_db = dbs()
 
     direct_list = []
@@ -39,7 +47,6 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
         data_source = [data_source]
 
     for data_path in data_source:
-
         if isinstance(data_path, str):
             if data_path == "":
                 continue
@@ -87,16 +94,14 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
 
     ### load dbs object based on files ###
     for parent_dir, file_list in files_dict.items():
-
         progress = tqdm(total=len(file_list), desc=f"db {parent_dir}")
 
         for data_path in file_list:
             progress.update(1)
             try:
-                is_suc = create_single_file_db(data_path,
-                                               embeddings,
-                                               chunk_size,
-                                               env_file=env_file)
+                is_suc = create_single_file_db(
+                    data_path, embeddings, chunk_size, env_file=env_file
+                )
 
                 if is_suc:
                     suc_files.append(data_path)
@@ -114,7 +119,7 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
         tot_db.merge(new_dbs)
 
     ### load dbs object based on links ###
-    progress = tqdm(total=len(link_list), desc=f"db http")
+    progress = tqdm(total=len(link_list), desc="db http")
     for url in link_list:
         progress.update(1)
         try:
@@ -147,7 +152,7 @@ def process_db(data_source: Union[List[Union[str, Path]], Union[Path, str]],
 
 
 def load_db_by_chroma_name(
-    chroma_name_list: Union[List[Union[str, Path]], Union[Path, str]]
+    chroma_name_list: Union[List[Union[str, Path]], Union[Path, str]],
 ) -> Tuple[dbs, List[str]]:
     """load dbs object from chroma db name
 
@@ -164,7 +169,6 @@ def load_db_by_chroma_name(
     ignored_files = []
     tot_db = dbs()
     for chroma_name in chroma_name_list:
-
         if isinstance(chroma_name, Path):
             chroma_name = chroma_name.__str__()
 
@@ -178,8 +182,7 @@ def load_db_by_chroma_name(
         new_dbs = dbs(docsearch)
 
         if len(new_dbs.get_ids()) == 0:
-            logging.warning(
-                f"No vectors found in the chromadb directory {chroma_name}")
+            logging.warning(f"No vectors found in the chromadb directory {chroma_name}")
             print(f"No vectors found in the chromadb directory {chroma_name}")
             ignored_files.append(chroma_name)
             continue
@@ -198,17 +201,18 @@ def load_directory_db(
     chunk_size: int,
     env_file: Optional[str] = "",
 ) -> dbs:
-
     ### get the chromadb directory name###
     if not isinstance(embeddings, str):
         embeddings, embeddings_name = handle_embeddings_and_name(
-            embeddings, False, env_file)
+            embeddings, False, env_file
+        )
     else:
         embeddings_name = embeddings
     embed_type, embed_name = separate_name(embeddings_name)
 
-    storage_directory = get_storage_directory(directory_path, chunk_size,
-                                              embed_type, embed_name)
+    storage_directory = get_storage_directory(
+        directory_path, chunk_size, embed_type, embed_name
+    )
 
     docsearch = Chroma(persist_directory=storage_directory)
     tot_dbs = dbs(docsearch)
@@ -218,7 +222,8 @@ def load_directory_db(
 
     if len(tot_dbs.get_ids()) == 0:
         raise ValueError(
-            f"No vectors found in the chromadb directory {storage_directory}")
+            f"No vectors found in the chromadb directory {storage_directory}"
+        )
 
     return tot_dbs
 
@@ -229,13 +234,13 @@ def load_files_db(
     chunk_size: int,
     env_file: Optional[str] = "",
 ) -> dbs:
-
     dir_set = set()
     file_name_dict = defaultdict(list)
     tot_dbs = dbs()
     if not isinstance(embeddings, str):
         embeddings, embeddings_name = handle_embeddings_and_name(
-            embeddings, False, env_file)
+            embeddings, False, env_file
+        )
     else:
         embeddings_name = embeddings
     embed_type, embed_name = separate_name(embeddings_name)
@@ -250,8 +255,9 @@ def load_files_db(
         cur_file_name = Path(file_path).name
         cur_dir = Path(file_path).parent
 
-        storage_directory = get_storage_directory(cur_dir, chunk_size,
-                                                  embed_type, embed_name)
+        storage_directory = get_storage_directory(
+            cur_dir, chunk_size, embed_type, embed_name
+        )
         dir_set.add(storage_directory)
         file_name_dict[storage_directory].append(cur_file_name)
 
@@ -272,13 +278,13 @@ def load_files_db(
 
     if len(tot_dbs.get_ids()) == 0:
         raise ValueError(
-            f"No vectors found in the chromadb directory {storage_directory}")
+            f"No vectors found in the chromadb directory {storage_directory}"
+        )
 
     return tot_dbs
 
 
 def _display_db_num(dir_num: int, file_num: int, link_num: int, verbose: bool):
-
     if not verbose:
         return
 

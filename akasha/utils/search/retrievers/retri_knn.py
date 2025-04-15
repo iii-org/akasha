@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from pydantic import Field
 import numpy as np
 from langchain.embeddings.base import Embeddings
@@ -53,27 +53,25 @@ class myKNNRetriever(BaseRetriever):
         """
         query_embeds = np.array(self.embeddings.embed_query(query))
         # calc L2 norm
-        index_embeds = self.index / np.sqrt(
-            (self.index**2).sum(1, keepdims=True))
+        index_embeds = self.index / np.sqrt((self.index**2).sum(1, keepdims=True))
         query_embeds = query_embeds / np.sqrt((query_embeds**2).sum())
 
         similarities = index_embeds.dot(query_embeds)
         sorted_ix = np.argsort(-similarities)
 
         denominator = np.max(similarities) - np.min(similarities) + 1e-6
-        normalized_similarities = (similarities -
-                                   np.min(similarities)) / denominator
+        normalized_similarities = (similarities - np.min(similarities)) / denominator
         # print([normalized_similarities[row]
         #        for row in sorted_ix[0:self.k]])  # stats
 
-        top_k_scores = [
-            normalized_similarities[row] for row in sorted_ix[0:self.k]
-        ]
+        top_k_scores = [normalized_similarities[row] for row in sorted_ix[0 : self.k]]
         top_k_results = [
             Document(page_content=self.texts[row], metadata=self.metadata[row])
-            for row in sorted_ix[0:self.k]
-            if (self.relevancy_threshold is None
-                or normalized_similarities[row] >= self.relevancy_threshold)
+            for row in sorted_ix[0 : self.k]
+            if (
+                self.relevancy_threshold is None
+                or normalized_similarities[row] >= self.relevancy_threshold
+            )
         ]
         return top_k_results, top_k_scores
 
@@ -81,7 +79,6 @@ class myKNNRetriever(BaseRetriever):
         self,
         query: str,
     ) -> Tuple[List[Document], List[float]]:
-
         return self._gs(query)
 
     def _aget_relevant_documents(self, query: str) -> List[Document]:
@@ -96,5 +93,4 @@ class myKNNRetriever(BaseRetriever):
         return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
-
         return self._gs(query)[0]

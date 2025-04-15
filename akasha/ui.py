@@ -42,9 +42,13 @@ def get_log_data():
     for key in st.session_state.logs:
         plain_txt += key + ":\n"
         for k in st.session_state.logs[key]:
-            if type(st.session_state.logs[key][k]) == list:
-                text = (k + ": " + "\n".join(
-                    [str(w) for w in st.session_state.logs[key][k]]) + "\n\n")
+            if isinstance(st.session_state.logs[key][k], list):
+                text = (
+                    k
+                    + ": "
+                    + "\n".join([str(w) for w in st.session_state.logs[key][k]])
+                    + "\n\n"
+                )
             else:
                 text = k + ": " + str(st.session_state.logs[key][k]) + "\n\n"
 
@@ -128,8 +132,7 @@ if "docs_list" not in st.session_state:
     if "Default" not in st.session_state.docs_list:
         st.session_state.docs_list.append("Default")
         # create default folder
-        Path(st.session_state.docs_path + "/Default").mkdir(parents=True,
-                                                            exist_ok=True)
+        Path(st.session_state.docs_path + "/Default").mkdir(parents=True, exist_ok=True)
 
 if "n_text" not in st.session_state:
     st.session_state.n_text = 1
@@ -147,11 +150,12 @@ if "chose_doc_path" not in st.session_state:
             st.session_state.chose_doc_path = []
             for dc in st.session_state.select_idx[0]:
                 st.session_state.chose_doc_path.append(
-                    st.session_state.docs_path + "/" + dc)
+                    st.session_state.docs_path + "/" + dc
+                )
         else:
-            st.session_state.chose_doc_path = (st.session_state.docs_path +
-                                               "/" +
-                                               st.session_state.docs_list[0])
+            st.session_state.chose_doc_path = (
+                st.session_state.docs_path + "/" + st.session_state.docs_list[0]
+            )
             st.session_state.select_idx[0] = [st.session_state.docs_list[0]]
     else:
         st.info("Please upload your documents first.", icon="🚨")
@@ -204,10 +208,7 @@ with st.sidebar:
             "container": {
                 "padding": "5!important",
             },
-            "icon": {
-                "color": "orange",
-                "font-size": "25px"
-            },
+            "icon": {"color": "orange", "font-size": "25px"},
             "nav-link": {
                 "font-size": "16px",
                 "text-align": "left",

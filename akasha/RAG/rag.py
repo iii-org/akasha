@@ -1,12 +1,20 @@
 from pathlib import Path
-import time, datetime
+import time
+import datetime
 
-from typing import Callable, Union, List, Tuple, Generator
+from typing import Callable, Union, List, Generator
 from langchain_core.language_models.base import BaseLanguageModel
 
 from langchain_core.embeddings import Embeddings
 
-from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_EMBED, DEFAULT_MAX_INPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MODEL, DEFAULT_SEARCH_TYPE
+from akasha.utils.base import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_EMBED,
+    DEFAULT_MAX_INPUT_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MODEL,
+    DEFAULT_SEARCH_TYPE,
+)
 
 from akasha.utils.atman import atman
 from akasha.utils.db.db_structure import dbs
@@ -16,15 +24,20 @@ from akasha.helper.token_counter import myTokenizer
 from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model
 from .self_ask import self_ask_f
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
-from akasha.utils.prompts.gen_prompt import default_doc_ask_prompt, format_sys_prompt, default_get_reference_prompt
+from akasha.utils.prompts.gen_prompt import (
+    default_doc_ask_prompt,
+    format_sys_prompt,
+    default_get_reference_prompt,
+)
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
 import pathlib
 from dotenv import load_dotenv
-import warnings, logging
+import warnings
+import logging
 from collections import defaultdict
 
-warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 load_dotenv(pathlib.Path().cwd() / ".env", override=True)
 
 
@@ -73,10 +86,23 @@ class RAG(atman):
             env_file (str, optional): the path of the .env file. Defaults to "".\n
         """
 
-        super().__init__(model, embeddings, chunk_size, search_type,
-                         max_input_tokens, max_output_tokens, temperature,
-                         threshold, language, record_exp, system_prompt,
-                         keep_logs, verbose, use_chroma, env_file)
+        super().__init__(
+            model,
+            embeddings,
+            chunk_size,
+            search_type,
+            max_input_tokens,
+            max_output_tokens,
+            temperature,
+            threshold,
+            language,
+            record_exp,
+            system_prompt,
+            keep_logs,
+            verbose,
+            use_chroma,
+            env_file,
+        )
         ### set argruments ###
         self.data_source = ""
         self.use_chroma = use_chroma
@@ -91,15 +117,13 @@ class RAG(atman):
         self.doc_tokens, self.doc_length = 0, 0
 
         ## set default RAG prompt ##
-        if self.system_prompt.replace(' ', '') == "":
+        if self.system_prompt.replace(" ", "") == "":
             self.system_prompt = default_doc_ask_prompt(self.language)
 
-    def _add_basic_log(self,
-                       timestamp: str,
-                       fn_type: str,
-                       history_messages: list = []) -> bool:
-
-        if super()._add_basic_log(timestamp, fn_type) == False:
+    def _add_basic_log(
+        self, timestamp: str, fn_type: str, history_messages: list = []
+    ) -> bool:
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["prompt"] = self.prompt
@@ -120,8 +144,7 @@ class RAG(atman):
         return True
 
     def _add_result_log(self, timestamp, time) -> bool:
-
-        if super()._add_result_log(timestamp, time) == False:
+        if super()._add_result_log(timestamp, time) is False:
             return False
 
         if self.logs[timestamp]["fn_type"] == "selfask_RAG":
@@ -137,25 +160,20 @@ class RAG(atman):
         return True
 
     def _display_info(self) -> bool:
-
-        if self.verbose == False:
+        if self.verbose is False:
             return False
         print(f"Model: {self.model}, Embeddings: {self.embeddings}")
-        print(
-            f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
+        print(f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
         print(
             f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
         )
-        print(
-            f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n"
-        )
+        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
 
         return True
 
     def _display_stream(
-            self, text_input: Union[str,
-                                    List[str]]) -> Generator[str, None, None]:
-
+        self, text_input: Union[str, List[str]]
+    ) -> Generator[str, None, None]:
         ret = call_stream_model(
             self.model_obj,
             text_input,
@@ -165,11 +183,13 @@ class RAG(atman):
             self.response += s
             yield s
 
-    def __call__(self,
-                 data_source: Union[List[Union[str, Path]], Path, str, dbs],
-                 prompt: str,
-                 history_messages: list = [],
-                 **kwargs):
+    def __call__(
+        self,
+        data_source: Union[List[Union[str, Path]], Path, str, dbs],
+        prompt: str,
+        history_messages: list = [],
+        **kwargs,
+    ):
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -198,18 +218,13 @@ class RAG(atman):
         self._add_basic_log(timestamp, "RAG", history_messages)
 
         ### check if prompt <= max_input_tokens ###
-        tot_prompts = self.prompt + self.system_prompt + '\n\n'.join(
-            history_messages)
+        tot_prompts = self.prompt + self.system_prompt + "\n\n".join(history_messages)
         self.prompt_length = get_doc_length(self.language, tot_prompts)
-        self.prompt_tokens = myTokenizer.compute_tokens(
-            tot_prompts, self.model) + 10
+        self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model) + 10
 
         if self.prompt_tokens > self.max_input_tokens:
-            print(
-                "\n\nThe tokens of prompt is larger than max_input_tokens.\n\n"
-            )
-            raise ValueError(
-                "The tokens of prompt is larger than max_input_tokens.")
+            print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
+            raise ValueError("The tokens of prompt is larger than max_input_tokens.")
 
         ### start to get response ###
         retrivers_list = get_retrivers(
@@ -229,7 +244,6 @@ class RAG(atman):
             self.language,
         )
         if self.doc_tokens == 0:
-
             print(
                 "Warning: Unable to retrieve any documents, possibly due to insufficient remaining tokens.\n\n"
             )
@@ -238,16 +252,19 @@ class RAG(atman):
         self._display_info()  # display the information of the parameters
         self._display_docs()
 
-        text_input = merge_history_and_prompt(history_messages,
-                                              self.system_prompt,
-                                              self._format_docs() +
-                                              "User question: " + self.prompt,
-                                              self.prompt_format_type,
-                                              model=self.model)
+        text_input = merge_history_and_prompt(
+            history_messages,
+            self.system_prompt,
+            self._format_docs() + "User question: " + self.prompt,
+            self.prompt_format_type,
+            model=self.model,
+        )
 
         end_time = time.time()
         if self.stream:
-            return self._display_stream(text_input, )
+            return self._display_stream(
+                text_input,
+            )
 
         self.response = call_model(
             self.model_obj,
@@ -256,8 +273,7 @@ class RAG(atman):
 
         self._add_result_log(timestamp, end_time - start_time)
 
-        self._upload_logs(end_time - start_time, self.doc_length,
-                          self.doc_tokens)
+        self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
 
         return self.response
 
@@ -265,29 +281,28 @@ class RAG(atman):
         """reference docs after calling the rag function, will return the reference file names of the response."""
 
         if self.response == "":
-            logging.warning(
-                "Response empty. Please call the RAG function first.")
+            logging.warning("Response empty. Please call the RAG function first.")
             print("Response empty. Please call the RAG function first.")
             return set()
 
         if self.docs == []:
-            logging.warning(
-                "No documents found. Please call the RAG function first.")
+            logging.warning("No documents found. Please call the RAG function first.")
             print("No documents found. Please call the RAG function first.")
             return set()
         ## sort out self.docs ##
         self.ref_files = defaultdict(set)
         meta_content_dict = defaultdict(str)
         for doc in self.docs:
-
-            #doc.page_content
+            # doc.page_content
             if "source" in doc.metadata and "page" in doc.metadata:
-                meta_content_dict[(doc.metadata["source"],
-                                   doc.metadata["page"])] += doc.page_content
+                meta_content_dict[(doc.metadata["source"], doc.metadata["page"])] += (
+                    doc.page_content
+                )
 
             elif "url" in doc.metadata and "title" in doc.metadata:
-                meta_content_dict[(doc.metadata["url"],
-                                   doc.metadata["title"])] += doc.page_content
+                meta_content_dict[(doc.metadata["url"], doc.metadata["title"])] += (
+                    doc.page_content
+                )
 
             else:
                 continue
@@ -297,33 +312,35 @@ class RAG(atman):
         m_key_list = []
 
         left_tokens = self.max_input_tokens - myTokenizer.compute_tokens(
-            default_get_reference_prompt() + "Reference: \n\n" + "Response: " +
-            self.response, self.model)
+            default_get_reference_prompt()
+            + "Reference: \n\n"
+            + "Response: "
+            + self.response,
+            self.model,
+        )
         for m_key, m_content in meta_content_dict.items():
-            m_content_tokens = myTokenizer.compute_tokens(
-                m_content, self.model)
+            m_content_tokens = myTokenizer.compute_tokens(m_content, self.model)
 
             ## separate m_content if m_content_tokens larger than left_tokens
             if m_content_tokens >= left_tokens:
-
-                pre_content = m_content[:len(m_content) // 2]
-                m_content = m_content[len(m_content) // 2:]
+                pre_content = m_content[: len(m_content) // 2]
+                m_content = m_content[len(m_content) // 2 :]
 
                 pre_sys_prompt = format_sys_prompt(
                     default_get_reference_prompt(),
-                    "Reference: " + pre_content + "\n\n" + "response: " +
-                    self.response,
+                    "Reference: " + pre_content + "\n\n" + "response: " + self.response,
                     self.prompt_format_type,
-                    model=self.model)
+                    model=self.model,
+                )
                 prod_sys_prompts.append(pre_sys_prompt)
                 m_key_list.append(m_key)
 
-            prod_sys_prompt = format_sys_prompt(default_get_reference_prompt(),
-                                                "Reference: " + m_content +
-                                                "\n\n" + "response: " +
-                                                self.response,
-                                                self.prompt_format_type,
-                                                model=self.model)
+            prod_sys_prompt = format_sys_prompt(
+                default_get_reference_prompt(),
+                "Reference: " + m_content + "\n\n" + "response: " + self.response,
+                self.prompt_format_type,
+                model=self.model,
+            )
             prod_sys_prompts.append(prod_sys_prompt)
             m_key_list.append(m_key)
 
@@ -341,15 +358,23 @@ class RAG(atman):
 
         if self.verbose:
             print(
-                "\n\nReference files: ", "\n".join([
-                    f"{ref}: {', '.join([str(c) for c in sorted(sub)])}"
-                    for ref, sub in self.ref_files.items()
-                ]))
+                "\n\nReference files: ",
+                "\n".join(
+                    [
+                        f"{ref}: {', '.join([str(c) for c in sorted(sub)])}"
+                        for ref, sub in self.ref_files.items()
+                    ]
+                ),
+            )
 
         return self.ref_files
 
-    def selfask_RAG(self, data_source: Union[List[Union[str, Path]], Path, str,
-                                             dbs], prompt: str, **kwargs):
+    def selfask_RAG(
+        self,
+        data_source: Union[List[Union[str, Path]], Path, str, dbs],
+        prompt: str,
+        **kwargs,
+    ):
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         question will use self-ask with search to solve complex question.
@@ -382,15 +407,11 @@ class RAG(atman):
         ### check if prompt <= max_input_tokens ###
         tot_prompts = self.prompt + self.system_prompt
         self.prompt_length = get_doc_length(self.language, tot_prompts)
-        self.prompt_tokens = myTokenizer.compute_tokens(
-            tot_prompts, self.model) + 10
+        self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model) + 10
 
         if self.prompt_tokens > self.max_input_tokens:
-            print(
-                "\n\nThe tokens of prompt is larger than max_input_tokens.\n\n"
-            )
-            raise ValueError(
-                "The tokens of prompt is larger than max_input_tokens.")
+            print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
+            raise ValueError("The tokens of prompt is larger than max_input_tokens.")
 
         self.response = self_ask_f(self, start_time, timestamp)
 

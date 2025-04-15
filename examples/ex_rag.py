@@ -1,4 +1,5 @@
 import akasha
+import akasha.helper as ah
 
 DEFAULT_MODEL = "openai:gpt-3.5-turbo"
 DEFAULT_EMBED = "openai:text-embedding-ada-002"
@@ -8,14 +9,15 @@ DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_SEARCH_TYPE = "auto"
 PROMPT = "akasha是甚麼?"
 
-# you can only create a model object or an embedding object
-import akasha.helper as ah
 
+# use helper function to create a pure model object or a pure embedding object
 ### create a model object and call it ###
-model_obj = ah.handle_model(DEFAULT_MODEL,
-                            verbose=True,
-                            temperature=1.0,
-                            max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS)
+model_obj = ah.handle_model(
+    DEFAULT_MODEL,
+    verbose=True,
+    temperature=1.0,
+    max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+)
 
 ret = ah.call_model(model_obj, PROMPT)
 
@@ -29,11 +31,13 @@ embed = emb_obj.embed_query(PROMPT)
 #
 #
 #### create a RAG object and call it ###
-ak = akasha.RAG(embeddings="openai:text-embedding-3-small",
-                model="openai:gpt-4o",
-                max_input_tokens=DEFAULT_MAX_INPUT_TOKENS,
-                keep_logs=True,
-                verbose=True)
+ak = akasha.RAG(
+    embeddings="openai:text-embedding-3-small",
+    model="openai:gpt-4o",
+    max_input_tokens=DEFAULT_MAX_INPUT_TOKENS,
+    keep_logs=True,
+    verbose=True,
+)
 
 ### use data source as reference and search similar document to answer the query ###
 ### data_source can be a list of local files, directories, or urls ###

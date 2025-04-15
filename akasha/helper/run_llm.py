@@ -1,7 +1,7 @@
-from pathlib import Path
-from typing import Callable, Union, Tuple, List, Generator
+from typing import Union, List, Generator
 from langchain_core.messages.ai import AIMessage
-import traceback, logging
+import traceback
+import logging
 from langchain_core.language_models.base import BaseLanguageModel
 from akasha.helper.handle_objects import handle_model_and_name
 from akasha.helper.base import sim_to_trad, extract_json
@@ -33,11 +33,11 @@ def call_model(
     try:
         try:
             model_type = model._llm_type
-        except:
+        except Exception:
             print_flag = False
             model_type = "unknown"
 
-        if ("openai" in model_type):
+        if "openai" in model_type:
             print_flag = False
             response = model.invoke(input_text)
 
@@ -47,7 +47,7 @@ def call_model(
         else:
             try:
                 response = model._call(input_text)
-            except:
+            except Exception:
                 response = model._generate(input_text)
 
         if isinstance(response, AIMessage):
@@ -55,10 +55,14 @@ def call_model(
             if isinstance(response, dict):
                 response = response.__str__()
             if isinstance(response, list):
-                response = '\n'.join(response)
+                response = "\n".join(response)
 
-        if ("huggingface" in model_type) or ("llama cpp" in model_type) or (
-                "gemini" in model_type) or ("anthropic" in model_type):
+        if (
+            ("huggingface" in model_type)
+            or ("llama cpp" in model_type)
+            or ("gemini" in model_type)
+            or ("anthropic" in model_type)
+        ):
             print_flag = False
 
         if response is None or response == "":
@@ -67,8 +71,11 @@ def call_model(
 
     except Exception as e:
         trace_text = traceback.format_exc()
-        logging.error(trace_text + "\n\nText generation encountered an error.\
-            Please check your model setting.\n\n")
+        logging.error(
+            trace_text
+            + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n"
+        )
         raise e
 
     if print_flag:
@@ -84,7 +91,7 @@ def call_batch_model(
     model: BaseLanguageModel,
     input_text: list,
 ) -> List[str]:
-    """call llm model in batch and return the response 
+    """call llm model in batch and return the response
 
     Args:
         model (BaseLanguageModel): llm model
@@ -103,7 +110,6 @@ def call_batch_model(
     model, model_name = handle_model_and_name(model)
 
     try:
-
         response = model.batch(input_text)
         for res in response:
             if isinstance(res, AIMessage):
@@ -111,17 +117,20 @@ def call_batch_model(
             if isinstance(res, dict):
                 res = res.__str__()
             if isinstance(res, list):
-                res = '\n'.join(res)
+                res = "\n".join(res)
             responses.append(res)
 
-        if response is None or response == "" or ''.join(responses) == "":
-            print_flag = False
+        if response is None or response == "" or "".join(responses) == "":
+            # print_flag = False
             raise Exception("LLM response is empty.")
 
     except Exception as e:
         trace_text = traceback.format_exc()
-        logging.error(trace_text + "\n\nText generation encountered an error.\
-            Please check your model setting.\n\n")
+        logging.error(
+            trace_text
+            + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n"
+        )
         raise e
 
     # if print_flag:
@@ -151,10 +160,9 @@ def call_stream_model(
     texts = ""
     model, model_name = handle_model_and_name(model)
     try:
-
         try:
             response = model.stream(input_text)
-        except:
+        except Exception:
             response = model._call(input_text)
 
         for r in response:
@@ -163,7 +171,7 @@ def call_stream_model(
                 if isinstance(r, dict):
                     r = r.__str__()
                 if isinstance(r, list):
-                    r = '\n'.join(r)
+                    r = "\n".join(r)
             texts += r
             yield sim_to_trad(r)
 
@@ -172,8 +180,11 @@ def call_stream_model(
 
     except Exception as e:
         trace_text = traceback.format_exc()
-        logging.error(trace_text + "\n\nText generation encountered an error.\
-            Please check your model setting.\n\n")
+        logging.error(
+            trace_text
+            + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n"
+        )
         yield e
 
 
@@ -181,12 +192,10 @@ def call_image_model(
     model: BaseLanguageModel,
     input_text: Union[str, list],
 ) -> str:
-
     response = ""
     print_flag = True
     model, model_name = handle_model_and_name(model)
     try:
-
         model_type = model._llm_type
 
         if ("openai" in model_type) or ("remote" in model_type):
@@ -194,10 +203,9 @@ def call_image_model(
             response = model.invoke(input_text)
 
         else:
-
             try:
                 response = model.call_image(input_text)
-            except:
+            except Exception:
                 response = model._generate(input_text)
 
         if isinstance(response, AIMessage):
@@ -205,7 +213,7 @@ def call_image_model(
             if isinstance(response, dict):
                 response = response.__str__()
             if isinstance(response, list):
-                response = '\n'.join(response)
+                response = "\n".join(response)
 
         if response is None or response == "":
             print_flag = False
@@ -213,8 +221,11 @@ def call_image_model(
 
     except Exception as e:
         trace_text = traceback.format_exc()
-        logging.error(trace_text + "\n\nText generation encountered an error.\
-            Please check your model setting.\n\n")
+        logging.error(
+            trace_text
+            + "\n\nText generation encountered an error.\
+            Please check your model setting.\n\n"
+        )
         raise e
 
     response = sim_to_trad(response)
@@ -224,34 +235,43 @@ def call_image_model(
     return response
 
 
-def check_relevant_answer(model_obj: BaseLanguageModel,
-                          batch_responses: List[str],
-                          question: str,
-                          prompt_format_type: str = "auto") -> List[str]:
+def check_relevant_answer(
+    model_obj: BaseLanguageModel,
+    batch_responses: List[str],
+    question: str,
+    prompt_format_type: str = "auto",
+) -> List[str]:
     """ask LLM that each of the retrieved answers list is relevant to the question or not"""
-    from akasha.utils.prompts.gen_prompt import default_answer_grader_prompt, format_sys_prompt
+    from akasha.utils.prompts.gen_prompt import (
+        default_answer_grader_prompt,
+        format_sys_prompt,
+    )
+
     results = []
     txts = []
     sys_prompt = default_answer_grader_prompt()
     model_obj, model_name = handle_model_and_name(model_obj)
     for idx in range(len(batch_responses)):
         prod_prompt = f"Retrieved answer: \n\n {batch_responses[idx]} \n\n User question: {question}"
-        text_input = format_sys_prompt(sys_prompt, prod_prompt,
-                                       prompt_format_type, model_name)
+        text_input = format_sys_prompt(
+            sys_prompt, prod_prompt, prompt_format_type, model_name
+        )
         txts.append(text_input)
 
     response_list = call_batch_model(model_obj, txts)
     for idx, response in enumerate(response_list):
-        if 'yes' in response.lower():
+        if "yes" in response.lower():
             results.append(batch_responses[idx])
 
     return results
 
 
-def call_translator(model_obj: BaseLanguageModel,
-                    texts: str,
-                    prompt_format_type: str = "auto",
-                    language: str = "zh") -> str:
+def call_translator(
+    model_obj: BaseLanguageModel,
+    texts: str,
+    prompt_format_type: str = "auto",
+    language: str = "zh",
+) -> str:
     """translate texts to target language
 
     Args:
@@ -265,8 +285,7 @@ def call_translator(model_obj: BaseLanguageModel,
     """
     model_obj, model_name = handle_model_and_name(model_obj)
     sys_prompt = default_translate_prompt(language)
-    prod_prompt = format_sys_prompt(sys_prompt, texts, prompt_format_type,
-                                    model_name)
+    prod_prompt = format_sys_prompt(sys_prompt, texts, prompt_format_type, model_name)
 
     response = call_model(model_obj, prod_prompt)
 
@@ -301,8 +320,9 @@ def call_JSON_formatter(
 
     model_obj, model_name = handle_model_and_name(model_obj)
 
-    prod_prompt = format_sys_prompt(sys_prompt, "TEXTS: " + texts,
-                                    prompt_format_type, model_name)
+    prod_prompt = format_sys_prompt(
+        sys_prompt, "TEXTS: " + texts, prompt_format_type, model_name
+    )
 
     response = call_model(model_obj, prod_prompt)
     return extract_json(response)

@@ -1,5 +1,5 @@
 import pytest
-import akasha
+import akasha  # noqa: F401
 from akasha.helper import handle_embeddings
 
 EMB_OBJ = handle_embeddings("hf:all-MiniLM-L6-v2", False, "")
@@ -10,14 +10,15 @@ CERTAIN_FILE = "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf
 @pytest.mark.db
 def test_create_db():
     from akasha.utils.db.create_db import create_directory_db, create_single_file_db
+
     suc, ign = create_directory_db("docs/mic", EMB_OBJ, CHUNK_SIZE)
 
-    assert suc == True
+    assert suc is True
     assert ign == []
 
     suc = create_single_file_db(CERTAIN_FILE, EMB_OBJ, CHUNK_SIZE)
 
-    assert suc == True
+    assert suc is True
 
     return
 
@@ -42,6 +43,7 @@ def test_load_extract_db():
 @pytest.mark.db
 def test_delete_file_db():
     from akasha.utils.db import delete_documents_by_file
+
     delete_num = delete_documents_by_file(CERTAIN_FILE, EMB_OBJ, CHUNK_SIZE)
 
     assert delete_num > 0

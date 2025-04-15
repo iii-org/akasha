@@ -1,5 +1,5 @@
 from langchain.docstore.document import Document
-from typing import Union, Tuple, List
+from typing import Union, List
 
 
 def handle_params(
@@ -19,7 +19,7 @@ def handle_params(
         **search_type (str)**: search type of finding relevant documents\n
         **threshold (float)**: only return documents that has similarity score larger than threshold\n
         **language (str)**: 'ch' for chinese and 'en' for other.\n
-        
+
     Returns:
         dict: parameter dictionary
     """
@@ -59,8 +59,7 @@ def handle_metrics(doc_length: int, time: float, tokens: int) -> dict:
     return metrics
 
 
-def handle_table(prompt: str, docs: List[Union[Document, str]],
-                 response: str) -> dict:
+def handle_table(prompt: str, docs: List[Union[Document, str]], response: str) -> dict:
     """save running results into dictionary in order to parse to aiido
 
     Args:
@@ -78,10 +77,10 @@ def handle_table(prompt: str, docs: List[Union[Document, str]],
         try:
             inputs = [doc.page_content for doc in docs]
             metadata = [
-                doc.metadata["source"] + "    page: " +
-                str(doc.metadata["page"]) for doc in docs
+                doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
+                for doc in docs
             ]
-        except:
+        except Exception:
             metadata = ["none" for _ in docs]
             inputs = [doc for doc in docs]
         table["inputs"] = inputs
@@ -94,8 +93,9 @@ def handle_table(prompt: str, docs: List[Union[Document, str]],
     return table
 
 
-def handle_score_table(table: dict, bert: float, rouge: float,
-                       llm_score: float) -> dict:
+def handle_score_table(
+    table: dict, bert: float, rouge: float, llm_score: float
+) -> dict:
     """add each response's bert and rouge score into table dictionary
 
     Args:
@@ -115,7 +115,6 @@ def handle_score_table(table: dict, bert: float, rouge: float,
 
 
 def handle_language(language: str):
-
     if language not in language_dict:
         print("language not supported, use chinese as default\n\n")
         return "ch"
@@ -155,47 +154,15 @@ language_dict = {
 }
 
 websearch_language_dict = {
-    "en": {
-        "brave": "en",
-        "serper": "en",
-        "wiki": "en"
-    },
-    "ch": {
-        "brave": "zh-hant",
-        "serper": "zh-TW",
-        "wiki": "zh-TW"
-    },
-    "jp": {
-        "brave": "ja",
-        "serper": "ja",
-        "wiki": "jp"
-    },
-    "ja": {
-        "brave": "ja",
-        "serper": "ja",
-        "wiki": "jp"
-    },
+    "en": {"brave": "en", "serper": "en", "wiki": "en"},
+    "ch": {"brave": "zh-hant", "serper": "zh-TW", "wiki": "zh-TW"},
+    "jp": {"brave": "ja", "serper": "ja", "wiki": "jp"},
+    "ja": {"brave": "ja", "serper": "ja", "wiki": "jp"},
 }
 
 websearch_country_dict = {
-    "en": {
-        "brave": "us",
-        "serper": "us",
-        "wiki": "us"
-    },
-    "ch": {
-        "brave": "tw",
-        "serper": "tw",
-        "wiki": "tw"
-    },
-    "jp": {
-        "brave": "jp",
-        "serper": "jp",
-        "wiki": "jp"
-    },
-    "ja": {
-        "brave": "jp",
-        "serper": "jp",
-        "wiki": "jp"
-    },
+    "en": {"brave": "us", "serper": "us", "wiki": "us"},
+    "ch": {"brave": "tw", "serper": "tw", "wiki": "tw"},
+    "jp": {"brave": "jp", "serper": "jp", "wiki": "jp"},
+    "ja": {"brave": "jp", "serper": "jp", "wiki": "jp"},
 }

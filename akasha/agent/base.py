@@ -1,9 +1,10 @@
 from typing import List, Dict, Callable, Union
-import logging, inspect
+import logging
+import inspect
 from langchain.tools import BaseTool
 
 
-def _get_tool_explaination(tools: List[BaseTool]) -> Dict[str, str]:
+def get_tool_explaination(tools: List[BaseTool]) -> Dict[str, str]:
     """get the explaination and parameter name, type of tools"""
     ret = {}
     for tool in tools:
@@ -12,23 +13,25 @@ def _get_tool_explaination(tools: List[BaseTool]) -> Dict[str, str]:
         para_des = ""
         try:
             para_des = tool.para_des
-        except:
+        except Exception:
             try:
                 para_des = "args: {"
                 dic = tool.args
                 for k, v in dic.items():
-                    para_des += f"{k}: {v['type']},"
+                    para_des += f"{k}:{v['type']}, "
+                para_des = para_des[:-2]  # remove the last comma and space
                 para_des += "}"
 
-            except:
+            except Exception:
                 para_des = ""
         ret[name] = dscp + ", " + para_des
 
     return ret
 
 
-def create_tool(tool_name: str, tool_description: str,
-                func: Callable) -> Union[BaseTool, None]:
+def create_tool(
+    tool_name: str, tool_description: str, func: Callable
+) -> Union[BaseTool, None]:
     """input function to create a tool
 
     Args:
@@ -71,10 +74,7 @@ def create_tool(tool_name: str, tool_description: str,
         prm += "}"
 
     except Exception as e:
-
         logging.error(f"Cannot create tool correctly, {e}\n\n")
         raise e
 
-    return custom_tool(name=tool_name,
-                       description=tool_description,
-                       para_des=prm)
+    return custom_tool(name=tool_name, description=tool_description, para_des=prm)

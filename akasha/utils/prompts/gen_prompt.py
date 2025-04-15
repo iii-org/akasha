@@ -21,7 +21,7 @@ def _separate_name(name: str):
 
     if len(sep) > 2:
         res_type = sep[0].lower()
-        res_name = ':'.join(sep[1:])
+        res_name = ":".join(sep[1:])
     elif len(sep) < 2:
         ### if the format type not equal to type:name ###
         res_type = sep[0].lower()
@@ -43,13 +43,10 @@ def format_chat_gemini_prompt(system_prompt: str, prompt: str) -> List[dict]:
     if prompt == "":
         return [{"role": "model", "parts": [system_prompt]}]
 
-    return [{
-        "role": "model",
-        "parts": [system_prompt]
-    }, {
-        "role": "user",
-        "parts": [prompt]
-    }]
+    return [
+        {"role": "model", "parts": [system_prompt]},
+        {"role": "user", "parts": [prompt]},
+    ]
 
 
 def format_chat_gemma_prompt(system_prompt: str, prompt: str) -> List[dict]:
@@ -75,17 +72,13 @@ def format_chat_gpt_prompt(system_prompt: str, prompt: str) -> List[dict]:
     if prompt == "":
         return [{"role": "system", "content": system_prompt}]
 
-    return [{
-        "role": "system",
-        "content": system_prompt
-    }, {
-        "role": "user",
-        "content": prompt
-    }]
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt},
+    ]
 
 
 def format_chat_mistral_prompt(system_prompt: str, prompt: str) -> List[dict]:
-
     if system_prompt == "" and prompt == "":
         return []
 
@@ -93,28 +86,19 @@ def format_chat_mistral_prompt(system_prompt: str, prompt: str) -> List[dict]:
         return [{"role": "user", "content": prompt}]
 
     if prompt == "":
-        return [{
-            "role": "user",
-            "content": "start conversation."
-        }, {
-            "role": "assistant",
-            "content": system_prompt
-        }]
+        return [
+            {"role": "user", "content": "start conversation."},
+            {"role": "assistant", "content": system_prompt},
+        ]
 
-    return [{
-        "role": "user",
-        "content": "start conversation."
-    }, {
-        "role": "assistant",
-        "content": system_prompt
-    }, {
-        "role": "user",
-        "content": prompt
-    }]
+    return [
+        {"role": "user", "content": "start conversation."},
+        {"role": "assistant", "content": system_prompt},
+        {"role": "user", "content": prompt},
+    ]
 
 
 def format_llama_sys_prompt(system_prompt: str, prompt: str) -> str:
-
     if system_prompt == "" and prompt == "":
         return ""
 
@@ -127,7 +111,6 @@ def format_llama_sys_prompt(system_prompt: str, prompt: str) -> str:
 
 
 def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> str:
-
     if system_prompt == "" and prompt == "":
         return ""
 
@@ -139,11 +122,12 @@ def format_GPT_sys_prompt(system_prompt: str, prompt: str) -> str:
     return "System: " + system_prompt + "\n\n" + "Human: " + prompt + "\n"
 
 
-def format_sys_prompt(system_prompt: str,
-                      prompt: str,
-                      prompt_format_type: str = "auto",
-                      model: str = "remote:xxx") -> Union[str, List[dict]]:
-
+def format_sys_prompt(
+    system_prompt: str,
+    prompt: str,
+    prompt_format_type: str = "auto",
+    model: str = "remote:xxx",
+) -> Union[str, List[dict]]:
     if prompt_format_type.lower() == "auto":
         prompt_format_type = decide_auto_prompt_format_type(model)
 
@@ -183,7 +167,13 @@ def decide_auto_prompt_format_type(model: str = "remote:xxx") -> str:
         return "chat_gpt"
     elif "gemini" in model_type or model_type in ["google", "gemi"]:
         return "chat_gemini"
-    elif "anthropic" in model_type or "claude" in model_name or "mistral" in model_name or "mixtral" in model_name or "gemma" in model_name:
+    elif (
+        "anthropic" in model_type
+        or "claude" in model_name
+        or "mistral" in model_name
+        or "mixtral" in model_name
+        or "gemma" in model_name
+    ):
         return "chat_mistral"
 
     elif "llama" in model_type or "llama" in model_name:
@@ -192,20 +182,21 @@ def decide_auto_prompt_format_type(model: str = "remote:xxx") -> str:
     return "gpt"
 
 
-def format_history_prompt(history_messages: list,
-                          prompt_format_type: str = "chat_gpt",
-                          user_tag="user",
-                          assistant_tag="assistant") -> List[dict]:
-
+def format_history_prompt(
+    history_messages: list,
+    prompt_format_type: str = "chat_gpt",
+    user_tag="user",
+    assistant_tag="assistant",
+) -> List[dict]:
     prod_history = []
     if isinstance(history_messages, str):
         history_messages = [history_messages]
 
     for idx, msg in enumerate(history_messages):
         if idx % 2 == 0:
-            prod_history.append({'role': user_tag, 'content': msg})
+            prod_history.append({"role": user_tag, "content": msg})
         else:
-            prod_history.append({'role': assistant_tag, 'content': msg})
+            prod_history.append({"role": assistant_tag, "content": msg})
 
     return prod_history
 
@@ -253,12 +244,9 @@ def format_llama_json(query: str):
 
     sys_prompt = (
         "human will give you a question with several possible answer, use the content of documents "
-        +
-        "to choose correct answer. and you need to return the answer of this question as"
-        +
-        ' JSON structure with key "ans", and only this JSON structure, please don\'t add any other word. for example, '
-        +
-        'User: what is 1+1 euqals to? 1.「2」  2.「4」 3.「10」 4.「15」 \n you: {"ans":1}'
+        + "to choose correct answer. and you need to return the answer of this question as"
+        + ' JSON structure with key "ans", and only this JSON structure, please don\'t add any other word. for example, '
+        + 'User: what is 1+1 euqals to? 1.「2」  2.「4」 3.「10」 4.「15」 \n you: {"ans":1}'
     )
 
     prompt = sys_s + sys_prompt + sys_e
@@ -274,16 +262,19 @@ def format_chinese_json(query: str):
     Returns:
         str: combined prompt
     """
-    sys_prompt = ("### 指令: 我会给出一个问题和几个可能的选项，请只根据提供的文件找到其中正确的一个答案，" +
-                  "並回答答案為第幾個選項。若沒有提供，請照你的知識回答，并将答案以JSON的格式表示，如答案為第一個選項，" +
-                  "回答的格式為{'ans':1}，不要添加其他字。  ### 问题和选项:\n")
+    sys_prompt = (
+        "### 指令: 我会给出一个问题和几个可能的选项，请只根据提供的文件找到其中正确的一个答案，"
+        + "並回答答案為第幾個選項。若沒有提供，請照你的知識回答，并将答案以JSON的格式表示，如答案為第一個選項，"
+        + "回答的格式為{'ans':1}，不要添加其他字。  ### 问题和选项:\n"
+    )
     # ts_prompt = "### Instruction: I will provide a question and several possible options in the input. Please find the correct answer based solely on the provided texts, and respond with the number of the option that is the correct answer. If no texts is provided, please respond based on your knowledge, and format the answer in JSON format. For example, if the answer is the first option, the format of the response should be {'Answer': 1}. Please do not add any additional words. ### Input:"
     # sys_prompt = ts_prompt + query "  ### Response:"
     return sys_prompt + query
 
 
-def format_wrong_answer(num: int, doc_text: str, question: str,
-                        correct_ans: str) -> str:
+def format_wrong_answer(
+    num: int, doc_text: str, question: str, correct_ans: str
+) -> str:
     """prompt for generate wrong answers to create single choice question
 
     Args:
@@ -297,24 +288,38 @@ def format_wrong_answer(num: int, doc_text: str, question: str,
     """
 
     q_prompt = (
-        sys_s +
-        f"根據以下的文件、問題和正確答案，請基於文件、問題和正確答案生成{num}個錯誤答案，錯誤答案應該與正確答案有相關性但數字、內容或定義錯誤，或者與正確答案不相同但有合理性。並注意各個錯誤答案必須都不相同。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n<開始問題>\n...\n<結束問題>\n<開始正確答案>\n...\n<結束正確答案>\n\n錯誤答案：錯誤答案1在這里\n\n錯誤答案：錯誤答案2在這里\n\n錯誤答案：錯誤答案3在這里\n\n。開始吧！"
-        + sys_e + "<開始文件>\n")
+        sys_s
+        + f"根據以下的文件、問題和正確答案，請基於文件、問題和正確答案生成{num}個錯誤答案，錯誤答案應該與正確答案有相關性但數字、內容或定義錯誤，或者與正確答案不相同但有合理性。並注意各個錯誤答案必須都不相同。\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n<開始問題>\n...\n<結束問題>\n<開始正確答案>\n...\n<結束正確答案>\n\n錯誤答案：錯誤答案1在這里\n\n錯誤答案：錯誤答案2在這里\n\n錯誤答案：錯誤答案3在這里\n\n。開始吧！"
+        + sys_e
+        + "<開始文件>\n"
+    )
     end_doc = "<結束文件>\n"
     st_q = "<開始問題>\n"
     end_q = "<結束問題>\n"
     st_cor = "<開始正確答案>\n"
     end_cor = "<結束正確答案>\n"
-    q_prompt = (q_prompt + doc_text + end_doc + st_q + question + end_q +
-                st_cor + correct_ans + end_cor + "\n\n")
+    q_prompt = (
+        q_prompt
+        + doc_text
+        + end_doc
+        + st_q
+        + question
+        + end_q
+        + st_cor
+        + correct_ans
+        + end_cor
+        + "\n\n"
+    )
 
     return q_prompt
 
 
-def format_create_question_prompt(doc_text: str,
-                                  question_type: str = "fact",
-                                  question_style: str = "essay",
-                                  topic: str = "") -> str:
+def format_create_question_prompt(
+    doc_text: str,
+    question_type: str = "fact",
+    question_style: str = "essay",
+    topic: str = "",
+) -> str:
     """prompts for auto generate question from document
 
     Args:
@@ -327,15 +332,18 @@ def format_create_question_prompt(doc_text: str,
     qt = ""
     question_type = question_type.lower()
     question_style = question_style.lower()
-    if question_style not in [
-            "essay", "問答", "essay question", "essay_question"
-    ]:
+    if question_style not in ["essay", "問答", "essay question", "essay_question"]:
         qt = "少於100字的"
 
     if question_type in ["fact", "facts", "factoid", "factoids", "事實"]:
         q_prompt = fact_question_prompt(qt, topic)
     elif question_type in [
-            "summary", "sum", "summarization", "summarize", "summaries", "摘要"
+        "summary",
+        "sum",
+        "summarization",
+        "summarize",
+        "summaries",
+        "摘要",
     ]:
         q_prompt = summary_question_prompt(qt)
     elif question_type in ["irre", "irrelevant", "irrelevance", "無關"]:
@@ -355,17 +363,19 @@ def fact_question_prompt(qt: str = "", topic: str = "") -> str:
     if topic != "":
         topic = f"相關{topic}的"
 
-    fact_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個{topic}問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。"
+    fact_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個{topic}問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
-    return (sys_s + fact_prompt + format_prompt + sys_e + "<開始文件>\n")
+    return sys_s + fact_prompt + format_prompt + sys_e + "<開始文件>\n"
 
 
 def summary_question_prompt(qt: str = "") -> str:
     """prompt for generate summary question"""
 
-    sum_prompt = "人類： 請根據以下文件進行摘要，並將摘要放在 \"答案\"後面."
-    format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n答案：摘要在這裡\n\n。開始吧！"
-    return (sys_s + sum_prompt + format_prompt + sys_e + "<開始文件>\n")
+    sum_prompt = '人類： 請根據以下文件進行摘要，並將摘要放在 "答案"後面.'
+    format_prompt = (
+        "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n答案：摘要在這裡\n\n。開始吧！"
+    )
+    return sys_s + sum_prompt + format_prompt + sys_e + "<開始文件>\n"
 
 
 def irre_question_prompt(qt: str = "", topic: str = "") -> str:
@@ -373,26 +383,35 @@ def irre_question_prompt(qt: str = "", topic: str = "") -> str:
     if topic != "":
         topic = f"和{topic}"
 
-    irre_prompt = f"人類：我想測試語言模型根據文件回答的可靠性。\n請只生成一個名詞或領域與文件內容{topic}相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
+    irre_prompt = f"人類：我想測試語言模型根據文件回答的可靠性。\n請只生成一個名詞或領域與文件內容{topic}相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
-    return (sys_s + irre_prompt + format_prompt + sys_e + "<開始文件>\n")
+    return sys_s + irre_prompt + format_prompt + sys_e + "<開始文件>\n"
 
 
-def compare_question_prompt(question_style: str, topic: str, nouns: str,
-                            used_texts: str):
+def compare_question_prompt(
+    question_style: str, topic: str, nouns: str, used_texts: str
+):
     """prompt for generate compare question"""
 
     qt = ""
-    if question_style not in [
-            "essay", "問答", "essay question", "essay_question"
-    ]:
+    if question_style not in ["essay", "問答", "essay question", "essay_question"]:
         qt = "少於100字的"
 
-    com_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件和相關主題只生成一個相關主題之間的比較問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用\'根據文件中的訊息\'等詞語取代想詢問的問題內容。"
+    com_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件和相關主題只生成一個相關主題之間的比較問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n<開始相關主題>\n...\n<結束相關主題>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
 
-    return (sys_s + com_prompt + format_prompt + sys_e + "<開始文件>\n" +
-            used_texts + "<結束文件>\n" + "<開始相關主題>\n" + nouns + "<結束相關主題>\n")
+    return (
+        sys_s
+        + com_prompt
+        + format_prompt
+        + sys_e
+        + "<開始文件>\n"
+        + used_texts
+        + "<結束文件>\n"
+        + "<開始相關主題>\n"
+        + nouns
+        + "<結束相關主題>\n"
+    )
 
 
 def format_llm_score(cand: str, ref: str):
@@ -405,21 +424,18 @@ def format_llm_score(cand: str, ref: str):
 
     sys_prompt = (
         "human will give you a [candidate] sentence and a [reference] sentence, please score the [candidate] sentence "
-        +
-        "based on the [reference] sentence, the higher score means the [candidate] sentence has enough information and correct answer that [reference] sentence has."
-        +
-        "remember, you can only return the score and need to return the score of this [candidate] sentence as a float number range from 0 to 1.\n"
-        +
-        "Example Format:\n Human: [candidate]: ...\n\n [reference]: ...\n\n You: 0.8\n\n"
+        + "based on the [reference] sentence, the higher score means the [candidate] sentence has enough information and correct answer that [reference] sentence has."
+        + "remember, you can only return the score and need to return the score of this [candidate] sentence as a float number range from 0 to 1.\n"
+        + "Example Format:\n Human: [candidate]: ...\n\n [reference]: ...\n\n You: 0.8\n\n"
     )
 
-    #prompt = sys_s + sys_prompt + sys_e
+    # prompt = sys_s + sys_prompt + sys_e
     return sys_prompt, "[candidate]: " + cand + "\n\n[reference]: " + ref + "\n\n"
 
 
-def format_reduce_summary_prompt(cur_text: str,
-                                 summary_len: int = 500,
-                                 language: str = "zh"):
+def format_reduce_summary_prompt(
+    cur_text: str, summary_len: int = 500, language: str = "zh"
+):
     """the prompt for llm to generate a summary of the given text
 
     Args:
@@ -433,32 +449,47 @@ def format_reduce_summary_prompt(cur_text: str,
     underline = "------------"
 
     if summary_len > 0:
-
         if "chinese" in target_language:
             sys_prompt = (
-                f"將以下內容總結成一個{summary_len}字的摘要，一步一步來，如果你做得好，我會給你100美元小費。\n\n" +
-                underline + "\n" + cur_text + underline)
+                f"將以下內容總結成一個{summary_len}字的摘要，一步一步來，如果你做得好，我會給你100美元小費。\n\n"
+                + underline
+                + "\n"
+                + cur_text
+                + underline
+            )
         else:
             sys_prompt = (
                 f"Write a concise {summary_len} words summary of the following text. Do it step by step and I will tip you 100 bucks if you are doing well.\n\n"
-                + underline + "\n" + cur_text + underline)
+                + underline
+                + "\n"
+                + cur_text
+                + underline
+            )
 
     else:
         if "chinese" in target_language:
-            sys_prompt = (f"將以下內容總結成一個摘要，一步一步來，如果你做得好，我會給你100美元小費。\n\n" +
-                          underline + "\n" + cur_text + underline)
+            sys_prompt = (
+                "將以下內容總結成一個摘要，一步一步來，如果你做得好，我會給你100美元小費。\n\n"
+                + underline
+                + "\n"
+                + cur_text
+                + underline
+            )
         else:
             sys_prompt = (
-                f"Write a concise summary of the following. Do it step by step and I will tip you 100 bucks if you are doing well.\n\n"
-                + underline + "\n" + cur_text + underline)
+                "Write a concise summary of the following. Do it step by step and I will tip you 100 bucks if you are doing well.\n\n"
+                + underline
+                + "\n"
+                + cur_text
+                + underline
+            )
 
     return sys_prompt
 
 
-def format_refine_summary_prompt(cur_text: str,
-                                 previous_summary: str,
-                                 summary_len: int = 500,
-                                 language: str = "zh"):
+def format_refine_summary_prompt(
+    cur_text: str, previous_summary: str, summary_len: int = 500, language: str = "zh"
+):
     """the prompt for llm to generate the summary of the given text and previous summary
 
      Args:
@@ -505,12 +536,11 @@ def format_compression_prompt(query: str, doc: str):
 
 def format_pic_summary_prompt(chunk_size: int = 500):
     # f"please use traditional chinese to describe this picture in {chunk_size} words.\n\n"
-    return f"please use traditional chinese to describe this picture in details.\n\n"
+    return "please use traditional chinese to describe this picture in details.\n\n"
 
 
 def default_doc_ask_prompt(language: str = "zh"):
-
-    prompt = f"""Use the following pieces of context to answer the user's question. 
+    prompt = """Use the following pieces of context to answer the user's question. 
 If you don't know the answer, just say that you don't know, don't try to make up an answer.\n"""
     if "chinese" in language_dict[language]:
         prompt += "用中文回答下列問題：\n"
@@ -519,7 +549,6 @@ If you don't know the answer, just say that you don't know, don't try to make up
 
 
 def default_ask_prompt(language: str = "zh"):
-
     prompt = """你是擅長回答問題的助手，若有提供參考文件，只根據參考文件回答問題;若沒有參考文件，則根據你的理解回答使用者的問題。\n"""
 
     if "chinese" in language_dict[language]:
@@ -529,7 +558,6 @@ def default_ask_prompt(language: str = "zh"):
 
 
 def default_conclusion_prompt(question: str, language: str = "zh"):
-
     prompt = f"""User will give you several pieces of answer about a question, use those context to answer the question: {question}. 
 Remember to response non-repeated, detailed and coherent answer..\n"""
     if "chinese" in language_dict[language]:
@@ -539,7 +567,6 @@ Remember to response non-repeated, detailed and coherent answer..\n"""
 
 
 def default_doc_grader_prompt():
-
     return """You are a grader assessing relevance of a retrieved document to a user question. \n 
     It does not need to be a stringent test, so if it's possible relevant to the question, grade it as relevant. 
     The goal is to filter out erroneous retrievals. \n
@@ -548,7 +575,6 @@ def default_doc_grader_prompt():
 
 
 def default_answer_grader_prompt():
-
     return """You are a grader assessing whether an answer addresses / resolves a question \n 
     Give a binary score 'yes' or 'no'. Yes' means that the answer resolves the question."""
 
@@ -616,7 +642,6 @@ def default_self_ask_prompt():
 
 
 def default_translate_prompt(language: str):
-
     target_language = language_dict[language]
 
     if "chinese" in target_language:
@@ -641,8 +666,14 @@ class OutputSchema:
         self.type = type
 
         if type not in [
-                "str", "int", "list", "dict", "tuple", "float", "double",
-                "long"
+            "str",
+            "int",
+            "list",
+            "dict",
+            "tuple",
+            "float",
+            "double",
+            "long",
         ]:
             self.type = "str"
 
@@ -691,9 +722,7 @@ def JSON_formatter(schemas: Union[list, OutputSchema]):
     return format_instruct
 
 
-def JSON_formatter_list(names: list,
-                        descriptions: list,
-                        types: list = ["str"]) -> list:
+def JSON_formatter_list(names: list, descriptions: list, types: list = ["str"]) -> list:
     """generate prompt for generate JSON format, input list name and descriptions, which include every key and value you want to generate in JSON format"""
     ret = []
     if len(names) != len(descriptions):
@@ -702,13 +731,19 @@ def JSON_formatter_list(names: list,
 
     for i in range(len(names)):
         if i < len(types) and types[i] in [
-                "str", "int", "list", "dict", "tuple", "float", "double",
-                "long"
+            "str",
+            "int",
+            "list",
+            "dict",
+            "tuple",
+            "float",
+            "double",
+            "long",
         ]:
             checked_type = types[i]
         else:
             checked_type = "str"
-        #schema_str += f"\t{names[i]}: {checked_type}  // {descriptions[i]}\n"
+        # schema_str += f"\t{names[i]}: {checked_type}  // {descriptions[i]}\n"
         schema = OutputSchema(names[i], descriptions[i], checked_type)
         ret.append(schema)
 
@@ -730,8 +765,14 @@ def JSON_formatter_dict(var_list: Union[list, dict]) -> list:
             print("var should contain name and description, ignore.\n\n")
             continue
         if "type" in var and var["type"] in [
-                "str", "int", "list", "dict", "tuple", "float", "double",
-                "long"
+            "str",
+            "int",
+            "list",
+            "dict",
+            "tuple",
+            "float",
+            "double",
+            "long",
         ]:
             checked_type = var["type"]
         else:
@@ -745,12 +786,12 @@ def JSON_formatter_dict(var_list: Union[list, dict]) -> list:
 
 def is_url(path):
     parsed_url = urlparse(path)
-    return parsed_url.scheme in ('http', 'https', 'ftp')
+    return parsed_url.scheme in ("http", "https", "ftp")
 
 
-def format_image_llama_prompt(image_path: Union[List[str], str],
-                              prompt: str) -> List[dict]:
-
+def format_image_llama_prompt(
+    image_path: Union[List[str], str], prompt: str
+) -> List[dict]:
     image_content = []
 
     if isinstance(image_path, str):
@@ -763,11 +804,12 @@ def format_image_llama_prompt(image_path: Union[List[str], str],
     return [{"role": "user", "content": image_content}]
 
 
-def format_image_anthropic_prompt(image_path: Union[List[str], str],
-                                  prompt: str) -> List[dict]:
-
+def format_image_anthropic_prompt(
+    image_path: Union[List[str], str], prompt: str
+) -> List[dict]:
     import base64
     import httpx
+
     image_content = [{"role": "user", "content": []}]
     if isinstance(image_path, str):
         image_path = [image_path]
@@ -775,57 +817,61 @@ def format_image_anthropic_prompt(image_path: Union[List[str], str],
 
     for imgP in image_path:
         image_count += 1
-        if imgP.split('.')[-1] == "jpg":
+        if imgP.split(".")[-1] == "jpg":
             image_media_type = "image/jpeg"
         else:
             image_media_type = f"image/{imgP.split('.')[-1]}"
 
         if is_url(imgP):
-            url_content = base64.standard_b64encode(
-                httpx.get(imgP).content).decode("utf-8")
+            url_content = base64.standard_b64encode(httpx.get(imgP).content).decode(
+                "utf-8"
+            )
 
         else:
-            url_content = base64.standard_b64encode(open(
-                imgP, "rb").read()).decode("utf-8")
+            url_content = base64.standard_b64encode(open(imgP, "rb").read()).decode(
+                "utf-8"
+            )
 
         # image_content[0]["content"].append({
         #     "type": "text",
         #     "text": f"Image {image_count}:"
         # })
-        image_content[0]["content"].append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": image_media_type,
-                "data": url_content
+        image_content[0]["content"].append(
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": image_media_type,
+                    "data": url_content,
+                },
             }
-        })
+        )
 
     image_content[0]["content"].append({"type": "text", "text": prompt})
 
     return image_content
 
 
-def format_image_gpt_prompt(image_path: Union[str, List[str]],
-                            prompt: str) -> List[dict]:
-
+def format_image_gpt_prompt(
+    image_path: Union[str, List[str]], prompt: str
+) -> List[dict]:
     url_content = {}
     image_content = [{"type": "text", "text": prompt}]
     if isinstance(image_path, str):
         image_path = [image_path]
 
     for imgP in image_path:
-
         if is_url(imgP):
             url_content = {"url": imgP}
         else:
             import base64
+
             # Get the image extension
             _, ext = os.path.splitext(imgP)
             ext = ext.lstrip(
-                '.').lower()  # Remove the leading dot and convert to lowercase
-            base64_image = base64.b64encode(open(imgP,
-                                                 "rb").read()).decode("utf-8")
+                "."
+            ).lower()  # Remove the leading dot and convert to lowercase
+            base64_image = base64.b64encode(open(imgP, "rb").read()).decode("utf-8")
             url_content = {"url": f"data:image/{ext};base64,{base64_image}"}
 
         image_content.append({"type": "image_url", "image_url": url_content})
@@ -833,10 +879,9 @@ def format_image_gpt_prompt(image_path: Union[str, List[str]],
     return [{"role": "user", "content": image_content}]
 
 
-def format_image_prompt(image_path: Union[List[str], str],
-                        prompt: str,
-                        model_type: str = "image_gpt"):
-
+def format_image_prompt(
+    image_path: Union[List[str], str], prompt: str, model_type: str = "image_gpt"
+):
     model_type = model_type.lower()
 
     if model_type == "image_llama":
@@ -849,8 +894,9 @@ def format_image_prompt(image_path: Union[List[str], str],
 
 
 def default_get_reference_prompt():
-
-    return "User will give you a Reference: and a Response:, you have to return only yes or no \
+    return (
+        "User will give you a Reference: and a Response:, you have to return only yes or no \
         based on if the reference is used to answer the response or not. \
         If the reference is used to answer the response, return yes, \
         else return no. Remember, you can only return yes or no."
+    )

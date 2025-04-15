@@ -8,10 +8,9 @@ DEFAULT_SEARCH_TYPE = "auto"
 PROMPT = "akasha是甚麼?"
 
 #### create a ask object and call it ###
-ak = akasha.ask(model="openai:gpt-4o",
-                max_input_tokens=8000,
-                keep_logs=True,
-                verbose=True)
+ak = akasha.ask(
+    model="openai:gpt-4o", max_input_tokens=8000, keep_logs=True, verbose=True
+)
 
 ### use info as reference, could be empty, but not recommand to be large, since llm will use all of the content to answer the question ###
 ### info can be a list of local files, string, directories, or urls ###
@@ -26,8 +25,7 @@ res = ak(
 ### please noted that most of the models can not process high quality images (e.g. 3mb) ###
 res = ak.vision(
     prompt="這張圖片是什麼?",
-    image_path=
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+    image_path="https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg",
 )
 
 # save the logs or turn verbose on to see the details

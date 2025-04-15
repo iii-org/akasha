@@ -1,5 +1,6 @@
 import requests
 import os
+
 ### use akasha api in terminal to start the api server ###
 ### use -p port -h host to specify the port and host ###
 HOST = os.getenv("API_HOST", "http://127.0.0.1")
@@ -27,7 +28,7 @@ ask_data = {
     "model": "openai:gpt-3.5-turbo",
     "system_prompt": "",
     "temperature": 0.0,
-    "env_config": env_config
+    "env_config": env_config,
 }
 
 rag_data = {
@@ -37,11 +38,11 @@ rag_data = {
     "model": "openai:gpt-3.5-turbo",
     "embedding_model": "openai:text-embedding-ada-002",
     "threshold": 0.1,
-    "search_type": 'auto',
+    "search_type": "auto",
     "system_prompt": "",
     "max_input_tokens": 3000,
     "temperature": 0.0,
-    "env_config": env_config
+    "env_config": env_config,
 }
 summary_data = {
     "content": "docs/2.pdf",
@@ -49,7 +50,7 @@ summary_data = {
     "summary_type": "reduce_map",
     "summary_len": 500,
     "system_prompt": "用中文做500字摘要",
-    "env_config": env_config
+    "env_config": env_config,
 }
 
 websearch_data = {
@@ -59,7 +60,7 @@ websearch_data = {
     "temperature": 0.0,
     "env_config": env_config,
     "search_engine": "serper",
-    "search_num": 5
+    "search_num": 5,
 }
 
 ask_response = requests.post(urls["ask"], json=ask_data).json()

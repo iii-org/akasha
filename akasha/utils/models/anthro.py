@@ -1,9 +1,7 @@
-import os
 from anthropic import Anthropic
 from langchain.llms.base import LLM
-from typing import Dict, List, Any, Optional, Callable, Generator, Union
+from typing import Dict, List, Any, Optional, Generator, Union
 from pydantic import Field
-import os
 import concurrent.futures
 
 
@@ -16,11 +14,9 @@ class anthropic_model(LLM):
     model: Anthropic = Field(default=None)
     model_name: str = "claude-3-5-sonnet-20241022"
 
-    def __init__(self,
-                 model_name: str,
-                 api_key: str,
-                 temperature: float = 0.0,
-                 **kwargs):
+    def __init__(
+        self, model_name: str, api_key: str, temperature: float = 0.0, **kwargs
+    ):
         """define custom model, input func and temperature
 
         Args:
@@ -30,8 +26,8 @@ class anthropic_model(LLM):
         self.model = Anthropic(api_key=api_key)
         self.model_name = model_name
         self.temperature = temperature
-        if 'max_output_tokens' in kwargs:
-            self.max_output_tokens = kwargs['max_output_tokens']
+        if "max_output_tokens" in kwargs:
+            self.max_output_tokens = kwargs["max_output_tokens"]
 
         #### gcp vertex (need credentials) ####
 
@@ -60,9 +56,9 @@ class anthropic_model(LLM):
         """
         return f"anthropic:{self.model_name}"
 
-    def stream(self,
-               prompt: Union[str, List[Dict[str, Any]]],
-               stop: Optional[List[str]] = None) -> Generator:
+    def stream(
+        self, prompt: Union[str, List[Dict[str, Any]]], stop: Optional[List[str]] = None
+    ) -> Generator:
         """run llm and get the stream generator
 
         Args:
@@ -75,23 +71,24 @@ class anthropic_model(LLM):
             prompt = [{"role": "user", "content": prompt}]
 
         with self.model.messages.stream(
-                max_tokens=self.max_output_tokens,
-                messages=prompt,
-                model=self.model_name,
-                stop_sequences=stop,
-                temperature=self.temperature,
-                top_p=self.top_p,
+            max_tokens=self.max_output_tokens,
+            messages=prompt,
+            model=self.model_name,
+            stop_sequences=stop,
+            temperature=self.temperature,
+            top_p=self.top_p,
         ) as stream:
-
             for text in stream.text_stream:
                 yield text
 
         return
 
-    def _call(self,
-              prompt: Union[str, List[Dict[str, Any]]],
-              stop: Optional[List[str]] = None,
-              verbose=True) -> str:
+    def _call(
+        self,
+        prompt: Union[str, List[Dict[str, Any]]],
+        stop: Optional[List[str]] = None,
+        verbose=True,
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -107,14 +104,13 @@ class anthropic_model(LLM):
             prompt = [{"role": "user", "content": prompt}]
 
         with self.model.messages.stream(
-                max_tokens=self.max_output_tokens,
-                messages=prompt,
-                model=self.model_name,
-                stop_sequences=stop,
-                temperature=self.temperature,
-                top_p=self.top_p,
+            max_tokens=self.max_output_tokens,
+            messages=prompt,
+            model=self.model_name,
+            stop_sequences=stop,
+            temperature=self.temperature,
+            top_p=self.top_p,
         ) as stream:
-
             for text in stream.text_stream:
                 ret += text
                 if verbose:
@@ -126,9 +122,7 @@ class anthropic_model(LLM):
         messages, stop, verbose = args
         return self._call(messages, stop, verbose)
 
-    def batch(self,
-              prompt: List[str],
-              stop: Optional[List[str]] = None) -> List[str]:
+    def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
         """run llm and get the response
 
         Args:
@@ -140,20 +134,20 @@ class anthropic_model(LLM):
         """
         # Number of threads should not exceed the number of prompts
         num_threads = min(
-            len(prompt),
-            concurrent.futures.thread.ThreadPoolExecutor()._max_workers)
+            len(prompt), concurrent.futures.thread.ThreadPoolExecutor()._max_workers
+        )
 
-        with concurrent.futures.ThreadPoolExecutor(
-                max_workers=num_threads) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
             results = list(
-                executor.map(self._invoke_helper,
-                             [(message, stop, False) for message in prompt]))
+                executor.map(
+                    self._invoke_helper, [(message, stop, False) for message in prompt]
+                )
+            )
         return results
 
-    def invoke(self,
-               messages: list,
-               stop: Optional[List[str]] = None,
-               verbose: bool = True) -> str:
+    def invoke(
+        self, messages: list, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -165,9 +159,9 @@ class anthropic_model(LLM):
         """
         return self._call(messages, stop, verbose)
 
-    def invoke_stream(self,
-                      messages: list,
-                      stop: Optional[List[str]] = None) -> Generator:
+    def invoke_stream(
+        self, messages: list, stop: Optional[List[str]] = None
+    ) -> Generator:
         """run llm and get the response
 
         Args:
@@ -179,9 +173,7 @@ class anthropic_model(LLM):
         """
         return self.stream(messages, stop)
 
-    def call_image(self,
-                   prompt: list,
-                   stop: Optional[List[str]] = None) -> str:
+    def call_image(self, prompt: list, stop: Optional[List[str]] = None) -> str:
         """run llm and get the response
 
         Args:
@@ -213,9 +205,10 @@ class anthropic_model(LLM):
             int: _description_
         """
         if isinstance(prompt, str):
-            input_text = [{'role': 'user', 'content': prompt}]
+            input_text = [{"role": "user", "content": prompt}]
 
         token_count = self.model.beta.messages.count_tokens(
-            model=self.model_name, messages=input_text)
+            model=self.model_name, messages=input_text
+        )
 
         return token_count.input_tokens

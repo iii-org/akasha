@@ -1,20 +1,23 @@
 from langchain.tools import BaseTool
-from typing import Callable, Union, List, Generator
+from typing import Union, List, Generator
 import json
-import akasha
-import akasha.helper as helper
-from langchain_core.utils import print_text
-import traceback, warnings, datetime, time, logging
-from warnings import warn
+import datetime
+import time
+import logging
+
 
 from akasha.utils.atman import basic_llm
 
-from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
+from akasha.utils.base import (
+    DEFAULT_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_INPUT_TOKENS,
+)
 from akasha.helper.preprocess_prompts import retri_history_messages
 from akasha.helper.base import get_doc_length, extract_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt
 from akasha.helper.run_llm import call_model, call_stream_model
-from .base import _get_tool_explaination
+from .base import get_tool_explaination
 
 
 class agents(basic_llm):
@@ -82,24 +85,26 @@ class agents(basic_llm):
         self.input_len = 0
         self.question = ""
 
-        self.tool_explaination = _get_tool_explaination(tools)
+        self.tool_explaination = get_tool_explaination(tools)
         if not isinstance(tools, List):
             tools = [tools]
         self.tools = {}
         for tool in tools:
-
             if not isinstance(tool, BaseTool):
                 logging.warning("tools should be a list of BaseTool")
                 continue
             tool_name = tool.name
             self.tools[tool_name] = tool
 
-        tool_explain_str = '\n'.join([
-            f'{tool_name}: {tool_des}'
-            for tool_name, tool_des in self.tool_explaination.items()
-        ])
-        tool_name_str = ', '.join(
-            [f'{tool_name}' for tool_name in self.tool_explaination.keys()])
+        tool_explain_str = "\n".join(
+            [
+                f"{tool_name}: {tool_des}"
+                for tool_name, tool_des in self.tool_explaination.items()
+            ]
+        )
+        tool_name_str = ", ".join(
+            [f'"{tool_name}"' for tool_name in self.tool_explaination.keys()]
+        )
         self.tool_name_str = tool_name_str
 
         self.REACT_PROMPT = f"""Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tool_explain_str}\n
@@ -110,7 +115,9 @@ Question: input question to answer\nThought: consider previous and subsequent st
 ... (repeat Thought/Action N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Answer",\n  "action_input": "Final response to human"\n}}\n```\n\n
 Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
 """
-        self.REMEMBER_PROMPT = "**Remember, Format is Thought: then Action:```$JSON_BLOB```\n\n"
+        self.REMEMBER_PROMPT = (
+            "**Remember, Format is Thought: then Action:```$JSON_BLOB```\n\n"
+        )
         self.OBSERVATION_PROMPT = "\n\nBelow are your previous work, check them carefully and provide the next action and thought,**do not ask same question repeatedly: "
         self.RETRI_OBSERVATION_PROMPT = "User will give you Question, Thought and Observation, return the information from Observation that you think is most relevant to the Question or Thought, if you can't find the information, return None."
 
@@ -121,14 +128,13 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             timestamp (str): timestamp of this run
             fn_type (str): function type of this run
         """
-        if super()._add_basic_log(timestamp, fn_type) == False:
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["question"] = self.question
         self.logs[timestamp]["max_round"] = self.max_round
         self.logs[timestamp]["max_input_tokens"] = self.max_input_tokens
-        self.logs[timestamp][
-            "max_past_observation"] = self.max_past_observation
+        self.logs[timestamp]["max_past_observation"] = self.max_past_observation
         return True
 
     def _add_result_log(self, timestamp: str, time: float) -> bool:
@@ -139,7 +145,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             time (float): spent time of this run
         """
 
-        if self.keep_logs == False:
+        if self.keep_logs is False:
             return False
 
         ### add token information ###
@@ -158,10 +164,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
     def _display_info(self, batch: int = 1) -> bool:
         """display the information of the parameters if verbose is True"""
-        if self.verbose == False:
+        if self.verbose is False:
             return False
         print(f"Model: {self.model}, Temperature: {self.temperature}")
-        print(f"Tool: ", self.tool_name_str)
+        print("Tool: ", self.tool_name_str)
         print(
             f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
         )
@@ -185,24 +191,38 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self._display_info()
         ### call model to get response ###
         retri_messages, messages_len = retri_history_messages(
-            self.messages, self.max_past_observation, self.max_input_tokens,
-            self.model, "Action", "Observation")
+            self.messages,
+            self.max_past_observation,
+            self.max_input_tokens,
+            self.model,
+            "Action",
+            "Observation",
+        )
         if retri_messages != "":
             retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
         text_input = format_sys_prompt(
             self.REACT_PROMPT,
             "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.prompt_format_type, self.model)
+            self.prompt_format_type,
+            self.model,
+        )
 
         response = call_model(self.model_obj, text_input)
 
-        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
+        txt = (
+            "Question: "
+            + " think step by step"
+            + question
+            + self.REMEMBER_PROMPT
+            + self.REACT_PROMPT
+            + retri_messages
+        )
         self.input_len = get_doc_length(self.language, txt)
         self.tokens = self.model_obj.get_num_tokens(txt)
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        if self.keep_logs == True:
+        if self.keep_logs is True:
             self.timestamp_list.append(timestamp)
             self._add_basic_log(timestamp, "agent_call")
 
@@ -211,65 +231,78 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             try:
                 cur_action = extract_json(response)
                 if (not isinstance(cur_action["action"], str)) or (
-                    (not isinstance(cur_action["action_input"], dict) and
-                     (cur_action["action"] != "Answer"))):
-                    raise ValueError(
-                        "Cannot find correct action from response")
-            except:
+                    not isinstance(cur_action["action_input"], dict)
+                    and (cur_action["action"] != "Answer")
+                ):
+                    raise ValueError("Cannot find correct action from response")
+            except Exception:
                 logging.warning(
-                    "Cannot extract JSON format action from response, retry.")
+                    "Cannot extract JSON format action from response, retry."
+                )
                 text_input = format_sys_prompt(
-                    self.REACT_PROMPT, "Question: " + question +
-                    retri_messages + self.REMEMBER_PROMPT,
-                    self.prompt_format_type, self.model)
+                    self.REACT_PROMPT,
+                    "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+                    self.prompt_format_type,
+                    self.model,
+                )
                 response = call_model(self.model_obj, text_input)
                 round_count -= 1
-                txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
+                txt = (
+                    "Question: "
+                    + question
+                    + retri_messages
+                    + self.REACT_PROMPT
+                    + self.REMEMBER_PROMPT
+                )
                 self.input_len += get_doc_length(self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
                 continue
 
             ### get thought from response ###
-            thought = ''.join(
-                response.split('Thought:')[1:]).split('Action:')[0]
+            thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
             if thought.replace(" ", "").replace("\n", "") == "":
                 thought = "None."
             self.thoughts.append(thought)
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
-            if cur_action['action'].lower() in [
-                    'final answer', 'final_answer', 'final', 'answer'
+            if cur_action["action"].lower() in [
+                "final answer",
+                "final_answer",
+                "final",
+                "answer",
             ]:
-                retri_messages = retri_messages.replace(
-                    self.OBSERVATION_PROMPT, "")
-                response = cur_action['action_input']
+                retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
+                response = cur_action["action_input"]
                 text_input = format_sys_prompt(
                     f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
-                    retri_messages, self.prompt_format_type, self.model)
+                    retri_messages,
+                    self.prompt_format_type,
+                    self.model,
+                )
 
                 if self.stream:
                     return self._display_stream(text_input)
 
                 response = call_model(self.model_obj, text_input)
 
-                txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                txt = (
+                    retri_messages
+                    + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                )
                 self.input_len += get_doc_length(self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
-                self.messages.append({
-                    "role":
-                    "Action",
-                    "content":
-                    json.dumps(cur_action, ensure_ascii=False)
-                })
-                self.messages.append({
-                    "role": "Observation",
-                    "content": response
-                })
+                self.messages.append(
+                    {
+                        "role": "Action",
+                        "content": json.dumps(cur_action, ensure_ascii=False),
+                    }
+                )
+                self.messages.append({"role": "Observation", "content": response})
                 break
-            elif cur_action['action'] in self.tools:
-                tool_name = cur_action['action']
-                tool_input = cur_action['action_input']
+            elif cur_action["action"] in self.tools:
+                tool_name = cur_action["action"]
+                tool_input = cur_action["action_input"]
 
                 tool = self.tools[tool_name]
                 try:
@@ -281,11 +314,25 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 if self.retri_observation:
                     text_input = format_sys_prompt(
                         self.RETRI_OBSERVATION_PROMPT,
-                        "Question: " + question + "\n\nThought: " + thought +
-                        "\n\nObservation: " + firsthand_observation,
-                        self.prompt_format_type, self.model)
+                        "Question: "
+                        + question
+                        + "\n\nThought: "
+                        + thought
+                        + "\n\nObservation: "
+                        + firsthand_observation,
+                        self.prompt_format_type,
+                        self.model,
+                    )
                     observation = call_model(self.model_obj, text_input)
-                    txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
+                    txt = (
+                        "Question: "
+                        + question
+                        + "\n\nThought: "
+                        + thought
+                        + "\n\nObservation: "
+                        + firsthand_observation
+                        + self.RETRI_OBSERVATION_PROMPT
+                    )
                     self.input_len += get_doc_length(self.language, txt)
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
@@ -296,27 +343,32 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
-            cur_action['action_input'].pop('run_manager', None)
-            self.messages.append({
-                "role":
-                "Action",
-                "content":
-                json.dumps(cur_action, ensure_ascii=False)
-            })
-            self.messages.append({
-                "role": "Observation",
-                "content": observation
-            })
+            cur_action["action_input"].pop("run_manager", None)
+            self.messages.append(
+                {
+                    "role": "Action",
+                    "content": json.dumps(cur_action, ensure_ascii=False),
+                }
+            )
+            self.messages.append({"role": "Observation", "content": observation})
 
             retri_messages, messages_len = retri_history_messages(
-                self.messages, self.max_past_observation,
-                self.max_input_tokens, self.model, "Action", "Observation")
+                self.messages,
+                self.max_past_observation,
+                self.max_input_tokens,
+                self.model,
+                "Action",
+                "Observation",
+            )
             if retri_messages != "":
                 retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
             text_input = format_sys_prompt(
-                self.REACT_PROMPT, "Question: " + question + retri_messages,
-                self.prompt_format_type, self.model)
+                self.REACT_PROMPT,
+                "Question: " + question + retri_messages,
+                self.prompt_format_type,
+                self.model,
+            )
             response = call_model(self.model_obj, text_input)
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
@@ -325,16 +377,18 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             round_count -= 1
 
         end_time = time.time()
-        print("\n-------------------------------------\nSpend Time: ",
-              end_time - start_time, "s\n")
+        print(
+            "\n-------------------------------------\nSpend Time: ",
+            end_time - start_time,
+            "s\n",
+        )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
 
         return response
 
     def __call__(self, question: str, messages: List[dict] = None):
-        """run agent to get response
-        """
+        """run agent to get response"""
         start_time = time.time()
         round_count = self.max_round
         if messages is None:
@@ -348,24 +402,38 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self._display_info()
         ### call model to get response ###
         retri_messages, messages_len = retri_history_messages(
-            self.messages, self.max_past_observation, self.max_input_tokens,
-            self.model, "Action", "Observation")
+            self.messages,
+            self.max_past_observation,
+            self.max_input_tokens,
+            self.model,
+            "Action",
+            "Observation",
+        )
         if retri_messages != "":
             retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
         text_input = format_sys_prompt(
             self.REACT_PROMPT,
             "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.prompt_format_type, self.model)
+            self.prompt_format_type,
+            self.model,
+        )
 
         response = call_model(self.model_obj, text_input)
 
-        txt = "Question: " + " think step by step" + question + self.REMEMBER_PROMPT + self.REACT_PROMPT + retri_messages
+        txt = (
+            "Question: "
+            + " think step by step"
+            + question
+            + self.REMEMBER_PROMPT
+            + self.REACT_PROMPT
+            + retri_messages
+        )
         self.input_len = get_doc_length(self.language, txt)
         self.tokens = self.model_obj.get_num_tokens(txt)
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        if self.keep_logs == True:
+        if self.keep_logs is True:
             self.timestamp_list.append(timestamp)
             self._add_basic_log(timestamp, "agent_call")
 
@@ -374,70 +442,82 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             try:
                 cur_action = extract_json(response)
                 if (not isinstance(cur_action["action"], str)) or (
-                    (not isinstance(cur_action["action_input"], dict) and
-                     (cur_action["action"] != "Answer"))):
-                    raise ValueError(
-                        "Cannot find correct action from response")
-            except:
+                    not isinstance(cur_action["action_input"], dict)
+                    and (cur_action["action"] != "Answer")
+                ):
+                    raise ValueError("Cannot find correct action from response")
+            except Exception:
                 logging.warning(
-                    "Cannot extract JSON format action from response, retry.")
+                    "Cannot extract JSON format action from response, retry."
+                )
                 text_input = format_sys_prompt(
-                    self.REACT_PROMPT, "Question: " + question +
-                    retri_messages + self.REMEMBER_PROMPT,
-                    self.prompt_format_type, self.model)
+                    self.REACT_PROMPT,
+                    "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+                    self.prompt_format_type,
+                    self.model,
+                )
                 response = call_model(self.model_obj, text_input)
                 round_count -= 1
-                txt = "Question: " + question + retri_messages + self.REACT_PROMPT + self.REMEMBER_PROMPT
+                txt = (
+                    "Question: "
+                    + question
+                    + retri_messages
+                    + self.REACT_PROMPT
+                    + self.REMEMBER_PROMPT
+                )
                 self.input_len += get_doc_length(self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
                 continue
 
             ### get thought from response ###
-            thought = ''.join(
-                response.split('Thought:')[1:]).split('Action:')[0]
+            thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
             if thought.replace(" ", "").replace("\n", "") == "":
                 thought = "None."
             self.thoughts.append(thought)
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
-            if cur_action['action'].lower() in [
-                    'final answer', 'final_answer', 'final', 'answer'
+            if cur_action["action"].lower() in [
+                "final answer",
+                "final_answer",
+                "final",
+                "answer",
             ]:
-                retri_messages = retri_messages.replace(
-                    self.OBSERVATION_PROMPT, "")
-                response = cur_action['action_input']
+                retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
+                response = cur_action["action_input"]
                 text_input = format_sys_prompt(
                     f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
-                    retri_messages, self.prompt_format_type, self.model)
+                    retri_messages,
+                    self.prompt_format_type,
+                    self.model,
+                )
 
                 if self.stream:
                     return self._display_stream(text_input)
 
                 response = call_model(self.model_obj, text_input)
 
-                txt = retri_messages + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                txt = (
+                    retri_messages
+                    + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                )
                 self.input_len += get_doc_length(self.language, txt)
                 self.tokens += self.model_obj.get_num_tokens(txt)
-                self.messages.append({
-                    "role":
-                    "Action",
-                    "content":
-                    json.dumps(cur_action, ensure_ascii=False)
-                })
-                self.messages.append({
-                    "role": "Observation",
-                    "content": response
-                })
+                self.messages.append(
+                    {
+                        "role": "Action",
+                        "content": json.dumps(cur_action, ensure_ascii=False),
+                    }
+                )
+                self.messages.append({"role": "Observation", "content": response})
                 break
 
-            elif cur_action['action'] in self.tools:
-                tool_name = cur_action['action']
-                tool_input = cur_action['action_input']
+            elif cur_action["action"] in self.tools:
+                tool_name = cur_action["action"]
+                tool_input = cur_action["action_input"]
 
                 tool = self.tools[tool_name]
                 try:
-
                     firsthand_observation = tool._run(**tool_input)
                 except Exception as e:
                     print("Error in tool invocation, retrying...\n\n\n\n", e)
@@ -446,11 +526,25 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 if self.retri_observation:
                     text_input = format_sys_prompt(
                         self.RETRI_OBSERVATION_PROMPT,
-                        "Question: " + question + "\n\nThought: " + thought +
-                        "\n\nObservation: " + firsthand_observation,
-                        self.prompt_format_type, self.model)
+                        "Question: "
+                        + question
+                        + "\n\nThought: "
+                        + thought
+                        + "\n\nObservation: "
+                        + firsthand_observation,
+                        self.prompt_format_type,
+                        self.model,
+                    )
                     observation = call_model(self.model_obj, text_input)
-                    txt = "Question: " + question + "\n\nThought: " + thought + "\n\nObservation: " + firsthand_observation + self.RETRI_OBSERVATION_PROMPT
+                    txt = (
+                        "Question: "
+                        + question
+                        + "\n\nThought: "
+                        + thought
+                        + "\n\nObservation: "
+                        + firsthand_observation
+                        + self.RETRI_OBSERVATION_PROMPT
+                    )
                     self.input_len += get_doc_length(self.language, txt)
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
@@ -461,26 +555,31 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
-            self.messages.append({
-                "role":
-                "Action",
-                "content":
-                json.dumps(cur_action, ensure_ascii=False)
-            })
-            self.messages.append({
-                "role": "Observation",
-                "content": observation
-            })
+            self.messages.append(
+                {
+                    "role": "Action",
+                    "content": json.dumps(cur_action, ensure_ascii=False),
+                }
+            )
+            self.messages.append({"role": "Observation", "content": observation})
 
             retri_messages, messages_len = retri_history_messages(
-                self.messages, self.max_past_observation,
-                self.max_input_tokens, self.model, "Action", "Observation")
+                self.messages,
+                self.max_past_observation,
+                self.max_input_tokens,
+                self.model,
+                "Action",
+                "Observation",
+            )
             if retri_messages != "":
                 retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
 
             text_input = format_sys_prompt(
-                self.REACT_PROMPT, "Question: " + question + retri_messages,
-                self.prompt_format_type, self.model)
+                self.REACT_PROMPT,
+                "Question: " + question + retri_messages,
+                self.prompt_format_type,
+                self.model,
+            )
             response = call_model(self.model_obj, text_input)
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
@@ -489,17 +588,19 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
             round_count -= 1
 
         end_time = time.time()
-        print("\n-------------------------------------\nSpend Time: ",
-              end_time - start_time, "s\n")
+        print(
+            "\n-------------------------------------\nSpend Time: ",
+            end_time - start_time,
+            "s\n",
+        )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
 
         return response
 
     def _display_stream(
-            self, text_input: Union[str,
-                                    List[str]]) -> Generator[str, None, None]:
-
+        self, text_input: Union[str, List[str]]
+    ) -> Generator[str, None, None]:
         ret = call_stream_model(
             self.model_obj,
             text_input,

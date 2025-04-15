@@ -1,12 +1,11 @@
 from langchain.schema import Document
-from typing import Callable, Union, List, Tuple, Generator
+from typing import Union, List
 from pathlib import Path
 from akasha.utils.db.db_structure import is_url
 from akasha.utils.db.file_loader import load_file, load_directory, load_url
 
 
 def _get_file_dir_docs(s: Union[str, Path]) -> List[Document]:
-
     if isinstance(s, str):
         s = Path(s)
 
@@ -18,8 +17,7 @@ def _get_file_dir_docs(s: Union[str, Path]) -> List[Document]:
         return [Document(page_content=s.__str__())]
 
 
-def load_docs_from_info(
-        info: Union[str, list, Path, Document]) -> List[Document]:
+def load_docs_from_info(info: Union[str, list, Path, Document]) -> List[Document]:
     """_summary_
 
     Args:

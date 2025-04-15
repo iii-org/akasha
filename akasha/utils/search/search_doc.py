@@ -1,17 +1,18 @@
 from typing import List, Tuple, Union, Callable
 from akasha.helper.base import get_doc_length
 from akasha.helper.token_counter import myTokenizer
-from akasha.utils.db.db_structure import dbs
 from .auto_search import get_relevant_doc_auto, get_relevant_doc_auto_rerank
 from langchain.schema import Document, BaseRetriever
 from langchain_core.language_models.base import BaseLanguageModel
 
 
-def _merge_docs(docs_list: List[List[Document]],
-                topK: int,
-                language: str,
-                max_input_tokens: int = 3000,
-                model: str = "openai:gpt-3.5-turbo") -> Tuple[list, int]:
+def _merge_docs(
+    docs_list: List[List[Document]],
+    topK: int,
+    language: str,
+    max_input_tokens: int = 3000,
+    model: str = "openai:gpt-3.5-turbo",
+) -> Tuple[list, int]:
     """merge different search types documents, if total len of documents too large,
         will not select all documents.
         use jieba to count length of chinese words, use split space otherwise.
@@ -38,10 +39,9 @@ def _merge_docs(docs_list: List[List[Document]],
                 continue
 
             words_len = get_doc_length(language, docs[i].page_content)
-            #token_len = model.get_num_tokens(docs[i].page_content)
+            # token_len = model.get_num_tokens(docs[i].page_content)
             token_len = myTokenizer.compute_tokens(docs[i].page_content, model)
             if cur_token + token_len > max_input_tokens:
-
                 return res, cur_count, cur_token
 
             cur_count += words_len
@@ -83,40 +83,39 @@ def search_docs(
     if isinstance(model, BaseLanguageModel):
         try:
             model = model._llm_type
-        except:
+        except Exception:
             model = "openai:gpt-3.5-turbo"
 
     if not callable(search_type):
-
         search_type = search_type.lower()
 
         if search_type == "auto":
-
             docs = get_relevant_doc_auto(
                 retriver_list,
                 query,
             )
-            docs, docs_len, tokens = _merge_docs([docs], topK, language,
-                                                 max_input_tokens, model)
+            docs, docs_len, tokens = _merge_docs(
+                [docs], topK, language, max_input_tokens, model
+            )
             return docs, docs_len, tokens
         elif search_type == "auto_rerank":
-
             docs = get_relevant_doc_auto_rerank(
                 retriver_list,
                 query,
                 topK,
             )
-            docs, docs_len, tokens = _merge_docs([docs], topK, language,
-                                                 max_input_tokens, model)
+            docs, docs_len, tokens = _merge_docs(
+                [docs], topK, language, max_input_tokens, model
+            )
             return docs, docs_len, tokens
 
     for retri in retriver_list:
-
         docs = retri._get_relevant_documents(query)
         final_docs.append(docs)
 
-    docs, docs_len, tokens = _merge_docs(final_docs, topK, language,
-                                         max_input_tokens, model)
+    docs, docs_len, tokens = _merge_docs(
+        final_docs, topK, language, max_input_tokens, model
+    )
 
     return docs, docs_len, tokens
 
@@ -161,11 +160,9 @@ def retri_docs(
         return res
 
     if not callable(search_type):
-
         search_type = search_type.lower()
 
         if search_type == "auto":
-
             docs = get_relevant_doc_auto(
                 retriver_list,
                 query,
@@ -173,7 +170,6 @@ def retri_docs(
             docs = merge_docs(docs, topK)
             return docs
         elif search_type == "auto_rerank":
-
             docs = get_relevant_doc_auto_rerank(
                 retriver_list,
                 query,
@@ -183,7 +179,6 @@ def retri_docs(
             return docs
 
     for retri in retriver_list:
-
         docs = retri._get_relevant_documents(query)
         # docs, scores = retri._gs(query)
         final_docs.extend(docs)

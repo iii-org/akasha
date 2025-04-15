@@ -1,10 +1,9 @@
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from pydantic import Field
 import numpy as np
-from langchain_core.language_models.base import BaseLanguageModel
-from langchain.embeddings.base import Embeddings
+
 from langchain.schema import BaseRetriever, Document
-from akasha.utils.db.db_structure import dbs
+
 import jieba
 from rank_bm25 import BM25Okapi
 
@@ -28,7 +27,6 @@ class myBM25Retriever(BaseRetriever):
         relevancy_threshold: float = 0.0,
         **kwargs: Any,
     ) -> BaseRetriever:
-
         tokenize_corpus = [list(jieba.cut(doc.page_content)) for doc in docs]
         bm25 = BM25Okapi(tokenize_corpus)
         return cls(
@@ -53,7 +51,7 @@ class myBM25Retriever(BaseRetriever):
 
         tokenize_query = list(jieba.cut(query))
         docs_scores = self.bm25.get_scores(tokenize_query)
-        top_k_idx = np.argsort(docs_scores)[::-1][:self.k]
+        top_k_idx = np.argsort(docs_scores)[::-1][: self.k]
         top_k_results = [self.docs[i] for i in top_k_idx]
         top_k_scores = [docs_scores[i] for i in top_k_idx]
         return top_k_results, top_k_scores
@@ -62,12 +60,10 @@ class myBM25Retriever(BaseRetriever):
         self,
         query: str,
     ) -> Tuple[List[Document], List[float]]:
-
         return self._gs(query)
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
-
         return self._gs(query)[0]

@@ -1,16 +1,22 @@
 from typing import Union
-from akasha.utils.prompts.gen_prompt import format_sys_prompt, format_history_prompt, decide_auto_prompt_format_type
+from akasha.utils.prompts.gen_prompt import (
+    format_sys_prompt,
+    format_history_prompt,
+    decide_auto_prompt_format_type,
+)
 from typing import Tuple
 from .token_counter import myTokenizer
 
 
-def merge_history_and_prompt(history_messages: list,
-                             system_prompt: str,
-                             prompt: str,
-                             prompt_format_type: str = "auto",
-                             user_tag: str = "user",
-                             assistant_tag: str = "assistant",
-                             model: str = "remote:xxx") -> Union[str, list]:
+def merge_history_and_prompt(
+    history_messages: list,
+    system_prompt: str,
+    prompt: str,
+    prompt_format_type: str = "auto",
+    user_tag: str = "user",
+    assistant_tag: str = "assistant",
+    model: str = "remote:xxx",
+) -> Union[str, list]:
     """merge system prompt, history messages, and prompt based on the prompt format type, if history_messages is empty, return the prompt
     if prompt_format_type is start with "chat_", it will become list of dictionary, otherwise it will become string
 
@@ -31,11 +37,10 @@ def merge_history_and_prompt(history_messages: list,
         prompt_format_type = decide_auto_prompt_format_type(model)
 
     ### if history_messages is empty, return the prompt ###
-    if history_messages == [] or history_messages == None or history_messages == "":
+    if history_messages == [] or history_messages is None or history_messages == "":
         return format_sys_prompt(system_prompt, prompt, prompt_format_type)
 
     if "chat_" in prompt_format_type and prompt_format_type != "chat_gemma":
-
         if prompt_format_type == "chat_gemini":
             assistant_tag = "model"
 
@@ -43,9 +48,9 @@ def merge_history_and_prompt(history_messages: list,
 
         prod_prompt = format_sys_prompt("", prompt, prompt_format_type)
 
-        prod_history = format_history_prompt(history_messages,
-                                             prompt_format_type, user_tag,
-                                             assistant_tag)
+        prod_history = format_history_prompt(
+            history_messages, prompt_format_type, user_tag, assistant_tag
+        )
 
         text_input.extend(prod_history)
 
@@ -57,7 +62,6 @@ def merge_history_and_prompt(history_messages: list,
         history_str = ""
 
         for i in range(len(history_messages)):
-
             if i % 2 == 0:
                 history_str += user_tag + ": " + history_messages[i] + "\n"
 
@@ -65,8 +69,9 @@ def merge_history_and_prompt(history_messages: list,
                 history_str += assistant_tag + ": " + history_messages[i] + "\n"
 
         history_str += "\n\n"
-        return format_sys_prompt(system_prompt, history_str + prompt,
-                                 prompt_format_type)
+        return format_sys_prompt(
+            system_prompt, history_str + prompt, prompt_format_type
+        )
 
 
 def retri_history_messages(
@@ -93,18 +98,18 @@ def retri_history_messages(
     cur_len = 0
     count = 0
     ret = []
-    splitter = '\n----------------\n'
+    splitter = "\n----------------\n"
 
     for i in range(len(messages) - 1, -1, -2):
         if count >= pairs:
             break
-        if (messages[i]["role"] != role2) or (messages[i - 1]["role"]
-                                              != role1):
+        if (messages[i]["role"] != role2) or (messages[i - 1]["role"] != role1):
             i += 1
             continue
-        texta = f"{role2}: " + messages[i]["content"].replace('\n', '') + "\n"
+        texta = f"{role2}: " + messages[i]["content"].replace("\n", "") + "\n"
         textq = f"{role1}: " + messages[i - 1]["content"].replace(
-            '\n', '')  # {(i+1)//2}.
+            "\n", ""
+        )  # {(i+1)//2}.
         len_texta = myTokenizer.compute_tokens(texta, model_name)
         len_textq = myTokenizer.compute_tokens(textq, model_name)
 
@@ -124,6 +129,6 @@ def retri_history_messages(
         return "", 0
 
     ret.reverse()
-    ret_str = splitter + ''.join(ret) + splitter
+    ret_str = splitter + "".join(ret) + splitter
 
     return ret_str, cur_len

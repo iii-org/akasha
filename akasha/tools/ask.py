@@ -1,20 +1,35 @@
 from akasha.utils.atman import basic_llm
-from akasha.utils.base import DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
-from akasha.utils.prompts.gen_prompt import default_ask_prompt, default_conclusion_prompt, format_sys_prompt, format_image_prompt
+from akasha.utils.base import (
+    DEFAULT_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_INPUT_TOKENS,
+)
+from akasha.utils.prompts.gen_prompt import (
+    default_ask_prompt,
+    default_conclusion_prompt,
+    format_sys_prompt,
+    format_image_prompt,
+)
 from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table
 from akasha.utils.db.load_docs import load_docs_from_info
 from akasha.helper.base import get_doc_length
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
-from akasha.helper.run_llm import call_model, call_stream_model, call_batch_model, call_image_model, check_relevant_answer
-from typing import Callable, Union, List, Tuple, Generator
+from akasha.helper.run_llm import (
+    call_model,
+    call_stream_model,
+    call_batch_model,
+    call_image_model,
+    check_relevant_answer,
+)
+from typing import Union, List, Tuple, Generator
 from pathlib import Path
 from langchain.schema import Document
-import time, datetime
+import time
+import datetime
 from akasha.helper.token_counter import myTokenizer
 
 
 class ask(basic_llm):
-
     def __init__(
         self,
         model: str = DEFAULT_MODEL,
@@ -65,12 +80,12 @@ class ask(basic_llm):
         self.doc_tokens, self.doc_length = 0, 0
 
         ## set default RAG prompt ##
-        if self.system_prompt.replace(' ', '') == "":
+        if self.system_prompt.replace(" ", "") == "":
             self.system_prompt = default_ask_prompt(self.language)
 
     def _display_info(self, batch: int = 1) -> bool:
         """display the information of the parameters if verbose is True"""
-        if self.verbose == False:
+        if self.verbose is False:
             return False
         print(f"Model: {self.model}, Temperature: {self.temperature}")
         print(
@@ -80,16 +95,15 @@ class ask(basic_llm):
             f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
         )
         print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}")
-        print(f"Batch:  {max(batch,1)}\n\n")
+        print(f"Batch:  {max(batch, 1)}\n\n")
 
         return True
 
-    def _add_basic_log(self,
-                       timestamp: str,
-                       fn_type: str,
-                       history_messages: list = []) -> bool:
-        """ add to logs for function if keep_logs is True"""
-        if super()._add_basic_log(timestamp, fn_type) == False:
+    def _add_basic_log(
+        self, timestamp: str, fn_type: str, history_messages: list = []
+    ) -> bool:
+        """add to logs for function if keep_logs is True"""
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["prompt"] = self.prompt
@@ -97,8 +111,8 @@ class ask(basic_llm):
         return True
 
     def _add_result_log(self, timestamp: str, time: float) -> bool:
-        """ add to logs for ask function if keep_logs is True"""
-        if super()._add_result_log(timestamp, time) == False:
+        """add to logs for ask function if keep_logs is True"""
+        if super()._add_result_log(timestamp, time) is False:
             return False
 
         ### add token information ###
@@ -110,10 +124,11 @@ class ask(basic_llm):
 
         return True
 
-    def _add_result_log_vision(self, timestamp: str, time: float,
-                               image_path: str) -> bool:
-        """ add to logs for vision function if keep_logs is True"""
-        if super()._add_result_log(timestamp, time) == False:
+    def _add_result_log_vision(
+        self, timestamp: str, time: float, image_path: str
+    ) -> bool:
+        """add to logs for vision function if keep_logs is True"""
+        if super()._add_result_log(timestamp, time) is False:
             return False
 
         ### add token information ###
@@ -124,11 +139,13 @@ class ask(basic_llm):
 
         return True
 
-    def __call__(self,
-                 prompt: str,
-                 info: Union[str, list, Path, Document] = "",
-                 history_messages: List[str] = [],
-                 **kwargs) -> str:
+    def __call__(
+        self,
+        prompt: str,
+        info: Union[str, list, Path, Document] = "",
+        history_messages: List[str] = [],
+        **kwargs,
+    ) -> str:
         """the function to ask model with prompt and info documents,
         the info can be file path, url, directory path, or list of Document object
         if the info has too many tokens, it will be separated into multiple documents and ask model batchly
@@ -152,32 +169,25 @@ class ask(basic_llm):
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.docs = load_docs_from_info(info)
         ### check if prompt <= max_input_tokens ###
-        tot_prompts = self.prompt + self.system_prompt + '\n\n'.join(
-            history_messages)
+        tot_prompts = self.prompt + self.system_prompt + "\n\n".join(history_messages)
         self.prompt_length = get_doc_length(self.language, tot_prompts)
-        self.prompt_tokens = myTokenizer.compute_tokens(
-            tot_prompts, self.model) + 10
+        self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model) + 10
 
         if self.prompt_tokens > self.max_input_tokens:
-            print(
-                "\n\nThe tokens of prompt is larger than max_input_tokens.\n\n"
-            )
-            raise ValueError(
-                "The tokens of prompt is larger than max_input_tokens.")
+            print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
+            raise ValueError("The tokens of prompt is larger than max_input_tokens.")
 
-        self._add_basic_log(timestamp,
-                            "ask",
-                            history_messages=history_messages)
+        self._add_basic_log(timestamp, "ask", history_messages=history_messages)
 
         ### separate documents and count tokens ###
         cur_documents, self.doc_tokens = self._separate_docs()
-        self.doc_length = get_doc_length(self.language, ''.join(cur_documents))
+        self.doc_length = get_doc_length(self.language, "".join(cur_documents))
 
-        prod_sys_prompts = self._process_batch_prompts(cur_documents,
-                                                       history_messages)
+        prod_sys_prompts = self._process_batch_prompts(cur_documents, history_messages)
 
         self._display_info(
-            len(cur_documents))  # display the information of the parameters
+            len(cur_documents)
+        )  # display the information of the parameters
         self._display_docs()
         ### start to ask llm ###
         if len(cur_documents) > 1:
@@ -186,29 +196,37 @@ class ask(basic_llm):
                 self.model_obj,
                 prod_sys_prompts,
             )
-            fnl_conclusion_prompt = default_conclusion_prompt(
-                prompt, self.language)
+            fnl_conclusion_prompt = default_conclusion_prompt(prompt, self.language)
             ## check relevant answer if batch_responses > 10 ##
             if len(batch_responses) > 10:
                 batch_responses = check_relevant_answer(
-                    self.model_obj, batch_responses, self.prompt,
-                    self.prompt_format_type)
+                    self.model_obj,
+                    batch_responses,
+                    self.prompt,
+                    self.prompt_format_type,
+                )
 
             batch_responses, cur_len = _retri_max_texts(
-                batch_responses, self.max_input_tokens -
-                myTokenizer.compute_tokens(fnl_conclusion_prompt, self.model),
-                self.model)
-            fnl_input = format_sys_prompt(fnl_conclusion_prompt,
-                                          "\n\n".join(batch_responses),
-                                          self.prompt_format_type, self.model)
+                batch_responses,
+                self.max_input_tokens
+                - myTokenizer.compute_tokens(fnl_conclusion_prompt, self.model),
+                self.model,
+            )
+            fnl_input = format_sys_prompt(
+                fnl_conclusion_prompt,
+                "\n\n".join(batch_responses),
+                self.prompt_format_type,
+                self.model,
+            )
 
             if self.stream:
-                return self._display_stream(fnl_input, )
+                return self._display_stream(
+                    fnl_input,
+                )
 
             self.response = call_model(self.model_obj, fnl_input)
 
         else:
-
             if self.stream:
                 return self._display_stream(prod_sys_prompts[0])
 
@@ -217,12 +235,10 @@ class ask(basic_llm):
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
 
-        self._upload_logs(end_time - start_time, self.doc_length,
-                          self.doc_tokens)
+        self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
         return self.response
 
-    def vision(self, prompt: str, image_path: Union[List[str], str],
-               **kwargs) -> str:
+    def vision(self, prompt: str, image_path: Union[List[str], str], **kwargs) -> str:
         """ask model with image and prompt, image_path can be list of image path or url
 
         Args:
@@ -242,24 +258,34 @@ class ask(basic_llm):
 
         ## check model ##
         model_prefix = self.model.split(":")[0]
-        if model_prefix in [
-                "hf", "hugginface", "anthropic", "claude", "anthro"
-        ] and self.stream == True:
+        if (
+            model_prefix in ["hf", "hugginface", "anthropic", "claude", "anthro"]
+            and self.stream is True
+        ):
             raise ValueError(
                 f"Currently {model_prefix} model does not support stream mode.\n\n"
             )
 
         if model_prefix in [
-                "llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp",
-                "chatglm", "chatglm2", "glm", "lora", "peft", "gptq", "gptq2"
+            "llama-cpu",
+            "llama-gpu",
+            "llama",
+            "llama2",
+            "llama-cpp",
+            "chatglm",
+            "chatglm2",
+            "glm",
+            "lora",
+            "peft",
+            "gptq",
+            "gptq2",
         ]:
             raise ValueError(
                 f"Currently {self.model} model does not support image input.\n\n"
             )
 
         ## count prompt tokens ##
-        self.prompt_tokens = myTokenizer.compute_tokens(
-            self.prompt, self.model)
+        self.prompt_tokens = myTokenizer.compute_tokens(self.prompt, self.model)
         self.prompt_length = get_doc_length(self.language, self.prompt)
 
         ## decide prompt format ##
@@ -267,25 +293,24 @@ class ask(basic_llm):
             fnl_input = format_image_prompt(image_path, prompt, "image_llama")
 
         elif model_prefix in ["anthropic", "claude", "anthro"]:
-            fnl_input = format_image_prompt(image_path, prompt,
-                                            "image_anthropic")
+            fnl_input = format_image_prompt(image_path, prompt, "image_anthropic")
 
         else:
             fnl_input = format_image_prompt(image_path, prompt, "image_gpt")
 
         if self.stream:
-            return self._display_stream(fnl_input, )
+            return self._display_stream(
+                fnl_input,
+            )
 
         self.response = call_image_model(self.model_obj, fnl_input)
-        self._add_result_log_vision(timestamp,
-                                    time.time() - start_time, image_path)
+        self._add_result_log_vision(timestamp, time.time() - start_time, image_path)
 
         return self.response
 
     def _display_stream(
-            self, text_input: Union[str,
-                                    List[str]]) -> Generator[str, None, None]:
-
+        self, text_input: Union[str, List[str]]
+    ) -> Generator[str, None, None]:
         ret = call_stream_model(
             self.model_obj,
             text_input,
@@ -295,13 +320,15 @@ class ask(basic_llm):
             self.response += s
             yield s
 
-    def _separate_docs(self, ) -> Tuple[List[str], int]:
+    def _separate_docs(
+        self,
+    ) -> Tuple[List[str], int]:
         """separate documents if the total length of documents exceed the max_input_tokens
 
         Returns:
             ret (List[str]): list of string of separated documents texts
             tot_len (int): the length of total documents
-            
+
         """
         tot_token_len = 0
         cur_len = 0
@@ -309,9 +336,7 @@ class ask(basic_llm):
         left_tokens = self.max_input_tokens - self.prompt_tokens
         ret = [""]
         for db_doc in self.docs:
-
-            cur_token_len = myTokenizer.compute_tokens(db_doc.page_content,
-                                                       self.model)
+            cur_token_len = myTokenizer.compute_tokens(db_doc.page_content, self.model)
 
             if cur_len + cur_token_len > left_tokens:
                 if cur_token_len <= left_tokens:
@@ -341,21 +366,21 @@ class ask(basic_llm):
 
         Returns:
             text (str): string of documents texts
-            
+
         """
 
         new_docs = []
         tot_len = len(text)
         idx = 2
-        truncate_content = text[:(tot_len // idx)]
+        truncate_content = text[: (tot_len // idx)]
         # truncate_len = helper.get_doc_length(self.language, truncate_content)
-        truncated_token_len = myTokenizer.compute_tokens(
-            truncate_content, self.model)
+        truncated_token_len = myTokenizer.compute_tokens(truncate_content, self.model)
         while truncated_token_len > self.max_input_tokens:
             idx *= 2
-            truncate_content = text[:(tot_len // idx)]
+            truncate_content = text[: (tot_len // idx)]
             truncated_token_len = myTokenizer.compute_tokens(
-                truncate_content, self.model)
+                truncate_content, self.model
+            )
 
         rge = tot_len // idx
         st = 0
@@ -367,9 +392,9 @@ class ask(basic_llm):
 
         return new_docs
 
-    def _process_batch_prompts(self,
-                               cur_documents: List[str],
-                               history_messages: List[str] = []) -> List[str]:
+    def _process_batch_prompts(
+        self, cur_documents: List[str], history_messages: List[str] = []
+    ) -> List[str]:
         """_summary_
 
         Args:
@@ -381,31 +406,32 @@ class ask(basic_llm):
         prod_sys_prompts = []
 
         if len(cur_documents) == 0:
-
-            prod_sys_prompt = merge_history_and_prompt(history_messages,
-                                                       self.system_prompt,
-                                                       "User question: " +
-                                                       self.prompt,
-                                                       self.prompt_format_type,
-                                                       model=self.model)
+            prod_sys_prompt = merge_history_and_prompt(
+                history_messages,
+                self.system_prompt,
+                "User question: " + self.prompt,
+                self.prompt_format_type,
+                model=self.model,
+            )
             prod_sys_prompts.append(prod_sys_prompt)
             return prod_sys_prompts
 
         for d_count in range(len(cur_documents)):
-
             prod_sys_prompt = merge_history_and_prompt(
                 history_messages,
                 self.system_prompt,
-                "Reference document: " + cur_documents[d_count] +
-                "\n\nUser question: " + self.prompt,
+                "Reference document: "
+                + cur_documents[d_count]
+                + "\n\nUser question: "
+                + self.prompt,
                 self.prompt_format_type,
-                model=self.model)
+                model=self.model,
+            )
             prod_sys_prompts.append(prod_sys_prompt)
 
         return prod_sys_prompts
 
-    def _upload_logs(self, tot_time: float, doc_len: int,
-                     doc_tokens: int) -> str:
+    def _upload_logs(self, tot_time: float, doc_len: int, doc_tokens: int) -> str:
         """_summary_
 
         Args:
@@ -424,15 +450,15 @@ class ask(basic_llm):
         metrics = handle_metrics(doc_len, tot_time, doc_tokens)
         table = handle_table(self.prompt, self.docs, self.response)
         from akasha.utils.upload import aiido_upload
+
         aiido_upload(self.record_exp, params, metrics, table)
 
         return "logs uploaded"
 
 
 def _retri_max_texts(
-        texts_list: list,
-        left_token_len: int,
-        model_name: str = "openai:gpt-3.5-turbo") -> Tuple[list, int]:
+    texts_list: list, left_token_len: int, model_name: str = "openai:gpt-3.5-turbo"
+) -> Tuple[list, int]:
     """return list of texts that do not exceed the left_token_len
 
     Args:

@@ -1,18 +1,30 @@
 from .model_eval import Model_Eval
-from .base import check_sum_type, get_non_repeat_rand_int, get_source_files, check_essay_system_prompt, get_question_from_file
+from .base import (
+    check_sum_type,
+    get_non_repeat_rand_int,
+    get_source_files,
+    check_essay_system_prompt,
+    get_question_from_file,
+)
 from akasha.utils.db.db_structure import dbs
-from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_EMBED, DEFAULT_MAX_INPUT_TOKENS, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MODEL, DEFAULT_SEARCH_TYPE
+from akasha.utils.base import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_EMBED,
+    DEFAULT_MAX_INPUT_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MODEL,
+    DEFAULT_SEARCH_TYPE,
+)
 from akasha.utils.prompts.gen_prompt import format_create_question_prompt
 from akasha.helper.base import get_docs_length, get_doc_length
 from akasha.helper.run_llm import call_model
 from akasha.utils.search.search_doc import search_docs
 from akasha.utils.search.retrievers.base import get_retrivers
-
-from typing import Union, Callable
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
-import datetime, time
-from typing import List, Union, Tuple
+import datetime
+import time
+from typing import List, Union, Tuple, Callable
 from pathlib import Path
 from langchain.schema import Document
 from tqdm import tqdm
@@ -20,7 +32,6 @@ import logging
 
 
 class eval(Model_Eval):
-
     def __init__(
         self,
         model: Union[str, BaseLanguageModel] = DEFAULT_MODEL,
@@ -68,19 +79,35 @@ class eval(Model_Eval):
             **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
             **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
         """
-        super().__init__(model, embeddings, chunk_size, search_type,
-                         max_input_tokens, max_output_tokens, question_type,
-                         question_style, temperature, threshold, language,
-                         record_exp, system_prompt, prompt_format_type,
-                         keep_logs, use_chroma, verbose, env_file)
+        super().__init__(
+            model,
+            embeddings,
+            chunk_size,
+            search_type,
+            max_input_tokens,
+            max_output_tokens,
+            question_type,
+            question_style,
+            temperature,
+            threshold,
+            language,
+            record_exp,
+            system_prompt,
+            prompt_format_type,
+            keep_logs,
+            use_chroma,
+            verbose,
+            env_file,
+        )
 
-    def create_questionset(self,
-                           data_source: Union[List[Union[str, Path]], Path,
-                                              str, dbs],
-                           question_num: int = 10,
-                           choice_num: int = 4,
-                           output_file_path: str = "",
-                           **kwargs) -> Tuple[list, list]:
+    def create_questionset(
+        self,
+        data_source: Union[List[Union[str, Path]], Path, str, dbs],
+        question_num: int = 10,
+        choice_num: int = 4,
+        output_file_path: str = "",
+        **kwargs,
+    ) -> Tuple[list, list]:
         """auto create question set by llm model, each time it will randomly select a range of documents from the documents directory,
         then use llm model to generate a question and answer pair, and save it into a txt file.
         1.The format of "single_choice" questionset should be one line one question, and the possibles answers and questions are separate by tab(\t),
@@ -118,8 +145,8 @@ class eval(Model_Eval):
         self.question_num = question_num
         vis_doc_range = set()
         doc_range = (
-            1999 + self.chunk_size
-        ) // self.chunk_size  # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
+            (1999 + self.chunk_size) // self.chunk_size
+        )  # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
 
         if check_sum_type(self.question_type, self.question_style):
             return [], []
@@ -130,15 +157,17 @@ class eval(Model_Eval):
 
         ## process of creating compare question is different from other, so we separate it ##
         if self.question_type in [
-                "compare", "comparison", "comparisons", "比較", "compared"
+            "compare",
+            "comparison",
+            "comparisons",
+            "比較",
+            "compared",
         ]:
-            return self._create_compare_questionset(choice_num,
-                                                    output_file_path)
+            return self._create_compare_questionset(choice_num, output_file_path)
 
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         start_time = time.time()
-        self._add_basic_log(timestamp, "create_questionset", doc_range,
-                            choice_num)
+        self._add_basic_log(timestamp, "create_questionset", doc_range, choice_num)
         self.prompt_tokens, self.prompt_length = [], []
         self.doc_tokens, self.doc_length = [], []
         self.question, self.answer, self.docs = [], [], []
@@ -150,42 +179,44 @@ class eval(Model_Eval):
         ## prevent doc_range - len of texts <= 0 ##
         doc_range = min(doc_range, len(texts) - 1)
 
-        progress = tqdm(total=question_num,
-                        desc=f"Create Q({self.question_type})")
+        progress = tqdm(total=question_num, desc=f"Create Q({self.question_type})")
         regenerate_limit = question_num
         ### random select a range of documents from the documents , and use llm model to generate a question and answer pair ###
         for i in range(question_num):
             print(" ")
             progress.update(1)
             print("\n")
-            random_index = get_non_repeat_rand_int(vis_doc_range,
-                                                   len(texts) - doc_range,
-                                                   doc_range)
+            random_index = get_non_repeat_rand_int(
+                vis_doc_range, len(texts) - doc_range, doc_range
+            )
 
-            doc_text = "\n".join(texts[random_index:random_index + doc_range])
+            doc_text = "\n".join(texts[random_index : random_index + doc_range])
             docs = [
                 Document(page_content=texts[k], metadata=metadata[k])
                 for k in range(random_index, random_index + doc_range)
             ]
-            source_files_name = get_source_files(metadata, random_index,
-                                                 doc_range, self.language)
+            source_files_name = get_source_files(
+                metadata, random_index, doc_range, self.language
+            )
             try:
                 q_prompt = format_create_question_prompt(
-                    doc_text, self.question_type, self.question_style)
+                    doc_text, self.question_type, self.question_style
+                )
                 response = call_model(self.model_obj, q_prompt)
 
-                if not self._process_response(response, doc_text, choice_num,
-                                              source_files_name):
+                if not self._process_response(
+                    response, doc_text, choice_num, source_files_name
+                ):
                     raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length.append(get_docs_length(self.language, docs))
                 self.doc_tokens.append(self.model_obj.get_num_tokens(doc_text))
                 self.prompt_length.append(
-                    get_doc_length(self.language, q_prompt) -
-                    self.doc_length[-1])
+                    get_doc_length(self.language, q_prompt) - self.doc_length[-1]
+                )
                 self.prompt_tokens.append(
-                    self.model_obj.get_num_tokens(q_prompt) -
-                    self.doc_tokens[-1])
+                    self.model_obj.get_num_tokens(q_prompt) - self.doc_tokens[-1]
+                )
                 self.docs.extend(docs)
 
             except Exception as e:
@@ -207,8 +238,9 @@ class eval(Model_Eval):
         end_time = time.time()
         self._display_info_fnl()
         self._add_result_log(timestamp, end_time - start_time)
-        self._upload_logs(end_time - start_time, table, sum(self.doc_length),
-                          sum(self.doc_tokens))
+        self._upload_logs(
+            end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
+        )
         self._save_questionset(timestamp, output_file_path)
 
         return self.question, self.answer
@@ -223,21 +255,21 @@ class eval(Model_Eval):
         **kwargs,
     ) -> Tuple[list, list]:
         """similar to auto_create_questionset, but it will use the topic to find the related documents and create questionset.
-            Args:
-                **doc_path (str)**: documents directory path\n
-                **topic (str)**: the topic of the questionset\n
-                **question_num (int, optional)**: number of questions you want to create. Defaults to 10.\n
-                **choice_num (int, optional)**: the number of choices for each single choice question, only use it if question_type is "single_choice".
-            Defaults to 4.\n
-                **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
-                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
-                question_style, question_type, embeddings, chunk_size, model, verbose, language , search_type, record_exp,
-                system_prompt, max_input_tokens, temperature.
-            Raises:
-                Exception: _description_
+        Args:
+            **doc_path (str)**: documents directory path\n
+            **topic (str)**: the topic of the questionset\n
+            **question_num (int, optional)**: number of questions you want to create. Defaults to 10.\n
+            **choice_num (int, optional)**: the number of choices for each single choice question, only use it if question_type is "single_choice".
+        Defaults to 4.\n
+            **output_file_path (str, optional)**: the path of output question set txt file, if not assign, use doc_path+datetime as the file name.
+            **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+            question_style, question_type, embeddings, chunk_size, model, verbose, language , search_type, record_exp,
+            system_prompt, max_input_tokens, temperature.
+        Raises:
+            Exception: _description_
 
-            Returns:
-                (question_list:list, answer_list:list): the question and answer list that generated by llm model
+        Returns:
+            (question_list:list, answer_list:list): the question and answer list that generated by llm model
         """
         ## set class variables ##
         ## set class variables ##
@@ -247,8 +279,8 @@ class eval(Model_Eval):
         self.question_num = question_num
         vis_doc_range = set()
         doc_range = (
-            1999 + self.chunk_size
-        ) // self.chunk_size  # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
+            (1999 + self.chunk_size) // self.chunk_size
+        )  # doc_range is determine by the chunk size, so the select documents won't be too short to having trouble genereating a question
 
         if check_sum_type(self.question_type, self.question_style):
             return [], []
@@ -260,8 +292,7 @@ class eval(Model_Eval):
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         start_time = time.time()
-        self._add_basic_log(timestamp, "create_questionset", doc_range,
-                            choice_num)
+        self._add_basic_log(timestamp, "create_questionset", doc_range, choice_num)
         self.prompt_tokens, self.prompt_length = [], []
         self.doc_tokens, self.doc_length = [], []
         self.question, self.answer, self.docs = [], [], []
@@ -294,43 +325,45 @@ class eval(Model_Eval):
 
         doc_range = min(doc_range, len(texts) - 1)
 
-        progress = tqdm(total=question_num,
-                        desc=f"Create Q({self.question_type})")
+        progress = tqdm(total=question_num, desc=f"Create Q({self.question_type})")
         regenerate_limit = question_num
         ### random select a range of documents from the documents , and use llm model to generate a question and answer pair ###
         for i in range(question_num):
             print(" ")
             progress.update(1)
             print("\n")
-            random_index = get_non_repeat_rand_int(vis_doc_range,
-                                                   len(texts) - doc_range,
-                                                   doc_range)
+            random_index = get_non_repeat_rand_int(
+                vis_doc_range, len(texts) - doc_range, doc_range
+            )
 
-            doc_text = "\n".join(texts[random_index:random_index + doc_range])
+            doc_text = "\n".join(texts[random_index : random_index + doc_range])
             docs = [
                 Document(page_content=texts[k], metadata=metadata[k])
                 for k in range(random_index, random_index + doc_range)
             ]
-            source_files_name = get_source_files(metadata, random_index,
-                                                 doc_range, self.language)
+            source_files_name = get_source_files(
+                metadata, random_index, doc_range, self.language
+            )
 
             try:
                 q_prompt = format_create_question_prompt(
-                    doc_text, self.question_type, self.question_style, topic)
+                    doc_text, self.question_type, self.question_style, topic
+                )
 
                 response = call_model(self.model_obj, q_prompt)
-                if not self._process_response(response, doc_text, choice_num,
-                                              source_files_name):
+                if not self._process_response(
+                    response, doc_text, choice_num, source_files_name
+                ):
                     raise Exception(f"Question Format Error, got {response}")
 
                 self.doc_length.append(get_docs_length(self.language, docs))
                 self.doc_tokens.append(self.model_obj.get_num_tokens(doc_text))
                 self.prompt_length.append(
-                    get_doc_length(self.language, q_prompt) -
-                    self.doc_length[-1])
+                    get_doc_length(self.language, q_prompt) - self.doc_length[-1]
+                )
                 self.prompt_tokens.append(
-                    self.model_obj.get_num_tokens(q_prompt) -
-                    self.doc_tokens[-1])
+                    self.model_obj.get_num_tokens(q_prompt) - self.doc_tokens[-1]
+                )
                 self.docs.extend(docs)
 
             except Exception as e:
@@ -352,8 +385,9 @@ class eval(Model_Eval):
 
         ### record logs ###
         self._display_info_fnl()
-        self._upload_logs(end_time - start_time, table, sum(self.doc_length),
-                          sum(self.doc_tokens))
+        self._upload_logs(
+            end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
+        )
 
         self._add_result_log(timestamp, end_time - start_time)
 
@@ -391,9 +425,12 @@ class eval(Model_Eval):
         if check_sum_type(self.question_type, self.question_style):
             return 0.0, []
 
-        self.system_prompt = check_essay_system_prompt(
-            self.question_style, self.language,
-            self.system_prompt) + self.system_prompt
+        self.system_prompt = (
+            check_essay_system_prompt(
+                self.question_style, self.language, self.system_prompt
+            )
+            + self.system_prompt
+        )
 
         ## db ##
         self._display_info()
@@ -411,11 +448,9 @@ class eval(Model_Eval):
             self.score = {"correct_count": 0}
         table = {}
         total_docs = []
-        question, answer = get_question_from_file(questionset_file,
-                                                  self.question_style)
+        question, answer = get_question_from_file(questionset_file, self.question_style)
         self.question_num = len(question)
-        progress = tqdm(total=self.question,
-                        desc=f"Run Eval({self.question_style})")
+        progress = tqdm(total=self.question, desc=f"Run Eval({self.question_style})")
         ## add logs ##
         self._add_basic_log(timestamp, "evaluation", -1, -1, questionset_file)
 
@@ -433,8 +468,9 @@ class eval(Model_Eval):
             progress.update(1)
             print("\n")
 
-            new_table = self._eval_get_res(question[i], answer[i], timestamp,
-                                           retrivers_list)
+            new_table = self._eval_get_res(
+                question[i], answer[i], timestamp, retrivers_list
+            )
             # ---- #
             if self.record_exp != "":
                 for key in new_table:
@@ -452,22 +488,23 @@ class eval(Model_Eval):
         self._add_result_log(timestamp, end_time - start_time)
 
         if self.question_style.lower() == "essay":
-            avg_bert = round(
-                sum(self.score["bert"]) / len(self.score["bert"]), 3)
-            avg_rouge = round(
-                sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
+            avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
+            avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(
-                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3)
+                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
+            )
 
-            self._upload_logs(end_time - start_time, table,
-                              sum(self.doc_length), sum(self.doc_tokens))
+            self._upload_logs(
+                end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
+            )
 
             return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
 
         else:
-            correct_rate = (self.score["correct_count"] / self.question_num)
-            self._upload_logs(end_time - start_time, table,
-                              sum(self.doc_length), sum(self.doc_tokens))
+            correct_rate = self.score["correct_count"] / self.question_num
+            self._upload_logs(
+                end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
+            )
 
             return correct_rate, self.doc_tokens
 

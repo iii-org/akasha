@@ -9,11 +9,13 @@ DEFAULT_SEARCH_TYPE = "auto"
 PROMPT = "akasha是甚麼?"
 
 #### create a RAG object and call it ###
-ak = akasha.RAG(embeddings="openai:text-embedding-3-small",
-                model="openai:gpt-4o",
-                max_input_tokens=DEFAULT_MAX_INPUT_TOKENS,
-                keep_logs=True,
-                verbose=True)
+ak = akasha.RAG(
+    embeddings="openai:text-embedding-3-small",
+    model="openai:gpt-4o",
+    max_input_tokens=DEFAULT_MAX_INPUT_TOKENS,
+    keep_logs=True,
+    verbose=True,
+)
 ### selfask_RAG is a function that will first use llm to separate user question into several prompts,
 ### then use RAG to search for the answer. ###
 ### use data source as reference and search similar document to answer the query ###

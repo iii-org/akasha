@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Generator, Union
+from typing import List, Any, Optional
 from langchain.llms.base import LLM
 from transformers import AutoTokenizer, TextStreamer
 
@@ -31,16 +31,15 @@ class gptq(LLM):
         max_token: int = 4096,
     ):
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
-                                                       use_fast=False,
-                                                       max_length=max_token,
-                                                       truncation=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name_or_path, use_fast=False, max_length=max_token, truncation=True
+        )
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.max_token = max_token
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
-        if bit4 == False:
+        if bit4 is False:
             from transformers import AutoModelForCausalLM
 
             self.model = AutoModelForCausalLM.from_pretrained(
@@ -71,8 +70,8 @@ class gptq(LLM):
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
         input_ids = self.tokenizer(
-            prompt, return_tensors="pt",
-            add_special_tokens=False).input_ids.to("cuda")
+            prompt, return_tensors="pt", add_special_tokens=False
+        ).input_ids.to("cuda")
         generate_input = {
             "input_ids": input_ids,
             "max_new_tokens": 1024,
@@ -106,19 +105,20 @@ class peft_Llama2(LLM):
     tokenizer: Any = Field(default=None)
     model: Any = Field(default=None)
 
-    def __init__(self,
-                 model_name_or_path: str,
-                 max_token: int = 2048,
-                 temperature: float = 0.01):
+    def __init__(
+        self, model_name_or_path: str, max_token: int = 2048, temperature: float = 0.01
+    ):
         super().__init__()
         from peft import AutoPeftModelForCausalLM
+
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
         self.max_token = max_token
         device_map = {"": 0}
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path,
-                                                       trust_remote_code=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name_or_path, trust_remote_code=True
+        )
         self.model = AutoPeftModelForCausalLM.from_pretrained(
             model_name_or_path + "/adapter_model",
             temperature=0.1,
@@ -143,8 +143,7 @@ class peft_Llama2(LLM):
             do_sample=True,
         )
 
-        result_message = self.tokenizer.decode(outputs[0],
-                                               skip_special_tokens=True)
+        result_message = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
         return result_message
 
@@ -180,9 +179,9 @@ class TaiwanLLaMaGPTQ(LLM):
             strict=False,
         )
 
-        self.streamer = TextStreamer(self.tokenizer,
-                                     skip_prompt=True,
-                                     skip_special_tokens=True)
+        self.streamer = TextStreamer(
+            self.tokenizer, skip_prompt=True, skip_special_tokens=True
+        )
 
     @property
     def _llm_type(self) -> str:
@@ -203,7 +202,6 @@ class TaiwanLLaMaGPTQ(LLM):
             bos_token_id=self.tokenizer.bos_token_id,
             pad_token_id=self.tokenizer.pad_token_id,
         )
-        output = self.tokenizer.decode(
-            generate_ids[0, len(tokens[0]):-1]).strip()
+        output = self.tokenizer.decode(generate_ids[0, len(tokens[0]) : -1]).strip()
 
         return output

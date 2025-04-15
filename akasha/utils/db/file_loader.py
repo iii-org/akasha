@@ -1,15 +1,21 @@
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader, UnstructuredPowerPointLoader
+from langchain_community.document_loaders import (
+    PyPDFLoader,
+    TextLoader,
+    Docx2txtLoader,
+    UnstructuredPowerPointLoader,
+)
 from langchain_community.document_loaders.csv_loader import CSVLoader
 from langchain.schema import Document
-from typing import Callable, Union, List
-import warnings, logging, traceback
+from typing import Union, List
+import warnings
+import logging
+import traceback
 from akasha.helper.encoding import detect_encoding
 from pathlib import Path
-from typing import Union
 from .db_structure import TEXT_EXTENSIONS
 from akasha.helper.crawler import get_text_from_url
 
-warnings.filterwarnings('ignore', category=UserWarning, module='pypdf')
+warnings.filterwarnings("ignore", category=UserWarning, module="pypdf")
 logging.basicConfig(level=logging.ERROR)
 
 
@@ -56,11 +62,16 @@ def load_file(file_path: str, extension: str) -> List[Document]:
         try:
             trace_text = traceback.format_exc()
 
-            logging.warning("\nLoad " + file_path + " failed, ignored.\n" +
-                            trace_text + "\n\n" + str(err))
-        except:
-            logging.warning("\nLoad file" + " failed, ignored.\n" +
-                            trace_text + "\n\n")
+            logging.warning(
+                "\nLoad "
+                + file_path
+                + " failed, ignored.\n"
+                + trace_text
+                + "\n\n"
+                + str(err)
+            )
+        except Exception:
+            logging.warning("\nLoad file" + " failed, ignored.\n" + trace_text + "\n\n")
         return []
 
 
@@ -105,15 +116,10 @@ def load_url(url: str) -> Document:
     """
     url_title, url_text = get_text_from_url(url)
 
-    return Document(page_content=url_text,
-                    metadata={
-                        "title": url_title,
-                        "url": url
-                    })
+    return Document(page_content=url_text, metadata={"title": url_title, "url": url})
 
 
-def get_load_file_list(doc_path: Union[str, Path],
-                       extension: str = "pdf") -> list:
+def get_load_file_list(doc_path: Union[str, Path], extension: str = "pdf") -> list:
     """get the list of text files with extension type in doc_path directory
 
     Args:

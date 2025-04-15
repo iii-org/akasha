@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from pydantic import Field
 from langchain.schema import BaseRetriever, Document
 
@@ -23,7 +23,6 @@ class myRerankRetriever(BaseRetriever):
         model_name: str = "BAAI/bge-reranker-base",
         **kwargs: Any,
     ) -> BaseRetriever:
-
         return cls(
             model_name=model_name,
             texts=[doc.page_content for doc in docs],
@@ -44,9 +43,9 @@ class myRerankRetriever(BaseRetriever):
             List[Document]: relevant documents
         """
 
-        top_k_results, top_k_scores = rerank(query, self.docs,
-                                             self.relevancy_threshold,
-                                             self.model_name)
+        top_k_results, top_k_scores = rerank(
+            query, self.docs, self.relevancy_threshold, self.model_name
+        )
 
         return top_k_results, top_k_scores
 
@@ -54,30 +53,28 @@ class myRerankRetriever(BaseRetriever):
         self,
         query: str,
     ) -> Tuple[List[Document], List[float]]:
-
         return self._gs(query)
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
-
         return self._gs(query)[0]
 
 
 def rerank(query: str, docs: list, threshold: float, model_name: str):
-    import torch, gc
+    import torch
+    import gc
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(
-        device)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
     model.eval()
 
     k, score_list = 0, []
     while k < len(docs):
-        pairs = [[query, doc.page_content] for doc in docs[k:k + 10]]
+        pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
         with torch.no_grad():
             inputs = tokenizer(
                 pairs,
@@ -86,8 +83,13 @@ def rerank(query: str, docs: list, threshold: float, model_name: str):
                 return_tensors="pt",
                 max_length=512,
             ).to(device)
-            scores = (model(**inputs,
-                            return_dict=True).logits.view(-1, ).float())
+            scores = (
+                model(**inputs, return_dict=True)
+                .logits.view(
+                    -1,
+                )
+                .float()
+            )
         if k == 0:
             score_list = scores
         else:
@@ -111,23 +113,23 @@ def rerank(query: str, docs: list, threshold: float, model_name: str):
     gc.collect()
     torch.cuda.empty_cache()
 
-    return documents, score_list[:len(documents)]
+    return documents, score_list[: len(documents)]
 
 
 def rerank_reduce(query, docs, topK):
-    import torch, gc
+    import torch
+    import gc
     from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(
-        device)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
     model.eval()
-    #topK //= 2
+    # topK //= 2
     k, score_list = 0, []
     while k < len(docs):
-        pairs = [[query, doc.page_content] for doc in docs[k:k + 10]]
+        pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
         with torch.no_grad():
             inputs = tokenizer(
                 pairs,
@@ -136,8 +138,13 @@ def rerank_reduce(query, docs, topK):
                 return_tensors="pt",
                 max_length=512,
             ).to(device)
-            scores = (model(**inputs,
-                            return_dict=True).logits.view(-1, ).float())
+            scores = (
+                model(**inputs, return_dict=True)
+                .logits.view(
+                    -1,
+                )
+                .float()
+            )
         if k == 0:
             score_list = scores
         else:

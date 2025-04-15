@@ -1,10 +1,22 @@
-import time
-from typing import Callable, Union, List, Tuple, Generator
+from typing import Callable, Union, List
 from akasha.helper import handle_embeddings, handle_model_type, handle_model
-from akasha.utils.prompts.format import handle_language, language_dict, handle_metrics, handle_params, handle_table
+from akasha.utils.prompts.format import (
+    handle_language,
+    language_dict,
+    handle_metrics,
+    handle_params,
+    handle_table,
+)
 import datetime
 import logging
-from akasha.utils.base import DEFAULT_CHUNK_SIZE, DEFAULT_SEARCH_TYPE, DEFAULT_EMBED, DEFAULT_MODEL, DEFAULT_MAX_OUTPUT_TOKENS, DEFAULT_MAX_INPUT_TOKENS
+from akasha.utils.base import (
+    DEFAULT_CHUNK_SIZE,
+    DEFAULT_SEARCH_TYPE,
+    DEFAULT_EMBED,
+    DEFAULT_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MAX_INPUT_TOKENS,
+)
 from akasha.utils.db.db_structure import dbs
 from akasha.utils.db.load_db import process_db, load_db_by_chroma_name
 
@@ -63,16 +75,21 @@ class basic_llm:
         self.logs: dict[dict] = {}
 
         ### set model and embeddings ###
-        self.model_obj = handle_model(model, self.verbose, self.temperature,
-                                      self.max_output_tokens, self.env_file)
+        self.model_obj = handle_model(
+            model, self.verbose, self.temperature, self.max_output_tokens, self.env_file
+        )
         self.model = handle_model_type(model)
 
     def _set_model(self, **kwargs):
         """change model, temperature if user use **kwargs to change them."""
         ## check if we need to change db, model_obj or embeddings_obj ##
 
-        if ("model" in kwargs) or ("temperature" in kwargs) or (
-                "max_output_tokens" in kwargs) or ("env_file" in kwargs):
+        if (
+            ("model" in kwargs)
+            or ("temperature" in kwargs)
+            or ("max_output_tokens" in kwargs)
+            or ("env_file" in kwargs)
+        ):
             new_temp = self.temperature
             new_model = self.model
             new_tokens = self.max_output_tokens
@@ -85,29 +102,30 @@ class basic_llm:
                 new_tokens = kwargs["max_output_tokens"]
             if "env_file" in kwargs:
                 new_env_file = kwargs["env_file"]
-            if (new_model != self.model) or (new_temp != self.temperature) or (
-                    new_tokens
-                    != self.max_output_tokens) or (new_env_file
-                                                   != self.env_file):
-                self.model_obj = handle_model(new_model, self.verbose,
-                                              new_temp, new_tokens,
-                                              new_env_file)
+            if (
+                (new_model != self.model)
+                or (new_temp != self.temperature)
+                or (new_tokens != self.max_output_tokens)
+                or (new_env_file != self.env_file)
+            ):
+                self.model_obj = handle_model(
+                    new_model, self.verbose, new_temp, new_tokens, new_env_file
+                )
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
         ### check input argument is valid or not ###
         for key, value in kwargs.items():
-
-            if (key == "model"
-                    or key == "embeddings") and key in self.__dict__:
+            if (key == "model" or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = handle_model_type(value)
 
             elif key == "language":
                 self.language = handle_language(value)
 
             elif key in self.__dict__:  # check if variable exist
-                if (getattr(self, key, None)
-                        != value):  # check if variable value is different
+                if (
+                    getattr(self, key, None) != value
+                ):  # check if variable value is different
                     self.__dict__[key] = value
             else:
                 if key != "dbs":
@@ -120,7 +138,7 @@ class basic_llm:
             timestamp (str): timestamp of this run
             fn_type (str): function type of this run
         """
-        if self.keep_logs == False:
+        if self.keep_logs is False:
             return False
         self.timestamp_list.append(timestamp)
 
@@ -142,49 +160,56 @@ class basic_llm:
             time (float): spent time of this run
         """
 
-        if self.keep_logs == False:
+        if self.keep_logs is False:
             return False
 
         self.logs[timestamp]["time"] = time
         try:
             self.logs[timestamp]["docs"] = "\n\n".join(
-                [doc.page_content for doc in self.docs])
-            self.logs[timestamp]["doc_metadata"] = "\n\n".join([
-                doc.metadata["source"] + "    page: " +
-                str(doc.metadata["page"]) for doc in self.docs
-            ])
-        except:
+                [doc.page_content for doc in self.docs]
+            )
+            self.logs[timestamp]["doc_metadata"] = "\n\n".join(
+                [
+                    doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
+                    for doc in self.docs
+                ]
+            )
+        except Exception:
             try:
-                self.logs[timestamp]["doc_metadata"] = "\n\n".join([
-                    doc.metadata["url"] + "    title: " +
-                    str(doc.metadata["title"]) for doc in self.docs
-                ])
-            except:
-
+                self.logs[timestamp]["doc_metadata"] = "\n\n".join(
+                    [
+                        doc.metadata["url"] + "    title: " + str(doc.metadata["title"])
+                        for doc in self.docs
+                    ]
+                )
+            except Exception:
                 try:
                     self.logs[timestamp]["doc_metadata"] = "none"
                     self.logs[timestamp]["docs"] = "\n\n".join(
-                        [doc for doc in self.docs])
-                except:
+                        [doc for doc in self.docs]
+                    )
+                except Exception:
                     self.logs[timestamp]["doc_metadata"] = "none"
                     self.logs[timestamp]["docs"] = "\n\n".join(
-                        [doc.page_content for doc in self.docs])
+                        [doc.page_content for doc in self.docs]
+                    )
 
         self.logs[timestamp]["system_prompt"] = self.system_prompt
 
         return True
 
     def _display_docs(self, show_num: int = 5):
-
-        if (not hasattr(self, 'docs')) or (self.verbose == False) or (self.docs
-                                                                      == []):
+        if (not hasattr(self, "docs")) or (self.verbose is False) or (self.docs == []):
             return
         show_less = ""
         if len(self.docs) > show_num:
             show_less = f" (showing {show_num} of " + str(len(self.docs)) + ")"
-        splitter = '\n----------------\n'
-        found_ref = "----------------\n" + splitter.join(
-            [doc.page_content for doc in self.docs[:show_num]]) + splitter
+        splitter = "\n----------------\n"
+        found_ref = (
+            "----------------\n"
+            + splitter.join([doc.page_content for doc in self.docs[:show_num]])
+            + splitter
+        )
 
         print(f"Reference{show_less}: \n\n" + found_ref + "\n\n")
 
@@ -238,9 +263,13 @@ class basic_llm:
                     text = key + ":\n"
                     fp.write(text)
                     for k in self.logs[key]:
-                        if type(self.logs[key][k]) == list:
-                            text = (k + ": " + "\n".join(
-                                [str(w) for w in self.logs[key][k]]) + "\n\n")
+                        if type(self.logs[key][k]) is list:
+                            text = (
+                                k
+                                + ": "
+                                + "\n".join([str(w) for w in self.logs[key][k]])
+                                + "\n\n"
+                            )
 
                         else:
                             text = k + ": " + str(self.logs[key][k]) + "\n\n"
@@ -299,9 +328,18 @@ class atman(basic_llm):
             **env_file (str, optional)**: the path of the .env file. Defaults to "".\n
         """
 
-        super().__init__(model, max_input_tokens, max_output_tokens,
-                         temperature, language, record_exp, system_prompt,
-                         keep_logs, verbose, env_file)
+        super().__init__(
+            model,
+            max_input_tokens,
+            max_output_tokens,
+            temperature,
+            language,
+            record_exp,
+            system_prompt,
+            keep_logs,
+            verbose,
+            env_file,
+        )
 
         self.chunk_size = chunk_size
         self.threshold = threshold
@@ -312,8 +350,7 @@ class atman(basic_llm):
         self.ignored_files = []
         ### set model and embeddings ###
 
-        self.embeddings_obj = handle_embeddings(embeddings, self.verbose,
-                                                self.env_file)
+        self.embeddings_obj = handle_embeddings(embeddings, self.verbose, self.env_file)
         self.embeddings = handle_model_type(embeddings)
 
     def _set_model(self, **kwargs):
@@ -322,8 +359,9 @@ class atman(basic_llm):
         super()._set_model(**kwargs)
 
         if "search_type" in kwargs:
-            self.search_type_str = handle_model_type(kwargs["search_type"],
-                                                     self.verbose)
+            self.search_type_str = handle_model_type(
+                kwargs["search_type"], self.verbose
+            )
 
         if ("embeddings" in kwargs) or ("env_file" in kwargs):
             new_embeddings = self.embeddings
@@ -335,7 +373,8 @@ class atman(basic_llm):
 
             if new_embeddings != self.embeddings or new_env_file != self.env_file:
                 self.embeddings_obj = handle_embeddings(
-                    new_embeddings, self.verbose, new_env_file)
+                    new_embeddings, self.verbose, new_env_file
+                )
 
     def _check_doc_path(self, doc_path: Union[List[str], str, dbs]):
         if isinstance(doc_path, dbs):
@@ -356,7 +395,6 @@ class atman(basic_llm):
         return True
 
     def _get_db(self, data: Union[List[str], str, dbs]):
-
         if isinstance(data, dbs):
             self.db = data
             self.ignored_files = []
@@ -368,7 +406,8 @@ class atman(basic_llm):
                 embeddings=self.embeddings_obj,
                 chunk_size=self.chunk_size,
                 verbose=self.verbose,
-                env_file=self.env_file)
+                env_file=self.env_file,
+            )
 
         return
 
@@ -379,7 +418,7 @@ class atman(basic_llm):
             timestamp (str): timestamp of this run
             fn_type (str): function type of this run
         """
-        if super()._add_basic_log(timestamp, fn_type) == False:
+        if super()._add_basic_log(timestamp, fn_type) is False:
             return False
 
         self.logs[timestamp]["chunk_size"] = self.chunk_size
@@ -395,17 +434,15 @@ class atman(basic_llm):
             time (float): spent time of this run
         """
 
-        if super()._add_result_log(timestamp, time) == False:
+        if super()._add_result_log(timestamp, time) is False:
             return False
         self.logs[timestamp]["time"] = time
 
         return True
 
-    def _upload_logs(self,
-                     tot_time: float,
-                     doc_length: int = 0,
-                     doc_tokens: int = 0) -> str:
-
+    def _upload_logs(
+        self, tot_time: float, doc_length: int = 0, doc_tokens: int = 0
+    ) -> str:
         if self.record_exp == "":
             return "no record_exp assigned, so no logs uploaded"
 
@@ -420,14 +457,19 @@ class atman(basic_llm):
         metrics = handle_metrics(doc_length, tot_time, doc_tokens)
         table = handle_table(self.prompt, self.docs, self.response)
         from akasha.utils.upload import aiido_upload
+
         aiido_upload(self.record_exp, params, metrics, table)
 
         return "logs uploaded"
 
-    def _format_docs(self, ) -> str:
-
-        splitter = '\n----------------\n'
-        found_ref = "----------------\n" + splitter.join(
-            [doc.page_content for doc in self.docs]) + splitter
+    def _format_docs(
+        self,
+    ) -> str:
+        splitter = "\n----------------\n"
+        found_ref = (
+            "----------------\n"
+            + splitter.join([doc.page_content for doc in self.docs])
+            + splitter
+        )
 
         return found_ref

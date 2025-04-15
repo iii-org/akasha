@@ -8,9 +8,10 @@ MODEL = "openai:gpt-4o"
 ### first, we define a function to retrieve today's date ###
 def today_f():
     from datetime import datetime
+
     now = datetime.now()
 
-    return f"today's date: " + str(now.strftime("%Y-%m-%d %H:%M:%S"))
+    return "today's date: " + str(now.strftime("%Y-%m-%d %H:%M:%S"))
 
 
 # then we create a tool to call the function, add function name and description
@@ -18,30 +19,32 @@ def today_f():
 today_tool = akasha.create_tool(
     "today_date_tool",
     "This is the tool to get today's date, the tool don't have any input parameter.",
-    today_f)
+    today_f,
+)
 
 ### create an agent with the tool, so llm can use tool to answer the question correctly ###
-agent = akasha.agents(tools=[today_tool],
-                      model=MODEL,
-                      temperature=1.0,
-                      verbose=True,
-                      keep_logs=True)
+agent = akasha.agents(
+    tools=[today_tool], model=MODEL, temperature=1.0, verbose=True, keep_logs=True
+)
 
 agent("今天幾月幾號?")
 
 agent.save_logs("logs.json")
 
 ### akasha have some built-in tools, you can use them directly ###
-import akasha.agent.agent_tools as at
+import akasha.agent.agent_tools as at  # noqa: E402
+
 # agent_tools.rag_tool  # agent_tools.calculate_tool # agent_tools.saveJSON_tool
 tool_list = [at.websearch_tool(search_engine="brave"), at.saveJSON_tool()]
 
-agnt = akasha.agents(tools=tool_list,
-                     model=MODEL,
-                     temperature=1.0,
-                     max_input_tokens=8000,
-                     verbose=True,
-                     keep_logs=True)
+agnt = akasha.agents(
+    tools=tool_list,
+    model=MODEL,
+    temperature=1.0,
+    max_input_tokens=8000,
+    verbose=True,
+    keep_logs=True,
+)
 
 agnt("用網頁搜尋工業4.0，並將資訊存成json檔iii.json")
 agnt.save_logs("logs.json")
@@ -58,7 +61,7 @@ agnt.save_logs("logs.json")
 # ### for example, first, we write a cal_server.py to create add tool and multiple tool ###
 
 # cal_server.py
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP  # noqa: E402
 
 mcp = FastMCP("Math")
 
@@ -81,8 +84,7 @@ if __name__ == "__main__":
 ### also, we can create a weather server to get the weather(using sse) ###
 
 # weather_server.py
-from typing import List
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP  # noqa: E402
 
 mcp = FastMCP("Weather")
 
@@ -107,9 +109,9 @@ if __name__ == "__main__":
 ### run the weather_server.py using "pyhon weather_server.py" in command line to activate the server
 ### then we can use akasha agent to call the tools in MCP server ###
 
-import asyncio
-import akasha
-from langchain_mcp_adapters.client import MultiServerMCPClient
+import asyncio  # noqa: E402
+import akasha  # noqa: E402
+from langchain_mcp_adapters.client import MultiServerMCPClient  # noqa: E402
 
 MODEL = "openai:gpt-4o"
 
@@ -126,14 +128,13 @@ connection_info = {
         # make sure you start your weather server with correct port
         "url": "http://localhost:8000/sse",
         "transport": "sse",
-    }
+    },
 }
 
 
 ## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
 async def call_agents(prompt: str):
     async with MultiServerMCPClient(connection_info) as client:
-
         tools = client.get_tools()
         agent = akasha.agents(
             tools=tools,

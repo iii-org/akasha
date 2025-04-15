@@ -1,7 +1,5 @@
 import streamlit as st
 from pathlib import Path
-import os
-from dotenv import load_dotenv
 
 
 def setting_page():
@@ -32,7 +30,7 @@ def setting_page():
             help="The path of the document folder.",
         )
 
-        if doc_path != None and doc_path != st.session_state.select_idx[0]:
+        if doc_path is not None and doc_path != st.session_state.select_idx[0]:
             # st.session_state.select_idx[0] = st.session_state.docs_list.index(doc_path)
             st.session_state.select_idx[0] = doc_path
             try:
@@ -40,7 +38,7 @@ def setting_page():
                     st.session_state.docs_path + "/" + doc_p
                     for doc_p in st.session_state.select_idx[0]
                 ]
-            except:
+            except Exception:
                 pass
             st.rerun()
         print(st.session_state.chose_doc_path)
@@ -55,7 +53,8 @@ def setting_page():
         if embed != st.session_state.embed:
             st.session_state.embed = embed
             st.session_state.select_idx[1] = st.session_state.embed_list.index(
-                st.session_state.embed)
+                st.session_state.embed
+            )
 
             st.rerun()
     with md:
@@ -68,7 +67,8 @@ def setting_page():
         if md != st.session_state.model:
             st.session_state.model = md
             st.session_state.select_idx[2] = st.session_state.model_list.index(
-                st.session_state.model)
+                st.session_state.model
+            )
             st.rerun()
 
     cks, seat = st.columns([1, 1])
@@ -94,9 +94,9 @@ def setting_page():
         )
         if stp != st.session_state.search_type:
             st.session_state.search_type = stp
-            st.session_state.select_idx[
-                3] = st.session_state.search_list.index(
-                    st.session_state.search_type)
+            st.session_state.select_idx[3] = st.session_state.search_list.index(
+                st.session_state.search_type
+            )
             st.rerun()
 
     tem, mxt = st.columns([1, 2])
@@ -119,8 +119,7 @@ def setting_page():
             value=st.session_state.max_input_tokens,
             min_value=1000,
             step=50,
-            help=
-            "The maximum number of tokens in the reference documents that will be used as input for the LLM model.",
+            help="The maximum number of tokens in the reference documents that will be used as input for the LLM model.",
         )
 
         if mt != st.session_state.max_input_tokens:
@@ -132,19 +131,21 @@ def set_model_dir():
     """parse all model files(gguf) and directory in the model folder"""
 
     st.session_state.model_list = [
-        "openai:gpt-3.5-turbo", "openai:gpt-4o", "gemini:gemini-1.5-flash",
-        "anthropic:claude-3-5-sonnet-20241022"
+        "openai:gpt-3.5-turbo",
+        "openai:gpt-4o",
+        "gemini:gemini-1.5-flash",
+        "anthropic:claude-3-5-sonnet-20241022",
     ]
     try:
         modes_dir = Path(st.session_state.mdl_dir)
         for dir_path in modes_dir.iterdir():
             if dir_path.is_dir():
-                st.session_state.model_list.append("hf:" +
-                                                   st.session_state.mdl_dir +
-                                                   "/" + dir_path.name)
+                st.session_state.model_list.append(
+                    "hf:" + st.session_state.mdl_dir + "/" + dir_path.name
+                )
             elif dir_path.suffix == ".gguf":
-                st.session_state.model_list.append("llama-gpu:" +
-                                                   st.session_state.mdl_dir +
-                                                   "/" + dir_path.name)
-    except:
+                st.session_state.model_list.append(
+                    "llama-gpu:" + st.session_state.mdl_dir + "/" + dir_path.name
+                )
+    except Exception:
         print("can not find model folder!\n\n")

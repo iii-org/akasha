@@ -15,15 +15,17 @@ def test_Summary():
         chunk_overlap=41,
     )
 
-    assert summ.verbose == False
+    assert summ.verbose is False
     assert summ.chunk_size == 501
     assert summ.chunk_overlap == 41
     assert summ.max_input_tokens == 3000
 
-    text = summ(content=["https://github.com/iii-org/akasha"],
-                sum_type="map_reduce",
-                sum_len=300)
+    text = summ(
+        content=["https://github.com/iii-org/akasha"],
+        sum_type="map_reduce",
+        sum_len=300,
+    )
 
-    assert type(text) == str
+    assert isinstance(text, str)
 
     return

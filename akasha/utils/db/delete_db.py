@@ -3,9 +3,14 @@ import logging
 from pathlib import Path
 from typing import Union, Callable
 from langchain_core.embeddings import Embeddings
-from akasha.utils.db.db_structure import get_storage_directory, FILE_LAST_CHANGE_FILE_NAME
+from akasha.utils.db.db_structure import (
+    get_storage_directory,
+    FILE_LAST_CHANGE_FILE_NAME,
+)
 from akasha.helper.base import get_embedding_type_and_name
-import shutil, time, gc, json
+import shutil
+import gc
+import json
 from typing import List
 
 _LANGCHAIN_DEFAULT_COLLECTION_NAME = "langchain"
@@ -29,8 +34,9 @@ def delete_documents_by_directory(
 
     try:
         embed_type, embed_name = get_embedding_type_and_name(embeddings)
-        storage_directory = get_storage_directory(directory_path, chunk_size,
-                                                  embed_type, embed_name)
+        storage_directory = get_storage_directory(
+            directory_path, chunk_size, embed_type, embed_name
+        )
 
         shutil.rmtree(Path(storage_directory))
     except Exception as e:
@@ -61,17 +67,21 @@ def delete_documents_by_file(
     doc_path = file_path.parent
     file_name = file_path.name
     embed_type, embed_name = get_embedding_type_and_name(embeddings)
-    storage_directory = get_storage_directory(doc_path, chunk_size, embed_type,
-                                              embed_name)
+    storage_directory = get_storage_directory(
+        doc_path, chunk_size, embed_type, embed_name
+    )
 
     # Retrieve all documents in the collection
-    docsearch = Chroma(persist_directory=storage_directory, )
+    docsearch = Chroma(
+        persist_directory=storage_directory,
+    )
     all_docs = docsearch._collection.get()
-    tot_ids_len = len(all_docs['ids'])
+    tot_ids_len = len(all_docs["ids"])
     # Filter documents by metadata
     ids_to_delete = [
-        doci for doci, docm in zip(all_docs['ids'], all_docs['metadatas'])
-        if file_name in docm.get('source')
+        doci
+        for doci, docm in zip(all_docs["ids"], all_docs["metadatas"])
+        if file_name in docm.get("source")
     ]
     # Delete documents by IDs
     if len(ids_to_delete) > 0:
@@ -81,8 +91,7 @@ def delete_documents_by_file(
             f"Deleted {len(ids_to_delete)} documents with file_name: {file_name}"
         )
     else:
-        logging.warning(
-            f"No documents found with file_name: {file_name} to delete")
+        logging.warning(f"No documents found with file_name: {file_name} to delete")
         print(f"No documents found with file_name: {file_name} to delete")
 
     if tot_ids_len == len(ids_to_delete) or tot_ids_len == 0:
@@ -103,8 +112,7 @@ def delete_documents_by_file(
     return len(ids_to_delete)
 
 
-def delete_documents_from_chroma_by_file_name(chroma: Chroma,
-                                              file_name: str) -> int:
+def delete_documents_from_chroma_by_file_name(chroma: Chroma, file_name: str) -> int:
     """delete the documents in the chroma db by file name
 
     Args:
@@ -117,8 +125,9 @@ def delete_documents_from_chroma_by_file_name(chroma: Chroma,
     all_docs = chroma._collection.get()
     # Filter documents by metadata
     ids_to_delete = [
-        doci for doci, docm in zip(all_docs['ids'], all_docs['metadatas'])
-        if file_name in docm.get('source')
+        doci
+        for doci, docm in zip(all_docs["ids"], all_docs["metadatas"])
+        if file_name in docm.get("source")
     ]
     # Delete documents by IDs
     if len(ids_to_delete) > 0:
@@ -133,7 +142,6 @@ def delete_documents_from_chroma_by_file_name(chroma: Chroma,
 
 
 def _delete_docs_built_time(storage_directory: str, file_name: List[str]):
-
     storage_path = Path(storage_directory)
 
     # Path to the JSON file
@@ -146,7 +154,7 @@ def _delete_docs_built_time(storage_directory: str, file_name: List[str]):
     if json_file_path.exists():
         # Load the JSON file
         try:
-            with open(json_file_path, 'r', encoding="utf-8") as json_file:
+            with open(json_file_path, "r", encoding="utf-8") as json_file:
                 file_last_changed = json.load(json_file)
         except Exception as e:
             logging.warning(f"Error reading JSON file: {e}")
@@ -162,11 +170,8 @@ def _delete_docs_built_time(storage_directory: str, file_name: List[str]):
 
     # Write the dictionary to the JSON file
     try:
-        with open(json_file_path, 'w', encoding="utf-8") as json_file:
-            json.dump(file_last_changed,
-                      json_file,
-                      indent=4,
-                      ensure_ascii=False)
+        with open(json_file_path, "w", encoding="utf-8") as json_file:
+            json.dump(file_last_changed, json_file, indent=4, ensure_ascii=False)
     except Exception as e:
         logging.warning(f"Error writing JSON file: {e}")
         print(f"Error writing JSON file: {e}")

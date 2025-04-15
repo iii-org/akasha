@@ -28,7 +28,7 @@ def get_retrivers(
         **db (Chromadb)**: chroma db\n
         **embeddings (Union[Embeddings, str])**: embeddings used to store vector and search documents\n
         **query (str)**: the query str used to search similar documents\n
-        **threshold (float)**: (deprecated) the similarity score threshold to select documents\n 
+        **threshold (float)**: (deprecated) the similarity score threshold to select documents\n
         **search_type (str)**: search type to find similar documents from db, .
             includes 'auto', 'merge', 'mmr', 'svm', 'tfidf', 'bm25'.\n
         **use_rerank (bool)**: use rerank model to search docs. Defaults to False.\n
@@ -41,31 +41,26 @@ def get_retrivers(
 
     retriver_list = []
 
-    embeddings, embed_name = handle_embeddings_and_name(
-        embeddings, False, env_file)
+    embeddings, embed_name = handle_embeddings_and_name(embeddings, False, env_file)
 
     if callable(search_type):
-
-        custom_retriver = customRetriever.from_db(db, embeddings, search_type,
-                                                  topK, threshold)
+        custom_retriver = customRetriever.from_db(
+            db, embeddings, search_type, topK, threshold
+        )
         retriver_list.append(custom_retriver)
 
     else:
         search_type = search_type.lower()
 
-        if search_type in [
-                "merge", "tfidf", "auto", "auto_rerank", "bm25", "rerank"
-        ]:
+        if search_type in ["merge", "tfidf", "auto", "auto_rerank", "bm25", "rerank"]:
             docs_list = db.get_Documents()
 
         if search_type in ["mmr", "merge"]:
-            mmr_retriver = myMMRRetriever.from_db(db, embeddings, topK,
-                                                  threshold)
+            mmr_retriver = myMMRRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(mmr_retriver)
 
         if search_type in ["svm", "merge"]:
-            svm_retriver = mySVMRetriever.from_db(db, embeddings, topK,
-                                                  threshold)
+            svm_retriver = mySVMRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(svm_retriver)
 
         if search_type in ["tfidf", "merge"]:
@@ -73,18 +68,15 @@ def get_retrivers(
             retriver_list.append(tfidf_retriver)
 
         if search_type in ["faiss", "FAISS", "meta", "facebook"]:
-            faiss_retriver = myFAISSRetriever.from_db(db, embeddings, topK,
-                                                      threshold)
+            faiss_retriver = myFAISSRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(faiss_retriver)
 
         if search_type in ["knn", "auto", "auto_rerank"]:
-            knn_retriver = myKNNRetriever.from_db(db, embeddings, topK,
-                                                  threshold)
+            knn_retriver = myKNNRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(knn_retriver)
 
         if search_type in ["bm25", "auto", "auto_rerank"]:
-            bm25_retriver = myBM25Retriever.from_documents(
-                docs_list, topK, threshold)
+            bm25_retriver = myBM25Retriever.from_documents(docs_list, topK, threshold)
             retriver_list.append(bm25_retriver)
 
         if "rerank" in search_type:
@@ -94,14 +86,11 @@ def get_retrivers(
                 rerank_type = "BAAI/bge-reranker-base"
 
             rerank_retriver = myRerankRetriever.from_documents(
-                docs_list,
-                k=topK,
-                relevancy_threshold=threshold,
-                model_name=rerank_type)
+                docs_list, k=topK, relevancy_threshold=threshold, model_name=rerank_type
+            )
             retriver_list.append(rerank_retriver)
 
     if len(retriver_list) == 0:
-        raise ValueError(
-            f"cannot find search type {search_type}, end process\n")
+        raise ValueError(f"cannot find search type {search_type}, end process\n")
 
     return retriver_list

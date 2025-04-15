@@ -10,17 +10,18 @@ DEFAULT_SEARCH_TYPE = "auto"
 # create a eval object with the model and question type, question_style
 # question type : fact, irrelevant, summary, compared
 # question_style : essay, single_choice
-ev = akasha.eval(model="openai:gpt-4o",
-                 question_type="fact",
-                 question_style="essay",
-                 keep_logs=True,
-                 verbose=True)
+ev = akasha.eval(
+    model="openai:gpt-4o",
+    question_type="fact",
+    question_style="essay",
+    keep_logs=True,
+    verbose=True,
+)
 
 # create a question set with the data source, number of questions, number of choices, and output file path
-questions, answers = ev.create_questionset(data_source=["docs/mic"],
-                                           question_num=3,
-                                           choice_num=4,
-                                           output_file_path="cq3.json")
+questions, answers = ev.create_questionset(
+    data_source=["docs/mic"], question_num=3, choice_num=4, output_file_path="cq3.json"
+)
 # save the logs or turn verbose on to see the details
 ev.save_logs("log_cq.json")
 
@@ -30,7 +31,8 @@ questions, answers = ev.create_topic_questionset(
     topic="工業 4.0",
     question_num=3,
     choice_num=4,
-    output_file_path="4-0topic.json")
+    output_file_path="4-0topic.json",
+)
 
-#assign the quesion set file name, and evaluate the model performance of the question set, it will return the evaluation result and the totken usage.
+# assign the quesion set file name, and evaluate the model performance of the question set, it will return the evaluation result and the totken usage.
 print(ev.evaluation(questionset_file="cq3.json", data_source=["docs/mic"]))

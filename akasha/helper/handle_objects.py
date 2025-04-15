@@ -1,18 +1,21 @@
 import warnings
-
-warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 from pathlib import Path
-from typing import Callable, Union, Tuple, List, Generator
+from typing import Callable, Union, Tuple
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI, AzureChatOpenAI, AzureOpenAIEmbeddings
-
-import os, traceback, logging
+from langchain_openai import (
+    OpenAIEmbeddings,
+    ChatOpenAI,
+    AzureChatOpenAI,
+    AzureOpenAIEmbeddings,
+)
+import os
+import traceback
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
-from pathlib import Path
-import os
 from dotenv import dotenv_values
 from akasha.helper.base import separate_name, decide_embedding_type
+
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 
 def _get_env_var(env_file: str = "") -> dict:
@@ -26,9 +29,22 @@ def _get_env_var(env_file: str = "") -> dict:
         dict: return the environment variable dictionary
     """
 
-    require_env = ["OPENAI_API_KEY", "OPENAI_API_BASE", "OPENAI_API_VERSION","OPEANI_API_TYPE", \
-        "AZURE_API_KEY", "AZURE_API_BASE", "AZURE_API_VERSION", "AZURE_API_TYPE", "SERPER_API_KEY",\
-            "GEMINI_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN","ANTHROPIC_API_KEY", "REMOTE_API_KEY"]
+    require_env = [
+        "OPENAI_API_KEY",
+        "OPENAI_API_BASE",
+        "OPENAI_API_VERSION",
+        "OPEANI_API_TYPE",
+        "AZURE_API_KEY",
+        "AZURE_API_BASE",
+        "AZURE_API_VERSION",
+        "AZURE_API_TYPE",
+        "SERPER_API_KEY",
+        "GEMINI_API_KEY",
+        "HF_TOKEN",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "ANTHROPIC_API_KEY",
+        "REMOTE_API_KEY",
+    ]
     if env_file == "" or not Path(env_file).exists():
         env_dict = {}
         os_env_dict = os.environ.copy()
@@ -52,8 +68,8 @@ def _handle_azure_env(env_dict: dict) -> Tuple[str, str, str]:
         for check in check_env:
             if f"AZURE_API_{check}" in env_dict:
                 ret[count] = env_dict[f"AZURE_API_{check}"]
-                #if "OPENAI_API_BASE" in os.environ:
-                #os.environ.pop("OPENAI_API_BASE", None)
+                # if "OPENAI_API_BASE" in os.environ:
+                # os.environ.pop("OPENAI_API_BASE", None)
             elif f"OPENAI_API_{check}" in os.environ:
                 ret[count] = env_dict[f"OPENAI_API_{check}"]
                 if check == "BASE":
@@ -74,9 +90,11 @@ def _handle_azure_env(env_dict: dict) -> Tuple[str, str, str]:
     return ret[0], ret[1], ret[2]
 
 
-def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
-                      verbose: bool = False,
-                      env_file: str = "") -> Embeddings:
+def handle_embeddings(
+    embedding_name: str = "openai:text-embedding-ada-002",
+    verbose: bool = False,
+    env_file: str = "",
+) -> Embeddings:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
         use openai:text-embedding-ada-002 as default.
     Args:
@@ -90,12 +108,11 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         vars: embeddings client
     """
     if isinstance(embedding_name, Embeddings):
-
         return embedding_name
 
     if isinstance(embedding_name, Callable):
-
         from akasha.utils.models.custom import custom_embed
+
         embeddings = custom_embed(func=embedding_name)
         if verbose:
             print("selected custom embedding.")
@@ -103,25 +120,23 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
 
     embedding_type, embedding_name = separate_name(embedding_name)
     env_dict = _get_env_var(env_file)
-    if embedding_type in [
-            "text-embedding-ada-002", "openai", "openaiembeddings"
-    ]:
+    if embedding_type in ["text-embedding-ada-002", "openai", "openaiembeddings"]:
         import openai
 
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
-                == "azure") or ("OPENAI_API_TYPE" in env_dict
-                                and env_dict["OPENAI_API_TYPE"] == "azure"):
-
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
+            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
+        ):
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
-            embeddings = AzureOpenAIEmbeddings(model=embedding_name,
-                                               azure_endpoint=api_base,
-                                               api_key=api_key,
-                                               api_version=api_version,
-                                               validate_base_url=False)
+            embeddings = AzureOpenAIEmbeddings(
+                model=embedding_name,
+                azure_endpoint=api_base,
+                api_key=api_key,
+                api_version=api_version,
+                validate_base_url=False,
+            )
 
         else:
-
             if "OPENAI_API_KEY" not in env_dict:
                 raise Exception(
                     "can not find the OPENAI_API_KEY in environment variable.\n\n"
@@ -137,26 +152,25 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         info = "selected openai embeddings.\n"
 
     elif embedding_type in [
-            "huggingface",
-            "huggingfaceembeddings",
-            "transformers",
-            "transformer",
-            "hf",
+        "huggingface",
+        "huggingfaceembeddings",
+        "transformers",
+        "transformer",
+        "hf",
     ]:
-
         from langchain_huggingface import HuggingFaceEmbeddings
 
         embeddings = HuggingFaceEmbeddings(
-            model_name=embedding_name,
-            model_kwargs={"trust_remote_code": True})
+            model_name=embedding_name, model_kwargs={"trust_remote_code": True}
+        )
         info = "selected hugging face embeddings.\n"
 
     elif embedding_type in [
-            "tf",
-            "tensorflow",
-            "tensorflowhub",
-            "tensorflowhubembeddings",
-            "tensorflowembeddings",
+        "tf",
+        "tensorflow",
+        "tensorflowhub",
+        "tensorflowhubembeddings",
+        "tensorflowembeddings",
     ]:
         from langchain_community.embeddings import TensorflowHubEmbeddings
 
@@ -164,30 +178,30 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
         info = "selected tensorflow embeddings.\n"
 
     elif embedding_type in ["gemini", "gemi", "google"]:
-
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
         embeddings = GoogleGenerativeAIEmbeddings(
-            model=embedding_name, google_api_key=os.environ["GEMINI_API_KEY"])
+            model=embedding_name, google_api_key=os.environ["GEMINI_API_KEY"]
+        )
         info = "selected gemini embeddings.\n"
 
     else:
         import openai
 
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
-                == "azure") or ("OPENAI_API_TYPE" in env_dict
-                                and env_dict["OPENAI_API_TYPE"] == "azure"):
-
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
+            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
+        ):
             embedding_name = embedding_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
-            embeddings = AzureOpenAIEmbeddings(model=embedding_name,
-                                               azure_endpoint=api_base,
-                                               api_key=api_key,
-                                               api_version=api_version,
-                                               validate_base_url=False)
+            embeddings = AzureOpenAIEmbeddings(
+                model=embedding_name,
+                azure_endpoint=api_base,
+                api_key=api_key,
+                api_version=api_version,
+                validate_base_url=False,
+            )
 
         else:
-
             if "OPENAI_API_KEY" not in env_dict:
                 raise Exception(
                     "can not find the OPENAI_API_KEY in environment variable.\n\n"
@@ -208,10 +222,11 @@ def handle_embeddings(embedding_name: str = "openai:text-embedding-ada-002",
     return embeddings
 
 
-def handle_embeddings_and_name(embeddings: Union[
-    str, Embeddings, Callable] = "openai:text-embedding-ada-002",
-                               verbose: bool = False,
-                               env_file: str = "") -> Tuple[Embeddings, str]:
+def handle_embeddings_and_name(
+    embeddings: Union[str, Embeddings, Callable] = "openai:text-embedding-ada-002",
+    verbose: bool = False,
+    env_file: str = "",
+) -> Tuple[Embeddings, str]:
     """get the embeddings object and embed name
 
     Args:
@@ -235,11 +250,13 @@ def handle_embeddings_and_name(embeddings: Union[
     return model_obj, model_name
 
 
-def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
-                 verbose: bool = False,
-                 temperature: float = 0.0,
-                 max_output_tokens: int = 1024,
-                 env_file: str = "") -> BaseLanguageModel:
+def handle_model(
+    model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
+    verbose: bool = False,
+    temperature: float = 0.0,
+    max_output_tokens: int = 1024,
+    env_file: str = "",
+) -> BaseLanguageModel:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
     Args:
@@ -255,6 +272,7 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
 
     if isinstance(model_name, Callable):
         from akasha.utils.models.custom import custom_model
+
         model = custom_model(func=model_name, temperature=temperature)
         if verbose:
             print("selected custom model.")
@@ -263,8 +281,8 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
     model_type, model_name = separate_name(model_name)
     env_dict = _get_env_var(env_file)
     if model_type in ["remote", "server", "tgi", "text-generation-inference"]:
-
         from akasha.utils.models.remo import remote_model
+
         remote_api_key = "123"
         remote_model_name = "remote_model"
         base_url = model_name
@@ -273,43 +291,51 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         if "@" in model_name:
             base_url, remote_model_name = model_name.split("@")
 
-        info = f"selected remote model. \n"
-        model = remote_model(base_url,
-                             temperature,
-                             api_key=remote_api_key,
-                             model_name=remote_model_name,
-                             max_output_tokens=max_output_tokens)
+        info = "selected remote model. \n"
+        model = remote_model(
+            base_url,
+            temperature,
+            api_key=remote_api_key,
+            model_name=remote_model_name,
+            max_output_tokens=max_output_tokens,
+        )
 
     elif model_type in ["google", "gemini", "gemi"]:
-
         from akasha.utils.models.gemi import gemini_model
+
         if "GEMINI_API_KEY" not in env_dict:
             raise Exception(
-                "can not find the GEMINI_API_KEY in environment variable.\n\n")
-        info = f"selected gemini model. \n"
-        model = gemini_model(model_name=model_name,
-                             api_key=env_dict["GEMINI_API_KEY"],
-                             temperature=temperature,
-                             max_output_tokens=max_output_tokens)
+                "can not find the GEMINI_API_KEY in environment variable.\n\n"
+            )
+        info = "selected gemini model. \n"
+        model = gemini_model(
+            model_name=model_name,
+            api_key=env_dict["GEMINI_API_KEY"],
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+        )
 
     elif model_type in ["anthropic", "anthropicai", "claude", "anthro"]:
-
         from akasha.utils.models.anthro import anthropic_model
+
         if "ANTHROPIC_API_KEY" not in env_dict:
             raise Exception(
                 "can not find the ANTHROPIC_API_KEY in environment variable.\n\n"
             )
-        info = f"selected anthropic model. \n"
-        model = anthropic_model(model_name=model_name,
-                                api_key=env_dict["ANTHROPIC_API_KEY"],
-                                temperature=temperature,
-                                max_output_tokens=max_output_tokens)
+        info = "selected anthropic model. \n"
+        model = anthropic_model(
+            model_name=model_name,
+            api_key=env_dict["ANTHROPIC_API_KEY"],
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+        )
 
-    elif (model_type
-          in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
-          and model_name != ""):
-
+    elif (
+        model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
+        and model_name != ""
+    ):
         from akasha.utils.models.llamacpp2 import LlamaCPP
+
         model = LlamaCPP(
             model_name=model_name,
             temperature=temperature,
@@ -317,43 +343,50 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
         )
         info = "selected llama-cpp model\n"
     elif model_type in [
-            "huggingface",
-            "huggingfacehub",
-            "transformers",
-            "transformer",
-            "huggingface-hub",
-            "hf",
+        "huggingface",
+        "huggingfacehub",
+        "transformers",
+        "transformer",
+        "huggingface-hub",
+        "hf",
     ]:
         from akasha.utils.models.hf import hf_model
-        model = hf_model(model_name=model_name,
-                         env_dict=env_dict,
-                         temperature=temperature,
-                         max_output_tokens=max_output_tokens)
+
+        model = hf_model(
+            model_name=model_name,
+            env_dict=env_dict,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+        )
         info = f"selected huggingface model {model_name}.\n"
 
     elif model_type in ["chatglm", "chatglm2", "glm"]:
-
         from akasha.utils.models.chglm import chatGLM
-        model = chatGLM(model_name=model_name,
-                        temperature=temperature,
-                        max_output_tokens=max_output_tokens)
+
+        model = chatGLM(
+            model_name=model_name,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+        )
         info = f"selected chatglm model {model_name}.\n"
 
     elif model_type in ["lora", "peft"]:
-
         from akasha.utils.models.gtq import peft_Llama2
-        model = peft_Llama2(model_name_or_path=model_name,
-                            temperature=temperature)
+
+        model = peft_Llama2(model_name_or_path=model_name, temperature=temperature)
         info = f"selected peft model {model_name}.\n"
 
     elif model_type in ["gptq"]:
         if model_name.lower().find("taiwan-llama") != -1:
             from akasha.utils.models.gtq import TaiwanLLaMaGPTQ
-            model = TaiwanLLaMaGPTQ(model_name_or_path=model_name,
-                                    temperature=temperature)
+
+            model = TaiwanLLaMaGPTQ(
+                model_name_or_path=model_name, temperature=temperature
+            )
 
         else:
             from akasha.utils.models.gtq import gptq
+
             model = gptq(
                 model_name_or_path=model_name,
                 temperature=temperature,
@@ -367,14 +400,15 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
             model_name = "gpt-3.5-turbo"
             print(info)
         import openai
+
         if verbose:
             call_back = [StreamingStdOutCallbackHandler()]
         else:
             call_back = None
 
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"]
-                == "azure") or ("OPENAI_API_TYPE" in env_dict
-                                and env_dict["OPENAI_API_TYPE"] == "azure"):
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
+            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
+        ):
             model_name = model_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
             model = AzureChatOpenAI(
@@ -408,12 +442,13 @@ def handle_model(model_name: Union[str, Callable] = "openai:gpt-3.5-turbo",
     return model
 
 
-def handle_model_and_name(model: Union[
-    str, Callable, BaseLanguageModel] = "openai:gpt-3.5-turbo",
-                          verbose: bool = False,
-                          temperature: float = 0.0,
-                          max_output_tokens: int = 1024,
-                          env_file: str = "") -> Tuple[BaseLanguageModel, str]:
+def handle_model_and_name(
+    model: Union[str, Callable, BaseLanguageModel] = "openai:gpt-3.5-turbo",
+    verbose: bool = False,
+    temperature: float = 0.0,
+    max_output_tokens: int = 1024,
+    env_file: str = "",
+) -> Tuple[BaseLanguageModel, str]:
     """get the model object and model name
 
     Args:
@@ -434,15 +469,14 @@ def handle_model_and_name(model: Union[
     else:
         model_name = model
 
-    model_obj = handle_model(model, verbose, temperature, max_output_tokens,
-                             env_file)
+    model_obj = handle_model(model, verbose, temperature, max_output_tokens, env_file)
 
     return model_obj, model_name
 
 
-def handle_model_type(search_type: Union[str, BaseLanguageModel, Embeddings],
-                      verbose: bool = False) -> str:
-
+def handle_model_type(
+    search_type: Union[str, BaseLanguageModel, Embeddings], verbose: bool = False
+) -> str:
     if isinstance(search_type, BaseLanguageModel):
         search_type_str = search_type._llm_type
 

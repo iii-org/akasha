@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from pydantic import Field
 import numpy as np
 from langchain.embeddings.base import Embeddings
@@ -29,8 +29,7 @@ class myFAISSRetriever(BaseRetriever):
         relevancy_threshold: float = 0.0,
         **kwargs: Any,
     ) -> KNNRetriever:
-
-        emb = np.array(db.get_embeds()).astype('float32')
+        emb = np.array(db.get_embeds()).astype("float32")
         dimention = emb.shape[1]
         index = faiss.IndexFlatL2(dimention)
         index.add(emb)  # add vectors to the index
@@ -55,18 +54,20 @@ class myFAISSRetriever(BaseRetriever):
         Returns:
             List[Document]: relevant documents
         """
-        query_embeds = np.array([self.embeddings.embed_query(query)
-                                 ]).astype('float32')
+        query_embeds = np.array([self.embeddings.embed_query(query)]).astype("float32")
         # use index to search
-        distances, indexes = self.index.search(query_embeds,
-                                               min(self.k, len(self.texts)))
+        distances, indexes = self.index.search(
+            query_embeds, min(self.k, len(self.texts))
+        )
 
         top_k_scores = 1 / (1 + distances[0])
         top_k_results = [
             Document(page_content=self.texts[row], metadata=self.metadata[row])
             for row in indexes[0]
-            if (self.relevancy_threshold is None
-                or top_k_scores[row] >= self.relevancy_threshold)
+            if (
+                self.relevancy_threshold is None
+                or top_k_scores[row] >= self.relevancy_threshold
+            )
         ]
         return top_k_results, top_k_scores
 
@@ -74,7 +75,6 @@ class myFAISSRetriever(BaseRetriever):
         self,
         query: str,
     ) -> Tuple[List[Document], List[float]]:
-
         return self._gs(query)
 
     def _aget_relevant_documents(self, query: str) -> List[Document]:
@@ -89,5 +89,4 @@ class myFAISSRetriever(BaseRetriever):
         return self._gs(query)[0]
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
-
         return self._gs(query)[0]

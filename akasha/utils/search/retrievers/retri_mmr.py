@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 from pydantic import Field
 import numpy as np
 from langchain.embeddings.base import Embeddings
@@ -47,7 +47,6 @@ class myMMRRetriever(BaseRetriever):
         )
 
     def _get_relevant_documents(self, query: str) -> List[Document]:
-
         return self._gs(query)[0]
 
     def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
@@ -88,8 +87,10 @@ class myMMRRetriever(BaseRetriever):
                 if i in relevant_docs_idx:
                     continue
                 redundant_score = max(similarity_to_selected[i])
-                equation_score = (self.lambda_mult * query_score -
-                                  (1 - self.lambda_mult) * redundant_score)
+                equation_score = (
+                    self.lambda_mult * query_score
+                    - (1 - self.lambda_mult) * redundant_score
+                )
                 if equation_score > best_score:
                     best_score = equation_score
                     idx_to_add = i
@@ -98,12 +99,12 @@ class myMMRRetriever(BaseRetriever):
             selected = np.append(selected, [docs_embeds[idx_to_add]], axis=0)
 
         ### from index rebuild the documents ###
-        for idx in relevant_docs_idx[:self.k]:
+        for idx in relevant_docs_idx[: self.k]:
             top_k_results.append(
-                Document(page_content=self.texts[idx],
-                         metadata=self.metadata[idx]))
+                Document(page_content=self.texts[idx], metadata=self.metadata[idx])
+            )
 
-        return top_k_results, mmr_scores[:self.k]
+        return top_k_results, mmr_scores[: self.k]
 
     async def _aget_relevant_documents(self, query: str) -> List[Document]:
         return self._gs(query)[0]
@@ -112,5 +113,4 @@ class myMMRRetriever(BaseRetriever):
         self,
         query: str,
     ) -> Tuple[List[Document], List[float]]:
-
         return self._gs(query)

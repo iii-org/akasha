@@ -8,8 +8,12 @@ DEFAULT_CHUNK_SIZE = 1000
 ### if the saved file and parameters are the same, the function will load the existing chromadb ###
 ## data_source can be file name, directory name, or url ##
 data_source = ["docs/mic", "docs/1.pdf", "https://github.com/iii-org/akasha"]
-db, ignore_files = adb.process_db(data_source=data_source, embeddings = DEFAULT_EMBED, chunk_size=DEFAULT_CHUNK_SIZE,\
-    verbose=True)
+db, ignore_files = adb.process_db(
+    data_source=data_source,
+    embeddings=DEFAULT_EMBED,
+    chunk_size=DEFAULT_CHUNK_SIZE,
+    verbose=True,
+)
 
 ### dbs object is a class that stores all information of the chromadb ###
 db.get_docs()
@@ -19,8 +23,9 @@ db.get_ids()
 
 ### for each string in data_source, you can use get_storage_directory to get the storage directory of the chromadb ###
 embed_type, embed_name = DEFAULT_EMBED.split(":")
-chromadb_mic_dir = adb.get_storage_directory("docs/mic", DEFAULT_CHUNK_SIZE,
-                                             embed_type, embed_name)
+chromadb_mic_dir = adb.get_storage_directory(
+    "docs/mic", DEFAULT_CHUNK_SIZE, embed_type, embed_name
+)
 
 ### after you created the chromadb, you can also load it by chroma_name ###
 chroma_list = [chromadb_mic_dir]

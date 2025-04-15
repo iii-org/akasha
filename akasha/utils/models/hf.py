@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Generator, Union
+from typing import List, Any, Optional, Generator, Union
 from langchain.llms.base import LLM
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
@@ -11,7 +11,6 @@ from pydantic import Field
 
 
 class hf_model(LLM):
-
     max_token: int = 4096
     tokenizer: Any = Field(default=None)
     model: Any = Field(default=None)
@@ -24,8 +23,7 @@ class hf_model(LLM):
     max_output_tokens: int = 1024
     model_name: str = ""
 
-    def __init__(self, model_name: str, env_dict: dict, temperature: float,
-                 **kwargs):
+    def __init__(self, model_name: str, env_dict: dict, temperature: float, **kwargs):
         """define custom model, input func and temperature
 
         Args:
@@ -39,22 +37,21 @@ class hf_model(LLM):
         else:
             self.hf_token = None
 
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if temperature == 0.0:
             temperature = 0.01
-        if 'max_output_tokens' in kwargs:
-            self.max_output_tokens = kwargs['max_output_tokens']
+        if "max_output_tokens" in kwargs:
+            self.max_output_tokens = kwargs["max_output_tokens"]
 
         self.temperature = temperature
         self.model_name = model_name
         if "vision" in model_name.lower():
             self.init_vision_model()
         else:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name,
-                                                           token=self.hf_token)
-            self.streamer = TextIteratorStreamer(self.tokenizer,
-                                                 skip_prompt=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name, token=self.hf_token
+            )
+            self.streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 token=self.hf_token,
@@ -62,7 +59,8 @@ class hf_model(LLM):
                 repetition_penalty=1.2,
                 top_p=0.95,
                 torch_dtype=torch.float16,
-                device_map="auto").to(self.device)
+                device_map="auto",
+            ).to(self.device)
 
     @property
     def _llm_type(self) -> str:
@@ -88,10 +86,9 @@ class hf_model(LLM):
                 device_map="auto",
             )
             self.processor = AutoProcessor.from_pretrained(self.model_id)
-        except:
+        except Exception:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-            self.streamer = TextIteratorStreamer(self.tokenizer,
-                                                 skip_prompt=True)
+            self.streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True)
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_id,
                 token=self.hf_token,
@@ -99,12 +96,12 @@ class hf_model(LLM):
                 repetition_penalty=1.2,
                 top_p=0.95,
                 torch_dtype=torch.float16,
-                device_map="auto").to(self.device)
+                device_map="auto",
+            ).to(self.device)
 
-    def stream(self,
-               prompt: str,
-               stop: Optional[List[str]] = None) -> Generator[str, None, None]:
-
+    def stream(
+        self, prompt: str, stop: Optional[List[str]] = None
+    ) -> Generator[str, None, None]:
         stop_list = get_stop_list(stop)
         inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
         gerneration_kwargs = dict(
@@ -116,7 +113,7 @@ class hf_model(LLM):
             stop_strings=stop_list,
             tokenizer=self.tokenizer,
         )
-        #self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
+        # self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
 
         thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
         thread.start()
@@ -149,41 +146,37 @@ class hf_model(LLM):
         thread.start()
         generated_text = ""
         for new_text in self.streamer:
-            print(new_text, end='', flush=True)
+            print(new_text, end="", flush=True)
             generated_text += new_text
         return generated_text
 
     def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-
         return self._call(prompt, stop)
 
-    def batch(self,
-              prompt: List[str],
-              stop: Optional[List[str]] = None) -> List[str]:
-
+    def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
         stop_list = get_stop_list(stop)
         self.tokenizer.pad_token = self.tokenizer.eos_token
-        inputs = self.tokenizer(prompt,
-                                return_tensors="pt",
-                                padding=True,
-                                truncation=True,
-                                max_length=1024).to(self.device)
+        inputs = self.tokenizer(
+            prompt, return_tensors="pt", padding=True, truncation=True, max_length=1024
+        ).to(self.device)
         generated_ids = self.model.generate(
             **inputs,
             max_new_tokens=self.max_output_tokens,
             do_sample=True,
-            stop_strings=stop_list)
-        generated_texts = self.tokenizer.batch_decode(generated_ids,
-                                                      skip_special_tokens=True)
+            stop_strings=stop_list,
+        )
+        generated_texts = self.tokenizer.batch_decode(
+            generated_ids, skip_special_tokens=True
+        )
 
         return generated_texts
 
     def call_image(self, prompt: list) -> str:
-
         def is_url(path):
             from urllib.parse import urlparse
+
             parsed_url = urlparse(path)
-            return parsed_url.scheme in ('http', 'https', 'ftp')
+            return parsed_url.scheme in ("http", "https", "ftp")
 
         ### check if the image is from url or local path
         image_path = prompt[0]["content"][0]["type"]
@@ -196,21 +189,24 @@ class hf_model(LLM):
 
         ## apply chat template ##
         input_text = self.processor.apply_chat_template(
-            prompt, add_generation_prompt=True)
-        inputs = self.processor(image,
-                                input_text,
-                                add_special_tokens=False,
-                                return_tensors="pt").to(self.device)
+            prompt, add_generation_prompt=True
+        )
+        inputs = self.processor(
+            image, input_text, add_special_tokens=False, return_tensors="pt"
+        ).to(self.device)
 
-        output = self.model.generate(**inputs,
-                                     max_new_tokens=512,
-                                     do_sample=True,
-                                     temperature=self.temperature,
-                                     top_p=0.95,
-                                     length_penalty=1.0,
-                                     repetition_penalty=1.0)
+        output = self.model.generate(
+            **inputs,
+            max_new_tokens=512,
+            do_sample=True,
+            temperature=self.temperature,
+            top_p=0.95,
+            length_penalty=1.0,
+            repetition_penalty=1.0,
+        )
         return self.processor.decode(
-            output[0][len(prompt[0]["content"][1]["text"]) + 8:])
+            output[0][len(prompt[0]["content"][1]["text"]) + 8 :]
+        )
 
 
 def get_stop_list(stop: Optional[List[str]]) -> List[str]:

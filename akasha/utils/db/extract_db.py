@@ -17,9 +17,9 @@ def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
     ret_db = dbs()
     file_set = set()
     for file_name in file_name_list:
-        file_name = file_name.replace('\\', '/')
-        file_name = file_name.lstrip('./')
-        file_name = file_name.split('/')[-1]
+        file_name = file_name.replace("\\", "/")
+        file_name = file_name.lstrip("./")
+        file_name = file_name.split("/")[-1]
         file_set.add(file_name)
 
     for i in range(len(db.ids)):
@@ -84,7 +84,6 @@ def extract_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]) -> dbs:
         id_list = set(id_list)
 
     for idx, id in enumerate(db.ids):
-
         if id in id_list:
             ret_db.ids.append(db.ids[idx])
             ret_db.embeds.append(db.embeds[idx])
@@ -112,12 +111,9 @@ def pop_db_by_ids(db: dbs, id_list: Union[List[str], Set[str]]):
 
     # Filter the lists in place
     db.ids = [id for id in db.ids if id not in id_list]
-    db.embeds = [
-        embed for id, embed in zip(db.ids, db.embeds) if id not in id_list
-    ]
+    db.embeds = [embed for id, embed in zip(db.ids, db.embeds) if id not in id_list]
     db.metadatas = [
-        metadata for id, metadata in zip(db.ids, db.metadatas)
-        if id not in id_list
+        metadata for id, metadata in zip(db.ids, db.metadatas) if id not in id_list
     ]
     db.docs = [doc for id, doc in zip(db.ids, db.docs) if id not in id_list]
     db.vis = {id for id in db.vis if id not in id_list}

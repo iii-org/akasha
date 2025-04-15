@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Any, Optional, Generator, Union
+from typing import List, Any, Optional, Generator
 from langchain.llms.base import LLM
 from openai import OpenAI
 import concurrent.futures
@@ -19,12 +19,14 @@ class remote_model(LLM):
     model: OpenAI = Field(default=None)
     url: Any = Field(default=None)
 
-    def __init__(self,
-                 base_url: str,
-                 temperature: float = 0.001,
-                 api_key: str = "123",
-                 model_name: str = "remote_model",
-                 **kwargs):
+    def __init__(
+        self,
+        base_url: str,
+        temperature: float = 0.001,
+        api_key: str = "123",
+        model_name: str = "remote_model",
+        **kwargs,
+    ):
         """define custom model, input func and temperature
 
         Args:
@@ -35,8 +37,8 @@ class remote_model(LLM):
         self.temperature = temperature
         self.api_key = api_key
         self.model_name = model_name
-        if 'max_output_tokens' in kwargs:
-            self.max_output_tokens = kwargs['max_output_tokens']
+        if "max_output_tokens" in kwargs:
+            self.max_output_tokens = kwargs["max_output_tokens"]
 
         if self.temperature == 0.0:
             self.temperature = 0.01
@@ -51,9 +53,7 @@ class remote_model(LLM):
         """
         return "remote: api model"
 
-    def stream(self,
-               prompt: str,
-               stop: Optional[List[str]] = None) -> Generator:
+    def stream(self, prompt: str, stop: Optional[List[str]] = None) -> Generator:
         """run llm and get the stream generator
 
         Args:
@@ -68,10 +68,7 @@ class remote_model(LLM):
         yield from self.invoke_stream(prompt, stop)
         return
 
-    def _call(self,
-              prompt: str,
-              stop: Optional[List[str]] = None,
-              verbose=True) -> str:
+    def _call(self, prompt: str, stop: Optional[List[str]] = None, verbose=True) -> str:
         """run llm and get the response
 
         Args:
@@ -91,9 +88,7 @@ class remote_model(LLM):
         messages, stop, verbose = args
         return self._call(messages, stop, verbose)
 
-    def batch(self,
-              prompt: List[str],
-              stop: Optional[List[str]] = None) -> List[str]:
+    def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
         """run llm and get the response
 
         Args:
@@ -105,20 +100,20 @@ class remote_model(LLM):
         """
         # Number of threads should not exceed the number of prompts
         num_threads = min(
-            len(prompt),
-            concurrent.futures.thread.ThreadPoolExecutor()._max_workers)
+            len(prompt), concurrent.futures.thread.ThreadPoolExecutor()._max_workers
+        )
 
-        with concurrent.futures.ThreadPoolExecutor(
-                max_workers=num_threads) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
             results = list(
-                executor.map(self._invoke_helper,
-                             [(message, stop, False) for message in prompt]))
+                executor.map(
+                    self._invoke_helper, [(message, stop, False) for message in prompt]
+                )
+            )
         return results
 
-    def invoke(self,
-               messages: list,
-               stop: Optional[List[str]] = None,
-               verbose: bool = True) -> str:
+    def invoke(
+        self, messages: list, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -140,11 +135,12 @@ class remote_model(LLM):
                 temperature=self.temperature,
                 top_p=0.95,
                 stop=stop_list,
-                frequency_penalty=1.2)
+                frequency_penalty=1.2,
+            )
 
             for message in chat_completion:
                 content = message.choices[0].delta.content
-                if type(content) == str:
+                if isinstance(content, str):
                     if verbose:
                         print(message.choices[0].delta.content, end="")
                     response += message.choices[0].delta.content
@@ -154,9 +150,9 @@ class remote_model(LLM):
             raise e
         return response
 
-    def invoke_stream(self,
-                      messages: list,
-                      stop: Optional[List[str]] = None) -> Generator:
+    def invoke_stream(
+        self, messages: list, stop: Optional[List[str]] = None
+    ) -> Generator:
         """run llm and get the response
 
         Args:
@@ -183,11 +179,12 @@ class remote_model(LLM):
                 temperature=self.temperature,
                 top_p=0.95,
                 stop=stop_list,
-                frequency_penalty=1.2)
+                frequency_penalty=1.2,
+            )
 
             for message in chat_completion:
                 content = message.choices[0].delta.content
-                if type(content) == str:
+                if isinstance(content, str):
                     yield message.choices[0].delta.content
 
         except Exception as e:

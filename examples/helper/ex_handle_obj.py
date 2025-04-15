@@ -13,14 +13,15 @@ PROMPT2 = "工業4.0是甚麼?"
 TEMPERATURE = 1.0
 
 ### create a model object and call it ###
-model_obj = ah.handle_model(DEFAULT_MODEL,
-                            verbose=True,
-                            temperature=TEMPERATURE,
-                            max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS)
+model_obj = ah.handle_model(
+    DEFAULT_MODEL,
+    verbose=True,
+    temperature=TEMPERATURE,
+    max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
+)
 
-#(option) format the prompt#
-prod_sys_prompt = format_sys_prompt(SYS_PROMPT, PROMPT, "chat_gpt",
-                                    DEFAULT_MODEL)
+# (option) format the prompt#
+prod_sys_prompt = format_sys_prompt(SYS_PROMPT, PROMPT, "chat_gpt", DEFAULT_MODEL)
 
 # call the model #
 ret = ah.call_model(model_obj, prod_sys_prompt)

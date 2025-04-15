@@ -1,4 +1,4 @@
-from typing import Dict, List, Any, Optional, Callable, Generator, Union
+from typing import Dict, List, Any, Optional, Callable
 from pydantic import BaseModel, Field
 from langchain.schema.embeddings import Embeddings
 from langchain.llms.base import LLM
@@ -32,10 +32,7 @@ class custom_embed(BaseModel, Embeddings):
     encode_kwargs: Dict[str, Any] = {}
     """Keyword arguments to pass when calling the `encode` method of the model."""
 
-    def __init__(self,
-                 func: Any,
-                 encode_kwargs: Dict[str, Any] = {},
-                 **kwargs: Any):
+    def __init__(self, func: Any, encode_kwargs: Dict[str, Any] = {}, **kwargs: Any):
         """Initialize the sentence_transformer."""
         super().__init__(**kwargs)
 
@@ -53,6 +50,7 @@ class custom_embed(BaseModel, Embeddings):
             List of embeddings, one for each text.
         """
         import numpy
+
         texts = list(map(lambda x: x.replace("\n", " "), texts))
 
         embeddings = self.client(texts, **self.encode_kwargs)

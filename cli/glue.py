@@ -12,24 +12,19 @@ def akasha():
 @click.option(
     "--data_source",
     "-d",
-    help=
-    "document directory path, or url, parse all .txt, .pdf, .docx files in the directory",
+    help="document directory path, or url, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
-@click.option("--prompt",
-              "-p",
-              help="prompt you want to ask to llm",
-              required=True)
+@click.option("--prompt", "-p", help="prompt you want to ask to llm", required=True)
 @click.option(
     "--embeddings",
     "-e",
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option("--chunk_size",
-              "-c",
-              default=1000,
-              help="chunk size for storing the documents")
+@click.option(
+    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
+)
 @click.option(
     "--model",
     "-m",
@@ -46,23 +41,20 @@ def akasha():
     "--search_type",
     "-s",
     default="auto",
-    help="search type for the documents, include auto, knn, mmr, tfidf",
+    help="search type for the documents, include auto, knn, svm, bm25",
 )
 @click.option(
     "--record_exp",
     "-r",
     default="",
-    help=
-    "input the experiment name if you want to record the experiment using aiido",
+    help="input the experiment name if you want to record the experiment using aiido",
 )
-@click.option("--system_prompt",
-              "-sys",
-              default="",
-              help="system prompt for the llm model")
-@click.option("--max_input_tokens",
-              "-md",
-              default=3000,
-              help="max token for the llm model input")
+@click.option(
+    "--system_prompt", "-sys", default="", help="system prompt for the llm model"
+)
+@click.option(
+    "--max_input_tokens", "-md", default=3000, help="max token for the llm model input"
+)
 def rag(
     data_source: str,
     prompt: str,
@@ -97,8 +89,7 @@ def rag(
 @click.option(
     "--data_source",
     "-d",
-    help=
-    "document directory path, or urls, parse all .txt, .pdf, .docx files in the directory",
+    help="document directory path, or urls, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
@@ -107,10 +98,9 @@ def rag(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option("--chunk_size",
-              "-c",
-              default=1000,
-              help="chunk size for storing the documents")
+@click.option(
+    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
+)
 @click.option(
     "--model",
     "-m",
@@ -129,14 +119,12 @@ def rag(
     default="merge",
     help="search type for the documents, include merge, svm, mmr, tfidf",
 )
-@click.option("--system_prompt",
-              "-sys",
-              default="",
-              help="system prompt for the llm model")
-@click.option("--max_input_tokens",
-              "-md",
-              default=3000,
-              help="max token for the llm model input")
+@click.option(
+    "--system_prompt", "-sys", default="", help="system prompt for the llm model"
+)
+@click.option(
+    "--max_input_tokens", "-md", default=3000, help="max token for the llm model input"
+)
 def keep_rag(
     data_source: str,
     embeddings: str,
@@ -152,6 +140,7 @@ def keep_rag(
     import akasha.utils.db as dd
     from akasha.utils.search.retrievers.base import get_retrivers
     from akasha.utils.search.search_doc import search_docs
+
     embeddings = helper.handle_embeddings(embeddings, False)
     model_name = model
     model = helper.handle_model(model, False)
@@ -163,8 +152,7 @@ def keep_rag(
         print(info)
         return ""
 
-    user_input = click.prompt(
-        'Please input your question(type "exit()" to quit) ')
+    user_input = click.prompt('Please input your question(type "exit()" to quit) ')
     retrivers_list = get_retrivers(db, embeddings, 0.0, search_type)
 
     while user_input != "exit()":
@@ -181,14 +169,12 @@ def keep_rag(
 
         chain = load_qa_chain(llm=model, chain_type="stuff", verbose=False)
 
-        res = chain.run(input_documents=docs,
-                        question=system_prompt + user_input)
+        res = chain.run(input_documents=docs, question=system_prompt + user_input)
         res = helper.sim_to_trad(res)
 
         print("Response: ", res)
         print("\n\n")
-        user_input = click.prompt(
-            'Please input your question(type "exit()" to quit) ')
+        user_input = click.prompt('Please input your question(type "exit()" to quit) ')
 
     del db, model, embeddings
 
@@ -197,14 +183,12 @@ def keep_rag(
 @click.option(
     "--data_source",
     "-d",
-    help=
-    "document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
-@click.option("-question_num",
-              "-qn",
-              default=10,
-              help="number of questions you want to generate")
+@click.option(
+    "-question_num", "-qn", default=10, help="number of questions you want to generate"
+)
 @click.option(
     "-question_type",
     "--qt",
@@ -217,10 +201,9 @@ def keep_rag(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option("--chunk_size",
-              "-c",
-              default=1000,
-              help="chunk size for storing the documents")
+@click.option(
+    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
+)
 @click.option(
     "--language",
     "-l",
@@ -237,8 +220,7 @@ def keep_rag(
     "--record_exp",
     "-r",
     default="",
-    help=
-    "input the experiment name if you want to record the experiment using aiido",
+    help="input the experiment name if you want to record the experiment using aiido",
 )
 def create_questionset(
     data_source: str,
@@ -273,15 +255,13 @@ def create_questionset(
 @click.option(
     "--question_path",
     "-qp",
-    help=
-    "document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
     "--data_source",
     "-d",
-    help=
-    "document directory path, parse all .txt, .pdf, .docx files in the directory",
+    help="document directory path, parse all .txt, .pdf, .docx files in the directory",
     required=True,
 )
 @click.option(
@@ -296,10 +276,9 @@ def create_questionset(
     default="openai:text-embedding-ada-002",
     help="embeddings for storing the documents",
 )
-@click.option("--chunk_size",
-              "-c",
-              default=1000,
-              help="chunk size for storing the documents")
+@click.option(
+    "--chunk_size", "-c", default=1000, help="chunk size for storing the documents"
+)
 @click.option(
     "--model",
     "-m",
@@ -323,13 +302,11 @@ def create_questionset(
     "--record_exp",
     "-r",
     default="",
-    help=
-    "input the experiment name if you want to record the experiment using aiido",
+    help="input the experiment name if you want to record the experiment using aiido",
 )
-@click.option("--max_input_tokens",
-              "-md",
-              default=3000,
-              help="max token for the llm model input")
+@click.option(
+    "--max_input_tokens", "-md", default=3000, help="max token for the llm model input"
+)
 def evaluation(
     question_path: str,
     data_source: str,
@@ -381,14 +358,16 @@ def evaluation(
 
 @click.command("toy", short_help="simple toy for akasha")
 def ui():
-
-    import os, sys
+    import os
+    import sys
     import site
     from streamlit import config as _config
     from streamlit.web import cli as stcli
+
     # make a folder `docs/Default`
     if not os.path.exists("docs") or not os.path.exists(
-            os.path.join("docs", "Default")):
+        os.path.join("docs", "Default")
+    ):
         os.makedirs(os.path.join(".", "docs", "Default"))
     else:
         pass
@@ -417,7 +396,7 @@ def ui():
     _config.set_option("server.headless", True)
 
     ui_py_file = os.path.join(target_dir, "akasha", "ui.py")
-    #streamlit.web.bootstrap.run(ui_py_file, "", [], [])
+    # streamlit.web.bootstrap.run(ui_py_file, "", [], [])
     sys.argv = ["streamlit", "run", ui_py_file]
     sys.exit(stcli.main())
 

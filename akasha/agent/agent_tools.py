@@ -1,16 +1,13 @@
-from typing import Callable, Union, List, Dict, Any, Tuple
-from pathlib import Path
+from typing import Callable, Union, List
 from langchain.tools import BaseTool
-from langchain_core.language_models.base import BaseLanguageModel
-from akasha.utils.base import DEFAULT_MODEL
 from akasha.helper.base import extract_json
 from .base import create_tool
 import json
 
 
-def websearch_tool(search_engine: str = "wiki",
-                   language: str = "ch",
-                   env_file: str = "") -> BaseTool:
+def websearch_tool(
+    search_engine: str = "wiki", language: str = "ch", env_file: str = ""
+) -> BaseTool:
     """return the tool to use search engine to search information for user
 
     Args:
@@ -24,34 +21,32 @@ def websearch_tool(search_engine: str = "wiki",
     from akasha.helper.web_engine import load_docs_from_webengine
 
     def _websearch_tool(prompt: str, search_num: int = 5):
-
-        docs = load_docs_from_webengine(prompt, search_engine, search_num,
-                                        language, env_file)
+        docs = load_docs_from_webengine(
+            prompt, search_engine, search_num, language, env_file
+        )
 
         ret = "\n\n".join([do.page_content for do in docs])
         return ret
 
     ret_tool = create_tool(
         tool_name="web_search_tool",
-        tool_description=
-        "This is the tool to use prompt to search information from web engine, the params \
+        tool_description="This is the tool to use prompt to search information from web engine, the params \
         includes prompt, search_num(default 5)",
-        func=_websearch_tool)
+        func=_websearch_tool,
+    )
 
     return ret_tool
 
 
 def calculate_tool():
-
     def _cal_tool(expr: str):
-
         return eval(expr)
 
     ret_tool = create_tool(
         tool_name="calculate_tool",
-        tool_description=
-        "This is the tool to calculate the math expression, the only one parameter is expr",
-        func=_cal_tool)
+        tool_description="This is the tool to calculate the math expression, the only one parameter is expr",
+        func=_cal_tool,
+    )
 
     return ret_tool
 
@@ -64,9 +59,9 @@ def saveJSON_tool() -> BaseTool:
     """
     return create_tool(
         tool_name="json_tool",
-        tool_description=
-        "This is the tool to save the content into json file, the input contains file_path and content.",
-        func=_jsonSaveTool)
+        tool_description="This is the tool to save the content into json file, the input contains file_path and content.",
+        func=_jsonSaveTool,
+    )
 
 
 def _jsonSaveTool(file_path: str = "default.json", content: str = None):
@@ -76,10 +71,11 @@ def _jsonSaveTool(file_path: str = "default.json", content: str = None):
             # change content from string to json
             try:
                 content = extract_json(content)
-            except Exception as e:
+            except Exception:
                 print(content)
             import json
-            with open(file_path, "w", encoding='utf-8') as f:
+
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(content, f, indent=4, ensure_ascii=False)
             return f"Success create {file_path}"
         except Exception as e:
@@ -89,11 +85,12 @@ def _jsonSaveTool(file_path: str = "default.json", content: str = None):
         return "Error: content is empty"
 
 
-def rag_tool(embeddings: Union[str, Callable],
-             chunk_size: int = 1000,
-             max_input_tokens: int = 3000,
-             env_file: str = ""):
-
+def rag_tool(
+    embeddings: Union[str, Callable],
+    chunk_size: int = 1000,
+    max_input_tokens: int = 3000,
+    env_file: str = "",
+):
     from akasha.utils.db import process_db
     from akasha.helper.handle_objects import handle_embeddings
     from akasha.utils.search.retrievers.base import get_retrivers
@@ -101,10 +98,9 @@ def rag_tool(embeddings: Union[str, Callable],
 
     embeddings_obj = handle_embeddings(embeddings, env_file=env_file)
 
-    def _rag_tool(data_source: Union[List[str], str],
-                  prompt: str,
-                  search_type: str = "knn"):
-
+    def _rag_tool(
+        data_source: Union[List[str], str], prompt: str, search_type: str = "knn"
+    ):
         # Ensure data_source is a list
         if isinstance(data_source, str):
             try:
@@ -121,10 +117,12 @@ def rag_tool(embeddings: Union[str, Callable],
                 f"data_source should be a list of strings or a single string, instead, we got {data_source}."
             )
 
-        db = process_db(data_source=data_source,
-                        embeddings=embeddings_obj,
-                        chunk_size=chunk_size,
-                        env_file=env_file)
+        db = process_db(
+            data_source=data_source,
+            embeddings=embeddings_obj,
+            chunk_size=chunk_size,
+            env_file=env_file,
+        )
 
         retrivers_list = get_retrivers(
             db,
@@ -145,9 +143,9 @@ def rag_tool(embeddings: Union[str, Callable],
 
     ret_tool = create_tool(
         tool_name="rag_tool",
-        tool_description=
-        "This is the tool to use prompt to search information from db, the params \
+        tool_description="This is the tool to use prompt to search information from db, the params \
         includes data_source(str or list, the path of data source), prompt, search_type(default 'knn')",
-        func=_rag_tool)
+        func=_rag_tool,
+    )
 
     return ret_tool
