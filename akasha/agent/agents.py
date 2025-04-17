@@ -16,7 +16,7 @@ from akasha.utils.base import (
 from akasha.helper.preprocess_prompts import retri_history_messages
 from akasha.helper.base import get_doc_length, extract_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt
-from akasha.helper.run_llm import call_model, call_stream_model
+from akasha.helper.run_llm import call_model
 from .base import get_tool_explaination
 
 
@@ -110,7 +110,8 @@ class agents(basic_llm):
         self.REACT_PROMPT = f"""Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tool_explain_str}\n
 Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\n
 Valid "action" values: "Answer" or {tool_name_str}\n\n
-Provide only ONE action per $JSON_BLOB, as shown:\n{{\n```\n\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```\n\nthe meaning of each format:\n
+Provide only ONE action per $JSON_BLOB, as shown:\n{{\n```\n\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```$INPUT is a dictionary that contains tool parameters and their values\n\n
+the meaning of each format:\n
 Question: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n
 ... (repeat Thought/Action N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Answer",\n  "action_input": "Final response to human"\n}}\n```\n\n
 Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
@@ -180,6 +181,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         """
         start_time = time.time()
         round_count = self.max_round
+        self.response = ""
         if messages is None:
             self.messages = []
         else:
@@ -272,26 +274,25 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 "final",
                 "answer",
             ]:
-                retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
+                # retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
                 response = cur_action["action_input"]
-                text_input = format_sys_prompt(
-                    f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
-                    retri_messages,
-                    self.prompt_format_type,
-                    self.model,
-                )
-
+                # text_input = format_sys_prompt(
+                #     f"based on the provided information, respond to the human as helpfully and accurately as possible: {question}",
+                #     response,
+                #     self.prompt_format_type,
+                #     self.model,
+                # )
                 if self.stream:
-                    return self._display_stream(text_input)
+                    return self._final_ronud_stream(response)
 
-                response = call_model(self.model_obj, text_input)
+                # response = call_model(self.model_obj, text_input)
 
-                txt = (
-                    retri_messages
-                    + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                )
-                self.input_len += get_doc_length(self.language, txt)
-                self.tokens += self.model_obj.get_num_tokens(txt)
+                # txt = (
+                #     retri_messages
+                #     + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                # )
+                # self.input_len += get_doc_length(self.language, txt)
+                # self.tokens += self.model_obj.get_num_tokens(txt)
                 self.messages.append(
                     {
                         "role": "Action",
@@ -391,6 +392,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         """run agent to get response"""
         start_time = time.time()
         round_count = self.max_round
+        self.response = ""
         if messages is None:
             self.messages = []
         else:
@@ -483,26 +485,26 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 "final",
                 "answer",
             ]:
-                retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
+                # retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
                 response = cur_action["action_input"]
-                text_input = format_sys_prompt(
-                    f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}",
-                    retri_messages,
-                    self.prompt_format_type,
-                    self.model,
-                )
+                # text_input = format_sys_prompt(
+                #     f"based on the provided information, respond to the human as helpfully and accurately as possible: {question}",
+                #     retri_messages,
+                #     self.prompt_format_type,
+                #     self.model,
+                # )
 
                 if self.stream:
-                    return self._display_stream(text_input)
+                    return self._final_ronud_stream(response)
 
-                response = call_model(self.model_obj, text_input)
+                # response = call_model(self.model_obj, text_input)
 
-                txt = (
-                    retri_messages
-                    + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                )
-                self.input_len += get_doc_length(self.language, txt)
-                self.tokens += self.model_obj.get_num_tokens(txt)
+                # txt = (
+                #     retri_messages
+                #     + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
+                # )
+                # self.input_len += get_doc_length(self.language, txt)
+                # self.tokens += self.model_obj.get_num_tokens(txt)
                 self.messages.append(
                     {
                         "role": "Action",
@@ -598,14 +600,8 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return response
 
-    def _display_stream(
-        self, text_input: Union[str, List[str]]
-    ) -> Generator[str, None, None]:
-        ret = call_stream_model(
-            self.model_obj,
-            text_input,
-        )
-
-        for s in ret:
-            self.response += s
-            yield s
+    def _final_ronud_stream(self, response: str) -> Generator[str, None, None]:
+        """final round stream"""
+        for c in response:
+            self.response += c
+            yield c
