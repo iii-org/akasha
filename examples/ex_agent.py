@@ -86,7 +86,7 @@ if __name__ == "__main__":
 # weather_server.py
 from mcp.server.fastmcp import FastMCP  # noqa: E402
 
-mcp = FastMCP("Weather")
+mcp = FastMCP("Weather", port=8000)
 
 
 @mcp.tool()
@@ -104,7 +104,7 @@ async def get_weather(location: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="sse", port=8000)
+    mcp.run(transport="sse")
 
 ### run the weather_server.py using "pyhon weather_server.py" in command line to activate the server
 ### then we can use akasha agent to call the tools in MCP server ###
@@ -146,6 +146,11 @@ async def call_agents(prompt: str):
 
         # Use the agent asynchronously
         response = await agent.acall(prompt)
+
+        ## if using streaming (stream=True), you can use async for loop to get the response
+        # async for r in response:
+        #     print(r, end="")
+
         agent.save_logs("logs_agent.json")
         return response
 

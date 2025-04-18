@@ -4,8 +4,8 @@ import json
 import datetime
 import time
 import logging
-
-
+import asyncio
+import inspect
 from akasha.utils.atman import basic_llm
 
 from akasha.utils.base import (
@@ -175,10 +175,46 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return True
 
+    def __call__(self, question: str, messages: List[dict] = None):
+        """Synchronous version of agent."""
+
+        async def collect_stream():
+            if self.stream:
+                # Handle streaming case
+                results = []
+                async for chunk in self._run_agent_stream(
+                    question,
+                    tool_runner=lambda tool, tool_input: tool._run(**tool_input),
+                    messages=messages,
+                ):
+                    results.append(chunk)
+                return results
+            else:
+                # Handle non-streaming case
+                return await self._run_agent(
+                    question,
+                    tool_runner=lambda tool, tool_input: tool._run(**tool_input),
+                    messages=messages,
+                )
+
+        # Consume the async generator or coroutine and return the result
+        return asyncio.run(collect_stream())
+
     async def acall(self, question: str, messages: List[dict] = None):
         """Asynchronous version of agent."""
-        """run agent to get response
-        """
+        return await self._run_agent(
+            question,
+            tool_runner=lambda tool, tool_input: tool.ainvoke(tool_input),
+            messages=messages,
+        )
+
+    async def _run_agent(
+        self, question: str, tool_runner: callable, messages: List[dict] = None
+    ):
+        """run agent to get response"""
+        if self.stream:
+            return self._run_agent_stream(question, tool_runner, messages)
+
         start_time = time.time()
         round_count = self.max_round
         self.response = ""
@@ -274,25 +310,13 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 "final",
                 "answer",
             ]:
-                # retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
-                response = cur_action["action_input"]
-                # text_input = format_sys_prompt(
-                #     f"based on the provided information, respond to the human as helpfully and accurately as possible: {question}",
-                #     response,
-                #     self.prompt_format_type,
-                #     self.model,
-                # )
-                if self.stream:
-                    return self._final_ronud_stream(response)
+                if isinstance(cur_action["action_input"], (dict, list)):
+                    response = json.dumps(
+                        cur_action["action_input"], ensure_ascii=False
+                    )
+                else:
+                    response = str(cur_action["action_input"])
 
-                # response = call_model(self.model_obj, text_input)
-
-                # txt = (
-                #     retri_messages
-                #     + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                # )
-                # self.input_len += get_doc_length(self.language, txt)
-                # self.tokens += self.model_obj.get_num_tokens(txt)
                 self.messages.append(
                     {
                         "role": "Action",
@@ -300,17 +324,19 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     }
                 )
                 self.messages.append({"role": "Observation", "content": response})
+
                 break
+
             elif cur_action["action"] in self.tools:
                 tool_name = cur_action["action"]
                 tool_input = cur_action["action_input"]
 
                 tool = self.tools[tool_name]
-                try:
-                    firsthand_observation = await tool.ainvoke(tool_input)
-                except Exception as e:
-                    print("Error in tool invocation, retrying...\n\n\n\n", e)
-                    firsthand_observation = tool._run(**tool_input)
+                result = tool_runner(tool, tool_input)
+                if asyncio.iscoroutine(result):
+                    firsthand_observation = await result  # Await async result
+                else:
+                    firsthand_observation = result  # Sync result
 
                 if self.retri_observation:
                     text_input = format_sys_prompt(
@@ -341,6 +367,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
                 if self.verbose:
                     print("\nObservation: " + observation)
+
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
@@ -388,8 +415,11 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return response
 
-    def __call__(self, question: str, messages: List[dict] = None):
-        """run agent to get response"""
+    async def _run_agent_stream(
+        self, question: str, tool_runner: callable, messages: List[dict] = None
+    ):
+        """run agent stream to get response"""
+
         start_time = time.time()
         round_count = self.max_round
         self.response = ""
@@ -477,6 +507,10 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 thought = "None."
             self.thoughts.append(thought)
 
+            # yield thought #
+            intermed_stream_text = "\nThought: " + str(thought) + "\n"
+            yield intermed_stream_text
+
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
             if cur_action["action"].lower() in [
@@ -485,26 +519,13 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                 "final",
                 "answer",
             ]:
-                # retri_messages = retri_messages.replace(self.OBSERVATION_PROMPT, "")
-                response = cur_action["action_input"]
-                # text_input = format_sys_prompt(
-                #     f"based on the provided information, respond to the human as helpfully and accurately as possible: {question}",
-                #     retri_messages,
-                #     self.prompt_format_type,
-                #     self.model,
-                # )
+                if isinstance(cur_action["action_input"], (dict, list)):
+                    response = json.dumps(
+                        cur_action["action_input"], ensure_ascii=False
+                    )
+                else:
+                    response = str(cur_action["action_input"])
 
-                if self.stream:
-                    return self._final_ronud_stream(response)
-
-                # response = call_model(self.model_obj, text_input)
-
-                # txt = (
-                #     retri_messages
-                #     + f"based on the provided information, please think step by step and respond to the human as helpfully and accurately as possible: {question}"
-                # )
-                # self.input_len += get_doc_length(self.language, txt)
-                # self.tokens += self.model_obj.get_num_tokens(txt)
                 self.messages.append(
                     {
                         "role": "Action",
@@ -512,18 +533,30 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                     }
                 )
                 self.messages.append({"role": "Observation", "content": response})
+                yield response
+
                 break
 
             elif cur_action["action"] in self.tools:
                 tool_name = cur_action["action"]
                 tool_input = cur_action["action_input"]
 
+                # yield action #
+                intermed_stream_text = (
+                    "\nAction: "
+                    + tool_name
+                    + ", "
+                    + json.dumps(cur_action, ensure_ascii=False)
+                    + "\n"
+                )
+                yield intermed_stream_text
+
                 tool = self.tools[tool_name]
-                try:
-                    firsthand_observation = tool._run(**tool_input)
-                except Exception as e:
-                    print("Error in tool invocation, retrying...\n\n\n\n", e)
-                    firsthand_observation = tool.ainvoke(tool_input)
+                result = tool_runner(tool, tool_input)
+                if asyncio.iscoroutine(result):
+                    firsthand_observation = await result  # Await async result
+                else:
+                    firsthand_observation = result  # Sync result
 
                 if self.retri_observation:
                     text_input = format_sys_prompt(
@@ -554,9 +587,14 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
                 if self.verbose:
                     print("\nObservation: " + observation)
+                # yield observation #
+                intermed_stream_text = "\nObservation: " + str(observation) + "\n"
+                yield intermed_stream_text
+
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
+            cur_action["action_input"].pop("run_manager", None)
             self.messages.append(
                 {
                     "role": "Action",
@@ -598,10 +636,15 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
 
-        return response
+        return
 
     def _final_ronud_stream(self, response: str) -> Generator[str, None, None]:
         """final round stream"""
         for c in response:
             self.response += c
+            yield c
+
+    def _display_stream(self, text: str) -> Generator[str, None, None]:
+        """display stream"""
+        for c in text:
             yield c
