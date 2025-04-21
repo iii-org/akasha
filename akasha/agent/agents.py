@@ -322,7 +322,6 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                         "content": json.dumps(cur_action, ensure_ascii=False),
                     }
                 )
-                self.messages.append({"role": "Observation", "content": response})
 
                 break
 
@@ -531,7 +530,7 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
                         "content": json.dumps(cur_action, ensure_ascii=False),
                     }
                 )
-                self.messages.append({"role": "Observation", "content": response})
+
                 yield response
 
                 break
