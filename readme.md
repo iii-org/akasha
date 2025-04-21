@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![pypi package](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
 [![downloads](https://img.shields.io/pypi/dm/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
-[![python version : 3.8 3.9 3.10](https://img.shields.io/badge/python-3.8%20%7C%203.9%20%7C%203.10-blue)](https://www.python.org/downloads/release/python-380/)
+[![python version : 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/release/python-3109/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 
 <br/>
@@ -12,7 +12,7 @@ akasha simplifies document-based Question Answering (QA) and Retrieval Augmented
 
 With akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
 
-For the chinese manual, please visit [manual](https://tea9297.github.io/)
+For the chinese manual, please visit [manual](https://tea9297.github.io/akasha/)
 
 <br/>
 <br/>
