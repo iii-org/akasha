@@ -242,7 +242,7 @@ class ask(basic_llm):
         """ask model with image and prompt, image_path can be list of image path or url
 
         Args:
-            image_path (str): image path or url (recommand jpeg or png file)
+            image_path (Union[List[str], str]): image path or url (recommand jpeg or png file)
             prompt (str): user question
 
         Returns:
