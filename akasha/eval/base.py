@@ -114,13 +114,18 @@ def get_source_files(
     return 'based on file "' + "、".join(list(file_sources)) + '",'
 
 
-def get_question_from_file(path: str, question_style: str):
+def get_question_from_file(
+    path: str, question_type: str, question_style: str
+) -> Union[list, list, str, str]:
     """load questions from file and save the questions into lists.
     a question list include the question, mutiple options, and the answer (the number of the option),
       and they are all separate by space in the file.
-
+       if the questionset file has question_type and question_style key, it will replace the question_type and question_style with the value.
     Args:
         **path (str)**: path of the question file\n
+        **question_type (str)**: question type, default is "fact"\n
+        **question_style (str)**: question style, default is "essay"\n
+
 
     Returns:
         list: list of question list
@@ -138,6 +143,11 @@ def get_question_from_file(path: str, question_style: str):
     # Validate the JSON structure
     if not all(key in content for key in ["question", "answer"]):
         raise ValueError("The JSON file does not contain 'question' and 'answer' keys.")
+
+    if "question_type" in content:
+        question_type = content["question_type"]
+    if "question_style" in content:
+        question_style = content["question_style"]
 
     questions = content["question"]
     answers = []
@@ -161,7 +171,7 @@ def get_question_from_file(path: str, question_style: str):
         #     answers.append(process[1])
         # return questions, answers
         answers = content["answer"]
-        return questions, answers
+        return questions, answers, question_type, question_style
     else:
         for idx, words in enumerate(content["answer"]):
             questions[idx] = [questions[idx]]
@@ -176,4 +186,4 @@ def get_question_from_file(path: str, question_style: str):
     #     answers.append(words[-1])
 
     # return questions, answers
-    return questions, answers
+    return questions, answers, question_type, question_style

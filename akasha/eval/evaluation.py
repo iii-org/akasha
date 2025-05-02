@@ -422,8 +422,18 @@ class eval(Model_Eval):
         self.data_source = self._check_doc_path(data_source)
         self._decide_eval_model(eval_model)
 
+        ### get question and answer from questionset file ###
+        question, answer, self.question_type, self.question_style = (
+            get_question_from_file(
+                questionset_file, self.question_type, self.question_style
+            )
+        )
+
         if check_sum_type(self.question_type, self.question_style):
-            return 0.0, []
+            if self.question_style.lower() == "essay":
+                return 0.0, 0.0, 0.0, []
+            else:
+                return 0.0, []
 
         self.system_prompt = (
             check_essay_system_prompt(
@@ -448,7 +458,7 @@ class eval(Model_Eval):
             self.score = {"correct_count": 0}
         table = {}
         total_docs = []
-        question, answer = get_question_from_file(questionset_file, self.question_style)
+
         self.question_num = len(question)
         progress = tqdm(total=self.question, desc=f"Run Eval({self.question_style})")
         ## add logs ##
