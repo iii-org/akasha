@@ -119,31 +119,32 @@ def process_db(
         tot_db.merge(new_dbs)
 
     ### load dbs object based on links ###
-    progress = tqdm(total=len(link_list), desc="db http")
-    for url in link_list:
-        progress.update(1)
-        try:
-            is_suc = create_webpage_db(
-                url,
-                embeddings,
-                chunk_size,
-                env_file=env_file,
-            )
-
-            if is_suc:
-                new_dbs = load_directory_db(
+    if len(link_list) > 0:
+        progress = tqdm(total=len(link_list), desc="db http")
+        for url in link_list:
+            progress.update(1)
+            try:
+                is_suc = create_webpage_db(
                     url,
                     embeddings,
                     chunk_size,
+                    env_file=env_file,
                 )
-                tot_db.merge(new_dbs)
-            else:
-                ignored_files.append(url)
-        except Exception as e:
-            logging.warning(f"Error loading directory {data_path}: {e}")
-            print(f"Error loading directory {data_path}: {e}")
-            continue
-    progress.close()
+
+                if is_suc:
+                    new_dbs = load_directory_db(
+                        url,
+                        embeddings,
+                        chunk_size,
+                    )
+                    tot_db.merge(new_dbs)
+                else:
+                    ignored_files.append(url)
+            except Exception as e:
+                logging.warning(f"Error loading directory {data_path}: {e}")
+                print(f"Error loading directory {data_path}: {e}")
+                continue
+        progress.close()
 
     ### print the information ###
     _display_db_num(len(direct_list), file_count, len(link_list), verbose)

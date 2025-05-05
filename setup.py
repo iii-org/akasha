@@ -13,7 +13,7 @@ install_requires = [
     "langchain-community>=0.3,<0.4",
     "langchain_openai>=0.1.0",
     "langchain-huggingface>=0.1.2",
-    "langchain-chroma",
+    "langchain-chroma==0.2.2",
     "chromadb==0.4.14",
     "openai>=0.27",
     "tiktoken",

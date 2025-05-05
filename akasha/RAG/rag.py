@@ -225,7 +225,7 @@ class RAG(atman):
         if self.prompt_tokens > self.max_input_tokens:
             print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
             raise ValueError("The tokens of prompt is larger than max_input_tokens.")
-
+        print(self.db.get_ids()[:10])
         ### start to get response ###
         retrivers_list = get_retrivers(
             self.db,
