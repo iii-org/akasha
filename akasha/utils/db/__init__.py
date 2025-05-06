@@ -9,3 +9,4 @@ from .extract_db import (
     extract_db_by_keyword,  # noqa: F401
     pop_db_by_ids,  # noqa: F401
 )
+from .upadte_db import update_db  # noqa: F401
