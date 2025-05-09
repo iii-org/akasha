@@ -78,3 +78,28 @@ def create_tool(
         raise e
 
     return custom_tool(name=tool_name, description=tool_description, para_des=prm)
+
+
+def get_REACT_PROMPT(tool_explain_str: str, tool_name_str: str) -> str:
+    """get the REACT prompt for the tool"""
+
+    ret = f"""Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tool_explain_str}\n
+Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\n
+Valid "action" values: "Answer" or {tool_name_str}\n\n
+Provide only ONE action per $JSON_BLOB, as shown:\n{{\n```\n\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```$INPUT is a dictionary that contains tool parameters and their values\n\n
+the meaning of each format:\n
+Question: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n
+... (repeat Thought/Action N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Answer",\n  "action_input": "Final response to human"\n}}\n```\n\n
+Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
+"""
+
+    return ret
+
+
+DEFAULT_REMEMBER_PROMPT = (
+    "**Remember, Format is Thought: then Action:```$JSON_BLOB```\n\n"
+)
+
+
+DEFAULT_OBSERVATION_PROMPT = "\n\nBelow are your previous work, check them carefully and provide the next action and thought,**do not ask same question repeatedly: "
+DEFAULT_RETRI_OBSERVATION_PROMPT = "User will give you Question, Thought and Observation, return the information from Observation that you think is most relevant to the Question or Thought, if you can't find the information, return None."

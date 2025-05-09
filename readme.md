@@ -293,27 +293,16 @@ connection_info = {
         "transport": "sse",
     },
 }
+prompt = "tell me the weather in Taipei"
 
 # 使用 MCP 工具
-async def call_agents(prompt: str):
-    async with MultiServerMCPClient(connection_info) as client:
-        tools = client.get_tools()
-        agent = akasha.agents(
-            tools=tools,
-            model=MODEL,
-            temperature=1.0,
-            verbose=True,
-            keep_logs=True,
-        )
-
-        # 問問題並使用 MCP 工具回答
-        response = await agent.acall(prompt)
-        print(response)
-
-        # 保存日誌
-        agent.save_logs("logs_agent.json")
-
-# 啟動 MCP 工具
-asyncio.run(call_agents("tell me the weather in Taipei"))
+agent = akasha.agents(
+    model=MODEL,
+    temperature=1.0,
+    verbose=True,
+    keep_logs=True,
+)
+response = akasha.call_mcp_agent(agent, connection_info, prompt)
+agent.save_logs("logs_agent.json")
 
 ```

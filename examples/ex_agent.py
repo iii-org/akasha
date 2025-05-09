@@ -109,9 +109,8 @@ if __name__ == "__main__":
 ### run the weather_server.py using "pyhon weather_server.py" in command line to activate the server
 ### then we can use akasha agent to call the tools in MCP server ###
 
-import asyncio  # noqa: E402
 import akasha  # noqa: E402
-from langchain_mcp_adapters.client import MultiServerMCPClient  # noqa: E402
+
 
 MODEL = "openai:gpt-4o"
 
@@ -132,32 +131,23 @@ connection_info = {
 }
 
 
-## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
-async def call_agents(prompt: str):
-    async with MultiServerMCPClient(connection_info) as client:
-        tools = client.get_tools()
-        agent = akasha.agents(
-            tools=tools,
-            model=MODEL,
-            temperature=1.0,
-            verbose=True,
-            keep_logs=True,
-        )
-
-        # Use the agent asynchronously
-        response = await agent.acall(prompt)
-
-        ## if using streaming (stream=True), you can use async for loop to get the response
-        # async for r in response:
-        #     print(r, end="")
-
-        agent.save_logs("logs_agent.json")
-        return response
+## connection_info is the information of multiple MCP servers and  agent can use them to get the tools
+## call_mcp_agent will call the agent and return the response
+agent = akasha.agents(
+    model=MODEL,
+    temperature=1.0,
+    verbose=True,
+    keep_logs=True,
+)
+response = akasha.call_mcp_agent(agent, connection_info, prompt)
+agent.save_logs("logs_agent.json")
 
 
-# Run the main function
-asyncio.run(call_agents(prompt))
+## if using streaming (stream=True)
+# for r in response:
+#     print(r, end="")
 
+### OUTPUT ###
 # Model: openai:gpt-4o, Temperature: 1.0
 # Tool:  add, multiply, get_weather
 # Prompt format type: auto, Max input tokens: 3000

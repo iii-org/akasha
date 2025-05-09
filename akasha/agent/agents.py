@@ -1,12 +1,12 @@
 from langchain.tools import BaseTool
-from typing import Union, List, Generator
+from typing import Union, List
 import json
 import datetime
 import time
 import logging
 import asyncio
+from langchain_mcp_adapters.client import MultiServerMCPClient
 from akasha.utils.atman import basic_llm
-
 from akasha.utils.base import (
     DEFAULT_MODEL,
     DEFAULT_MAX_OUTPUT_TOKENS,
@@ -16,7 +16,13 @@ from akasha.helper.preprocess_prompts import retri_history_messages
 from akasha.helper.base import get_doc_length, extract_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt
 from akasha.helper.run_llm import call_model
-from .base import get_tool_explaination
+from .base import (
+    get_tool_explaination,
+    get_REACT_PROMPT,
+    DEFAULT_REMEMBER_PROMPT,
+    DEFAULT_OBSERVATION_PROMPT,
+    DEFAULT_RETRI_OBSERVATION_PROMPT,
+)
 
 
 class agents(basic_llm):
@@ -24,7 +30,7 @@ class agents(basic_llm):
 
     def __init__(
         self,
-        tools: Union[BaseTool, List],
+        tools: Union[BaseTool, List] = [],
         model: str = DEFAULT_MODEL,
         max_input_tokens: int = DEFAULT_MAX_INPUT_TOKENS,
         max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
@@ -83,11 +89,13 @@ class agents(basic_llm):
         self.tokens = 0
         self.input_len = 0
         self.question = ""
+        self.tools = {}
+        ## if tools is mcp connection info, connect mcp client to get tools when acall ##
+
+        if isinstance(tools, BaseTool):
+            tools = [tools]
 
         self.tool_explaination = get_tool_explaination(tools)
-        if not isinstance(tools, List):
-            tools = [tools]
-        self.tools = {}
         for tool in tools:
             if not isinstance(tool, BaseTool):
                 logging.warning("tools should be a list of BaseTool")
@@ -95,6 +103,12 @@ class agents(basic_llm):
             tool_name = tool.name
             self.tools[tool_name] = tool
 
+        self.REACT_PROMPT = self._merge_tool_explaination_and_react()
+        self.REMEMBER_PROMPT = DEFAULT_REMEMBER_PROMPT
+        self.OBSERVATION_PROMPT = DEFAULT_OBSERVATION_PROMPT
+        self.RETRI_OBSERVATION_PROMPT = DEFAULT_RETRI_OBSERVATION_PROMPT
+
+    def _merge_tool_explaination_and_react(self) -> str:
         tool_explain_str = "\n".join(
             [
                 f"{tool_name}: {tool_des}"
@@ -106,20 +120,7 @@ class agents(basic_llm):
         )
         self.tool_name_str = tool_name_str
 
-        self.REACT_PROMPT = f"""Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tool_explain_str}\n
-Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\n
-Valid "action" values: "Answer" or {tool_name_str}\n\n
-Provide only ONE action per $JSON_BLOB, as shown:\n{{\n```\n\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```$INPUT is a dictionary that contains tool parameters and their values\n\n
-the meaning of each format:\n
-Question: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n
-... (repeat Thought/Action N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Answer",\n  "action_input": "Final response to human"\n}}\n```\n\n
-Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
-"""
-        self.REMEMBER_PROMPT = (
-            "**Remember, Format is Thought: then Action:```$JSON_BLOB```\n\n"
-        )
-        self.OBSERVATION_PROMPT = "\n\nBelow are your previous work, check them carefully and provide the next action and thought,**do not ask same question repeatedly: "
-        self.RETRI_OBSERVATION_PROMPT = "User will give you Question, Thought and Observation, return the information from Observation that you think is most relevant to the Question or Thought, if you can't find the information, return None."
+        return get_REACT_PROMPT(tool_explain_str, tool_name_str)
 
     def _add_basic_log(self, timestamp: str, fn_type: str) -> bool:
         """add pre-process log to self.logs
@@ -201,6 +202,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
     async def acall(self, question: str, messages: List[dict] = None):
         """Asynchronous version of agent."""
+
+        self.REACT_PROMPT = self._merge_tool_explaination_and_react()
+
         return await self._run_agent(
             question,
             tool_runner=lambda tool, tool_input: tool.ainvoke(tool_input),
@@ -636,13 +640,140 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
 
         return
 
-    def _final_ronud_stream(self, response: str) -> Generator[str, None, None]:
-        """final round stream"""
-        for c in response:
-            self.response += c
-            yield c
 
-    def _display_stream(self, text: str) -> Generator[str, None, None]:
-        """display stream"""
-        for c in text:
-            yield c
+## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
+async def call_agents_non_streaming(agent: agents, connection_info: dict, prompt: str):
+    """Handle the non-streaming case where we want to return a complete string"""
+    async with MultiServerMCPClient(connection_info) as client:
+        tools = client.get_tools()
+
+        if isinstance(tools, BaseTool):
+            tools = [tools]
+
+        agent.tool_explaination = get_tool_explaination(tools)
+        for tool in tools:
+            if not isinstance(tool, BaseTool):
+                logging.warning("tools should be a list of BaseTool")
+                continue
+            tool_name = tool.name
+            agent.tools[tool_name] = tool
+
+        # Use the agent asynchronously
+        response = await agent.acall(prompt)
+
+        # For non-streaming, collect the complete response
+        if hasattr(response, "__aiter__"):
+            # If it's an async generator, collect all chunks and join them
+            result = ""
+            async for chunk in response:
+                result += chunk
+            return result
+        # If it's already a string or other non-generator response
+        return response
+
+
+# Run the mcp main function
+def call_mcp_agent(agent: agents, connection_info: dict, prompt: str):
+    if not agent.stream:
+        return asyncio.run(call_agents_non_streaming(agent, connection_info, prompt))
+
+    # For streaming, use a thread approach with a queue
+    import queue
+    import threading
+
+    # Create a queue for passing messages from async to sync
+    message_queue = queue.Queue()
+    stop_event = threading.Event()
+
+    # Function to run in a background thread
+    def run_async_stream():
+        # Create a new event loop for this thread
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        async def process_stream():
+            try:
+                async with MultiServerMCPClient(connection_info) as client:
+                    tools = client.get_tools()
+
+                    if isinstance(tools, BaseTool):
+                        tools = [tools]
+
+                    agent.tool_explaination = get_tool_explaination(tools)
+                    for tool in tools:
+                        if not isinstance(tool, BaseTool):
+                            logging.warning("tools should be a list of BaseTool")
+                            continue
+                        tool_name = tool.name
+                        agent.tools[tool_name] = tool
+
+                    # Use the agent asynchronously
+                    response = await agent.acall(prompt)
+
+                    # Process the streaming response in real-time
+                    async for chunk in response:
+                        # Put each chunk in the queue as it arrives
+                        message_queue.put(chunk)
+            except Exception:
+                import traceback
+
+                message_queue.put(("ERROR", traceback.format_exc()))
+            finally:
+                # Signal that we're done
+                message_queue.put(None)
+
+        # Run the async function and ensure proper cleanup
+        try:
+            loop.run_until_complete(process_stream())
+        finally:
+            # Clean up the event loop
+            pending = asyncio.all_tasks(loop)
+            for task in pending:
+                task.cancel()
+
+            # Give cancelled tasks a chance to clean up
+            if pending:
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+    # Start the background thread
+    thread = threading.Thread(target=run_async_stream)
+    thread.daemon = True  # The thread will exit when the main thread exits
+    thread.start()
+
+    # Return a generator that yields results as they arrive from the queue
+    def result_generator():
+        try:
+            while not stop_event.is_set():
+                try:
+                    # Timeout allows checking the stop_event occasionally
+                    result = message_queue.get(timeout=0.1)
+
+                    # None signals end of stream
+                    if result is None:
+                        break
+
+                    # Check for error
+                    if isinstance(result, tuple) and result[0] == "ERROR":
+                        raise RuntimeError(f"Error in async thread: {result[1]}")
+
+                    yield result
+
+                except queue.Empty:
+                    # Just a timeout, check if the thread is still alive
+                    if not thread.is_alive():
+                        # Thread died unexpectedly
+                        raise RuntimeError("Background thread died unexpectedly")
+                    # Otherwise continue waiting
+        finally:
+            # Clean up
+            stop_event.set()
+            # Wait for thread to finish if it's still running
+            if thread.is_alive():
+                thread.join(timeout=5.0)
+
+    return result_generator()
