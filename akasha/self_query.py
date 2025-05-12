@@ -1,8 +1,9 @@
-#from langchain_chroma import Chroma
+# from langchain_chroma import Chroma
 from langchain_core.documents import Document
-#from langchain_openai import OpenAIEmbeddings
+
+# from langchain_openai import OpenAIEmbeddings
 from langchain.chains.query_constructor.base import AttributeInfo
-from typing import List, Union, Set, Any, Tuple, Optional, Callable, Dict
+from typing import List, Union, Set, Any, Tuple, Optional, Callable
 import json
 from pydantic import Field
 import operator
@@ -36,15 +37,18 @@ def query_filter(
         Tuple[dbs, str, dict]: the filtered documents dbs, the query(str) and matched fields dict(dict[db.ids, List[str]])
     """
     query, fnl_filter, data_source = generate_query_filter(
-        model_obj, prompt, metadata_field_info, document_content_description,
-        custom_parser)
+        model_obj,
+        prompt,
+        metadata_field_info,
+        document_content_description,
+        custom_parser,
+    )
 
     new_docs = [
         DocumentCP(doc, metadata, ids)
         for doc, metadata, ids in zip(db.docs, db.metadatas, db.ids)
     ]
-    filtered_docs = filter_docs(new_docs, fnl_filter, data_source,
-                                loose_filter)
+    filtered_docs = filter_docs(new_docs, fnl_filter, data_source, loose_filter)
     filtered_docs_set = set(fd.ids for fd in filtered_docs)
     matched_fields_dict = {fd.ids: fd.matched_fields for fd in filtered_docs}
     new_dbs = extract_db_by_ids(db, filtered_docs_set)
@@ -52,13 +56,12 @@ def query_filter(
 
 
 def check_metadata_info(
-        metadata_info: List[Union[AttributeInfo,
-                                  dict]]) -> List[AttributeInfo]:
+    metadata_info: List[Union[AttributeInfo, dict]],
+) -> List[AttributeInfo]:
     """check if the metadata_info is in the right format"""
 
     new_metadata_info = []
     if isinstance(metadata_info, list):
-
         for i, attr in enumerate(metadata_info):
             if isinstance(attr, dict):
                 if "name" in attr and "description" in attr and "type" in attr:
@@ -80,9 +83,11 @@ def check_metadata_info(
     return new_metadata_info
 
 
-def generate_query_constructor(metadata_info: List[Union[AttributeInfo, dict]],
-                               document_content_description: str,
-                               prompt: str) -> tuple[str, dict]:
+def generate_query_constructor(
+    metadata_info: List[Union[AttributeInfo, dict]],
+    document_content_description: str,
+    prompt: str,
+) -> tuple[str, dict]:
     """generate a query constructor prompt based on metadata_info and document_content_description"""
 
     new_metadata_info = check_metadata_info(metadata_info)
@@ -90,12 +95,9 @@ def generate_query_constructor(metadata_info: List[Union[AttributeInfo, dict]],
     data_source = {
         "content": document_content_description,
         "attributes": {
-            attr.name: {
-                "description": attr.description,
-                "type": attr.type
-            }
+            attr.name: {"description": attr.description, "type": attr.type}
             for attr in new_metadata_info
-        }
+        },
     }
     json_string = json.dumps(data_source, ensure_ascii=False, indent=4)
     st1 = """\
@@ -205,6 +207,7 @@ class DocumentCP(Document):
     Returns:
         _type_: _description_
     """
+
     ids: Union[int, str] = Field(default="")
     matched_fields: List[str] = Field(default=[])
 
@@ -217,12 +220,12 @@ class DocumentCP(Document):
         return hash(self.page_content)
 
     def __eq__(self, other):
-        return isinstance(
-            other, DocumentCP) and self.page_content == other.page_content
+        return isinstance(other, DocumentCP) and self.page_content == other.page_content
 
 
-def handle_attr(attr: Union[int, float, str], data_source: dict,
-                keyword: str) -> Union[int, float, str]:
+def handle_attr(
+    attr: Union[int, float, str], data_source: dict, keyword: str
+) -> Union[int, float, str]:
     """change attriubte type based on the data_source
 
     Args:
@@ -233,11 +236,11 @@ def handle_attr(attr: Union[int, float, str], data_source: dict,
     Returns:
         Union[int, float, str]:  changed type of the attribute
     """
-    if data_source['attributes'][keyword]['type'] == 'string':
+    if data_source["attributes"][keyword]["type"] == "string":
         return str(attr)
-    elif data_source['attributes'][keyword]['type'] == 'integer':
+    elif data_source["attributes"][keyword]["type"] == "integer":
         return int(attr)
-    elif data_source['attributes'][keyword]['type'] == 'float':
+    elif data_source["attributes"][keyword]["type"] == "float":
         return float(attr)
     return str(attr)
 
@@ -261,12 +264,12 @@ def find_subset(
     """
     # Define a dictionary to map operators to functions
     operator_map = {
-        '$eq': operator.eq,
-        '$ne': operator.ne,
-        '$gt': operator.gt,
-        '$gte': operator.ge,
-        '$lt': operator.lt,
-        '$lte': operator.le
+        "$eq": operator.eq,
+        "$ne": operator.ne,
+        "$gt": operator.gt,
+        "$gte": operator.ge,
+        "$lt": operator.lt,
+        "$lte": operator.le,
     }
 
     res = set()
@@ -274,17 +277,18 @@ def find_subset(
         if op in val:
             attr = handle_attr(val[op], data_source, keyword)
 
-            if isinstance(attr, str) and op == '$eq':
+            if isinstance(attr, str) and op == "$eq":
                 attr = attr.lower()
                 for doc in cur_docs:
-                    if keyword in doc.metadata and attr in doc.metadata[
-                            keyword].lower():
+                    if (
+                        keyword in doc.metadata
+                        and attr in doc.metadata[keyword].lower()
+                    ):
                         doc.matched_fields.append(keyword)
                         res.add(doc)
             else:
                 for doc in cur_docs:
-                    if keyword in doc.metadata and func(
-                            doc.metadata[keyword], attr):
+                    if keyword in doc.metadata and func(doc.metadata[keyword], attr):
                         doc.matched_fields.append(keyword)
                         res.add(doc)
 
@@ -295,18 +299,17 @@ def transfer_filter(filters: Union[dict, int, float, str]) -> dict:
     """Recursively convert all $and filters to $or filters."""
     if not isinstance(filters, dict):
         return filters
-    elif '$and' in filters:
-        filters = {'$or': [transfer_filter(f) for f in filters['$and']]}
+    elif "$and" in filters:
+        filters = {"$or": [transfer_filter(f) for f in filters["$and"]]}
     else:
         for key, value in filters.items():
             filters[key] = transfer_filter(value)
     return filters
 
 
-def filter_docs(docs: Document,
-                filters: dict,
-                data_source: dict,
-                loose_filter: bool = False) -> List[DocumentCP]:
+def filter_docs(
+    docs: Document, filters: dict, data_source: dict, loose_filter: bool = False
+) -> List[DocumentCP]:
     """filter the documents based on the filters
 
     Args:
@@ -326,15 +329,15 @@ def filter_docs(docs: Document,
     def recur(cur_docs: DocumentCP, filters: dict):
         res = set()
         flag = True
-        if '$and' in filters:
-            for f in filters['$and']:
+        if "$and" in filters:
+            for f in filters["$and"]:
                 if flag:
                     flag = False
                     res = recur(cur_docs, f)
                 else:
                     res = res.intersection(recur(cur_docs, f))
-        elif '$or' in filters:
-            for f in filters['$or']:
+        elif "$or" in filters:
+            for f in filters["$or"]:
                 res = res.union(recur(cur_docs, f))
         else:
             keyword = next(iter(filters))
@@ -350,17 +353,15 @@ def filter_docs(docs: Document,
 def translate(expr):
     """Translate a logical expression to a nested dictionary format."""
     # Pattern to match logical operations (e.g., and(...), or(...))
-    logical_op_pattern = re.compile(r'(and|or|AND|OR)\((.*)\)')
+    logical_op_pattern = re.compile(r"(and|or|AND|OR)\((.*)\)")
     # Pattern to match comparison operations (e.g., eq(公司名稱, a公司))
-    comparison_op_pattern = re.compile(
-        r'(eq|ne|gt|gte|lt|lte)\(([^,]+),([^,]+)\)')
+    comparison_op_pattern = re.compile(r"(eq|ne|gt|gte|lt|lte)\(([^,]+),([^,]+)\)")
 
     # Check if it's a logical operation
     logical_match = logical_op_pattern.match(expr)
     if logical_match:
         logical_op = logical_match.group(1)  # "and" or "or"
-        inner_expr = logical_match.group(
-            2)  # Expressions inside the parentheses
+        inner_expr = logical_match.group(2)  # Expressions inside the parentheses
 
         # Split inner expressions by commas not inside parentheses
         parts = split_expressions(inner_expr)
@@ -371,7 +372,6 @@ def translate(expr):
     # Check if it's a comparison operation
     comparison_match = comparison_op_pattern.match(expr)
     if comparison_match:
-
         comparison_op, field, value = comparison_match.groups()
         field = field.strip()
         value = value.strip()
@@ -387,18 +387,18 @@ def split_expressions(expr):
     current_part = []
 
     for char in expr:
-        if char == ',' and depth == 0:
-            parts.append(''.join(current_part).strip())
+        if char == "," and depth == 0:
+            parts.append("".join(current_part).strip())
             current_part = []
         else:
             current_part.append(char)
-            if char == '(':
+            if char == "(":
                 depth += 1
-            elif char == ')':
+            elif char == ")":
                 depth -= 1
 
     if current_part:
-        parts.append(''.join(current_part).strip())
+        parts.append("".join(current_part).strip())
 
     return parts
 
@@ -415,7 +415,7 @@ def translate_output(llm_res: str) -> tuple[str, dict]:
     first we extract the query and filter from the llm_res by using helper.extract_json
     then we translate the filter to a dictionary looks like this:
     {'$and': [{'公司名稱': {'$eq': 'a公司'}}, {'拜訪年': {'$eq': '2024'}}]}
-    
+
     Args:
         llm_res (str): the output of the language model
 
@@ -426,10 +426,8 @@ def translate_output(llm_res: str) -> tuple[str, dict]:
     filters = {}
     try:
         llm_res = helper.extract_json(llm_res)
-        query = llm_res['query']
-        filter = llm_res['filter'].replace("\"",
-                                           "").replace("\\",
-                                                       "").replace("  ", "")
+        query = llm_res["query"]
+        filter = llm_res["filter"].replace('"', "").replace("\\", "").replace("  ", "")
 
         filters = translate(filter)
         print(filters)
@@ -458,7 +456,8 @@ def generate_query_filter(
         tuple[str, dict, dict[str, Any]]: query, fnl_filter, data_source
     """
     query_constructor_prompt, data_source = generate_query_constructor(
-        metadata_field_info, document_content_description, prompt)
+        metadata_field_info, document_content_description, prompt
+    )
     res = helper.call_model(model_obj, query_constructor_prompt)
 
     if custom_parser is not None:
