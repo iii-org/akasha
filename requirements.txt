@@ -6,7 +6,7 @@ langchain-huggingface>=0.1.2
 langchain_openai>=0.1.0
 langchain-chroma==0.2.2
 chromadb==0.4.14
-openai>=1.68.2
+openai>=1.78.1
 tiktoken
 scikit-learn>=1.3.0
 jieba>=0.42.1
@@ -28,9 +28,7 @@ unstructured
 python-pptx
 wikipedia
 opencc-python-reimplemented>=0.1.7
-google-cloud-aiplatform>=1.64
-google-generativeai
-langchain-google-genai
+google-genai>=1.15.0
 sentencepiece
 anthropic
 tavily-python

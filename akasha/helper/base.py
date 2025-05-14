@@ -57,10 +57,10 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
     ):
         return "openai:" + embeddings.model
     else:
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        from akasha.utils.models.gemi import gemini_embed
 
-        if isinstance(embeddings, GoogleGenerativeAIEmbeddings):
-            return "gemini:" + embeddings.model
+        if isinstance(embeddings, gemini_embed):
+            return "gemini:" + embeddings.model_name
 
         from akasha.utils.models.custom import custom_embed
 

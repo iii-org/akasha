@@ -1,8 +1,14 @@
-import google.generativeai as genai
-from google.generativeai import GenerationConfig
+from google import genai
+from google.genai import types
+
 from langchain.llms.base import LLM
 from typing import Dict, List, Any, Optional, Generator, Union
-from pydantic import Field
+from pydantic import BaseModel
+import os
+from langchain.schema.embeddings import Embeddings
+from pathlib import Path
+
+# from pydantic import Field
 import concurrent.futures
 
 
@@ -12,8 +18,9 @@ class gemini_model(LLM):
     temperature: float = 0.01
     top_p: float = 0.95
     history: list = []
-    model: genai.GenerativeModel = Field(default=None)
     model_name: str = "gemini-1.5-flash"
+    client: genai.Client = None
+    generation_config: types.GenerateContentConfig = None
 
     def __init__(
         self, model_name: str, api_key: str, temperature: float = 0.0, **kwargs
@@ -24,17 +31,14 @@ class gemini_model(LLM):
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__()
-        genai.configure(api_key=api_key)
+        self.client = genai.Client(api_key=api_key)
         self.temperature = temperature
         if "max_output_tokens" in kwargs:
             self.max_output_tokens = kwargs["max_output_tokens"]
 
-        generation_config = GenerationConfig(
+        self.generation_config = types.GenerateContentConfig(
             max_output_tokens=self.max_output_tokens,
             temperature=temperature,
-        )
-        self.model = genai.GenerativeModel(
-            model_name, generation_config=generation_config
         )
         self.model_name = model_name
 
@@ -61,18 +65,18 @@ class gemini_model(LLM):
         if isinstance(prompt, list):
             prompt = check_format_prompt(prompt)
 
-        generation_config = GenerationConfig(
+        generation_config = types.GenerateContentConfig(
             max_output_tokens=self.max_output_tokens,
             temperature=self.temperature,
             top_p=self.top_p,
             stop_sequences=stop,
         )
-        streaming_response = self.model.generate_content(
-            prompt, generation_config=generation_config, stream=True
-        )
+        for chunk in self.client.models.generate_content_stream(
+            model=self.model_name, contents=prompt, config=generation_config
+        ):
+            if chunk.text:
+                yield chunk.text
 
-        for s in streaming_response:
-            yield s.text
         return
 
     def _call(
@@ -94,21 +98,19 @@ class gemini_model(LLM):
         if isinstance(prompt, list):
             prompt = check_format_prompt(prompt)
 
-        generation_config = GenerationConfig(
+        generation_config = types.GenerateContentConfig(
             max_output_tokens=self.max_output_tokens,
             temperature=self.temperature,
             top_p=self.top_p,
             stop_sequences=stop,
         )
-
         ret = ""
-        streaming_response = self.model.generate_content(
-            prompt, generation_config=generation_config, stream=True
-        )
-
-        for s in streaming_response:
-            print(s.text, end="", flush=True)
-            ret += s.text
+        for chunk in self.client.models.generate_content_stream(
+            model=self.model_name, contents=prompt, config=generation_config
+        ):
+            if chunk.text:
+                print(chunk.text, end="", flush=True)
+                ret += chunk.text
 
         return ret
 
@@ -167,6 +169,74 @@ class gemini_model(LLM):
         """
         return self.stream(messages, stop)
 
+    def generate(self, prompt: str, save_path: str = "./image.png", **kwargs) -> Path:
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+        )
+
+        from PIL import Image
+        from io import BytesIO
+
+        path = Path(save_path)
+        if path.is_dir():
+            # If it's a directory, append default filename
+            save_path = path / "image.png"
+
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                print(part.text)
+            elif part.inline_data is not None:
+                image = Image.open(BytesIO((part.inline_data.data)))
+                image.save(save_path.__str__())
+                image.show()
+
+        return path
+
+    def edit(
+        self, prompt: str, images: list[str], save_path: str = "./image.png", **kwargs
+    ):
+        ## process the image list
+        images_source = [prompt]
+        for image in images:
+            if isinstance(image, str):
+                # use Path to check if the image is exist
+                image_path = Path(image)
+                if not image_path.exists():
+                    raise ValueError(f"Image {image} does not exist.")
+                images_source.append(self.client.files.upload(file=image))
+            elif isinstance(image, Path):
+                if not image.exists():
+                    raise ValueError(f"Image {image} does not exist.")
+                images_source.append(self.client.files.upload(file=image.__str__()))
+            else:
+                raise ValueError(f"Image {image} is not a valid path or file object.")
+
+        response = self.client.models.generate_content(
+            model=self.model_name,
+            contents=images_source,
+            config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+        )
+
+        from PIL import Image
+        from io import BytesIO
+
+        path = Path(save_path)
+        if path.is_dir():
+            # If it's a directory, append default filename
+            save_path = path / "image.png"
+
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                print(part.text)
+            elif part.inline_data is not None:
+                image = Image.open(BytesIO((part.inline_data.data)))
+                image.save(save_path.__str__())
+                image.show()
+
+        return path
+
 
 def check_format_prompt(prompts: list):
     """check and format the prompt to fit the correct gemini format"""
@@ -184,6 +254,67 @@ def calculate_token(
     prompt: str,
     model_name: str = "gemini-1.5-flash",
 ):
-    num_tokens = genai.GenerativeModel(model_name).count_tokens(prompt)
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    num_tokens = client.models.count_tokens(
+        model=model_name, contents=prompt
+    ).total_tokens
 
     return num_tokens
+
+
+class gemini_embed(BaseModel, Embeddings):
+    """gemini embedding models."""
+
+    client: genai.Client = None
+    model_name: str = "gemini-embedding-exp-03-07"
+    """Model name to use."""
+    # """Keyword arguments to pass to the model."""
+    embedConfig: types.EmbedContentConfig = None
+    """Keyword arguments to pass when calling the `encode` method of the model."""
+
+    class Config:
+        arbitrary_types_allowed = True  # Allow arbitrary types like genai.Client
+
+    def __init__(self, model_name: str, api_key: str, **kwargs: Any):
+        """Initialize the sentence_transformer."""
+        super().__init__(**kwargs)
+
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = model_name
+        self.embedConfig = types.EmbedContentConfig(task_type="SEMANTIC_SIMILARITY")
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        """Compute doc embeddings using a HuggingFace transformer model.
+
+        Args:
+            texts: The list of texts to embed.
+
+        Returns:
+            List of embeddings, one for each text.
+        """
+
+        texts = list(map(lambda x: x.replace("\n", " "), texts))
+
+        result = self.client.models.embed_content(
+            model=self.model_name, contents=texts, config=self.embedConfig
+        )
+        embeddings = []
+        # get list of embedding floats #
+        for r in result.embeddings:
+            embeddings.append(list(map(lambda x: float(x), r.values)))
+        return embeddings
+
+    def embed_query(self, text: str) -> List[float]:
+        """Compute query embeddings using a HuggingFace transformer model.
+
+        Args:
+            text: The text to embed.
+
+        Returns:
+            Embeddings for the text.
+        """
+        result = self.client.models.embed_content(
+            model=self.model_name, contents=text, config=self.embedConfig
+        )
+
+        return result.embeddings[0].values

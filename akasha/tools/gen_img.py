@@ -67,33 +67,18 @@ def edit_image(
     """
 
     model_obj = handle_client(model, env_file)
-    images_source = []
 
     ### check if images is a list
     if not isinstance(images, list):
         images = [images]
 
-    for image in images:
-        if isinstance(image, str):
-            # use Path to check if the image is exist
-            image_path = Path(image)
-            if not image_path.exists():
-                raise ValueError(f"Image {image} does not exist.")
-            images_source.append(open(image, "rb"))
-        elif isinstance(image, Path):
-            if not image.exists():
-                raise ValueError(f"Image {image} does not exist.")
-            images_source.append(open(image, "rb"))
-        else:
-            raise ValueError(f"Image {image} is not a valid path or file object.")
-
     print(
-        f"Generationg, may take some time...\n\nmodel: {model}, save_path: {save_path}"
+        f"Generating, may take some time...\n\nmodel: {model}, save_path: {save_path}"
     )
 
     ret = model_obj.edit(
         prompt=prompt,
-        images=images_source,
+        images=images,
         save_path=save_path,
         size=size,
         quality=quality,

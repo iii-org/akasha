@@ -178,10 +178,10 @@ def handle_embeddings(
         info = "selected tensorflow embeddings.\n"
 
     elif embedding_type in ["gemini", "gemi", "google"]:
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        from akasha.utils.models.gemi import gemini_embed
 
-        embeddings = GoogleGenerativeAIEmbeddings(
-            model=embedding_name, google_api_key=os.environ["GEMINI_API_KEY"]
+        embeddings = gemini_embed(
+            model_name=embedding_name, api_key=os.environ["GEMINI_API_KEY"]
         )
         info = "selected gemini embeddings.\n"
 
@@ -473,8 +473,12 @@ def handle_client(model: str, env_file: str = ""):
                 api_type="openai",
             )
     elif client_type == "gemini":
-        pass
-        # client = basic_llm(model=model_name)
+        from akasha.utils.models.gemi import gemini_model
+
+        client = gemini_model(
+            model_name=model_name,
+            api_key=env_dict["GEMINI_API_KEY"],
+        )
     else:
         raise ValueError(f"Unknown client type: {client_type}")
 

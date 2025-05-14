@@ -137,14 +137,23 @@ class myTokenizer(object):
         Raises:
             ValueError: If the model_id is not a valid Gemini model.
         """
-        from vertexai.preview import tokenization
+        try:
+            from akasha.utils.models.gemi import calculate_token
 
-        if "/" in model_name:
-            model_name = model_name.split("/")[-1]
-        if model_name.lower().startswith("gemini:"):
-            model_name = model_name.lower().lstrip("gemini:")
-        tokenizer = tokenization.get_tokenizer_for_model(model_name)
-        num_tokens = tokenizer.count_tokens(text).total_tokens
+            if "/" in model_name:
+                model_name = model_name.split("/")[-1]
+            if model_name.lower().startswith("gemini:"):
+                model_name = model_name.lower().lstrip("gemini:")
+            # tokenizer = tokenization.get_tokenizer_for_model(model_name)
+            # num_tokens = tokenizer.count_tokens(text).total_tokens
+            num_tokens = calculate_token(text, model_name=model_name)
+        except Exception:
+            import tiktoken
+
+            encoding = tiktoken.get_encoding("cl100k_base")
+            num_tokens = len(encoding.encode(text))
+            return num_tokens
+
         return num_tokens
 
     @classmethod

@@ -1,7 +1,7 @@
 from openai import OpenAI, AzureOpenAI
 import base64
 from pathlib import Path
-from openai._types import FileTypes
+import openai as ai
 
 
 class AzureOpenAIClient:
@@ -26,6 +26,7 @@ class AzureOpenAIClient:
                 api_key=api_key,
                 api_version=api_version,
             )
+            print(self.client.base_url)
 
     def generate(
         self,
@@ -88,7 +89,7 @@ class AzureOpenAIClient:
     def edit(
         self,
         prompt: str,
-        images: list[FileTypes],
+        images: str,
         save_path: str = "./image.png",
         size: str = "auto",
         quality: str = "auto",
@@ -104,6 +105,22 @@ class AzureOpenAIClient:
             moderation (str, optional): _description_. Defaults to "auto".
             background (str, optional): _description_. Defaults to "auto".
         """
+        ai._azure._deployments_endpoints.add("/images/edits")  # hack fix openai bug
+        ## process the image list
+        images_source = []
+        for image in images:
+            if isinstance(image, str):
+                # use Path to check if the image is exist
+                image_path = Path(image)
+                if not image_path.exists():
+                    raise ValueError(f"Image {image} does not exist.")
+                images_source.append(open(image, "rb"))
+            elif isinstance(image, Path):
+                if not image.exists():
+                    raise ValueError(f"Image {image} does not exist.")
+                images_source.append(open(image, "rb"))
+            else:
+                raise ValueError(f"Image {image} is not a valid path or file object.")
 
         # Convert save_path to Path object
         path = Path(save_path)
@@ -121,11 +138,10 @@ class AzureOpenAIClient:
 
         # Generate image
         result = self.client.images.edit(
-            image=images,
+            image=images_source,
             model=self.model_name,
             prompt=prompt,
             size=size,
-            quality=quality,
         )
 
         ## decode the image
