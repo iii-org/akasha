@@ -343,8 +343,11 @@ def create_chromadb_from_file(
         cur_doc = documents[k : k + interval]
         texts = text_splitter.split_documents(cur_doc)
         formatted_date = datetime.datetime.now().strftime("%Y-%m-%d-%H_%M_%S_%f")
-
-        page_contents = [text.page_content for text in texts]
+        page_contents = []
+        text_str_count = 0
+        for text in texts:
+            text_str_count += len(text.page_content)
+            page_contents.append(text.page_content)
 
         try:
             vectors = embeddings.embed_documents(page_contents)
@@ -365,7 +368,9 @@ def create_chromadb_from_file(
                 for i in range(len(texts))
             ],
         )
-        is_added = True
+
+        if text_str_count > 0:
+            is_added = True
 
         k += interval
         cum_ids += len(texts)

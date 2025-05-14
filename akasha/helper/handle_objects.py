@@ -442,6 +442,45 @@ def handle_model(
     return model
 
 
+def handle_client(model: str, env_file: str = ""):
+    client_type, model_name = separate_name(model)
+    env_dict = _get_env_var(env_file)
+    if client_type == "openai":
+        from akasha.utils.models.azure_openai import AzureOpenAIClient
+
+        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
+            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
+        ):
+            model_name = model_name.replace(".", "")
+            api_base, api_key, api_version = _handle_azure_env(env_dict)
+
+            client = AzureOpenAIClient(
+                api_key=api_key,
+                model_name=model_name,
+                api_type="azure",
+                api_base=api_base,
+                api_version=api_version,
+            )
+
+        else:
+            if "OPENAI_API_KEY" not in env_dict:
+                raise Exception(
+                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
+                )
+            client = AzureOpenAIClient(
+                api_key=env_dict["OPENAI_API_KEY"],
+                model_name=model_name,
+                api_type="openai",
+            )
+    elif client_type == "gemini":
+        pass
+        # client = basic_llm(model=model_name)
+    else:
+        raise ValueError(f"Unknown client type: {client_type}")
+
+    return client
+
+
 def handle_model_and_name(
     model: Union[str, Callable, BaseLanguageModel] = "openai:gpt-3.5-turbo",
     verbose: bool = False,

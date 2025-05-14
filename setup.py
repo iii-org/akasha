@@ -15,7 +15,7 @@ install_requires = [
     "langchain-huggingface>=0.1.2",
     "langchain-chroma==0.2.2",
     "chromadb==0.4.14",
-    "openai>=0.27",
+    "openai>=1.68.2",
     "tiktoken",
     "scikit-learn>=1.3.0",
     "jieba>=0.42.1",

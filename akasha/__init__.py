@@ -2,6 +2,7 @@ from .RAG.rag import RAG
 from .tools.ask import ask
 from .tools.summary import summary
 from .tools.websearch import websearch
+from .tools.gen_img import gen_image, edit_image
 from .eval import eval
 from .agent import agents, call_mcp_agent
 from .agent import create_tool
@@ -15,4 +16,6 @@ __all__ = [
     "agents",
     "call_mcp_agent",
     "create_tool",
+    "gen_image",
+    "edit_image",
 ]
