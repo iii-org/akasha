@@ -52,7 +52,10 @@ class gemini_model(LLM):
         return f"gemini:{self.model_name}"
 
     def stream(
-        self, prompt: Union[str, List[Dict[str, Any]]], stop: Optional[List[str]] = None
+        self,
+        prompt: Union[str, List[Dict[str, Any]]],
+        stop: Optional[List[str]] = None,
+        system_prompt: Union[str, None] = None,
     ) -> Generator:
         """run llm and get the stream generator
 
@@ -63,13 +66,14 @@ class gemini_model(LLM):
             Generator: _description_
         """
         if isinstance(prompt, list):
-            prompt = check_format_prompt(prompt)
+            prompt, system_prompt = check_format_prompt(prompt)
 
         generation_config = types.GenerateContentConfig(
             max_output_tokens=self.max_output_tokens,
             temperature=self.temperature,
             top_p=self.top_p,
             stop_sequences=stop,
+            system_instruction=system_prompt,
         )
         for chunk in self.client.models.generate_content_stream(
             model=self.model_name, contents=prompt, config=generation_config
@@ -84,6 +88,7 @@ class gemini_model(LLM):
         prompt: Union[str, List[Dict[str, Any]]],
         stop: Optional[List[str]] = None,
         verbose=True,
+        system_prompt: Union[str, None] = None,
     ) -> str:
         """run llm and get the response
 
@@ -96,15 +101,17 @@ class gemini_model(LLM):
         """
 
         if isinstance(prompt, list):
-            prompt = check_format_prompt(prompt)
+            prompt, system_prompt = check_format_prompt(prompt)
 
         generation_config = types.GenerateContentConfig(
             max_output_tokens=self.max_output_tokens,
             temperature=self.temperature,
             top_p=self.top_p,
             stop_sequences=stop,
+            system_instruction=system_prompt,
         )
         ret = ""
+
         for chunk in self.client.models.generate_content_stream(
             model=self.model_name, contents=prompt, config=generation_config
         ):
@@ -129,6 +136,7 @@ class gemini_model(LLM):
             str: llm response
         """
         # Number of threads should not exceed the number of prompts
+
         num_threads = min(
             len(prompt), concurrent.futures.thread.ThreadPoolExecutor()._max_workers
         )
@@ -240,14 +248,27 @@ class gemini_model(LLM):
 
 def check_format_prompt(prompts: list):
     """check and format the prompt to fit the correct gemini format"""
+    converted_prompts = []
+    system_prompt = None
     for idx, prompt in enumerate(prompts):
-        if prompt["role"] != "user":
-            prompts[idx]["role"] = "model"
-        if ("parts" not in prompt) and ("content" in prompt):
-            prompts[idx]["parts"] = [prompts[idx]["content"]]
-            prompts[idx].pop("content")
+        if prompt["role"] == "user" or prompt["role"] == "human":
+            if "parts" in prompt:
+                print(prompt["parts"][0])
+                converted_prompts.append(types.Part.from_text(text=prompt["parts"][0]))
+            elif "content" in prompt:
+                converted_prompts.append(types.Part.from_text(text=prompt["content"]))
 
-    return prompts
+        elif (
+            prompt["role"] == "assistant"
+            or prompt["role"] == "system"
+            or prompt["role"] == "model"
+        ):
+            if "parts" in prompt:
+                system_prompt = prompt["parts"][0]
+            elif "content" in prompt:
+                system_prompt = prompt["content"]
+
+    return converted_prompts, system_prompt
 
 
 def calculate_token(

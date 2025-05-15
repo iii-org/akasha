@@ -218,7 +218,6 @@ class ask(basic_llm):
                 self.prompt_format_type,
                 self.model,
             )
-
             if self.stream:
                 return self._display_stream(
                     fnl_input,
