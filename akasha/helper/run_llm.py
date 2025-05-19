@@ -198,7 +198,11 @@ def call_image_model(
     try:
         model_type = model._llm_type
 
-        if ("openai" in model_type) or ("remote" in model_type):
+        if (
+            ("openai" in model_type)
+            or ("remote" in model_type)
+            or ("gemini" in model_type)
+        ):
             print_flag = False
             response = model.invoke(input_text)
 

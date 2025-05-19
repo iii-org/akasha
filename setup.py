@@ -15,6 +15,7 @@ install_requires = [
     "langchain-huggingface>=0.1.2",
     "langchain-chroma==0.2.2",
     "chromadb==0.4.14",
+    "onnxruntime <= 1.20.0",
     "openai>=1.78.1",
     "tiktoken",
     "scikit-learn>=1.3.0",
@@ -85,5 +86,5 @@ setup(
         "akasha.utils.search.retrievers",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
-    python_requires=">=3.10",
+    python_requires=">=3.10,<3.13",
 )

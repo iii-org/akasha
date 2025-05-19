@@ -99,7 +99,6 @@ class gemini_model(LLM):
         Returns:
             str: llm response
         """
-
         if isinstance(prompt, list):
             prompt, system_prompt = check_format_prompt(prompt)
 
@@ -246,6 +245,27 @@ class gemini_model(LLM):
         return path
 
 
+def convert_vision_prompt(prompt: list):
+    """convert the vision prompt to the correct format"""
+    converted_prompts = []
+    for idx, p in enumerate(prompt):
+        if isinstance(p, str):
+            converted_prompts.append(types.Part.from_text(text=p))
+        elif isinstance(p, dict):
+            if "text" in p:
+                converted_prompts.append(types.Part.from_text(text=p["text"]))
+            elif "image_url" in p:
+                converted_prompts.append(
+                    types.Part.from_bytes(data=p["image_url"], mime_type=p["mime_type"])
+                )
+            else:
+                raise ValueError(f"Invalid prompt format: {p}")
+        else:
+            raise ValueError(f"Invalid prompt format: {p}")
+
+    return converted_prompts
+
+
 def check_format_prompt(prompts: list):
     """check and format the prompt to fit the correct gemini format"""
     converted_prompts = []
@@ -253,9 +273,10 @@ def check_format_prompt(prompts: list):
     for idx, prompt in enumerate(prompts):
         if prompt["role"] == "user" or prompt["role"] == "human":
             if "parts" in prompt:
-                print(prompt["parts"][0])
                 converted_prompts.append(types.Part.from_text(text=prompt["parts"][0]))
             elif "content" in prompt:
+                if isinstance(prompt["content"], list):
+                    return convert_vision_prompt(prompt["content"]), system_prompt
                 converted_prompts.append(types.Part.from_text(text=prompt["content"]))
 
         elif (

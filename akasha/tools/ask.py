@@ -294,6 +294,8 @@ class ask(basic_llm):
         elif model_prefix in ["anthropic", "claude", "anthro"]:
             fnl_input = format_image_prompt(image_path, prompt, "image_anthropic")
 
+        elif model_prefix in ["gemini", "google"]:
+            fnl_input = format_image_prompt(image_path, prompt, "image_gemini")
         else:
             fnl_input = format_image_prompt(image_path, prompt, "image_gpt")
 
@@ -301,7 +303,6 @@ class ask(basic_llm):
             return self._display_stream(
                 fnl_input,
             )
-
         self.response = call_image_model(self.model_obj, fnl_input)
         self._add_result_log_vision(timestamp, time.time() - start_time, image_path)
 

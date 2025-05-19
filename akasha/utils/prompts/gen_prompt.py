@@ -852,6 +852,38 @@ def format_image_anthropic_prompt(
     return image_content
 
 
+def format_image_gemini_prompt(image_path: Union[str, List[str]], prompt: str):
+    import requests
+
+    image_content = [{"type": "text", "text": prompt}]
+    if isinstance(image_path, str):
+        image_path = [image_path]
+    image_count = 0
+
+    for imgP in image_path:
+        image_count += 1
+        if imgP.split(".")[-1] == "jpg":
+            image_media_type = "image/jpeg"
+        else:
+            image_media_type = f"image/{imgP.split('.')[-1]}"
+
+        if is_url(imgP):
+            url_content = requests.get(imgP).content
+
+        else:
+            with open(imgP, "rb") as f:
+                url_content = f.read()
+        image_content.append(
+            {
+                "type": "image_url",
+                "image_url": url_content,
+                "mime_type": image_media_type,
+            }
+        )
+
+    return [{"role": "user", "content": image_content}]
+
+
 def format_image_gpt_prompt(
     image_path: Union[str, List[str]], prompt: str
 ) -> List[dict]:
@@ -889,6 +921,8 @@ def format_image_prompt(
 
     elif model_type == "image_anthropic":
         return format_image_anthropic_prompt(image_path, prompt)
+    elif model_type == "image_gemini":
+        return format_image_gemini_prompt(image_path, prompt)
     else:
         return format_image_gpt_prompt(image_path, prompt)
 
