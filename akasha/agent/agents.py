@@ -178,6 +178,8 @@ class agents(basic_llm):
     def __call__(self, question: str, messages: List[dict] = None):
         """Synchronous version of agent."""
 
+        self.question = question
+
         async def collect_stream():
             if self.stream:
                 # Handle streaming case
@@ -644,36 +646,55 @@ class agents(basic_llm):
 ## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
 async def call_agents_non_streaming(agent: agents, connection_info: dict, prompt: str):
     """Handle the non-streaming case where we want to return a complete string"""
-    async with MultiServerMCPClient(connection_info) as client:
-        tools = client.get_tools()
 
-        if isinstance(tools, BaseTool):
-            tools = [tools]
+    client = MultiServerMCPClient(connection_info)
+    tools = await client.get_tools()
 
-        agent.tool_explaination = get_tool_explaination(tools)
-        for tool in tools:
-            if not isinstance(tool, BaseTool):
-                logging.warning("tools should be a list of BaseTool")
-                continue
-            tool_name = tool.name
-            agent.tools[tool_name] = tool
+    if isinstance(tools, BaseTool):
+        tools = [tools]
 
-        # Use the agent asynchronously
-        response = await agent.acall(prompt)
+    agent.tool_explaination = get_tool_explaination(tools)
+    for tool in tools:
+        if not isinstance(tool, BaseTool):
+            logging.warning("tools should be a list of BaseTool")
+            continue
+        tool_name = tool.name
+        agent.tools[tool_name] = tool
 
-        # For non-streaming, collect the complete response
-        if hasattr(response, "__aiter__"):
-            # If it's an async generator, collect all chunks and join them
-            result = ""
-            async for chunk in response:
-                result += chunk
-            return result
-        # If it's already a string or other non-generator response
-        return response
+    # Use the agent asynchronously
+    response = await agent.acall(prompt)
+
+    # For non-streaming, collect the complete response
+    if hasattr(response, "__aiter__"):
+        # If it's an async generator, collect all chunks and join them
+        result = ""
+        async for chunk in response:
+            result += chunk
+        return result
+    # If it's already a string or other non-generator response
+    return response
 
 
 # Run the mcp main function
 def call_mcp_agent(agent: agents, connection_info: dict, prompt: str):
+    """Call the agent with the given connection info and prompt.
+
+    Args:
+        agent (agents): _description_
+        connection_info (dict): _description_
+        prompt (str): _description_
+
+    Raises:
+        RuntimeError: _description_
+        RuntimeError: _description_
+
+    Returns:
+        _type_: _description_
+
+    Yields:
+        _type_: _description_
+    """
+    agent.question = prompt
     if not agent.stream:
         return asyncio.run(call_agents_non_streaming(agent, connection_info, prompt))
 
@@ -693,27 +714,27 @@ def call_mcp_agent(agent: agents, connection_info: dict, prompt: str):
 
         async def process_stream():
             try:
-                async with MultiServerMCPClient(connection_info) as client:
-                    tools = client.get_tools()
+                client = MultiServerMCPClient(connection_info)
+                tools = await client.get_tools()
 
-                    if isinstance(tools, BaseTool):
-                        tools = [tools]
+                if isinstance(tools, BaseTool):
+                    tools = [tools]
 
-                    agent.tool_explaination = get_tool_explaination(tools)
-                    for tool in tools:
-                        if not isinstance(tool, BaseTool):
-                            logging.warning("tools should be a list of BaseTool")
-                            continue
-                        tool_name = tool.name
-                        agent.tools[tool_name] = tool
+                agent.tool_explaination = get_tool_explaination(tools)
+                for tool in tools:
+                    if not isinstance(tool, BaseTool):
+                        logging.warning("tools should be a list of BaseTool")
+                        continue
+                    tool_name = tool.name
+                    agent.tools[tool_name] = tool
 
-                    # Use the agent asynchronously
-                    response = await agent.acall(prompt)
+                # Use the agent asynchronously
+                response = await agent.acall(prompt)
 
-                    # Process the streaming response in real-time
-                    async for chunk in response:
-                        # Put each chunk in the queue as it arrives
-                        message_queue.put(chunk)
+                # Process the streaming response in real-time
+                async for chunk in response:
+                    # Put each chunk in the queue as it arrives
+                    message_queue.put(chunk)
             except Exception:
                 import traceback
 

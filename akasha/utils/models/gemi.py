@@ -89,6 +89,7 @@ class gemini_model(LLM):
         stop: Optional[List[str]] = None,
         verbose=True,
         system_prompt: Union[str, None] = None,
+        response_format: Union[dict, BaseModel, None] = None,
     ) -> str:
         """run llm and get the response
 
@@ -101,14 +102,18 @@ class gemini_model(LLM):
         """
         if isinstance(prompt, list):
             prompt, system_prompt = check_format_prompt(prompt)
+        config_param = {
+            "max_output_tokens": self.max_output_tokens,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "stop_sequences": stop,
+            "system_instruction": system_prompt,
+        }
+        if response_format is not None:
+            config_param["response_schema"] = list[response_format]
+            config_param["response_mime_type"] = "application/json"
+        generation_config = types.GenerateContentConfig(**config_param)
 
-        generation_config = types.GenerateContentConfig(
-            max_output_tokens=self.max_output_tokens,
-            temperature=self.temperature,
-            top_p=self.top_p,
-            stop_sequences=stop,
-            system_instruction=system_prompt,
-        )
         ret = ""
 
         for chunk in self.client.models.generate_content_stream(
@@ -149,7 +154,11 @@ class gemini_model(LLM):
         return results
 
     def invoke(
-        self, messages: list, stop: Optional[List[str]] = None, verbose: bool = True
+        self,
+        messages: list,
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
+        response_format: Union[dict, BaseModel, None] = None,
     ) -> str:
         """run llm and get the response
 
@@ -160,7 +169,7 @@ class gemini_model(LLM):
         Returns:
             str: llm response
         """
-        return self._call(messages, stop, verbose)
+        return self._call(messages, stop, verbose, response_format=response_format)
 
     def invoke_stream(
         self, messages: list, stop: Optional[List[str]] = None

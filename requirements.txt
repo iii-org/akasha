@@ -34,4 +34,4 @@ sentencepiece
 anthropic
 tavily-python
 faiss-cpu
-langchain-mcp-adapters
+langchain-mcp-adapters>=0.1.1

@@ -1,10 +1,11 @@
 from typing import Union, List, Generator
+from pydantic import BaseModel
 from langchain_core.messages.ai import AIMessage
 import traceback
 import logging
 from langchain_core.language_models.base import BaseLanguageModel
 from akasha.helper.handle_objects import handle_model_and_name
-from akasha.helper.base import sim_to_trad, extract_json
+from akasha.helper.base import sim_to_trad, extract_json, extract_multiple_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt, default_translate_prompt
 
 
@@ -299,9 +300,9 @@ def call_translator(
 def call_JSON_formatter(
     model_obj: BaseLanguageModel,
     texts: str,
-    keys: Union[str, list] = "",
+    keys: Union[str, list, BaseModel] = "",
     prompt_format_type: str = "auto",
-) -> Union[dict, None]:
+) -> Union[dict, List[dict], None]:
     """use LLM to transfer texts into JSON format
 
     Args:
@@ -314,19 +315,84 @@ def call_JSON_formatter(
         Union[dict, None]: return the JSON part of the string, if not found return None
     """
 
+    ### RESPONSE FORMAT FAILED OR NOT OPENAI/GEMINI MODEL ###
     if keys == "":
         sys_prompt = "Format the following TEXTS into a single JSON instance that conforms to the JSON schema."
     elif isinstance(keys, str):
         keys = [keys]
 
-    if keys != "":
-        sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys)}\n\n"
-
     model_obj, model_name = handle_model_and_name(model_obj)
+    model_name = model_name.lower()
+
+    if keys != "":
+        if not isinstance(keys, list):
+            keys_list = basemodel_keys_list(keys)
+        else:
+            keys_list = keys
+
+        sys_prompt = f"Format the following TEXTS into a single JSON instance that conforms to the JSON schema which includes: {', '.join(keys_list)}\n\n"
 
     prod_prompt = format_sys_prompt(
         sys_prompt, "TEXTS: " + texts, prompt_format_type, model_name
     )
 
+    ## try use response format ##
+    if keys != "" and ("openai" in model_name or "gemini" in model_name):
+        try:
+            if issubclass(keys, BaseModel):
+                json_base_model = keys
+            else:
+                json_base_model = keys_to_basemodel_class(keys)
+
+            if "openai" in model_name:
+                response_format = {"type": "json_object"}
+
+                # can not use it yet #
+                # else:
+                #    response_format = json_base_model
+                response = model_obj.invoke(
+                    prod_prompt,
+                    response_format=response_format,
+                )
+                return extract_json(response)
+
+            else:
+                response = model_obj.invoke(
+                    prod_prompt,
+                    response_format=json_base_model,
+                )
+                return extract_multiple_json(response)
+        except Exception as e:
+            print("Error in using JSON response format:", e)
+
     response = call_model(model_obj, prod_prompt)
     return extract_json(response)
+
+
+def keys_to_basemodel_class(
+    keys: list[str], class_name: str = "JSONFormatModel"
+) -> type:
+    """
+    Dynamically create a Pydantic BaseModel class with all fields as str.
+
+    Args:
+        keys (list[str]): List of field names.
+        class_name (str): Name of the generated class.
+
+    Returns:
+        type: A new BaseModel subclass.
+    """
+    return type(class_name, (BaseModel,), {"__annotations__": {k: str for k in keys}})
+
+
+def basemodel_keys_list(model: type) -> list[str]:
+    """
+    Return all field names of a Pydantic BaseModel class as a list of strings.
+
+    Args:
+        model (type): A Pydantic BaseModel class.
+
+    Returns:
+        list[str]: List of field names.
+    """
+    return list(model.__annotations__.keys())

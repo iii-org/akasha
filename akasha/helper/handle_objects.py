@@ -1,11 +1,10 @@
 import warnings
 from pathlib import Path
 from typing import Callable, Union, Tuple
-from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+
+# from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_openai import (
     OpenAIEmbeddings,
-    ChatOpenAI,
-    AzureChatOpenAI,
     AzureOpenAIEmbeddings,
 )
 import os
@@ -400,27 +399,21 @@ def handle_model(
             model_name = "gpt-3.5-turbo"
             print(info)
         import openai
-
-        if verbose:
-            call_back = [StreamingStdOutCallbackHandler()]
-        else:
-            call_back = None
+        from akasha.utils.models.azure_openai import AzureOpenAIClient
 
         if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
             "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
         ):
             model_name = model_name.replace(".", "")
             api_base, api_key, api_version = _handle_azure_env(env_dict)
-            model = AzureChatOpenAI(
-                model=model_name,
-                deployment_name=model_name,
-                temperature=temperature,
-                azure_endpoint=api_base,
+            model = AzureOpenAIClient(
                 api_key=api_key,
+                model_name=model_name,
+                max_output_tokens=max_output_tokens,
+                temperature=temperature,
+                api_type="azure",
+                api_base=api_base,
                 api_version=api_version,
-                validate_base_url=False,
-                streaming=True,
-                callbacks=call_back,
             )
         else:
             if "OPENAI_API_KEY" not in env_dict:
@@ -428,13 +421,14 @@ def handle_model(
                     "can not find the OPENAI_API_KEY in environment variable.\n\n"
                 )
             openai.api_type = "open_ai"
-            model = ChatOpenAI(
-                model=model_name,
-                temperature=temperature,
+            model = AzureOpenAIClient(
                 api_key=env_dict["OPENAI_API_KEY"],
-                streaming=True,
-                callbacks=call_back,
+                model_name=model_name,
+                max_output_tokens=max_output_tokens,
+                temperature=temperature,
+                api_type="openai",
             )
+
         info = f"selected openai model {model_name}.\n"
     if verbose:
         print(info)

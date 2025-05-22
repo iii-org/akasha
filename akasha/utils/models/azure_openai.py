@@ -1,24 +1,62 @@
 from openai import OpenAI, AzureOpenAI
+from langchain.llms.base import LLM
 import base64
 from pathlib import Path
 import openai as ai
+from typing import Optional, List, Union, Any, Generator
+from pydantic import BaseModel
+import asyncio
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 
 
-class AzureOpenAIClient:
+async def _async_get_completion(
+    client: Union[AsyncAzureOpenAI, AsyncOpenAI],
+    model: str,
+    prompt: dict,
+    max_tokens: int,
+    temperature: float,
+):
+    response = await client.chat.completions.create(
+        model=model,
+        messages=prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
+    return response.choices[0].message.content
+
+
+class AzureOpenAIClient(LLM):
+    model_name: str = "gpt-4o"
+    max_output_tokens: int = 1024
+    temperature: float = 0.0
+    api_key: str = ""
+    api_type: str = "openai"
+    api_base: str = ""
+    api_version: str = "2023-05-15"
+    client: Union[OpenAI, AzureOpenAI, None] = None
+
     def __init__(
         self,
         api_key: str,
-        model_name: str,
+        model_name: str = "gpt-4o",
+        max_output_tokens: int = 1024,
+        temperature: float = 0.0,
         api_type: str = "openai",
         api_base: str = "",
         api_version: str = "2023-05-15",
         **kwargs,
     ):
+        super().__init__()
         self.model_name = model_name
+        self.max_output_tokens = max_output_tokens
+        self.temperature = temperature
+        self.api_type = api_type
+        self.api_key = api_key
         if api_type == "openai":
             self.client = OpenAI(
                 api_key=api_key,
             )
+
         else:
             self.client = AzureOpenAI(
                 azure_endpoint=api_base,
@@ -26,7 +64,144 @@ class AzureOpenAIClient:
                 api_key=api_key,
                 api_version=api_version,
             )
-            print(self.client.base_url)
+            self.api_base = api_base
+            self.api_version = api_version
+
+    @property
+    def _llm_type(self) -> str:
+        """return llm type
+
+        Returns:
+            str: llm type
+        """
+        return f"openai:{self.model_name}"
+
+    def invoke(
+        self,
+        messages: Union[list, str],
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
+        response_format: Union[dict, BaseModel, None] = None,
+    ) -> str:
+        """run llm and get the stream generator
+
+        Args:
+            prompt (str): _description_
+
+        Yields:
+            Generator: _description_
+        """
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+
+        params = {
+            "model": self.model_name,
+            "messages": messages,
+            "temperature": self.temperature,
+            "max_tokens": self.max_output_tokens,
+        }
+
+        fully_text = ""
+        if response_format is not None:
+            params["response_format"] = response_format
+            response = self.client.beta.chat.completions.parse(**params)
+            message = response.choices[0].message
+
+            return message.content
+        else:
+            params["stream"] = True
+            response = self.client.chat.completions.create(**params)
+
+        for chunk in response:
+            if chunk.choices[0].delta.content:
+                fully_text += chunk.choices[0].delta.content
+                if verbose:
+                    print(chunk.choices[0].delta.content, end="", flush=True)
+
+        return fully_text
+
+    def _call(
+        self,
+        messages: list,
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
+        resposne_format: Union[dict, BaseModel, None] = None,
+    ) -> str:
+        return self.invoke(messages, stop, verbose, resposne_format)
+
+    def stream(
+        self,
+        messages: Union[list, str],
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
+        resposne_format: Union[dict, BaseModel, None] = None,
+    ) -> Generator[Any, Any, Any]:
+        """run llm and get the stream generator
+
+        Args:
+            prompt (str): _description_
+
+        Yields:
+            Generator: _description_
+        """
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+
+        params = {
+            "model": self.model_name,
+            "messages": messages,
+            "temperature": self.temperature,
+            "max_tokens": self.max_output_tokens,
+            "stream": True,
+        }
+        fully_text = ""
+
+        response = self.client.chat.completions.create(**params)
+
+        for chunk in response:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+                fully_text += chunk.choices[0].delta.content
+
+        return
+
+    def batch(
+        self,
+        inputs: list,
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
+        resposne_format: Union[dict, BaseModel, None] = None,
+    ) -> List[str]:
+        messages_list = []
+        for prompt in inputs:
+            if isinstance(prompt, str):
+                prompt = [{"role": "user", "content": prompt}]
+            messages_list.append(prompt)
+
+        async def process_batch(prompts):
+            # 根據 api_type 決定用哪個 async client
+            if self.api_type == "openai":
+                client = AsyncOpenAI(api_key=self.api_key)
+            else:
+                client = AsyncAzureOpenAI(
+                    azure_endpoint=self.api_base,
+                    azure_deployment=self.model_name,
+                    api_key=self.api_key,
+                    api_version=self.api_version,
+                )
+            tasks = [
+                _async_get_completion(
+                    client,
+                    self.model_name,
+                    prompt,
+                    self.max_output_tokens,
+                    self.temperature,
+                )
+                for prompt in prompts
+            ]
+            return await asyncio.gather(*tasks)
+
+        return asyncio.run(process_batch(messages_list))
 
     def generate(
         self,
