@@ -5,6 +5,8 @@ import datetime
 import time
 import logging
 import asyncio
+import queue
+import threading
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from akasha.utils.atman import basic_llm
 from akasha.utils.base import (
@@ -180,27 +182,76 @@ class agents(basic_llm):
 
         self.question = question
 
-        async def collect_stream():
-            if self.stream:
-                # Handle streaming case
-                results = []
-                async for chunk in self._run_agent_stream(
-                    question,
-                    tool_runner=lambda tool, tool_input: tool._run(**tool_input),
-                    messages=messages,
-                ):
-                    results.append(chunk)
-                return results
-            else:
-                # Handle non-streaming case
+        if not self.stream:
+            # Non-streaming: just run and return the result
+            async def collect_non_stream():
                 return await self._run_agent(
                     question,
                     tool_runner=lambda tool, tool_input: tool._run(**tool_input),
                     messages=messages,
                 )
 
-        # Consume the async generator or coroutine and return the result
-        return asyncio.run(collect_stream())
+            return asyncio.run(collect_non_stream())
+
+        # Streaming: yield results in real time
+        message_queue = queue.Queue()
+        stop_event = threading.Event()
+
+        def run_async_stream():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+            async def process_stream():
+                try:
+                    async for chunk in self._run_agent_stream(
+                        question,
+                        tool_runner=lambda tool, tool_input: tool._run(**tool_input),
+                        messages=messages,
+                    ):
+                        message_queue.put(chunk)
+                except Exception:
+                    import traceback
+
+                    message_queue.put(("ERROR", traceback.format_exc()))
+                finally:
+                    message_queue.put(None)
+
+            try:
+                loop.run_until_complete(process_stream())
+            finally:
+                pending = asyncio.all_tasks(loop)
+                for task in pending:
+                    task.cancel()
+                if pending:
+                    loop.run_until_complete(
+                        asyncio.gather(*pending, return_exceptions=True)
+                    )
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
+
+        thread = threading.Thread(target=run_async_stream)
+        thread.daemon = True
+        thread.start()
+
+        def result_generator():
+            try:
+                while not stop_event.is_set():
+                    try:
+                        result = message_queue.get(timeout=0.1)
+                        if result is None:
+                            break
+                        if isinstance(result, tuple) and result[0] == "ERROR":
+                            raise RuntimeError(f"Error in async thread: {result[1]}")
+                        yield result
+                    except queue.Empty:
+                        if not thread.is_alive():
+                            raise RuntimeError("Background thread died unexpectedly")
+            finally:
+                stop_event.set()
+                if thread.is_alive():
+                    thread.join(timeout=5.0)
+
+        return result_generator()
 
     async def acall(self, question: str, messages: List[dict] = None):
         """Asynchronous version of agent."""
