@@ -563,7 +563,7 @@ class agents(basic_llm):
             self.thoughts.append(thought)
 
             # yield thought #
-            intermed_stream_text = "\nThought: " + str(thought) + "\n"
+            intermed_stream_text = "\n[THOUGHT]: " + str(thought) + "\n"
             yield intermed_stream_text
 
             if cur_action is None:
@@ -598,7 +598,7 @@ class agents(basic_llm):
 
                 # yield action #
                 intermed_stream_text = (
-                    "\nAction: "
+                    "\n[ACTION]: "
                     + tool_name
                     + ", "
                     + json.dumps(cur_action, ensure_ascii=False)
@@ -641,9 +641,9 @@ class agents(basic_llm):
                     observation = firsthand_observation
 
                 if self.verbose:
-                    print("\nObservation: " + observation)
+                    print("\n[OBSERVATION]: " + observation)
                 # yield observation #
-                intermed_stream_text = "\nObservation: " + str(observation) + "\n"
+                intermed_stream_text = "\n[OBSERVATION]: " + str(observation) + "\n"
                 yield intermed_stream_text
 
             else:
