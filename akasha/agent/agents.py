@@ -301,7 +301,6 @@ class agents(basic_llm):
             self.prompt_format_type,
             self.model,
         )
-
         response = call_model(self.model_obj, text_input)
 
         txt = (
@@ -383,15 +382,37 @@ class agents(basic_llm):
                 break
 
             elif cur_action["action"] in self.tools:
-                tool_name = cur_action["action"]
-                tool_input = cur_action["action_input"]
+                try:
+                    tool_name = cur_action["action"]
+                    tool_input = cur_action["action_input"]
 
-                tool = self.tools[tool_name]
-                result = tool_runner(tool, tool_input)
-                if asyncio.iscoroutine(result):
-                    firsthand_observation = await result  # Await async result
-                else:
-                    firsthand_observation = result  # Sync result
+                    tool = self.tools[tool_name]
+                    result = tool_runner(tool, tool_input)
+                    if asyncio.iscoroutine(result):
+                        firsthand_observation = await result  # Await async result
+                    else:
+                        firsthand_observation = result  # Sync result
+
+                except Exception:
+                    logging.warning("Cannot run the tool, retry.")
+                    text_input = format_sys_prompt(
+                        self.REACT_PROMPT,
+                        "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+                        self.prompt_format_type,
+                        self.model,
+                    )
+                    response = call_model(self.model_obj, text_input)
+                    round_count -= 1
+                    txt = (
+                        "Question: "
+                        + question
+                        + retri_messages
+                        + self.REACT_PROMPT
+                        + self.REMEMBER_PROMPT
+                    )
+                    self.input_len += get_doc_length(self.language, txt)
+                    self.tokens += self.model_obj.get_num_tokens(txt)
+                    continue
 
                 if self.retri_observation:
                     text_input = format_sys_prompt(
@@ -505,7 +526,6 @@ class agents(basic_llm):
             self.prompt_format_type,
             self.model,
         )
-
         response = call_model(self.model_obj, text_input)
 
         txt = (
@@ -593,25 +613,47 @@ class agents(basic_llm):
                 break
 
             elif cur_action["action"] in self.tools:
-                tool_name = cur_action["action"]
-                tool_input = cur_action["action_input"]
+                try:
+                    tool_name = cur_action["action"]
+                    tool_input = cur_action["action_input"]
 
-                # yield action #
-                intermed_stream_text = (
-                    "\n[ACTION]: "
-                    + tool_name
-                    + ", "
-                    + json.dumps(cur_action, ensure_ascii=False)
-                    + "\n"
-                )
-                yield intermed_stream_text
+                    # yield action #
+                    intermed_stream_text = (
+                        "\n[ACTION]: "
+                        + tool_name
+                        + ", "
+                        + json.dumps(cur_action, ensure_ascii=False)
+                        + "\n"
+                    )
+                    yield intermed_stream_text
 
-                tool = self.tools[tool_name]
-                result = tool_runner(tool, tool_input)
-                if asyncio.iscoroutine(result):
-                    firsthand_observation = await result  # Await async result
-                else:
-                    firsthand_observation = result  # Sync result
+                    tool = self.tools[tool_name]
+                    result = tool_runner(tool, tool_input)
+                    if asyncio.iscoroutine(result):
+                        firsthand_observation = await result  # Await async result
+                    else:
+                        firsthand_observation = result  # Sync result
+                except Exception:
+                    logging.warning("Cannot run the tool, retry.")
+                    print("Cannot run the tool, retry.")
+                    text_input = format_sys_prompt(
+                        self.REACT_PROMPT,
+                        "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
+                        self.prompt_format_type,
+                        self.model,
+                    )
+                    response = call_model(self.model_obj, text_input)
+                    round_count -= 1
+                    txt = (
+                        "Question: "
+                        + question
+                        + retri_messages
+                        + self.REACT_PROMPT
+                        + self.REMEMBER_PROMPT
+                    )
+                    self.input_len += get_doc_length(self.language, txt)
+                    self.tokens += self.model_obj.get_num_tokens(txt)
+                    continue
 
                 if self.retri_observation:
                     text_input = format_sys_prompt(
@@ -693,159 +735,155 @@ class agents(basic_llm):
 
         return
 
+    def mcp_agent(self, connection_info: dict, prompt: str):
+        """Call the agent with the given connection info and prompt.
 
-## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
-async def call_agents_non_streaming(agent: agents, connection_info: dict, prompt: str):
-    """Handle the non-streaming case where we want to return a complete string"""
+        Args:
+            connection_info (dict): _description_
+            prompt (str): _description_
 
-    client = MultiServerMCPClient(connection_info)
-    tools = await client.get_tools()
+        Raises:
+            RuntimeError: _description_
+            RuntimeError: _description_
 
-    if isinstance(tools, BaseTool):
-        tools = [tools]
+        Returns:
+            _type_: _description_
 
-    agent.tool_explaination = get_tool_explaination(tools)
-    for tool in tools:
-        if not isinstance(tool, BaseTool):
-            logging.warning("tools should be a list of BaseTool")
-            continue
-        tool_name = tool.name
-        agent.tools[tool_name] = tool
+        Yields:
+            _type_: _description_
+        """
+        self.question = prompt
+        if not self.stream:
+            return asyncio.run(self._call_agents_non_streaming(connection_info, prompt))
 
-    # Use the agent asynchronously
-    response = await agent.acall(prompt)
+        # For streaming, use a thread approach with a queue
+        import queue
+        import threading
 
-    # For non-streaming, collect the complete response
-    if hasattr(response, "__aiter__"):
-        # If it's an async generator, collect all chunks and join them
-        result = ""
-        async for chunk in response:
-            result += chunk
-        return result
-    # If it's already a string or other non-generator response
-    return response
+        # Create a queue for passing messages from async to sync
+        message_queue = queue.Queue()
+        stop_event = threading.Event()
 
+        # Function to run in a background thread
+        def run_async_stream():
+            # Create a new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
 
-# Run the mcp main function
-def call_mcp_agent(agent: agents, connection_info: dict, prompt: str):
-    """Call the agent with the given connection info and prompt.
-
-    Args:
-        agent (agents): _description_
-        connection_info (dict): _description_
-        prompt (str): _description_
-
-    Raises:
-        RuntimeError: _description_
-        RuntimeError: _description_
-
-    Returns:
-        _type_: _description_
-
-    Yields:
-        _type_: _description_
-    """
-    agent.question = prompt
-    if not agent.stream:
-        return asyncio.run(call_agents_non_streaming(agent, connection_info, prompt))
-
-    # For streaming, use a thread approach with a queue
-    import queue
-    import threading
-
-    # Create a queue for passing messages from async to sync
-    message_queue = queue.Queue()
-    stop_event = threading.Event()
-
-    # Function to run in a background thread
-    def run_async_stream():
-        # Create a new event loop for this thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        async def process_stream():
-            try:
-                client = MultiServerMCPClient(connection_info)
-                tools = await client.get_tools()
-
-                if isinstance(tools, BaseTool):
-                    tools = [tools]
-
-                agent.tool_explaination = get_tool_explaination(tools)
-                for tool in tools:
-                    if not isinstance(tool, BaseTool):
-                        logging.warning("tools should be a list of BaseTool")
-                        continue
-                    tool_name = tool.name
-                    agent.tools[tool_name] = tool
-
-                # Use the agent asynchronously
-                response = await agent.acall(prompt)
-
-                # Process the streaming response in real-time
-                async for chunk in response:
-                    # Put each chunk in the queue as it arrives
-                    message_queue.put(chunk)
-            except Exception:
-                import traceback
-
-                message_queue.put(("ERROR", traceback.format_exc()))
-            finally:
-                # Signal that we're done
-                message_queue.put(None)
-
-        # Run the async function and ensure proper cleanup
-        try:
-            loop.run_until_complete(process_stream())
-        finally:
-            # Clean up the event loop
-            pending = asyncio.all_tasks(loop)
-            for task in pending:
-                task.cancel()
-
-            # Give cancelled tasks a chance to clean up
-            if pending:
-                loop.run_until_complete(
-                    asyncio.gather(*pending, return_exceptions=True)
-                )
-
-            loop.run_until_complete(loop.shutdown_asyncgens())
-            loop.close()
-
-    # Start the background thread
-    thread = threading.Thread(target=run_async_stream)
-    thread.daemon = True  # The thread will exit when the main thread exits
-    thread.start()
-
-    # Return a generator that yields results as they arrive from the queue
-    def result_generator():
-        try:
-            while not stop_event.is_set():
+            async def process_stream():
                 try:
-                    # Timeout allows checking the stop_event occasionally
-                    result = message_queue.get(timeout=0.1)
+                    client = MultiServerMCPClient(connection_info)
+                    tools = await client.get_tools()
 
-                    # None signals end of stream
-                    if result is None:
-                        break
+                    if isinstance(tools, BaseTool):
+                        tools = [tools]
 
-                    # Check for error
-                    if isinstance(result, tuple) and result[0] == "ERROR":
-                        raise RuntimeError(f"Error in async thread: {result[1]}")
+                    self.tool_explaination = get_tool_explaination(tools)
+                    for tool in tools:
+                        if not isinstance(tool, BaseTool):
+                            logging.warning("tools should be a list of BaseTool")
+                            continue
+                        tool_name = tool.name
+                        self.tools[tool_name] = tool
 
-                    yield result
+                    # Use the agent asynchronously
+                    response = await self.acall(prompt)
 
-                except queue.Empty:
-                    # Just a timeout, check if the thread is still alive
-                    if not thread.is_alive():
-                        # Thread died unexpectedly
-                        raise RuntimeError("Background thread died unexpectedly")
-                    # Otherwise continue waiting
-        finally:
-            # Clean up
-            stop_event.set()
-            # Wait for thread to finish if it's still running
-            if thread.is_alive():
-                thread.join(timeout=5.0)
+                    # Process the streaming response in real-time
+                    async for chunk in response:
+                        # Put each chunk in the queue as it arrives
+                        message_queue.put(chunk)
+                except Exception:
+                    import traceback
 
-    return result_generator()
+                    message_queue.put(("ERROR", traceback.format_exc()))
+                finally:
+                    # Signal that we're done
+                    message_queue.put(None)
+
+            # Run the async function and ensure proper cleanup
+            try:
+                loop.run_until_complete(process_stream())
+            finally:
+                # Clean up the event loop
+                pending = asyncio.all_tasks(loop)
+                for task in pending:
+                    task.cancel()
+
+                # Give cancelled tasks a chance to clean up
+                if pending:
+                    loop.run_until_complete(
+                        asyncio.gather(*pending, return_exceptions=True)
+                    )
+
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.close()
+
+        # Start the background thread
+        thread = threading.Thread(target=run_async_stream)
+        thread.daemon = True  # The thread will exit when the main thread exits
+        thread.start()
+
+        # Return a generator that yields results as they arrive from the queue
+        def result_generator():
+            try:
+                while not stop_event.is_set():
+                    try:
+                        # Timeout allows checking the stop_event occasionally
+                        result = message_queue.get(timeout=0.1)
+
+                        # None signals end of stream
+                        if result is None:
+                            break
+
+                        # Check for error
+                        if isinstance(result, tuple) and result[0] == "ERROR":
+                            raise RuntimeError(f"Error in async thread: {result[1]}")
+
+                        yield result
+
+                    except queue.Empty:
+                        # Just a timeout, check if the thread is still alive
+                        if not thread.is_alive():
+                            # Thread died unexpectedly
+                            raise RuntimeError("Background thread died unexpectedly")
+                        # Otherwise continue waiting
+            finally:
+                # Clean up
+                stop_event.set()
+                # Wait for thread to finish if it's still running
+                if thread.is_alive():
+                    thread.join(timeout=5.0)
+
+        return result_generator()
+
+    ## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
+    async def _call_agents_non_streaming(self, connection_info: dict, prompt: str):
+        """Handle the non-streaming case where we want to return a complete string"""
+
+        client = MultiServerMCPClient(connection_info)
+        tools = await client.get_tools()
+
+        if isinstance(tools, BaseTool):
+            tools = [tools]
+
+        self.tool_explaination = get_tool_explaination(tools)
+        for tool in tools:
+            if not isinstance(tool, BaseTool):
+                logging.warning("tools should be a list of BaseTool")
+                continue
+            tool_name = tool.name
+            self.tools[tool_name] = tool
+
+        # Use the agent asynchronously
+        response = await self.acall(prompt)
+
+        # For non-streaming, collect the complete response
+        if hasattr(response, "__aiter__"):
+            # If it's an async generator, collect all chunks and join them
+            result = ""
+            async for chunk in response:
+                result += chunk
+            return result
+        # If it's already a string or other non-generator response
+        return response

@@ -46,10 +46,7 @@ def call_model(
             print_flag = False
             response = model._call(input_text)
         else:
-            try:
-                response = model._call(input_text)
-            except Exception:
-                response = model._generate(input_text)
+            response = model._call(input_text)
 
         if isinstance(response, AIMessage):
             response = response.content
@@ -208,10 +205,7 @@ def call_image_model(
             response = model.invoke(input_text)
 
         else:
-            try:
-                response = model.call_image(input_text)
-            except Exception:
-                response = model._generate(input_text)
+            response = model.call_image(input_text)
 
         if isinstance(response, AIMessage):
             response = response.content
