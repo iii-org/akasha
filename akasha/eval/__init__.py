@@ -1,2 +1,1 @@
-from .eval import *
-from .scores import *
+from .evaluation import eval  # noqa: F401

@@ -1,26 +1,37 @@
 import streamlit as st
 from pathlib import Path
 from streamlit_option_menu import option_menu
-from interface.cot_page import cot_page
 from interface.res_page import response_page
 from interface.upload_file import upload_page
 from interface.setting import setting_page, set_model_dir
 from interface.sum_page import summary_page
+from interface.webpage import websearch_page
 import datetime
 
 st.set_page_config(layout="wide")
+st.markdown(
+    """
+    <style>
+        div[data-testid="stChatInput"] {
+            position: fixed;
+            bottom: 40px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 menu_list = [
-    "Get Response",
-    "Chain Of Thoughts",
+    "RAG",
     "Summary",
+    "Web Search",
     "Upload Files",
     "Setting",
 ]
 
 icon_list = [
     "chat-left-text",
-    "puzzle",
     "chat-quote",
+    "search",
     "upload",
     "gear",
 ]
@@ -31,9 +42,13 @@ def get_log_data():
     for key in st.session_state.logs:
         plain_txt += key + ":\n"
         for k in st.session_state.logs[key]:
-            if type(st.session_state.logs[key][k]) == list:
-                text = (k + ": " + "\n".join(
-                    [str(w) for w in st.session_state.logs[key][k]]) + "\n\n")
+            if isinstance(st.session_state.logs[key][k], list):
+                text = (
+                    k
+                    + ": "
+                    + "\n".join([str(w) for w in st.session_state.logs[key][k]])
+                    + "\n\n"
+                )
             else:
                 text = k + ": " + str(st.session_state.logs[key][k]) + "\n\n"
 
@@ -77,13 +92,11 @@ def download_json(file_name: str):
 if "embed_list" not in st.session_state:
     st.session_state.embed_list = [
         "openai:text-embedding-ada-002",
-        "hf:shibing624/text2vec-base-chinese",
+        "openai:text-embedding-3-small",
         "hf:shibing624/text2vec-base-multilingual",
-        "hf:shibing624/text2vec-base-chinese-paraphrase",
+        "hf:Alibaba-NLP/gte-multilingual-base",
         "hf:BAAI/bge-base-en-v1.5",
         "hf:BAAI/bge-base-zh-v1.5",
-        "rerank:BAAI/bge-reranker-base",
-        "rerank:BAAI/bge-reranker-large",
     ]
 
 if "mdl_dir" not in st.session_state:
@@ -96,7 +109,7 @@ if "model_list" not in st.session_state:
     #         "llama-gpu:model/llama-2-7b-chat.Q5_K_S.gguf"]
 
 if "search_list" not in st.session_state:
-    st.session_state.search_list = ["auto", "merge", "svm", "bm25", "mmr"]
+    st.session_state.search_list = ["auto", "knn", "svm", "bm25"]
 
 if "docs_path" not in st.session_state:
     st.session_state.docs_path = "./docs"
@@ -119,17 +132,13 @@ if "docs_list" not in st.session_state:
     if "Default" not in st.session_state.docs_list:
         st.session_state.docs_list.append("Default")
         # create default folder
-        Path(st.session_state.docs_path + "/Default").mkdir(parents=True,
-                                                            exist_ok=True)
+        Path(st.session_state.docs_path + "/Default").mkdir(parents=True, exist_ok=True)
 
 if "n_text" not in st.session_state:
     st.session_state.n_text = 1
 
-if "openai_key" not in st.session_state:
-    st.session_state.openai_key = ""
-
-if "openai_base" not in st.session_state:
-    st.session_state.openai_base = ""
+if "env_path" not in st.session_state:
+    st.session_state.env_path = "./.env"
 
 if "select_idx" not in st.session_state:
     st.session_state.select_idx = [["Default"], 0, 0, 0]
@@ -141,11 +150,12 @@ if "chose_doc_path" not in st.session_state:
             st.session_state.chose_doc_path = []
             for dc in st.session_state.select_idx[0]:
                 st.session_state.chose_doc_path.append(
-                    st.session_state.docs_path + "/" + dc)
+                    st.session_state.docs_path + "/" + dc
+                )
         else:
-            st.session_state.chose_doc_path = (st.session_state.docs_path +
-                                               "/" +
-                                               st.session_state.docs_list[0])
+            st.session_state.chose_doc_path = (
+                st.session_state.docs_path + "/" + st.session_state.docs_list[0]
+            )
             st.session_state.select_idx[0] = [st.session_state.docs_list[0]]
     else:
         st.info("Please upload your documents first.", icon="🚨")
@@ -156,7 +166,7 @@ if "model" not in st.session_state:
     st.session_state.model = st.session_state.model_list[0]
 
 if "chunksize" not in st.session_state:
-    st.session_state.chunksize = 500
+    st.session_state.chunksize = 1000
 
 if "search_type" not in st.session_state:
     st.session_state.search_type = st.session_state.search_list[0]
@@ -177,6 +187,15 @@ if "logs" not in st.session_state:
 if "akasha_obj" not in st.session_state:
     st.session_state.akasha_obj = ""
 
+if "stream" not in st.session_state:
+    st.session_state.stream = False
+
+if "search_engine" not in st.session_state:
+    st.session_state.search_engine = "wiki"
+
+if "search_num" not in st.session_state:
+    st.session_state.search_num = 5
+
 ################
 
 with st.sidebar:
@@ -189,10 +208,7 @@ with st.sidebar:
             "container": {
                 "padding": "5!important",
             },
-            "icon": {
-                "color": "orange",
-                "font-size": "25px"
-            },
+            "icon": {"color": "orange", "font-size": "25px"},
             "nav-link": {
                 "font-size": "16px",
                 "text-align": "left",
@@ -201,9 +217,7 @@ with st.sidebar:
         },
     )
 
-    st.session_state.openai_key = st.text_input("OpenAI Key", type="password")
-    st.session_state.openai_base = st.text_input("OpenAI Base URL",
-                                                 type="password")
+    st.session_state.env_path = st.text_input("Environment File Path")
 
     st.markdown("##")
     st.markdown("##")
@@ -217,14 +231,14 @@ with st.sidebar:
             download_txt(file_date)
         with js:
             download_json(file_date)
-if user_menu == "Get Response":
+if user_menu == "RAG":
     response_page()
 
-elif user_menu == "Chain Of Thoughts":
-    cot_page()
 elif user_menu == "Upload Files":
     upload_page()
 elif user_menu == "Setting":
     setting_page()
 elif user_menu == "Summary":
     summary_page()
+elif user_menu == "Web Search":
+    websearch_page()

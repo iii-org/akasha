@@ -1,4 +1,5 @@
 from setuptools import setup
+
 # read the contents of your README file
 from pathlib import Path
 
@@ -12,16 +13,16 @@ install_requires = [
     "langchain-community>=0.3,<0.4",
     "langchain_openai>=0.1.0",
     "langchain-huggingface>=0.1.2",
-    "langchain-chroma",
-    "lark",
+    "langchain-chroma==0.2.2",
     "chromadb==0.4.14",
-    "openai>=0.27",
+    "onnxruntime <= 1.20.0",
+    "openai>=1.78.1",
     "tiktoken",
     "scikit-learn>=1.3.0",
     "jieba>=0.42.1",
     "opencc-python-reimplemented==0.1.7",
     "sentence-transformers>=3.1.1",
-    "transformers>=4.45.0",  #==4.41.1
+    "transformers>=4.45.0,<4.48",  # ==4.41.1
     "tqdm>=4.65.0",
     "docx2txt==0.8",
     "rouge==1.0.1",
@@ -37,10 +38,11 @@ install_requires = [
     "wikipedia",
     "numpy<2",
     "sentencepiece",
-    "google-cloud-aiplatform>=1.64",
-    "google-generativeai",
-    "langchain-google-genai",
+    "google-genai>=1.15.0",
     "anthropic",
+    "tavily-python",
+    "faiss-cpu",
+    "langchain-mcp-adapters>=0.1.1",
 ]
 
 ### install different torch version###
@@ -53,7 +55,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.8.88",
+    version="0.9.0",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -62,18 +64,27 @@ setup(
     author_email="ccchang@iii.org.tw",
     install_requires=install_requires,
     extras_require={
-        'llama-cpp': [
-            "llama-cpp-python>=0.3.1",
+        "llama-cpp": [
+            "llama-cpp-python>=0.3.8",
         ],
-        'peft': ["auto-gptq==0.3.1"]
+        "peft": ["auto-gptq==0.3.1"],
     },
     packages=[
         "akasha",
-        "akasha.models",
+        "akasha.agent",
+        "akasha.interface",
         "cli",
         "akasha.eval",
-        "akasha.interface",
+        "akasha.helper",
+        "akasha.RAG",
+        "akasha.tools",
+        "akasha.utils",
+        "akasha.utils.models",
+        "akasha.utils.db",
+        "akasha.utils.prompts",
+        "akasha.utils.search",
+        "akasha.utils.search.retrievers",
     ],
     entry_points={"console_scripts": ["akasha = cli.glue:akasha"]},
-    python_requires=">=3.9",
+    python_requires=">=3.10,<3.13",
 )

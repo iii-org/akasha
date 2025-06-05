@@ -8,21 +8,22 @@ def upload_page():
     st.markdown("##")
     st.markdown("##")
 
-    uploaded_files = st.file_uploader("Upload document files",
-                                      accept_multiple_files=True,
-                                      type=["txt", "pdf", "docx", "md", "csv"])
+    uploaded_files = st.file_uploader(
+        "Upload document files",
+        accept_multiple_files=True,
+        type=["txt", "pdf", "docx", "md", "csv"],
+    )
 
     path_name = st.text_input("path name")
     sb1, sb2, sb3 = st.columns([1, 1, 1])
     with sb2:
-        submit_but = st.button("Submit",
-                               type="primary",
-                               use_container_width=True)
+        submit_but = st.button("Submit", type="primary", use_container_width=True)
     if submit_but:
         if path_name in st.session_state.docs_list:
             st.info(
                 f"Path name already exist, add files to the path {path_name}.",
-                icon="🔥")
+                icon="🔥",
+            )
 
         # create path
         if path_name[-1] != "/":
