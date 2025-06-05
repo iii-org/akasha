@@ -22,7 +22,7 @@ For the chinese manual, please visit [manual](https://tea9297.github.io/akasha/)
 
 # Updates
 
-- 0.9.0b
+- 0.9.0
 
     1. new function calling
    
@@ -302,7 +302,7 @@ agent = akasha.agents(
     verbose=True,
     keep_logs=True,
 )
-response = akasha.call_mcp_agent(agent, connection_info, prompt)
+response = agent.mcp_agent(connection_info, prompt)
 agent.save_logs("logs_agent.json")
 
 ```
