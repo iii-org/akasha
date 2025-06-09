@@ -1,6 +1,7 @@
 from typing import Union, List, Tuple, Callable
 from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
+from chromadb.config import Settings
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pathlib import Path
@@ -78,9 +79,15 @@ def create_directory_db(
         files.extend(get_load_file_list(directory_path, extension))
 
     progress = tqdm(total=len(files), desc=f"db {directory_path.name}")
+    client_settings = Settings(
+        is_persistent=True,
+        persist_directory=storage_directory,
+        anonymized_telemetry=False,
+    )
     docsearch = Chroma(
         persist_directory=storage_directory,
         embedding_function=embeddings,
+        client_settings=client_settings,
         collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
     )
 
@@ -180,9 +187,15 @@ def create_single_file_db(
     if is_doc_b == ALREADY_BUILT:
         return True
     elif is_doc_b == OLD_BUILT:
+        client_settings = Settings(
+            is_persistent=True,
+            persist_directory=storage_directory,
+            anonymized_telemetry=False,
+        )
         docsearch = Chroma(
             persist_directory=storage_directory,
             embedding_function=embeddings,
+            client_settings=client_settings,
             collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
         )
         loaded = True
@@ -195,9 +208,15 @@ def create_single_file_db(
         return False
 
     if not loaded:
+        client_settings = Settings(
+            is_persistent=True,
+            persist_directory=storage_directory,
+            anonymized_telemetry=False,
+        )
         docsearch = Chroma(
             persist_directory=storage_directory,
             embedding_function=embeddings,
+            client_settings=client_settings,
             collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
         )
 
@@ -279,9 +298,15 @@ def create_webpage_db(
         Document(page_content=file_doc, metadata={"title": file_title, "url": url})
     ]
 
+    client_settings = Settings(
+        is_persistent=True,
+        persist_directory=storage_directory,
+        anonymized_telemetry=False,
+    )
     docsearch = Chroma(
         persist_directory=storage_directory,
         embedding_function=embeddings,
+        client_settings=client_settings,
         collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
     )
 

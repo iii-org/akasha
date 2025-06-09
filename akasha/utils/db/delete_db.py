@@ -1,4 +1,5 @@
 from langchain_chroma import Chroma
+from chromadb.config import Settings
 import logging
 from pathlib import Path
 from typing import Union, Callable
@@ -72,8 +73,13 @@ def delete_documents_by_file(
     )
 
     # Retrieve all documents in the collection
-    docsearch = Chroma(
+    client_settings = Settings(
+        is_persistent=True,
         persist_directory=storage_directory,
+        anonymized_telemetry=False,
+    )
+    docsearch = Chroma(
+        persist_directory=storage_directory, client_settings=client_settings
     )
     all_docs = docsearch._collection.get()
     tot_ids_len = len(all_docs["ids"])
