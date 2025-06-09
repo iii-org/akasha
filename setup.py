@@ -55,7 +55,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.9.0",
+    version="0.9.01",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",

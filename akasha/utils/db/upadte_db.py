@@ -1,6 +1,7 @@
 from typing import Callable, List, Union
 from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
+from chromadb.config import Settings
 from pathlib import Path
 from akasha.utils.db.db_structure import dbs, get_storage_directory
 from akasha.helper.handle_objects import handle_embeddings_and_name
@@ -40,7 +41,12 @@ def update_db(
 
         progress.update(1)
         cur_meta = []
-        docsearch = Chroma(persist_directory=db_path)
+        client_settings = Settings(
+            is_persistent=True,
+            persist_directory=db_path,
+            anonymized_telemetry=False,
+        )
+        docsearch = Chroma(persist_directory=db_path, client_settings=client_settings)
         doc_search_data = docsearch.get(include=["metadatas"])
 
         ### find the ids in db_dict that are in doc_search_data["ids"]

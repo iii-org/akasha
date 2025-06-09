@@ -11,6 +11,7 @@ from akasha.utils.db.create_db import (
 from akasha.helper import separate_name
 from akasha.helper.handle_objects import handle_embeddings_and_name
 from langchain_chroma import Chroma
+from chromadb.config import Settings
 import logging
 import gc
 from collections import defaultdict
@@ -179,7 +180,14 @@ def load_db_by_chroma_name(
             ignored_files.append(chroma_name)
             continue
 
-        docsearch = Chroma(persist_directory=chroma_name)
+        client_settings = Settings(
+            is_persistent=True,
+            persist_directory=chroma_name,
+            anonymized_telemetry=False,
+        )
+        docsearch = Chroma(
+            persist_directory=chroma_name, client_settings=client_settings
+        )
         new_dbs = dbs(docsearch)
 
         if len(new_dbs.get_ids()) == 0:
@@ -215,7 +223,14 @@ def load_directory_db(
         directory_path, chunk_size, embed_type, embed_name
     )
 
-    docsearch = Chroma(persist_directory=storage_directory)
+    client_settings = Settings(
+        is_persistent=True,
+        persist_directory=storage_directory,
+        anonymized_telemetry=False,
+    )
+    docsearch = Chroma(
+        persist_directory=storage_directory, client_settings=client_settings
+    )
     tot_dbs = dbs(docsearch)
 
     del docsearch
@@ -264,7 +279,14 @@ def load_files_db(
 
     for st_dir in dir_set:
         try:
-            docsearch = Chroma(persist_directory=st_dir)
+            client_settings = Settings(
+                is_persistent=True,
+                persist_directory=st_dir,
+                anonymized_telemetry=False,
+            )
+            docsearch = Chroma(
+                persist_directory=st_dir, client_settings=client_settings
+            )
             new_dbs = dbs(docsearch)
         except Exception as e:
             logging.warning(f"Error loading chromadb directory {st_dir}: {e}")

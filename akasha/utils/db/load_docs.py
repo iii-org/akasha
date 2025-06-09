@@ -6,14 +6,25 @@ from akasha.utils.db.file_loader import load_file, load_directory, load_url
 
 
 def _get_file_dir_docs(s: Union[str, Path]) -> List[Document]:
-    if isinstance(s, str):
-        s = Path(s)
+    try:
+        if isinstance(s, str):
+            if len(s) < 255:
+                s = Path(s)
+            else:
+                return [Document(page_content=s)]
+    except Exception as e:
+        print(f"Error loading {s}: {e}")
+        return [Document(page_content=s)]
 
-    if s.is_file():
-        return load_file(s, s.__str__().split(".")[-1])
-    elif s.is_dir():
-        return load_directory(s)
-    else:
+    try:
+        if s.is_file():
+            return load_file(s, s.__str__().split(".")[-1])
+        elif s.is_dir():
+            return load_directory(s)
+        else:
+            return [Document(page_content=s.__str__())]
+    except Exception as e:
+        print(f"Error loading {s}: {e}")
         return [Document(page_content=s.__str__())]
 
 
