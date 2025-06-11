@@ -449,7 +449,7 @@ class atman(basic_llm):
         params = handle_params(
             self.model,
             self.language,
-            self.search_type_str,
+            self.search_type,
             self.threshold,
             self.embeddings,
             self.chunk_size,

@@ -505,7 +505,11 @@ class eval(Model_Eval):
             )
 
             self._upload_logs(
-                end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
+                end_time - start_time,
+                table,
+                sum(self.doc_length),
+                sum(self.doc_tokens),
+                True,
             )
 
             return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
@@ -513,7 +517,11 @@ class eval(Model_Eval):
         else:
             correct_rate = self.score["correct_count"] / self.question_num
             self._upload_logs(
-                end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
+                end_time - start_time,
+                table,
+                sum(self.doc_length),
+                sum(self.doc_tokens),
+                True,
             )
 
             return correct_rate, self.doc_tokens
