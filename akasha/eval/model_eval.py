@@ -482,7 +482,7 @@ class Model_Eval(atman):
 
         ### record logs ###
         self._upload_logs(
-            end_time - start_time, sum(self.doc_length), sum(self.doc_tokens)
+            end_time - start_time, table, sum(self.doc_length), sum(self.doc_tokens)
         )
         self._add_result_log(timestamp, end_time - start_time)
 
@@ -715,9 +715,15 @@ class Model_Eval(atman):
             if key not in table:
                 table[key] = []
             table[key].append(new_table[key])
+        return table
 
     def _upload_logs(
-        self, table: dict, tot_time: float, doc_length: int = 0, doc_tokens: int = 0
+        self,
+        tot_time: float,
+        table: dict,
+        doc_length: int = 0,
+        doc_tokens: int = 0,
+        from_eval: bool = False,
     ) -> str:
         if self.record_exp == "":
             return "no record_exp assigned, so no logs uploaded"
@@ -725,26 +731,28 @@ class Model_Eval(atman):
         params = handle_params(
             self.model,
             self.language,
-            self.search_type_str,
+            self.search_type,
             self.threshold,
             self.embeddings,
             self.chunk_size,
         )
         metrics = handle_metrics(doc_length, tot_time, doc_tokens)
+        if from_eval:
+            if self.question_style.lower() == "essay":
+                avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
+                avg_rouge = round(
+                    sum(self.score["rouge"]) / len(self.score["rouge"]), 3
+                )
+                avg_llm_score = round(
+                    sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
+                )
 
-        if self.question_style.lower() == "essay":
-            avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
-            avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
-            avg_llm_score = round(
-                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
-            )
-
-            metrics["avg_bert"] = avg_bert
-            metrics["avg_rouge"] = avg_rouge
-            metrics["avg_llm_score"] = avg_llm_score
-        else:
-            correct_rate = self.score["correct_count"] / self.question_num
-            metrics["correct_rate"] = correct_rate
+                metrics["avg_bert"] = avg_bert
+                metrics["avg_rouge"] = avg_rouge
+                metrics["avg_llm_score"] = avg_llm_score
+            else:
+                correct_rate = self.score["correct_count"] / self.question_num
+                metrics["correct_rate"] = correct_rate
 
         from akasha.utils.upload import aiido_upload
 
