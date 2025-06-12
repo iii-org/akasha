@@ -233,7 +233,6 @@ class ask(basic_llm):
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
-
         self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
         return self.response
 

@@ -15,6 +15,7 @@ sentence-transformers>=3.1.1
 torch==2.2.0
 torchvision==0.17.0
 transformers>=4.45.0,<4.48.0
+accelerate>=1.7.0
 tqdm>=4.65.0
 docx2txt==0.8
 rouge==1.0.1
@@ -35,3 +36,4 @@ anthropic
 tavily-python
 faiss-cpu
 langchain-mcp-adapters>=0.1.1
+mlflow

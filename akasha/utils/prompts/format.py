@@ -76,10 +76,23 @@ def handle_table(prompt: str, docs: List[Union[Document, str]], response: str) -
     if len(docs) != 0:
         try:
             inputs = [doc.page_content for doc in docs]
-            metadata = [
-                doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
-                for doc in docs
-            ]
+
+            if "source" in docs[0].metadata and "page" in docs[0].metadata:
+                # if the metadata has source and page, we can use it to show the source of the document
+                metadata = [
+                    doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
+                    for doc in docs
+                ]
+            elif "title" in docs[0].metadata and "url" in docs[0].metadata:
+                # if the metadata has title and url, we can use it to show the source of the document
+                metadata = [
+                    doc.metadata["title"] + "    url: " + doc.metadata["url"]
+                    for doc in docs
+                ]
+            else:
+                raise Exception(
+                    "metadata does not have source or page, or title and url"
+                )
         except Exception:
             metadata = ["none" for _ in docs]
             inputs = [doc for doc in docs]

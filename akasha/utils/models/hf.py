@@ -60,7 +60,7 @@ class hf_model(LLM):
                 top_p=0.95,
                 torch_dtype=torch.float16,
                 device_map="auto",
-            ).to(self.device)
+            )
 
     @property
     def _llm_type(self) -> str:
@@ -97,14 +97,16 @@ class hf_model(LLM):
                 top_p=0.95,
                 torch_dtype=torch.float16,
                 device_map="auto",
-            ).to(self.device)
+            )
 
     def stream(
         self, prompt: str, stop: Optional[List[str]] = None
     ) -> Generator[str, None, None]:
         stop_list = get_stop_list(stop)
-        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
-        gerneration_kwargs = dict(
+        # inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        inputs = self.tokenizer([prompt], return_tensors="pt")
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        generation_kwargs = dict(
             inputs,
             streamer=self.streamer,
             max_new_tokens=self.max_output_tokens,
@@ -115,7 +117,7 @@ class hf_model(LLM):
         )
         # self.model.generate(**inputs, streamer= self.streamer, max_new_tokens=1024, do_sample=True)
 
-        thread = Thread(target=self.model.generate, kwargs=gerneration_kwargs)
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
         thread.start()
         # for text in self.streamer:
         #     yield text
@@ -131,7 +133,9 @@ class hf_model(LLM):
         Returns:
             str: llm response
         """
-        inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        # inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
+        inputs = self.tokenizer([prompt], return_tensors="pt")
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
         stop_list = get_stop_list(stop)
         gerneration_kwargs = dict(
             inputs,
@@ -154,17 +158,22 @@ class hf_model(LLM):
         return self._call(prompt, stop)
 
     def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
-        stop_list = get_stop_list(stop)
         self.tokenizer.pad_token = self.tokenizer.eos_token
+
+        # Tokenize and move to correct device
         inputs = self.tokenizer(
             prompt, return_tensors="pt", padding=True, truncation=True, max_length=1024
-        ).to(self.device)
+        )
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+        # Note: `stop_strings` is not supported by HF `generate()`, may require custom logic
         generated_ids = self.model.generate(
             **inputs,
             max_new_tokens=self.max_output_tokens,
             do_sample=True,
-            stop_strings=stop_list,
+            # stop_strings=stop_list  ← only keep if your model wrapper supports it
         )
+
         generated_texts = self.tokenizer.batch_decode(
             generated_ids, skip_special_tokens=True
         )

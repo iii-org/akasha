@@ -23,6 +23,7 @@ install_requires = [
     "opencc-python-reimplemented==0.1.7",
     "sentence-transformers>=3.1.1",
     "transformers>=4.45.0,<4.48",  # ==4.41.1
+    "accelerate>=1.7.0",
     "tqdm>=4.65.0",
     "docx2txt==0.8",
     "rouge==1.0.1",
@@ -43,6 +44,7 @@ install_requires = [
     "tavily-python",
     "faiss-cpu",
     "langchain-mcp-adapters>=0.1.1",
+    "mlflow",
 ]
 
 ### install different torch version###
@@ -55,7 +57,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.9.02",
+    version="0.9.03",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
