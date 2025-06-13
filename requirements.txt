@@ -37,3 +37,4 @@ tavily-python
 faiss-cpu
 langchain-mcp-adapters>=0.1.1
 mlflow
+setuptools
