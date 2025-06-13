@@ -45,6 +45,7 @@ install_requires = [
     "faiss-cpu",
     "langchain-mcp-adapters>=0.1.1",
     "mlflow",
+    "setuptools",
 ]
 
 ### install different torch version###
@@ -57,7 +58,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.9.03",
+    version="0.9.04",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
