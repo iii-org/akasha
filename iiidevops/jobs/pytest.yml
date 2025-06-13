@@ -9,4 +9,3 @@ pytest:
     - pytest
   only:
     - ceres
-    - master
