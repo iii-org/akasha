@@ -29,7 +29,7 @@ def gen_image(
     model_obj = handle_client(model, env_file)
 
     print(
-        f"Generationg, may take some time...\n\nmodel: {model}, save_path: {save_path}"
+        f"Generating, may take some time...\n\nmodel: {model}, save_path: {save_path}"
     )
     ret = model_obj.generate(
         prompt=prompt,
