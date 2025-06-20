@@ -221,7 +221,11 @@ class AzureOpenAIClient(LLM):
             moderation (str, optional): _description_. Defaults to "auto".
             background (str, optional): _description_. Defaults to "auto".
         """
-
+        if "dall" in self.model_name.lower():
+            if size == "auto":
+                size = "1024x1024"
+            if quality == "auto":
+                quality = "standard"
         # Convert save_path to Path object
         path = Path(save_path)
         allowed_exts = {"png", "jpeg", "webp"}
@@ -238,16 +242,20 @@ class AzureOpenAIClient(LLM):
                 output_format = "png"
             else:
                 output_format = ext
-
+        params = {
+            "model": self.model_name,
+            "prompt": prompt,
+            "size": size,
+            "quality": quality,
+            "output_format": output_format,
+        }
+        if "dall" in self.model_name.lower():
+            # For DALL-E models, we need to set the response format to b64_json
+            params["response_format"] = "b64_json"
         # Generate image
         result = self.client.images.generate(
-            model=self.model_name,
-            prompt=prompt,
-            size=size,
-            quality=quality,
-            output_format=output_format,
+            **params,
         )
-
         ## decode the image
 
         image_base64 = result.data[0].b64_json
