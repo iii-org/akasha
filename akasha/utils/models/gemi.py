@@ -206,9 +206,10 @@ class gemini_model(LLM):
             elif part.inline_data is not None:
                 image = Image.open(BytesIO((part.inline_data.data)))
                 image.save(save_path.__str__())
-                image.show()
+                # image.show()
+                print(f"Image saved to {save_path.__str__()}")
 
-        return path
+        return save_path
 
     def edit(
         self, prompt: str, images: list[str], save_path: str = "./image.png", **kwargs
@@ -249,9 +250,10 @@ class gemini_model(LLM):
             elif part.inline_data is not None:
                 image = Image.open(BytesIO((part.inline_data.data)))
                 image.save(save_path.__str__())
-                image.show()
+                # image.show()
+                print(f"Image saved to {save_path.__str__()}")
 
-        return path
+        return save_path
 
 
 def convert_vision_prompt(prompt: list):

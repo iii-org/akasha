@@ -1,6 +1,7 @@
 from akasha.helper.handle_objects import handle_client
 from pathlib import Path
 from typing import Union
+from PIL import Image
 
 IMAGE_DEFAULT_MODEL = "openai:gpt-image-1"
 
@@ -39,6 +40,13 @@ def gen_image(
         moderation="auto",
         background="auto",
     )
+
+    if verbose and ret:
+        try:
+            img = Image.open(ret)
+            img.show()
+        except Exception as e:
+            print(f"Failed to open image: {e}")
 
     return ret
 
@@ -85,5 +93,12 @@ def edit_image(
         moderation="auto",
         background="auto",
     )
+
+    if verbose and ret:
+        try:
+            img = Image.open(ret)
+            img.show()
+        except Exception as e:
+            print(f"Failed to open image: {e}")
 
     return ret
