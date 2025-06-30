@@ -308,7 +308,9 @@ class eval(Model_Eval):
             self.db,
             self.embeddings_obj,
             self.threshold,
-            self.search_type,
+            self.search_type
+            if self.custom_search_func is None
+            else self.custom_search_func,
             self.env_file,
         )
         self.docs, doc_length, doc_tokens = search_docs(
@@ -469,7 +471,9 @@ class eval(Model_Eval):
             self.db,
             self.embeddings_obj,
             self.threshold,
-            self.search_type,
+            self.search_type
+            if self.custom_search_func is None
+            else self.custom_search_func,
             self.env_file,
         )
 

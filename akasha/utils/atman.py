@@ -119,6 +119,8 @@ class basic_llm:
             if (key == "model" or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = handle_model_type(value)
 
+            if (key == "search_type") and key in self.__dict__:
+                continue
             elif key == "language":
                 self.language = handle_language(value)
 
@@ -346,6 +348,10 @@ class atman(basic_llm):
         self.search_type = handle_model_type(search_type, self.verbose)
         self.use_chroma = use_chroma
 
+        if callable(search_type):
+            self.custom_search_func = search_type
+        else:
+            self.custom_search_func = None
         self.db = None
         self.ignored_files = []
         ### set model and embeddings ###
@@ -359,9 +365,11 @@ class atman(basic_llm):
         super()._set_model(**kwargs)
 
         if "search_type" in kwargs:
-            self.search_type_str = handle_model_type(
-                kwargs["search_type"], self.verbose
-            )
+            if callable(kwargs["search_type"]):
+                self.custom_search_func = kwargs["search_type"]
+            else:
+                self.custom_search_func = None
+            self.search_type = handle_model_type(kwargs["search_type"], self.verbose)
 
         if ("embeddings" in kwargs) or ("env_file" in kwargs):
             new_embeddings = self.embeddings

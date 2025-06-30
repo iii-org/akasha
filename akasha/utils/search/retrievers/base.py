@@ -42,7 +42,7 @@ def get_retrivers(
     retriver_list = []
 
     embeddings, embed_name = handle_embeddings_and_name(embeddings, False, env_file)
-
+    print("search_type:", search_type, type(search_type))
     if callable(search_type):
         custom_retriver = customRetriever.from_db(
             db, embeddings, search_type, topK, threshold
