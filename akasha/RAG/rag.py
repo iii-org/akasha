@@ -231,7 +231,9 @@ class RAG(atman):
             self.db,
             self.embeddings_obj,
             self.threshold,
-            self.search_type,
+            self.search_type
+            if self.custom_search_func is None
+            else self.custom_search_func,
             self.env_file,
         )
 

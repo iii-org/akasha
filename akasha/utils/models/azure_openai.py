@@ -111,13 +111,15 @@ class AzureOpenAIClient(LLM):
         else:
             params["stream"] = True
             response = self.client.chat.completions.create(**params)
-
+        count = 0
         for chunk in response:
+            if len(chunk.choices) == 0:
+                continue
             if chunk.choices[0].delta.content:
                 fully_text += chunk.choices[0].delta.content
                 if verbose:
                     print(chunk.choices[0].delta.content, end="", flush=True)
-
+            count += 1
         return fully_text
 
     def _call(
@@ -159,6 +161,8 @@ class AzureOpenAIClient(LLM):
         response = self.client.chat.completions.create(**params)
 
         for chunk in response:
+            if len(chunk.choices) == 0:
+                continue
             if chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
                 fully_text += chunk.choices[0].delta.content
