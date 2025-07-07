@@ -22,7 +22,7 @@ install_requires = [
     "jieba>=0.42.1",
     "opencc-python-reimplemented==0.1.7",
     "sentence-transformers>=3.1.1",
-    "transformers>=4.45.0,<4.48",  # ==4.41.1
+    "transformers>=4.50.0",  # ==4.41.1
     "accelerate>=1.7.0",
     "tqdm>=4.65.0",
     "docx2txt==0.8",
@@ -58,7 +58,7 @@ install_requires.append("torchvision==0.15.2; platform_system=='Darwin'")
 install_requires.append("torchvision==0.17.0; platform_system=='Linux'")
 setup(
     name="akasha_terminal",
-    version="0.9.07",
+    version="0.9.08",
     description="document QA(RAG) package using langchain and chromadb",
     long_description=long_description,
     long_description_content_type="text/markdown",
