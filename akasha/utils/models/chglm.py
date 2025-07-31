@@ -61,3 +61,18 @@ class chatGLM(LLM):
         self.model = self.model.eval()
         response, history = self.model.chat(self.tokenizer, prompt, history=[])
         return response
+
+    def get_num_tokens(self, text: str) -> int:
+        """get number of tokens in the text
+
+        Args:
+            **text (str)**: input text
+
+        Returns:
+            int: number of tokens
+        """
+        import tiktoken
+
+        encoding = tiktoken.get_encoding("cl100k_base")
+        num_tokens = len(encoding.encode(text))
+        return num_tokens

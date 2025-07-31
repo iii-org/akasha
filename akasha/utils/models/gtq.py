@@ -88,6 +88,21 @@ class gptq(LLM):
         text = self.tokenizer.decode(generate_ids[0])
         return text
 
+    def get_num_tokens(self, text: str) -> int:
+        """get number of tokens in the text
+
+        Args:
+            **text (str)**: input text
+
+        Returns:
+            int: number of tokens
+        """
+        import tiktoken
+
+        encoding = tiktoken.get_encoding("cl100k_base")
+        num_tokens = len(encoding.encode(text))
+        return num_tokens
+
 
 class peft_Llama2(LLM):
     """define initials and _call function for llama2 peft model
@@ -147,6 +162,21 @@ class peft_Llama2(LLM):
 
         return result_message
 
+    def get_num_tokens(self, text: str) -> int:
+        """get number of tokens in the text
+
+        Args:
+            **text (str)**: input text
+
+        Returns:
+            int: number of tokens
+        """
+        import tiktoken
+
+        encoding = tiktoken.get_encoding("cl100k_base")
+        num_tokens = len(encoding.encode(text))
+        return num_tokens
+
 
 class TaiwanLLaMaGPTQ(LLM):
     max_token: int = 300
@@ -205,3 +235,18 @@ class TaiwanLLaMaGPTQ(LLM):
         output = self.tokenizer.decode(generate_ids[0, len(tokens[0]) : -1]).strip()
 
         return output
+
+    def get_num_tokens(self, text: str) -> int:
+        """get number of tokens in the text
+
+        Args:
+            **text (str)**: input text
+
+        Returns:
+            int: number of tokens
+        """
+        import tiktoken
+
+        encoding = tiktoken.get_encoding("cl100k_base")
+        num_tokens = len(encoding.encode(text))
+        return num_tokens

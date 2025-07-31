@@ -343,3 +343,24 @@ class AzureOpenAIClient(LLM):
         print(f"Image saved to {path}")
 
         return path
+
+    def get_num_tokens(self, text: str) -> int:
+        """Get the number of tokens in the text using the model's tokenizer.
+
+        Args:
+            text (str): The text to be tokenized.
+
+        Returns:
+            int: The number of tokens in the text.
+        """
+        import tiktoken
+
+        try:
+            encoding = tiktoken.encoding_for_model(self.model_name)
+            tokens = encoding.encode(text)
+            num_tokens = len(tokens)
+            return num_tokens
+        except Exception:
+            encoding = tiktoken.get_encoding("cl100k_base")
+            num_tokens = len(encoding.encode(text))
+            return num_tokens

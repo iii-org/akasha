@@ -212,3 +212,15 @@ class anthropic_model(LLM):
         )
 
         return token_count.input_tokens
+
+    def get_num_tokens(self, text: str) -> int:
+        """Get the number of tokens in the text using the model's tokenizer.
+
+        Args:
+            text (str): The text to be tokenized.
+
+        Returns:
+            int: The number of tokens in the text.
+        """
+
+        return self.count_tokens(text)
