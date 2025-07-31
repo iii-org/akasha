@@ -255,6 +255,17 @@ class gemini_model(LLM):
 
         return save_path
 
+    def get_num_tokens(self, text: str) -> int:
+        try:
+            num_tokens = calculate_token(text, model_name=self.model_name)
+        except Exception:
+            import tiktoken
+
+            encoding = tiktoken.get_encoding("cl100k_base")
+            num_tokens = len(encoding.encode(text))
+
+        return num_tokens
+
 
 def convert_vision_prompt(prompt: list):
     """convert the vision prompt to the correct format"""

@@ -313,7 +313,6 @@ class agents(basic_llm):
         )
         self.input_len = get_doc_length(self.language, txt)
         self.tokens = self.model_obj.get_num_tokens(txt)
-
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         if self.keep_logs is True:
             self.timestamp_list.append(timestamp)
@@ -538,7 +537,6 @@ class agents(basic_llm):
         )
         self.input_len = get_doc_length(self.language, txt)
         self.tokens = self.model_obj.get_num_tokens(txt)
-
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         if self.keep_logs is True:
             self.timestamp_list.append(timestamp)
