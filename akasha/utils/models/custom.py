@@ -102,7 +102,9 @@ class custom_model(LLM):
         """
         return "custom: " + self.func.__name__
 
-    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+    def _call(
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -114,6 +116,8 @@ class custom_model(LLM):
         """
 
         response = self.func(prompt)
+        if verbose:
+            print(response, end="", flush=True)
         return response
 
     def get_num_tokens(self, text: str) -> int:

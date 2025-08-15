@@ -34,5 +34,6 @@ wb.save_logs("wb.json")
 ### same as ask, you can set stream to True to get the response in stream ###
 st = wb(PROMPT, stream=True)
 
+full_response = ""
 for s in st:
-    print(s)
+    full_response += s

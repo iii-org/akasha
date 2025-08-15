@@ -217,7 +217,9 @@ class TaiwanLLaMaGPTQ(LLM):
     def _llm_type(self) -> str:
         return "Taiwan_LLaMa:"
 
-    def _call(self, message: str, stop: Optional[List[str]] = None):
+    def _call(
+        self, message: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ):
         prompt = message
         tokens = self.tokenizer(prompt, return_tensors="pt").input_ids
         generate_ids = self.model.generate(
@@ -233,6 +235,8 @@ class TaiwanLLaMaGPTQ(LLM):
             pad_token_id=self.tokenizer.pad_token_id,
         )
         output = self.tokenizer.decode(generate_ids[0, len(tokens[0]) : -1]).strip()
+        if verbose:
+            print(output, end="", flush=True)
 
         return output
 

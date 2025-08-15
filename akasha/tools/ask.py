@@ -223,13 +223,15 @@ class ask(basic_llm):
                     fnl_input,
                 )
 
-            self.response = call_model(self.model_obj, fnl_input)
+            self.response = call_model(self.model_obj, fnl_input, self.verbose)
 
         else:
             if self.stream:
                 return self._display_stream(prod_sys_prompts[0])
 
-            self.response = call_model(self.model_obj, prod_sys_prompts[0])
+            self.response = call_model(
+                self.model_obj, prod_sys_prompts[0], self.verbose
+            )
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)
@@ -302,7 +304,7 @@ class ask(basic_llm):
             return self._display_stream(
                 fnl_input,
             )
-        self.response = call_image_model(self.model_obj, fnl_input)
+        self.response = call_image_model(self.model_obj, fnl_input, self.verbose)
         self._add_result_log_vision(timestamp, time.time() - start_time, image_path)
 
         return self.response
@@ -310,10 +312,7 @@ class ask(basic_llm):
     def _display_stream(
         self, text_input: Union[str, List[str]]
     ) -> Generator[str, None, None]:
-        ret = call_stream_model(
-            self.model_obj,
-            text_input,
-        )
+        ret = call_stream_model(self.model_obj, text_input, self.verbose)
 
         for s in ret:
             self.response += s

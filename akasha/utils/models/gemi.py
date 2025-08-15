@@ -54,6 +54,7 @@ class gemini_model(LLM):
     def stream(
         self,
         prompt: Union[str, List[Dict[str, Any]]],
+        verbose: bool = True,
         stop: Optional[List[str]] = None,
         system_prompt: Union[str, None] = None,
     ) -> Generator:
@@ -79,6 +80,8 @@ class gemini_model(LLM):
             model=self.model_name, contents=prompt, config=generation_config
         ):
             if chunk.text:
+                if verbose:
+                    print(chunk.text, end="", flush=True)
                 yield chunk.text
 
         return
@@ -120,7 +123,8 @@ class gemini_model(LLM):
             model=self.model_name, contents=prompt, config=generation_config
         ):
             if chunk.text:
-                print(chunk.text, end="", flush=True)
+                if verbose:
+                    print(chunk.text, end="", flush=True)
                 ret += chunk.text
 
         return ret
@@ -129,7 +133,9 @@ class gemini_model(LLM):
         messages, stop, verbose = args
         return self._call(messages, stop, verbose)
 
-    def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
+    def batch(
+        self, prompt: List[str], stop: Optional[List[str]] = None, verbose: bool = False
+    ) -> List[str]:
         """run llm and get the response
 
         Args:
@@ -148,7 +154,8 @@ class gemini_model(LLM):
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
             results = list(
                 executor.map(
-                    self._invoke_helper, [(message, stop, False) for message in prompt]
+                    self._invoke_helper,
+                    [(message, stop, verbose) for message in prompt],
                 )
             )
         return results
@@ -172,7 +179,7 @@ class gemini_model(LLM):
         return self._call(messages, stop, verbose, response_format=response_format)
 
     def invoke_stream(
-        self, messages: list, stop: Optional[List[str]] = None
+        self, messages: list, stop: Optional[List[str]] = None, verbose: bool = True
     ) -> Generator:
         """run llm and get the response
 
@@ -183,9 +190,15 @@ class gemini_model(LLM):
         Returns:
             str: llm response
         """
-        return self.stream(messages, stop)
+        return self.stream(messages, stop, verbose=verbose)
 
-    def generate(self, prompt: str, save_path: str = "./image.png", **kwargs) -> Path:
+    def generate(
+        self,
+        prompt: str,
+        save_path: str = "./image.png",
+        verbose: bool = True,
+        **kwargs,
+    ) -> Path:
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
@@ -201,18 +214,24 @@ class gemini_model(LLM):
             save_path = path / "image.png"
 
         for part in response.candidates[0].content.parts:
-            if part.text is not None:
+            if part.text is not None and verbose:
                 print(part.text)
             elif part.inline_data is not None:
                 image = Image.open(BytesIO((part.inline_data.data)))
                 image.save(save_path.__str__())
                 # image.show()
-                print(f"Image saved to {save_path.__str__()}")
+                if verbose:
+                    print(f"Image saved to {save_path.__str__()}")
 
         return save_path
 
     def edit(
-        self, prompt: str, images: list[str], save_path: str = "./image.png", **kwargs
+        self,
+        prompt: str,
+        images: list[str],
+        save_path: str = "./image.png",
+        verbose: bool = True,
+        **kwargs,
     ):
         ## process the image list
         images_source = [prompt]
@@ -245,13 +264,14 @@ class gemini_model(LLM):
             save_path = path / "image.png"
 
         for part in response.candidates[0].content.parts:
-            if part.text is not None:
+            if part.text is not None and verbose:
                 print(part.text)
             elif part.inline_data is not None:
                 image = Image.open(BytesIO((part.inline_data.data)))
                 image.save(save_path.__str__())
                 # image.show()
-                print(f"Image saved to {save_path.__str__()}")
+                if verbose:
+                    print(f"Image saved to {save_path.__str__()}")
 
         return save_path
 

@@ -31,6 +31,6 @@ ak.save_logs("logs.json")
 
 ### you can set stream to True to get the response in stream ###
 st = ak.selfask_RAG("docs/mic", PROMPT, stream=True)
-
+full_response = ""
 for s in st:
-    print(s)
+    full_response += s

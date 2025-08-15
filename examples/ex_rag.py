@@ -19,7 +19,7 @@ model_obj = ah.handle_model(
     max_output_tokens=DEFAULT_MAX_OUTPUT_TOKENS,
 )
 
-ret = ah.call_model(model_obj, PROMPT)
+ret = ah.call_model(model_obj, PROMPT, verbose=True)
 
 ### create an embedding object and embed the query ###
 emb_obj = ah.handle_embeddings(DEFAULT_EMBED, verbose=True)
@@ -55,6 +55,6 @@ ak.save_logs("logs.json")
 
 ### you can set stream to True to get the response in stream ###
 st = ak("docs/mic", PROMPT, stream=True)
-
+full_response = ""
 for s in st:
-    print(s)
+    full_response += s

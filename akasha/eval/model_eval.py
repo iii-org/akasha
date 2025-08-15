@@ -80,7 +80,7 @@ def _generate_single_choice_question(
     q_prompt = format_wrong_answer(choice_num - 1, doc_text, question, cor_ans)
 
     input_text = format_sys_prompt(system_prompt, q_prompt)
-    response = call_model(model, input_text)
+    response = call_model(model, input_text, False)
 
     ### separate the response into wrong answers ###
     try:
@@ -422,7 +422,7 @@ class Model_Eval(atman):
                 try:
                     ## ask model to get category & nouns, add to category ##
                     category_prompt = format_category_prompt(doc_text, self.language)
-                    response = call_model(self.model_obj, category_prompt)
+                    response = call_model(self.model_obj, category_prompt, False)
 
                     json_response = extract_json(response)
                     if json_response is None:
@@ -446,7 +446,7 @@ class Model_Eval(atman):
                 q_prompt = compare_question_prompt(
                     self.question_style, topic, nouns, used_texts
                 )
-                response = call_model(self.model_obj, q_prompt)
+                response = call_model(self.model_obj, q_prompt, False)
 
                 if not self._process_response(response, used_texts, choice_num, ""):
                     raise Exception(f"Question Format Error, got {response}")
@@ -548,7 +548,7 @@ class Model_Eval(atman):
                 self.prompt_format_type,
                 self.model,
             )
-            response = call_model(self.model_obj, intput_text)
+            response = call_model(self.model_obj, intput_text, False)
             self.response.append(response)
             self.doc_length.append(doc_length)
             self.doc_tokens.append(doc_tokens)
@@ -622,7 +622,7 @@ class Model_Eval(atman):
         self.docs = [Document(page_content=sum_doc, metadata={"source": "", "page": 0})]
 
         try:
-            response = call_model(self.model_obj, intput_text)
+            response = call_model(self.model_obj, intput_text, False)
             self.response.append(response)
             self.doc_length.append(get_doc_length(self.language, sum_doc))
             self.doc_tokens.append(self.model_obj.get_num_tokens(sum_doc))

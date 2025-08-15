@@ -10,15 +10,14 @@ from akasha.utils.prompts.gen_prompt import format_sys_prompt, default_translate
 
 
 def call_model(
-    model: BaseLanguageModel,
-    input_text: Union[str, list],
+    model: BaseLanguageModel, input_text: Union[str, list], verbose: bool = True
 ) -> str:
     """call llm model and return the response
 
     Args:
         model (BaseLanguageModel): llm model
         input_text (str): the input_text that send to llm model
-        prompt_type (str): the type of prompt, default "gpt"
+        verbose (bool, optional): whether to print the response. Defaults to True.
 
     Returns:
         str: llm response
@@ -27,7 +26,6 @@ def call_model(
     ### for openai, change system prompt and prompt into system meg and human meg ###
 
     response = ""
-    print_flag = True
 
     model, model_name = handle_model_and_name(model)
 
@@ -35,18 +33,15 @@ def call_model(
         try:
             model_type = model._llm_type
         except Exception:
-            print_flag = False
             model_type = "unknown"
 
         if "openai" in model_type:
-            print_flag = False
-            response = model.invoke(input_text)
+            response = model.invoke(input_text, verbose=verbose)
 
         elif "remote" in model_type:
-            print_flag = False
-            response = model._call(input_text)
+            response = model._call(input_text, verbose=verbose)
         else:
-            response = model._call(input_text)
+            response = model._call(input_text, verbose=verbose)
 
         if isinstance(response, AIMessage):
             response = response.content
@@ -55,16 +50,7 @@ def call_model(
             if isinstance(response, list):
                 response = "\n".join(response)
 
-        if (
-            ("huggingface" in model_type)
-            or ("llama cpp" in model_type)
-            or ("gemini" in model_type)
-            or ("anthropic" in model_type)
-        ):
-            print_flag = False
-
         if response is None or response == "":
-            print_flag = False
             raise Exception("LLM response is empty.")
 
     except Exception as e:
@@ -76,9 +62,6 @@ def call_model(
         )
         raise e
 
-    if print_flag:
-        print("llm response:", "\n\n" + response)
-
     if isinstance(response, str):
         response = sim_to_trad(response)
 
@@ -88,12 +71,14 @@ def call_model(
 def call_batch_model(
     model: BaseLanguageModel,
     input_text: list,
+    verbose: bool = False,
 ) -> List[str]:
     """call llm model in batch and return the response
 
     Args:
         model (BaseLanguageModel): llm model
-        input_text: list
+        input_text (list):  the input_text that send to llm model
+        verbose (bool, optional): whether to print the response. Defaults to False.
 
     Returns:
         str: llm response
@@ -119,7 +104,6 @@ def call_batch_model(
             responses.append(res)
 
         if response is None or response == "" or "".join(responses) == "":
-            # print_flag = False
             raise Exception("LLM response is empty.")
 
     except Exception as e:
@@ -140,13 +124,14 @@ def call_batch_model(
 def call_stream_model(
     model: BaseLanguageModel,
     input_text: Union[str, list],
+    verbose: bool = True,
 ) -> Generator[str, None, None]:
     """call llm model and yield the response
 
     Args:
         model (BaseLanguageModel): llm model
         input_text (str): the input_text that send to llm model
-        prompt_type (str): the type of prompt, default "gpt"
+        verbose (bool, optional): whether to print the response. Defaults to True.
 
     Returns:
         str: llm response
@@ -159,9 +144,9 @@ def call_stream_model(
     model, model_name = handle_model_and_name(model)
     try:
         try:
-            response = model.stream(input_text)
+            response = model.stream(input_text, verbose=verbose)
         except Exception:
-            response = model._call(input_text)
+            response = model._call(input_text, verbose=verbose)
 
         for r in response:
             if isinstance(r, AIMessage):
@@ -189,6 +174,7 @@ def call_stream_model(
 def call_image_model(
     model: BaseLanguageModel,
     input_text: Union[str, list],
+    verbose: bool = True,
 ) -> str:
     response = ""
     print_flag = True
@@ -202,10 +188,10 @@ def call_image_model(
             or ("gemini" in model_type)
         ):
             print_flag = False
-            response = model.invoke(input_text)
+            response = model.invoke(input_text, verbose=verbose)
 
         else:
-            response = model.call_image(input_text)
+            response = model.call_image(input_text, verbose=verbose)
 
         if isinstance(response, AIMessage):
             response = response.content
@@ -270,6 +256,7 @@ def call_translator(
     texts: str,
     prompt_format_type: str = "auto",
     language: str = "zh",
+    verbose: bool = True,
 ) -> str:
     """translate texts to target language
 
@@ -282,11 +269,11 @@ def call_translator(
     Returns:
         str: translated texts
     """
-    model_obj, model_name = handle_model_and_name(model_obj)
+    model_obj, model_name = handle_model_and_name(model_obj, verbose=verbose)
     sys_prompt = default_translate_prompt(language)
     prod_prompt = format_sys_prompt(sys_prompt, texts, prompt_format_type, model_name)
 
-    response = call_model(model_obj, prod_prompt)
+    response = call_model(model_obj, prod_prompt, verbose=verbose)
 
     return response
 
@@ -296,6 +283,7 @@ def call_JSON_formatter(
     texts: str,
     keys: Union[str, list, BaseModel] = "",
     prompt_format_type: str = "auto",
+    verbose: bool = True,
 ) -> Union[dict, List[dict], None]:
     """use LLM to transfer texts into JSON format
 
@@ -347,6 +335,7 @@ def call_JSON_formatter(
                 response = model_obj.invoke(
                     prod_prompt,
                     response_format=response_format,
+                    verbose=verbose,
                 )
                 return extract_json(response)
 
@@ -354,12 +343,13 @@ def call_JSON_formatter(
                 response = model_obj.invoke(
                     prod_prompt,
                     response_format=json_base_model,
+                    verbose=verbose,
                 )
                 return extract_multiple_json(response)
         except Exception as e:
             print("Error in using JSON response format:", e)
 
-    response = call_model(model_obj, prod_prompt)
+    response = call_model(model_obj, prod_prompt, verbose=verbose)
     return extract_json(response)
 
 

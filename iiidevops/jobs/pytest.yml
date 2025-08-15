@@ -1,10 +1,13 @@
 pytest:
   image: ghcr.io/astral-sh/uv:0.6.13-python3.10-bookworm-slim
   stage: jobs
+  cache:
+    key: uv-cache
+    paths:
+      - /root/.cache/uv
   before_script:
-    - python -V # Print out python version for debugging
-    - uv pip install --system -r requirements.txt
-    - uv pip install --system pytest pytest-cov
+    - python -V
+    - uv pip install --system -e ".[dev]" 
   script:
     - pytest
   only:

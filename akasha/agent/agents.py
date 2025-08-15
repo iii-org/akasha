@@ -101,6 +101,7 @@ class agents(basic_llm):
         for tool in tools:
             if not isinstance(tool, BaseTool):
                 logging.warning("tools should be a list of BaseTool")
+                print("WARNING. tools should be a list of BaseTool\n\n")
                 continue
             tool_name = tool.name
             self.tools[tool_name] = tool
@@ -301,7 +302,11 @@ class agents(basic_llm):
             self.prompt_format_type,
             self.model,
         )
-        response = call_model(self.model_obj, text_input)
+        response = call_model(
+            self.model_obj,
+            text_input,
+            self.verbose,
+        )
 
         txt = (
             "Question: "
@@ -331,13 +336,20 @@ class agents(basic_llm):
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
                 )
+                print(
+                    "WARNING. Cannot extract JSON format action from response, retry.\n\n"
+                )
                 text_input = format_sys_prompt(
                     self.REACT_PROMPT,
                     "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
                     self.prompt_format_type,
                     self.model,
                 )
-                response = call_model(self.model_obj, text_input)
+                response = call_model(
+                    self.model_obj,
+                    text_input,
+                    self.verbose,
+                )
                 round_count -= 1
                 txt = (
                     "Question: "
@@ -394,13 +406,18 @@ class agents(basic_llm):
 
                 except Exception:
                     logging.warning("Cannot run the tool, retry.")
+                    print("WARNING. Cannot run the tool, retry.\n\n")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
                         "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
                         self.prompt_format_type,
                         self.model,
                     )
-                    response = call_model(self.model_obj, text_input)
+                    response = call_model(
+                        self.model_obj,
+                        text_input,
+                        self.verbose,
+                    )
                     round_count -= 1
                     txt = (
                         "Question: "
@@ -425,7 +442,11 @@ class agents(basic_llm):
                         self.prompt_format_type,
                         self.model,
                     )
-                    observation = call_model(self.model_obj, text_input)
+                    observation = call_model(
+                        self.model_obj,
+                        text_input,
+                        self.verbose,
+                    )
                     txt = (
                         "Question: "
                         + question
@@ -472,7 +493,11 @@ class agents(basic_llm):
                 self.prompt_format_type,
                 self.model,
             )
-            response = call_model(self.model_obj, text_input)
+            response = call_model(
+                self.model_obj,
+                text_input,
+                self.verbose,
+            )
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
             self.tokens += self.model_obj.get_num_tokens(txt)
@@ -525,7 +550,11 @@ class agents(basic_llm):
             self.prompt_format_type,
             self.model,
         )
-        response = call_model(self.model_obj, text_input)
+        response = call_model(
+            self.model_obj,
+            text_input,
+            self.verbose,
+        )
 
         txt = (
             "Question: "
@@ -555,13 +584,20 @@ class agents(basic_llm):
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
                 )
+                print(
+                    "WARNING. Cannot extract JSON format action from response, retry.\n\n"
+                )
                 text_input = format_sys_prompt(
                     self.REACT_PROMPT,
                     "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
                     self.prompt_format_type,
                     self.model,
                 )
-                response = call_model(self.model_obj, text_input)
+                response = call_model(
+                    self.model_obj,
+                    text_input,
+                    self.verbose,
+                )
                 round_count -= 1
                 txt = (
                     "Question: "
@@ -640,7 +676,11 @@ class agents(basic_llm):
                         self.prompt_format_type,
                         self.model,
                     )
-                    response = call_model(self.model_obj, text_input)
+                    response = call_model(
+                        self.model_obj,
+                        text_input,
+                        self.verbose,
+                    )
                     round_count -= 1
                     txt = (
                         "Question: "
@@ -665,7 +705,11 @@ class agents(basic_llm):
                         self.prompt_format_type,
                         self.model,
                     )
-                    observation = call_model(self.model_obj, text_input)
+                    observation = call_model(
+                        self.model_obj,
+                        text_input,
+                        self.verbose,
+                    )
                     txt = (
                         "Question: "
                         + question
@@ -715,7 +759,11 @@ class agents(basic_llm):
                 self.prompt_format_type,
                 self.model,
             )
-            response = call_model(self.model_obj, text_input)
+            response = call_model(
+                self.model_obj,
+                text_input,
+                self.verbose,
+            )
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
             self.tokens += self.model_obj.get_num_tokens(txt)
@@ -780,6 +828,7 @@ class agents(basic_llm):
                     for tool in tools:
                         if not isinstance(tool, BaseTool):
                             logging.warning("tools should be a list of BaseTool")
+                            print("WARNING. tools should be a list of BaseTool\n\n")
                             continue
                         tool_name = tool.name
                         self.tools[tool_name] = tool
@@ -869,6 +918,7 @@ class agents(basic_llm):
         for tool in tools:
             if not isinstance(tool, BaseTool):
                 logging.warning("tools should be a list of BaseTool")
+                print("WARNING. tools should be a list of BaseTool\n\n")
                 continue
             tool_name = tool.name
             self.tools[tool_name] = tool

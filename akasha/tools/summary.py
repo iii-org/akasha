@@ -210,10 +210,7 @@ class summary(basic_llm):
                     self.prompt_format_type,
                     self.model,
                 )
-                response = call_model(
-                    self.model_obj,
-                    input_text,
-                )
+                response = call_model(self.model_obj, input_text, self.verbose)
 
                 total_list.append(response)
 
@@ -223,7 +220,7 @@ class summary(basic_llm):
             input_text = format_sys_prompt(
                 self.system_prompt, "\n" + prompt, self.prompt_format_type, self.model
             )
-            response = call_model(self.model_obj, input_text)
+            response = call_model(self.model_obj, input_text, self.verbose)
 
             i = newi
 
@@ -294,10 +291,7 @@ class summary(basic_llm):
             text_input = format_sys_prompt(
                 self.system_prompt, "\n" + prompt, self.prompt_format_type, self.model
             )
-            response = call_model(
-                self.model_obj,
-                text_input,
-            )
+            response = call_model(self.model_obj, text_input, self.verbose)
 
             response_list.append(response)
             previous_summary = response

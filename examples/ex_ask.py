@@ -33,6 +33,6 @@ ak.save_logs("logs_ask.json")
 
 ### you can set stream to True to get the response in stream ###
 st = ak(PROMPT, "https://github.com/iii-org/akasha", stream=True)
-
+full_response = ""
 for s in st:
-    print(s)
+    full_response += s
