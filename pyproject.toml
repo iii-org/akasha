@@ -64,6 +64,7 @@ dependencies = [
 [project.optional-dependencies]
 llama-cpp = ["llama-cpp-python>=0.3.8"]
 peft = ["auto-gptq==0.3.1"]
+dev = ["pytest", "pytest-cov"]
 
 [project.scripts]
 akasha = "cli.glue:akasha"
