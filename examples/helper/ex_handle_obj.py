@@ -36,16 +36,16 @@ model_obj = ah.handle_model(
 prod_sys_prompt = format_sys_prompt(SYS_PROMPT, PROMPT, "chat_gpt", DEFAULT_MODEL)
 
 # call the model #
-ret = ah.call_model(model_obj, prod_sys_prompt)
+ret = ah.call_model(model_obj, prod_sys_prompt, verbose=True)
 
 # call the model in parallel #
 ret2 = ah.call_batch_model(model_obj, [PROMPT, PROMPT2])
 
 # call the model in stream #
-st = ah.call_stream_model(model_obj, PROMPT)
-
+st = ah.call_stream_model(model_obj, PROMPT, verbose=True)
+full_response = ""
 for s in st:
-    print(s)
+    full_response += s
 
 
 # restrict the model to output JSON format response

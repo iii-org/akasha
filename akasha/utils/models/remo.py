@@ -53,7 +53,9 @@ class remote_model(LLM):
         """
         return "remote: api model"
 
-    def stream(self, prompt: str, stop: Optional[List[str]] = None) -> Generator:
+    def stream(
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> Generator:
         """run llm and get the stream generator
 
         Args:
@@ -65,7 +67,7 @@ class remote_model(LLM):
         if isinstance(prompt, str):
             prompt = [{"role": "user", "content": prompt}]
 
-        yield from self.invoke_stream(prompt, stop)
+        yield from self.invoke_stream(prompt, stop, verbose)
         return
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None, verbose=True) -> str:
@@ -88,7 +90,9 @@ class remote_model(LLM):
         messages, stop, verbose = args
         return self._call(messages, stop, verbose)
 
-    def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
+    def batch(
+        self, prompt: List[str], stop: Optional[List[str]] = None, verbose: bool = False
+    ) -> List[str]:
         """run llm and get the response
 
         Args:
@@ -106,7 +110,8 @@ class remote_model(LLM):
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
             results = list(
                 executor.map(
-                    self._invoke_helper, [(message, stop, False) for message in prompt]
+                    self._invoke_helper,
+                    [(message, stop, verbose) for message in prompt],
                 )
             )
         return results
@@ -151,7 +156,7 @@ class remote_model(LLM):
         return response
 
     def invoke_stream(
-        self, messages: list, stop: Optional[List[str]] = None
+        self, messages: list, stop: Optional[List[str]] = None, verbose: bool = True
     ) -> Generator:
         """run llm and get the response
 
@@ -185,6 +190,8 @@ class remote_model(LLM):
             for message in chat_completion:
                 content = message.choices[0].delta.content
                 if isinstance(content, str):
+                    if verbose:
+                        print(message.choices[0].delta.content, end="")
                     yield message.choices[0].delta.content
 
         except Exception as e:

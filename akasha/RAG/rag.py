@@ -174,10 +174,7 @@ class RAG(atman):
     def _display_stream(
         self, text_input: Union[str, List[str]]
     ) -> Generator[str, None, None]:
-        ret = call_stream_model(
-            self.model_obj,
-            text_input,
-        )
+        ret = call_stream_model(self.model_obj, text_input, self.verbose)
 
         for s in ret:
             self.response += s
@@ -271,6 +268,7 @@ class RAG(atman):
         self.response = call_model(
             self.model_obj,
             text_input,
+            self.verbose,
         )
 
         self._add_result_log(timestamp, end_time - start_time)

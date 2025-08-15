@@ -457,7 +457,7 @@ def generate_query_filter(
     query_constructor_prompt, data_source = generate_query_constructor(
         metadata_field_info, document_content_description, prompt
     )
-    res = helper.call_model(model_obj, query_constructor_prompt)
+    res = helper.call_model(model_obj, query_constructor_prompt, False)
 
     if custom_parser is not None:
         query, fnl_filter = custom_parser(res)

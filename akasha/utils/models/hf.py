@@ -100,7 +100,7 @@ class hf_model(LLM):
             )
 
     def stream(
-        self, prompt: str, stop: Optional[List[str]] = None
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
     ) -> Generator[str, None, None]:
         stop_list = get_stop_list(stop)
         # inputs = self.tokenizer([prompt], return_tensors="pt").to(self.device)
@@ -123,7 +123,9 @@ class hf_model(LLM):
         #     yield text
         yield from self.streamer
 
-    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+    def _call(
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -150,14 +152,19 @@ class hf_model(LLM):
         thread.start()
         generated_text = ""
         for new_text in self.streamer:
-            print(new_text, end="", flush=True)
+            if verbose:
+                print(new_text, end="", flush=True)
             generated_text += new_text
         return generated_text
 
-    def _generate(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-        return self._call(prompt, stop)
+    def _generate(
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
+        return self._call(prompt, stop, verbose)
 
-    def batch(self, prompt: List[str], stop: Optional[List[str]] = None) -> List[str]:
+    def batch(
+        self, prompt: List[str], stop: Optional[List[str]] = None, verbose: bool = False
+    ) -> List[str]:
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
         # Tokenize and move to correct device
@@ -180,7 +187,7 @@ class hf_model(LLM):
 
         return generated_texts
 
-    def call_image(self, prompt: list) -> str:
+    def call_image(self, prompt: list, verbose: bool = True) -> str:
         def is_url(path):
             from urllib.parse import urlparse
 

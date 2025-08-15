@@ -49,7 +49,11 @@ def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
         self_ask_sys_prompt, self_ask_prompt, self.prompt_format_type, self.model
     )
 
-    ret = call_model(self.model_obj, prod_sys_prompt)
+    ret = call_model(
+        self.model_obj,
+        prod_sys_prompt,
+        self.verbose,
+    )
     parse_json = extract_json(ret)
 
     if parse_json is None or int(parse_json["need"]) == 0:
@@ -98,6 +102,7 @@ def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
     self.response = call_model(
         self.model_obj,
         text_input,
+        self.verbose,
     )
 
     self._add_result_log(timestamp, end_time - start_time)

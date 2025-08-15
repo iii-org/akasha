@@ -48,7 +48,9 @@ class chatGLM(LLM):
         """
         return f"chatglm:{self.model_name}  ChatGLM"
 
-    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+    def _call(
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -60,6 +62,8 @@ class chatGLM(LLM):
         """
         self.model = self.model.eval()
         response, history = self.model.chat(self.tokenizer, prompt, history=[])
+        if verbose:
+            print(response, end="", flush=True)
         return response
 
     def get_num_tokens(self, text: str) -> int:

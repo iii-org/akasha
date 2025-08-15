@@ -202,7 +202,11 @@ class eval(Model_Eval):
                 q_prompt = format_create_question_prompt(
                     doc_text, self.question_type, self.question_style
                 )
-                response = call_model(self.model_obj, q_prompt)
+                response = call_model(
+                    self.model_obj,
+                    q_prompt,
+                    self.verbose,
+                )
 
                 if not self._process_response(
                     response, doc_text, choice_num, source_files_name
@@ -352,7 +356,11 @@ class eval(Model_Eval):
                     doc_text, self.question_type, self.question_style, topic
                 )
 
-                response = call_model(self.model_obj, q_prompt)
+                response = call_model(
+                    self.model_obj,
+                    q_prompt,
+                    self.verbose,
+                )
                 if not self._process_response(
                     response, doc_text, choice_num, source_files_name
                 ):

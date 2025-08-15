@@ -228,13 +228,15 @@ class websearch(ask):
                     fnl_input,
                 )
 
-            self.response = call_model(self.model_obj, fnl_input)
+            self.response = call_model(self.model_obj, fnl_input, self.verbose)
 
         else:
             if self.stream:
                 return self._display_stream(prod_sys_prompts[0])
 
-            self.response = call_model(self.model_obj, prod_sys_prompts[0])
+            self.response = call_model(
+                self.model_obj, prod_sys_prompts[0], self.verbose
+            )
 
         end_time = time.time()
         self._add_result_log(timestamp, end_time - start_time)

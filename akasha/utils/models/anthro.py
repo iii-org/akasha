@@ -57,7 +57,10 @@ class anthropic_model(LLM):
         return f"anthropic:{self.model_name}"
 
     def stream(
-        self, prompt: Union[str, List[Dict[str, Any]]], stop: Optional[List[str]] = None
+        self,
+        prompt: Union[str, List[Dict[str, Any]]],
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
     ) -> Generator:
         """run llm and get the stream generator
 
@@ -79,6 +82,8 @@ class anthropic_model(LLM):
             top_p=self.top_p,
         ) as stream:
             for text in stream.text_stream:
+                if verbose:
+                    print(text, end="", flush=True)
                 yield text
 
         return
@@ -173,7 +178,9 @@ class anthropic_model(LLM):
         """
         return self.stream(messages, stop)
 
-    def call_image(self, prompt: list, stop: Optional[List[str]] = None) -> str:
+    def call_image(
+        self, prompt: list, stop: Optional[List[str]] = None, verbose: bool = False
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -192,7 +199,8 @@ class anthropic_model(LLM):
             temperature=self.temperature,
             top_p=self.top_p,
         )
-
+        if verbose:
+            print(messages.content[0].text, end="", flush=True)
         return messages.content[0].text
 
     def count_tokens(self, prompt: Union[list, str]) -> int:

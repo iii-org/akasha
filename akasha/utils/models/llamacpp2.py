@@ -75,7 +75,10 @@ class LlamaCPP(LLM):
         return "llama-cpp:" + self.model_id
 
     def stream(
-        self, prompt: Union[list, str], stop: Optional[List[str]] = None
+        self,
+        prompt: Union[list, str],
+        stop: Optional[List[str]] = None,
+        verbose: bool = True,
     ) -> Generator[str, None, None]:
         stop_list = get_stop_list(stop)
         input_text = ""
@@ -96,9 +99,13 @@ class LlamaCPP(LLM):
 
         for text in output:
             delta = text["choices"][0]["text"]
+            if verbose:
+                print(delta, end="", flush=True)
             yield delta
 
-    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+    def _call(
+        self, prompt: str, stop: Optional[List[str]] = None, verbose: bool = True
+    ) -> str:
         """run llm and get the response
 
         Args:
@@ -129,7 +136,8 @@ class LlamaCPP(LLM):
         ret = ""
         for text in output:
             delta = text["choices"][0]["text"]
-            print(delta, end="", flush=True)
+            if verbose:
+                print(delta, end="", flush=True)
             ret += delta
 
         return ret

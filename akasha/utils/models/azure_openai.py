@@ -15,6 +15,7 @@ async def _async_get_completion(
     prompt: dict,
     max_tokens: int,
     temperature: float,
+    verbose: bool = False,
 ):
     response = await client.chat.completions.create(
         model=model,
@@ -22,6 +23,9 @@ async def _async_get_completion(
         max_tokens=max_tokens,
         temperature=temperature,
     )
+    if verbose:
+        print(response.choices[0].message.content, end="", flush=True)
+
     return response.choices[0].message.content
 
 
@@ -156,7 +160,7 @@ class AzureOpenAIClient(LLM):
             "max_tokens": self.max_output_tokens,
             "stream": True,
         }
-        fully_text = ""
+        # fully_text = ""
 
         response = self.client.chat.completions.create(**params)
 
@@ -164,8 +168,10 @@ class AzureOpenAIClient(LLM):
             if len(chunk.choices) == 0:
                 continue
             if chunk.choices[0].delta.content:
+                if verbose:
+                    print(chunk.choices[0].delta.content, end="", flush=True)
                 yield chunk.choices[0].delta.content
-                fully_text += chunk.choices[0].delta.content
+                # fully_text += chunk.choices[0].delta.content
 
         return
 
@@ -173,7 +179,7 @@ class AzureOpenAIClient(LLM):
         self,
         inputs: list,
         stop: Optional[List[str]] = None,
-        verbose: bool = True,
+        verbose: bool = False,
         resposne_format: Union[dict, BaseModel, None] = None,
     ) -> List[str]:
         messages_list = []
@@ -200,6 +206,7 @@ class AzureOpenAIClient(LLM):
                     prompt,
                     self.max_output_tokens,
                     self.temperature,
+                    verbose=verbose,
                 )
                 for prompt in prompts
             ]
@@ -215,6 +222,7 @@ class AzureOpenAIClient(LLM):
         quality: str = "auto",
         moderation: str = "auto",
         background: str = "auto",
+        verbose: bool = True,
     ) -> Path:
         """generate image based on the user prompt.\n
         Args:
@@ -268,8 +276,8 @@ class AzureOpenAIClient(LLM):
         ## save the image
         with open(path, "wb") as f:
             f.write(image_bytes)
-
-        print(f"Image saved to {path}")
+        if verbose:
+            print(f"Image saved to {path}")
 
         return path
 
@@ -282,6 +290,7 @@ class AzureOpenAIClient(LLM):
         quality: str = "auto",
         moderation: str = "auto",
         background: str = "auto",
+        verbose: bool = True,
     ) -> Path:
         """generate image based on the user prompt.\n
         Args:
@@ -339,8 +348,8 @@ class AzureOpenAIClient(LLM):
         ## save the image
         with open(path, "wb") as f:
             f.write(image_bytes)
-
-        print(f"Image saved to {path}")
+        if verbose:
+            print(f"Image saved to {path}")
 
         return path
 

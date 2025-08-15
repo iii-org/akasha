@@ -110,7 +110,7 @@ def get_llm_score(
         system_prompt, prompt, prompt_format_type, model_name
     )
 
-    response = call_model(model, input_text)
+    response = call_model(model, input_text, False)
 
     # find the first float number in the response string and turn to float
     try:

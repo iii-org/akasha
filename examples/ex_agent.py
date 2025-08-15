@@ -144,8 +144,9 @@ agent.save_logs("logs_agent.json")
 
 
 ## if using streaming (stream=True)
+# full_response = ""
 # for r in response:
-#     print(r, end="")
+#     full_response += s
 
 ### OUTPUT ###
 # Model: openai:gpt-4o, Temperature: 1.0

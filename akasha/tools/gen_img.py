@@ -39,6 +39,7 @@ def gen_image(
         quality=quality,
         moderation="auto",
         background="auto",
+        verbose=verbose,
     )
 
     if verbose and ret:
@@ -92,6 +93,7 @@ def edit_image(
         quality=quality,
         moderation="auto",
         background="auto",
+        verbose=verbose,
     )
 
     if verbose and ret:
