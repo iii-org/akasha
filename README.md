@@ -245,9 +245,9 @@ def today_f():
 
 # 創建工具
 today_tool = akasha.create_tool(
-    "today_date_tool",
     "This is the tool to get today's date, the tool doesn't have any input parameter.",
     today_f,
+    "today_date_tool",
 )
 
 # 創建 agent 並使用工具

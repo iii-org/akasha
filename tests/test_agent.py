@@ -11,9 +11,9 @@ def today_f():
 
 
 today_tool = akasha.create_tool(
-    "today_date_tool",
     "This is the tool to get today's date, the tool don't have any input parameter.",
     today_f,
+    "today_date_tool",
 )
 
 
