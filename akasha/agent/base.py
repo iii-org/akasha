@@ -30,19 +30,22 @@ def get_tool_explaination(tools: List[BaseTool]) -> Dict[str, str]:
 
 
 def create_tool(
-    tool_name: str, tool_description: str, func: Callable
+    tool_description: str, func: Callable, tool_name: Union[str, None] = None
 ) -> Union[BaseTool, None]:
     """input function to create a tool
 
     Args:
-        tool_name (str): name of the tool
         tool_description (str): description of the function and the parameters of the tool
         func (Callable): callable function of the tool
+        tool_name (str, optional): name of the tool. If not provided, the function's name will be used.
 
     Returns:
         Union[BaseTool, None]: return the tool if success, return None if failed
     """
     try:
+        # Check if tool_name is provided, otherwise use the function name
+        if tool_name is None:
+            tool_name = func.__name__
 
         class custom_tool(BaseTool):
             name: str

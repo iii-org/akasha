@@ -157,69 +157,36 @@ def extract_json(text: str) -> Union[Dict[str, Any], List[Dict[str, Any]], None]
         Union[Dict[str, Any], List[Dict[str, Any]], None]: Parsed JSON data or None if parsing fails
     """
     # Clean up the text by removing markdown formatting if present
-    cleaned_text = re.sub(r"```(?:json)?\n", "", text)
-    cleaned_text = re.sub(r"```", "", cleaned_text)
+    try:
+        import json_repair
 
-    # Try to extract content within square brackets first (for list of dictionaries)
-    list_match = re.search(r"\[(.*?)\]", cleaned_text, re.DOTALL)
-
-    if list_match:
+        json_object = json_repair.loads(text)
+        return json_object
+    except (json.JSONDecodeError, TypeError):
         try:
-            # Try to parse as a list of JSON objects
-            json_str = list_match.group(0)
-            # Fix common issues: replace single quotes with double quotes
-            json_str = re.sub(r"'([^']*)':", r'"\1":', json_str)  # Fix keys
-            json_str = re.sub(
-                r":\s*\'([^\']*)\'", r': "\1"', json_str
-            )  # Fix string values
-            return json.loads(json_str)
+            # Use regex to find the first occurrence of a JSON object or list
+            # It handles nested structures by looking for balanced brackets or braces.
+            json_match = re.search(r"(\{.*\}|\[.*\])", text.strip(), re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+
+                # Fix common LLM errors before parsing
+                json_str = json_str.replace("`", "")  # Clean up markdown
+                json_str = re.sub(
+                    r"(\w+)\s*:", r'"\1":', json_str
+                )  # Add quotes to unquoted keys
+                json_str = json_str.replace(
+                    "'", '"'
+                )  # Replace single quotes with double quotes
+                json_str = re.sub(
+                    r",\s*([}\]])", r"\1", json_str
+                )  # Remove trailing commas
+
+                return json.loads(json_str)
         except json.JSONDecodeError:
-            # If list parsing fails, we'll fall through to try single object parsing
-            pass
+            # If parsing fails, it's not a valid JSON string
+            return None
 
-    # Try to extract the most promising JSON object
-    # This looks for balanced braces { } with content inside
-    matches = []
-    stack = []
-    start = -1
-
-    for i, char in enumerate(cleaned_text):
-        if char == "{":
-            if not stack:  # Start of a potential JSON object
-                start = i
-            stack.append("{")
-        elif char == "}":
-            if stack and stack[-1] == "{":
-                stack.pop()
-                if not stack:  # We've found a complete balanced {} section
-                    matches.append(cleaned_text[start : i + 1])
-
-    # Process matches from longest to shortest (assuming more complete is better)
-    matches.sort(key=len, reverse=True)
-
-    for match in matches:
-        try:
-            # Fix common issues that LLMs make in JSON generation
-            json_str = match
-            # Replace single quotes with double quotes for keys and string values
-            json_str = re.sub(r"'([^']*)':", r'"\1":', json_str)  # Fix keys
-            json_str = re.sub(
-                r":\s*\'([^\']*)\'", r': "\1"', json_str
-            )  # Fix string values
-            # Remove trailing commas before closing brackets
-            json_str = re.sub(r",\s*}", "}", json_str)
-            json_str = re.sub(r",\s*]", "]", json_str)
-            # Fix boolean values
-            json_str = re.sub(r":\s*True", r": true", json_str)
-            json_str = re.sub(r":\s*False", r": false", json_str)
-            # Fix None values
-            json_str = re.sub(r":\s*None", r": null", json_str)
-
-            return json.loads(json_str)
-        except json.JSONDecodeError:
-            continue
-
-    # If all attempts failed, return None
     return None
 
 

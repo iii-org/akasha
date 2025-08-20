@@ -17,9 +17,9 @@ def today_f():
 # then we create a tool to call the function, add function name and description
 # so llm can recognize the tool
 today_tool = akasha.create_tool(
-    "today_date_tool",
     "This is the tool to get today's date, the tool don't have any input parameter.",
     today_f,
+    "today_date_tool",
 )
 
 ### create an agent with the tool, so llm can use tool to answer the question correctly ###
