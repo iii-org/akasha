@@ -17,6 +17,9 @@ jobs:
       - name: Show Python version
         run: python -V
 
+      - name: Set up environment
+        run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+        
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"
 
