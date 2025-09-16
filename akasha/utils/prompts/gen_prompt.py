@@ -319,6 +319,7 @@ def format_create_question_prompt(
     question_type: str = "fact",
     question_style: str = "essay",
     topic: str = "",
+    system_prompt: str = "",
 ) -> str:
     """prompts for auto generate question from document
 
@@ -336,6 +337,8 @@ def format_create_question_prompt(
         qt = "少於100字的"
 
     if question_type in ["fact", "facts", "factoid", "factoids", "事實"]:
+        if system_prompt == "":
+            system_prompt = "人類：您是一位教師，正在為測驗準備問題。\n"
         q_prompt = fact_question_prompt(qt, topic)
     elif question_type in [
         "summary",
@@ -347,6 +350,8 @@ def format_create_question_prompt(
     ]:
         q_prompt = summary_question_prompt(qt)
     elif question_type in ["irre", "irrelevant", "irrelevance", "無關"]:
+        if system_prompt == "":
+            system_prompt = "人類：我想測試語言模型根據文件回答的可靠性。\n"
         q_prompt = irre_question_prompt(qt, topic)
 
     # end_prompt = "<End Document>\n"
@@ -354,7 +359,7 @@ def format_create_question_prompt(
     # generate question prompt = generate_question_prompt(Document)
     q_prompt = q_prompt + doc_text + end_prompt
 
-    return q_prompt
+    return system_prompt + q_prompt
 
 
 def fact_question_prompt(qt: str = "", topic: str = "") -> str:
@@ -363,7 +368,7 @@ def fact_question_prompt(qt: str = "", topic: str = "") -> str:
     if topic != "":
         topic = f"相關{topic}的"
 
-    fact_prompt = f"人類：您是一位教師，正在為測驗準備問題。\n請基於文件只生成一個{topic}問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。"
+    fact_prompt = f"請基於文件只生成一個{topic}問題和一個{qt}答案，問題應該詳細並且明確基於文件中的訊息，但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
     return sys_s + fact_prompt + format_prompt + sys_e + "<開始文件>\n"
 
@@ -371,7 +376,7 @@ def fact_question_prompt(qt: str = "", topic: str = "") -> str:
 def summary_question_prompt(qt: str = "") -> str:
     """prompt for generate summary question"""
 
-    sum_prompt = '人類： 請根據以下文件進行摘要，並將摘要放在 "答案"後面.'
+    sum_prompt = '請根據以下文件進行摘要，並將摘要放在"答案"後面.'
     format_prompt = (
         "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n答案：摘要在這裡\n\n。開始吧！"
     )
@@ -383,7 +388,7 @@ def irre_question_prompt(qt: str = "", topic: str = "") -> str:
     if topic != "":
         topic = f"和{topic}"
 
-    irre_prompt = f"人類：我想測試語言模型根據文件回答的可靠性。\n請只生成一個名詞或領域與文件內容{topic}相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
+    irre_prompt = f"請只生成一個名詞或領域與文件內容{topic}相關，但文件內容中不存在的問題。這代表說，詢問任何人這個問題與文件，都無法回答該問題。問題應該詳細但不要使用'根據文件中的訊息'等詞語取代想詢問的問題內容。根據這個問題和文件，生成一個{qt}回答"
     format_prompt = "\n\n示例格式：\n<開始文件>\n...\n<結束文件>\n問題：問題在這里\n答案：答案在這里\n\n。開始吧！"
     return sys_s + irre_prompt + format_prompt + sys_e + "<開始文件>\n"
 

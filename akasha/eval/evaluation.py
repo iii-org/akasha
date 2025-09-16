@@ -200,7 +200,11 @@ class eval(Model_Eval):
             )
             try:
                 q_prompt = format_create_question_prompt(
-                    doc_text, self.question_type, self.question_style
+                    doc_text,
+                    self.question_type,
+                    self.question_style,
+                    "",
+                    self.system_prompt,
                 )
                 response = call_model(
                     self.model_obj,
@@ -353,7 +357,11 @@ class eval(Model_Eval):
 
             try:
                 q_prompt = format_create_question_prompt(
-                    doc_text, self.question_type, self.question_style, topic
+                    doc_text,
+                    self.question_type,
+                    self.question_style,
+                    topic,
+                    self.system_prompt,
                 )
 
                 response = call_model(
