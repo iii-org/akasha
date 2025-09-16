@@ -2,7 +2,7 @@ from typing import Optional, Union, Dict, Sequence
 import os
 from pathlib import Path
 from datetime import datetime
-import pkg_resources
+from importlib import metadata
 
 
 def aiido_upload(
@@ -60,7 +60,7 @@ def mlflow_init(
         import mlflow
 
         try:
-            __version__ = pkg_resources.require("akasha-terminal")[0].version
+            __version__ = metadata.version("akasha-light")
         except Exception:
             __version__ = "dev"
 

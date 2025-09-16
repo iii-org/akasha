@@ -10,9 +10,6 @@ rf2 = """工業 4.0 是一種智慧與互聯的生產系統，旨在感知、預
 簡單來說，它利用像是物聯網、AI、大數據和雲端等技術，讓製造業更加智能化和自動化。
 """
 
-### use bert to get the similarity score ###
-bert_score = ah.get_bert_score(rf1, rf2)
-
 ### use rouge to get the similarity score ###
 rouge_score = ah.get_rouge_score(rf1, rf2)
 

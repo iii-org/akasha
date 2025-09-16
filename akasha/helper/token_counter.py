@@ -24,51 +24,6 @@ class myTokenizer(object):
         self.tokenizer = tokenizer
         self.path = path
 
-    @classmethod
-    def load(cls, model_id: str, path: str = "./tokenizers"):
-        """
-        Load a tokenizer from local path or huggingface model hub.
-
-        Args:
-            model_id (str): The name of the model. only supported on Non-OpenAI models & gpt-2 model.
-                            ex. 'google/gemma-2-2b-it', 'openai:gpt2'
-                            Reminder: model_id which includes '/' will be replaced by '--' to find the local path
-            path (str, optional): The path to the tokenizer. Defaults to './tokenizers'.
-        """
-        from transformers import AutoTokenizer
-
-        model_path = Path.joinpath(Path(path), Path(model_id.replace("/", "--")))
-        if model_path.exists():
-            print("Loading tokenizer from local path...")
-            tokenizer = AutoTokenizer.from_pretrained(model_path)
-        else:
-            print("Loading tokenizer from huggingface model hub...")
-            hf_token = os.environ.get("HF_TOKEN")
-            if hf_token is None:
-                hf_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-            tokenizer = AutoTokenizer.from_pretrained(model_id, token=hf_token)
-        return cls(model_id, tokenizer, path)
-
-    def save(self, name: str, path: str = None):
-        """
-        Save the tokenizer to local path.
-
-        Args:
-            name (str): The name of the tokenizer to be saved.
-            path (str, optional): The path to the tokenizer. Defaults to the path given in `__init__`.
-        """
-        if self.tokenizer is None:
-            raise ValueError("Tokenizer is not initialized")
-        if path is None:
-            path = self.path
-        root_path = Path(path)
-        if not root_path.exists():
-            Path.mkdir(root_path)
-        model_path = Path.joinpath(root_path, Path(name))
-        if not model_path.exists():
-            Path.mkdir(model_path)
-        self.tokenizer.save_pretrained(model_path)
-
     def compute_tokens_huggingface(self, text: str) -> int:
         """
         Compute the number of tokens in a given text using huggingface tokenizer.
@@ -185,20 +140,6 @@ class myTokenizer(object):
             return cls.compute_tokens_openai(text, model_name)
         elif model_type in ["gemini", "google"]:
             return cls.compute_tokens_gemini(text, model_name)
-        elif model_type in [
-            "huggingface",
-            "huggingfacehub",
-            "transformers",
-            "transformer",
-            "huggingface-hub",
-            "hf",
-        ]:
-            tkn = cls.load(model_name, model_path)
-            # tokenizer is storable if using Non-OpenAI model
-            if save_tokenizer:
-                tkn.save(name=model_name.replace("/", "--"), path=model_path)
-            return tkn.compute_tokens_huggingface(text)
-
         else:
             import tiktoken
 

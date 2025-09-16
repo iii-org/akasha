@@ -1,7 +1,7 @@
 from typing import List, Tuple, Union, Callable
 from akasha.helper.base import get_doc_length
 from akasha.helper.token_counter import myTokenizer
-from .auto_search import get_relevant_doc_auto, get_relevant_doc_auto_rerank
+from .auto_search import get_relevant_doc_auto
 from langchain.schema import Document, BaseRetriever
 from langchain_core.language_models.base import BaseLanguageModel
 
@@ -98,17 +98,6 @@ def search_docs(
                 [docs], topK, language, max_input_tokens, model
             )
             return docs, docs_len, tokens
-        elif search_type == "auto_rerank":
-            docs = get_relevant_doc_auto_rerank(
-                retriver_list,
-                query,
-                topK,
-            )
-            docs, docs_len, tokens = _merge_docs(
-                [docs], topK, language, max_input_tokens, model
-            )
-            return docs, docs_len, tokens
-
     for retri in retriver_list:
         docs = retri._get_relevant_documents(query)
         final_docs.append(docs)
@@ -166,14 +155,6 @@ def retri_docs(
             docs = get_relevant_doc_auto(
                 retriver_list,
                 query,
-            )
-            docs = merge_docs(docs, topK)
-            return docs
-        elif search_type == "auto_rerank":
-            docs = get_relevant_doc_auto_rerank(
-                retriver_list,
-                query,
-                topK,
             )
             docs = merge_docs(docs, topK)
             return docs

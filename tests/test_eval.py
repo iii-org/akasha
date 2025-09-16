@@ -6,10 +6,10 @@ from typing import Tuple
 @pytest.fixture
 def base_line():
     eva = akasha.eval(
-        embeddings="hf:all-MiniLM-L6-v2",
+        embeddings="openai:text-embedding-3-small",
         model="openai:gpt-3.5-turbo",
         verbose=True,
-        search_type="tfidf",
+        search_type="bm25",
         chunk_size=500,
         max_input_tokens=2468,
         temperature=0.15,
@@ -24,7 +24,7 @@ def test_Model_Eval(base_line: Tuple[akasha.eval, str]):
     eva, doc_path = base_line
 
     assert eva.verbose is True
-    assert eva.search_type == "tfidf"
+    assert eva.search_type == "bm25"
     assert eva.chunk_size == 500
     assert eva.max_input_tokens == 2468
     assert eva.temperature == 0.15
@@ -53,15 +53,13 @@ def test_Model_Eval(base_line: Tuple[akasha.eval, str]):
     f2_name = eva.logs[eva.timestamp_list[-1]]["questionset_path"]
     assert len(ql) == len(al)
 
-    avg_bert, avg_rouge, avg_llm_score, tokens = eva.evaluation(
+    avg_rouge, avg_llm_score, tokens = eva.evaluation(
         f1_name, doc_path, question_style="essay"
     )
-    assert isinstance(avg_bert, float)
     assert isinstance(avg_rouge, float)
     assert isinstance(avg_llm_score, float)
     assert isinstance(tokens, list)
 
-    assert 0 <= avg_bert <= 1
     assert 0 <= avg_rouge <= 1
     assert 0 <= avg_llm_score <= 1
 

@@ -106,9 +106,7 @@ def handle_table(prompt: str, docs: List[Union[Document, str]], response: str) -
     return table
 
 
-def handle_score_table(
-    table: dict, bert: float, rouge: float, llm_score: float
-) -> dict:
+def handle_score_table(table: dict, rouge: float, llm_score: float) -> dict:
     """add each response's bert and rouge score into table dictionary
 
     Args:
@@ -120,7 +118,6 @@ def handle_score_table(
         dict: table dictionary
     """
 
-    table["bert"] = bert
     table["rouge"] = rouge
     table["llm_score"] = llm_score
 

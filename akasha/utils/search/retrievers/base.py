@@ -2,7 +2,6 @@ from .retri_bm25 import myBM25Retriever
 from .retri_custom import customRetriever
 from .retri_knn import myKNNRetriever
 from .retri_mmr import myMMRRetriever
-from .retri_rerank import myRerankRetriever
 from .retri_svm import mySVMRetriever
 from .retri_tfidf import myTFIDFRetriever
 from .retri_faiss import myFAISSRetriever
@@ -77,17 +76,6 @@ def get_retrivers(
         if search_type in ["bm25", "auto", "auto_rerank"]:
             bm25_retriver = myBM25Retriever.from_documents(docs_list, topK, threshold)
             retriver_list.append(bm25_retriver)
-
-        if "rerank" in search_type:
-            if ":" in search_type:
-                search_type, rerank_type = search_type.split(":")
-            else:
-                rerank_type = "BAAI/bge-reranker-base"
-
-            rerank_retriver = myRerankRetriever.from_documents(
-                docs_list, k=topK, relevancy_threshold=threshold, model_name=rerank_type
-            )
-            retriver_list.append(rerank_retriver)
 
     if len(retriver_list) == 0:
         raise ValueError(f"cannot find search type {search_type}, end process\n")

@@ -3,11 +3,11 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "akasha_terminal"
-version = "0.9.11"
-description = "document QA(RAG) package using langchain and chromadb"
+name = "akasha_light"
+version = "0.1.0"
+description = "document QA(RAG) package(light weight version) using langchain and chromadb"
 readme = "README.md"
-authors = [{ name = "chih chuan chang", email = "ccchang@iii.org.tw" }]
+authors = [{ name = "chih chuan chang", email = "tea9296@gmail.com" }]
 requires-python = ">=3.10,<3.13"
 
 # 核心相依（環境標記照你原本的平台分流）
@@ -19,6 +19,7 @@ dependencies = [
   "langchain_openai>=0.1.0",
   "langchain-huggingface>=0.1.2",
   "langchain-chroma==0.2.2",
+  "monotonic",
   "chromadb==0.4.14",
   "onnxruntime<=1.20.0",
   "openai>=1.78.1",
@@ -26,14 +27,10 @@ dependencies = [
   "scikit-learn>=1.3.0",
   "jieba>=0.42.1",
   "opencc-python-reimplemented==0.1.7",
-  "sentence-transformers>=3.1.1",
-  "transformers>=4.50.0",
-  "accelerate>=1.7.0",
   "tqdm>=4.65.0",
   "docx2txt==0.8",
   "rouge==1.0.1",
   "rouge-chinese==1.0.3",
-  "bert-score==0.3.13",
   "click",
   "tokenizers>=0.19.1",
   "streamlit>=1.33.0",
@@ -52,19 +49,10 @@ dependencies = [
   "mlflow",
   "json_repair",
 
-  # 各平台 Torch/torchvision（沿用你的釘版與標記）
-  "torch==2.2.0; platform_system == 'Windows'",
-  "torch==2.0.1; platform_system == 'Darwin'",
-  "torch==2.2.0; platform_system == 'Linux'",
 
-  "torchvision==0.17.0; platform_system == 'Windows'",
-  "torchvision==0.15.2; platform_system == 'Darwin'",
-  "torchvision==0.17.0; platform_system == 'Linux'",
 ]
 
 [project.optional-dependencies]
-llama-cpp = ["llama-cpp-python>=0.3.8"]
-peft = ["auto-gptq==0.3.1"]
 dev = ["pytest", "pytest-cov"]
 
 [project.scripts]

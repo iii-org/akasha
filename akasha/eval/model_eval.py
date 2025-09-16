@@ -9,7 +9,7 @@ from akasha.utils.prompts.gen_prompt import (
 )
 from akasha.helper import call_model
 from akasha.helper.base import extract_json, get_docs_length, get_doc_length
-from akasha.helper.scores import get_bert_score, get_llm_score, get_rouge_score
+from akasha.helper.scores import get_llm_score, get_rouge_score
 from akasha.utils.prompts.format import (
     handle_score_table,
     handle_metrics,
@@ -43,11 +43,6 @@ import logging
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 from langchain.schema import Document
-
-
-def get_torch():
-    ttorch = importlib.import_module("torch")
-    return ttorch
 
 
 def _generate_single_choice_question(
@@ -217,8 +212,7 @@ class Model_Eval(atman):
         self.logs[timestamp]["question"] = self.question
         self.logs[timestamp]["answer"] = self.answer
 
-        if "bert" in self.score:
-            self.logs[timestamp]["bert"] = self.score["bert"]
+        if "rouge" in self.score:
             self.logs[timestamp]["rouge"] = self.score["rouge"]
             self.logs[timestamp]["llm_score"] = self.score["llm_score"]
         elif "correct_count" in self.score:
@@ -557,8 +551,6 @@ class Model_Eval(atman):
         except Exception as e:
             traceback.print_exc()
             # response = ["running model error"]
-            torch = get_torch()
-            torch.cuda.empty_cache()
             logging.error(f"running model error\n {e}")
             raise e
 
@@ -568,7 +560,6 @@ class Model_Eval(atman):
                 print("Reference Answer: ", answer, "\n\n")
                 print("Generated Response: ", response, "\n\n")
 
-            self.score["bert"].append(get_bert_score(response, answer, self.language))
             self.score["rouge"].append(get_rouge_score(response, answer, self.language))
             self.score["llm_score"].append(
                 get_llm_score(response, answer, self.eval_model, "auto")
@@ -579,7 +570,6 @@ class Model_Eval(atman):
             )
             new_table = handle_score_table(
                 new_table,
-                self.score["bert"][-1],
                 self.score["rouge"][-1],
                 self.score["llm_score"][-1],
             )
@@ -632,8 +622,6 @@ class Model_Eval(atman):
         except Exception as e:
             traceback.print_exc()
             # response = ["running model error"]
-            torch = get_torch()
-            torch.cuda.empty_cache()
             logging.error(f"running model error\n {e}")
             raise e
 
@@ -642,20 +630,11 @@ class Model_Eval(atman):
             print("Reference Answer: ", answer, "\n\n")
             print("Generated Response: ", response, "\n\n")
 
-        self.score["bert"].append(get_bert_score(response, answer, self.language))
         self.score["rouge"].append(get_rouge_score(response, answer, self.language))
         self.score["llm_score"].append(
             get_llm_score(response, answer, self.eval_model, "auto")
         )
 
-        # new_table = akasha.format.handle_table(prompt + "\nAnswer:  " + answer,
-        #                                        self.docs, response)
-        # new_table = akasha.format.handle_score_table(
-        #     new_table,
-        #     self.score["bert"][-1],
-        #     self.score["rouge"][-1],
-        #     self.score["llm_score"][-1],
-        # )
         new_table = {}
 
         return new_table
@@ -739,7 +718,6 @@ class Model_Eval(atman):
         metrics = handle_metrics(doc_length, tot_time, doc_tokens)
         if from_eval:
             if self.question_style.lower() == "essay":
-                avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
                 avg_rouge = round(
                     sum(self.score["rouge"]) / len(self.score["rouge"]), 3
                 )
@@ -747,7 +725,6 @@ class Model_Eval(atman):
                     sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
                 )
 
-                metrics["avg_bert"] = avg_bert
                 metrics["avg_rouge"] = avg_rouge
                 metrics["avg_llm_score"] = avg_llm_score
             else:

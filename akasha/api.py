@@ -2,20 +2,9 @@ from fastapi import FastAPI
 from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel
 import akasha
-import gc
-import torch
 import os
 
 app = FastAPI()
-
-
-def clean():
-    try:
-        gc.collect()
-        torch.cuda.ipc_collect()
-        torch.cuda.empty_cache()
-    except Exception:
-        pass
 
 
 class InfoModel(BaseModel):
@@ -154,7 +143,6 @@ def RAG(user_input: ConsultModel):
         if not load_env(config=user_input.env_config):
             return {"status": "fail", "response": "load env config failed.\n\n"}
     try:
-        clean()
         qa = akasha.RAG(
             verbose=True,
             search_type=user_input.search_type,
@@ -206,7 +194,6 @@ def RAG(user_input: ConsultModel):
 
     del qa.model_obj
     del qa
-    clean()
     return user_output
 
 
@@ -232,7 +219,6 @@ def ask(user_input: InfoModel):
         if not load_env(config=user_input.env_config):
             return {"status": "fail", "response": "load env config failed.\n\n"}
     try:
-        clean()
         qa = akasha.ask(
             verbose=True,
             model=user_input.model,
@@ -277,7 +263,6 @@ def ask(user_input: InfoModel):
 
     del qa.model_obj
     del qa
-    clean()
     return user_output
 
 
@@ -301,7 +286,6 @@ def summary(user_input: SummaryModel):
         if not load_env(config=user_input.env_config):
             return {"status": "fail", "response": "load env config failed.\n\n"}
     try:
-        clean()
         sum = akasha.summary(
             chunk_size=500,
             chunk_overlap=50,
@@ -341,7 +325,6 @@ def summary(user_input: SummaryModel):
         )
     del sum.model_obj
     del sum
-    clean()
 
     return user_output
 
@@ -370,7 +353,6 @@ def websearch(user_input: webInfoModel):
     load_env(config=user_input.env_config)
 
     try:
-        clean()
         qa = akasha.websearch(
             verbose=True,
             model=user_input.model,
@@ -417,5 +399,4 @@ def websearch(user_input: webInfoModel):
 
     del qa.model_obj
     del qa
-    clean()
     return user_output

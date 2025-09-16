@@ -9,16 +9,12 @@ install_requires = [
     "tiktoken",
     "scikit-learn<1.3.0",
     "jieba==0.42.1",
-    "sentence-transformers==2.2.2",
-    "torch==2.0.1",
-    "transformers>=4.33.4",  # ==4.31.0
     "llama-cpp-python==0.2.6",
     "auto-gptq==0.3.1",
     "tqdm==4.65.0",
     "docx2txt==0.8",
     "rouge==1.0.1",
     "rouge-chinese==1.0.3",
-    "bert-score==0.3.13",
     "click",
     "tokenizers>=0.13.3",
     "streamlit==1.28.2",
@@ -65,7 +61,7 @@ def base_embed(texts: list) -> list:
 @pytest.fixture
 def base_line():
     ak = akasha.RAG(
-        embeddings="hf:all-MiniLM-L6-v2",
+        embeddings="openai:text-embedding-3-small",
         model="openai:gpt-3.5-turbo",
         verbose=False,
         chunk_size=500,
@@ -103,12 +99,12 @@ def test_ask():
         max_input_tokens=3000,
         stream=True,
     )
-    res = ak("此requirement中torch的版本為何?", install_requires)
+    res = ak("此requirement中chromadb的版本為何?", install_requires)
     ret = ""
     for r in res:
         ret += r
         continue
     assert ak.max_input_tokens == 3000
-    assert "2." in ret
+    assert "0.4.14" in ret
 
     return

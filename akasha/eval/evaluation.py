@@ -411,9 +411,9 @@ class eval(Model_Eval):
         data_source: Union[List[str], str],
         eval_model: Union[BaseLanguageModel, str] = "",
         **kwargs,
-    ) -> Union[Tuple[float, float, float, list], Tuple[float, list]]:
+    ) -> Union[Tuple[float, float, list], Tuple[float, list]]:
         """parse the question set txt file generated from "create_questionset" function and then use llm model to generate response,
-        evaluate the performance of the given paramters based on similarity between responses and the default answers, use bert_score
+        evaluate the performance of the given paramters based on similarity between responses and the default answers, use
         and rouge_l to evaluate the response if you use essay type to generate questionset.  And use correct_count to evaluate
         the response if you use single_choice type to generate questionset.  **Noted that the question_type must match the questionset_file's type**.
 
@@ -463,7 +463,7 @@ class eval(Model_Eval):
         self.doc_tokens, self.doc_length = [], []
         self.question, self.answer, self.docs = [], [], []
         if self.question_style.lower() == "essay":
-            self.score = {"bert": [], "rouge": [], "llm_score": []}
+            self.score = {"rouge": [], "llm_score": []}
         else:
             self.score = {"correct_count": 0}
         table = {}
@@ -474,7 +474,7 @@ class eval(Model_Eval):
         ## add logs ##
         self._add_basic_log(timestamp, "evaluation", -1, -1, questionset_file)
 
-        ### for each question and answer, use llm model to generate response, and evaluate the response by bert_score and rouge_l ###
+        ### for each question and answer, use llm model to generate response, and evaluate the response by rouge_l and llm###
         retrivers_list = get_retrivers(
             self.db,
             self.embeddings_obj,
@@ -510,7 +510,6 @@ class eval(Model_Eval):
         self._add_result_log(timestamp, end_time - start_time)
 
         if self.question_style.lower() == "essay":
-            avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
             avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(
                 sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
@@ -524,7 +523,7 @@ class eval(Model_Eval):
                 True,
             )
 
-            return avg_bert, avg_rouge, avg_llm_score, self.doc_tokens
+            return avg_rouge, avg_llm_score, self.doc_tokens
 
         else:
             correct_rate = self.score["correct_count"] / self.question_num

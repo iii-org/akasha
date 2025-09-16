@@ -67,18 +67,7 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
             return embeddings.model_name
 
         else:
-            from langchain_huggingface import HuggingFaceEmbeddings
-
-            if isinstance(embeddings, HuggingFaceEmbeddings):
-                return "hf:" + embeddings.model_name
-
-            from langchain_community.embeddings import TensorflowHubEmbeddings
-
-            if isinstance(embeddings, TensorflowHubEmbeddings):
-                return "tf:" + embeddings.model_url
-
-            else:
-                raise Exception("can not find the embeddings type.")
+            raise Exception("can not find the embeddings type.")
 
 
 def get_embedding_type_and_name(

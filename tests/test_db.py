@@ -2,7 +2,7 @@ import pytest
 import akasha  # noqa: F401
 from akasha.helper import handle_embeddings
 
-EMB_OBJ = handle_embeddings("hf:all-MiniLM-L6-v2", False, "")
+EMB_OBJ = handle_embeddings("openai:text-embedding-3-small", False, "")
 CHUNK_SIZE = 1000
 CERTAIN_FILE = "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf"
 
