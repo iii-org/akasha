@@ -107,4 +107,17 @@ def test_ask():
     assert ak.max_input_tokens == 3000
     assert "0.4.14" in ret
 
+    mem = akasha.MemoryManager(
+        memory_name="test_memory",
+        model="openai:gpt-4o",
+        embeddings="openai:text-embedding-3-small",
+        verbose=True,
+    )
+    PROMPT = "我的名字是什麼?"
+    mem.add_memory("Hi, 我的名字是小宋", "Hello, 小宋! 很高興認識你。")
+    history_msg = mem.search_memory(PROMPT, top_k=3)
+    response = ak(PROMPT, history_messages=history_msg, stream=False)
+
+    assert "小宋" in response
+
     return

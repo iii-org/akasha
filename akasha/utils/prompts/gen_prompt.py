@@ -934,3 +934,66 @@ def default_get_reference_prompt():
         If the reference is used to answer the response, return yes, \
         else return no. Remember, you can only return yes or no."
     )
+
+
+def default_extract_memory_prompt(language: str = "ch") -> str:
+    """
+    Returns the system prompt for extracting salient information from a conversation.
+    """
+    if "chinese" in language_dict[language]:
+        return """你的任務是從一段對話中，提取出值得長期記住的關鍵資訊。
+
+這包括：
+- 使用者的明確偏好 (例如：我喜歡科幻小說)。
+- 重要的個人資訊 (例如：我的工作是軟體工程師)。
+- 對話中得出的具體事實或結論 (例如：我們確定了專案的最終期限是下週五)。
+- 使用者設定的目標或計畫 (例如：我打算下個月開始學習日文)。
+- 清楚明確回答使用者問題的答案 (例如：使用者問「愛因斯坦的出生年份是什麼？」你回答「1879年」)。
+
+你需要將這些資訊濃縮成一個簡潔的句子或幾個要點。
+
+如果對話中沒有任何值得記住的資訊 (例如只是閒聊或沒有提供具體資訊)，請只回答 "無"。
+
+請直接輸出提煉出的資訊，不要包含任何額外的解釋或客套話。"""
+    else:
+        return """Your task is to extract key, long-term memorable information from a conversation.
+
+This includes:
+- Explicit user preferences (e.g., "I prefer science fiction novels").
+- Important personal details (e.g., "My job is a software engineer").
+- Concrete facts or conclusions reached in the conversation (e.g., "We confirmed the project deadline is next Friday").
+- User-stated goals or plans (e.g., "I plan to start learning Japanese next month").
+
+You need to condense this information into a concise sentence or a few key points.
+
+If there is no memorable information in the conversation (e.g., it's just small talk or lacks specific details), please respond with only the word "none".
+
+Directly output the extracted information without any extra explanations or pleasantries."""
+
+
+def default_categorize_memory_prompt(language: str = "ch") -> str:
+    """
+    Returns the system prompt for categorizing a piece of memory.
+    """
+    if "chinese" in language_dict[language]:
+        return """你的任務是為以下這段記憶資訊，提供一個簡潔且單一的主題分類。
+
+這個分類應該是一個名詞或名詞片語，用來代表這段記憶的核心主題。例如：
+- "個人偏好"
+- "專案管理"
+- "學習計畫"
+- "軟體開發"
+- "家庭"
+
+請只回答最適合的那個分類名稱，不要包含任何解釋或額外的文字。"""
+    else:
+        return """Your task is to provide a single, concise category for the following piece of memory.
+
+The category should be a noun or a noun phrase that represents the core topic of the memory. For example:
+- "Personal Preferences"
+- "Project Management"
+- "Learning Goals"
+- "Software Development"
+- "Family"
+
+Please respond with only the most suitable category name. Do not include any explanations or extra text."""

@@ -1,4 +1,5 @@
 from .RAG.rag import RAG
+from .RAG.memory import MemoryManager
 from .tools.ask import ask
 from .tools.summary import summary
 from .tools.websearch import websearch
@@ -17,4 +18,5 @@ __all__ = [
     "create_tool",
     "gen_image",
     "edit_image",
+    "MemoryManager",
 ]

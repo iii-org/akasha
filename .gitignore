@@ -12,7 +12,7 @@ _build/
 questionset/
 .gitignore
 model/
-test.py
+test*.py
 chroma_logs.log
 process_dataset.py
 t.py
