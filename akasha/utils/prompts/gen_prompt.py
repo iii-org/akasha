@@ -941,14 +941,14 @@ def default_extract_memory_prompt(language: str = "ch") -> str:
     Returns the system prompt for extracting salient information from a conversation.
     """
     if "chinese" in language_dict[language]:
-        return """你的任務是從一段對話中，提取出值得長期記住的關鍵資訊。
+        return """你的任務是從一段對話中，提取出關鍵資訊。
 
 這包括：
 - 使用者的明確偏好 (例如：我喜歡科幻小說)。
-- 重要的個人資訊 (例如：我的工作是軟體工程師)。
+- 重要的個人資訊 (例如：我的工作是軟體工程師、我的名字)。
 - 對話中得出的具體事實或結論 (例如：我們確定了專案的最終期限是下週五)。
 - 使用者設定的目標或計畫 (例如：我打算下個月開始學習日文)。
-- 清楚明確回答使用者問題的答案 (例如：使用者問「愛因斯坦的出生年份是什麼？」你回答「1879年」)。
+- 有回答使用者問題的答案 (例如：使用者問「愛因斯坦的出生年份是什麼？」你回答「1879年」)。
 
 你需要將這些資訊濃縮成一個簡潔的句子或幾個要點。
 
@@ -960,9 +960,10 @@ def default_extract_memory_prompt(language: str = "ch") -> str:
 
 This includes:
 - Explicit user preferences (e.g., "I prefer science fiction novels").
-- Important personal details (e.g., "My job is a software engineer").
+- Important personal details (e.g., "My job is a software engineer、my name is xxx").
 - Concrete facts or conclusions reached in the conversation (e.g., "We confirmed the project deadline is next Friday").
 - User-stated goals or plans (e.g., "I plan to start learning Japanese next month").
+- Answers to user questions (e.g., if the user asks "What is Einstein's birth year?" and you answer "1879").
 
 You need to condense this information into a concise sentence or a few key points.
 
