@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akasha_light"
-version = "0.1.0"
+version = "0.1.1"
 description = "document QA(RAG) package(light weight version) using langchain and chromadb"
 readme = "README.md"
 authors = [{ name = "chih chuan chang", email = "tea9296@gmail.com" }]
