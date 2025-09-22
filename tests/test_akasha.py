@@ -94,6 +94,7 @@ def test_RAG(base_line: akasha.RAG):
 @pytest.mark.akasha
 def test_ask():
     ak = akasha.ask(
+        model="openai:gpt-4o",
         keep_logs=True,
         verbose=True,
         max_input_tokens=3000,
