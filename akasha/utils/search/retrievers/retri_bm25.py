@@ -3,8 +3,7 @@ from pydantic import Field
 import numpy as np
 
 from langchain.schema import BaseRetriever, Document
-
-import jieba
+from akasha.helper.base import jieba_tokenizer
 from rank_bm25 import BM25Okapi
 
 
@@ -27,7 +26,9 @@ class myBM25Retriever(BaseRetriever):
         relevancy_threshold: float = 0.0,
         **kwargs: Any,
     ) -> BaseRetriever:
-        tokenize_corpus = [list(jieba.cut(doc.page_content)) for doc in docs]
+        tokenize_corpus = [
+            jieba_tokenizer.cut_text(doc.page_content) for doc in docs
+        ]
         bm25 = BM25Okapi(tokenize_corpus)
         return cls(
             bm25=bm25,
@@ -49,9 +50,9 @@ class myBM25Retriever(BaseRetriever):
             List[Document]: relevant documents
         """
 
-        tokenize_query = list(jieba.cut(query))
+        tokenize_query = jieba_tokenizer.cut_text(query)
         docs_scores = self.bm25.get_scores(tokenize_query)
-        top_k_idx = np.argsort(docs_scores)[::-1][: self.k]
+        top_k_idx = np.argsort(docs_scores)[::-1][:self.k]
         top_k_results = [self.docs[i] for i in top_k_idx]
         top_k_scores = [docs_scores[i] for i in top_k_idx]
         return top_k_results, top_k_scores

@@ -118,24 +118,8 @@ class MemoryManager:
         if self.verbose:
             print("\n[Memory] Extracting salient information...")
 
-        conversation_context = f"User asks: {user_prompt}\nAI responds: {ai_response}"
-        extraction_prompt = default_extract_memory_prompt(language)
-
-        extracted_memory = call_model(
-            self.model_obj,
-            "System: " + extraction_prompt + "\n\nHuman: " +
-            conversation_context,
-            verbose=self.verbose,
-        )
-
-        if "none" in extracted_memory.lower() or "無" in extracted_memory:
-            if self.verbose:
-                print("[Memory] No salient information found.")
-            return ""
-
-        if self.verbose:
-            print(f"[Memory] Extracted: {extracted_memory}")
-        return extracted_memory
+        memory = f"User: {user_prompt}\nAI: {ai_response}"
+        return memory
 
     def _categorize_memory(self,
                            memory_text: str,

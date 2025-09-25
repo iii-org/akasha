@@ -8,7 +8,7 @@ install_requires = [
     "openai==0.27",
     "tiktoken",
     "scikit-learn<1.3.0",
-    "jieba==0.42.1",
+    "jieba3==1.0.2",
     "llama-cpp-python==0.2.6",
     "auto-gptq==0.3.1",
     "tqdm==4.65.0",

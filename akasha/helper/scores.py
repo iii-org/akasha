@@ -1,8 +1,8 @@
 # coding:utf-8
 from rouge import Rouge
 import rouge_chinese
-import jieba
 import warnings
+from .base import jieba_tokenizer
 from akasha.utils.prompts.gen_prompt import format_sys_prompt, format_llm_score
 from akasha.utils.prompts.format import language_dict
 from .handle_objects import handle_model_and_name
@@ -13,7 +13,6 @@ from typing import Union
 import importlib
 
 warnings.filterwarnings("ignore")
-jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
 def get_bert_pack():
@@ -21,9 +20,10 @@ def get_bert_pack():
     return bert_score.score
 
 
-def get_bert_score(
-    candidate_str: str, reference_str: str, language: str = "ch", round_digit: int = 3
-):
+def get_bert_score(candidate_str: str,
+                   reference_str: str,
+                   language: str = "ch",
+                   round_digit: int = 3):
     """bert score using pre-trained contextual embeddings from BERT to calculate the cosine similarity between two sentences.
     So different words with similar meaning will have higher score.
 
@@ -40,9 +40,13 @@ def get_bert_score(
     score = get_bert_pack()
     try:
         if "chinese" in language_dict[language]:
-            P, R, F1 = score([candidate_str], [reference_str], lang="zh", verbose=False)
+            P, R, F1 = score([candidate_str], [reference_str],
+                             lang="zh",
+                             verbose=False)
         else:
-            P, R, F1 = score([candidate_str], [reference_str], lang="en", verbose=False)
+            P, R, F1 = score([candidate_str], [reference_str],
+                             lang="en",
+                             verbose=False)
     except Exception:
         F1 = 0.0
     # round float into 3 digits behind 0
@@ -51,9 +55,10 @@ def get_bert_score(
     return F1
 
 
-def get_rouge_score(
-    candidate_str: str, reference_str: str, language: str = "ch", round_digit: int = 3
-):
+def get_rouge_score(candidate_str: str,
+                    reference_str: str,
+                    language: str = "ch",
+                    round_digit: int = 3):
     """use jieba to separate words from chinese sentence, and then use rouge_l to calculate the rouge score
     the difference between bleu and rouge is that bleu is focus on precision, but rouge is focus on the recall.
 
@@ -69,8 +74,8 @@ def get_rouge_score(
     try:
         if "chinese" in language_dict[language]:
             rouge = rouge_chinese.Rouge(metrics=["rouge-l"])
-            cand = " ".join(jieba.cut(candidate_str))
-            ref = " ".join(jieba.cut(reference_str))
+            cand = " ".join(jieba_tokenizer.cut_text(candidate_str))
+            ref = " ".join(jieba_tokenizer.cut_text(reference_str))
         else:
             rouge = Rouge(metrics=["rouge-l"])
             cand = candidate_str
@@ -106,15 +111,15 @@ def get_llm_score(
 
     model, model_name = handle_model_and_name(model)
     system_prompt, prompt = format_llm_score(candidate_str, reference_str)
-    input_text = format_sys_prompt(
-        system_prompt, prompt, prompt_format_type, model_name
-    )
+    input_text = format_sys_prompt(system_prompt, prompt, prompt_format_type,
+                                   model_name)
 
     response = call_model(model, input_text, False)
 
     # find the first float number in the response string and turn to float
     try:
-        score = round(float(re.findall(r"\d+\.?\d*", response)[0]), round_digit)
+        score = round(float(re.findall(r"\d+\.?\d*", response)[0]),
+                      round_digit)
     except Exception:
         score = 0.0
     return score
@@ -132,7 +137,8 @@ def get_toxic_score(texts: str, round_digit: int = 3):
     """
     from transformers import pipeline
 
-    pipe = pipeline("text-classification", model="martin-ha/toxic-comment-model")
+    pipe = pipeline("text-classification",
+                    model="martin-ha/toxic-comment-model")
     res = pipe.predict(texts)[0]
 
     if res["label"] == "toxic":
