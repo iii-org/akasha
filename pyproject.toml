@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akasha_light"
-version = "0.1.1"
+version = "0.1.2"
 description = "document QA(RAG) package(light weight version) using langchain and chromadb"
 readme = "README.md"
 authors = [{ name = "chih chuan chang", email = "tea9296@gmail.com" }]
@@ -25,7 +25,7 @@ dependencies = [
   "openai>=1.78.1",
   "tiktoken",
   "scikit-learn>=1.3.0",
-  "jieba>=0.42.1",
+  "jieba3>=1.0.2",
   "opencc-python-reimplemented==0.1.7",
   "tqdm>=4.65.0",
   "docx2txt==0.8",

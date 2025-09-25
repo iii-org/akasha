@@ -8,7 +8,7 @@ install_requires = [
     "openai==0.27",
     "tiktoken",
     "scikit-learn<1.3.0",
-    "jieba==0.42.1",
+    "jieba3>=1.0.2",
     "llama-cpp-python==0.2.6",
     "auto-gptq==0.3.1",
     "tqdm==4.65.0",
@@ -22,15 +22,12 @@ install_requires = [
 ]
 
 
-def base_search(
-    query_embeds, docs_embeds, k: int, relevancy_threshold: float, logs: dict
-):
+def base_search(query_embeds, docs_embeds, k: int, relevancy_threshold: float,
+                logs: dict):
     from scipy.spatial.distance import euclidean
 
-    distance = [
-        [euclidean(query_embeds, docs_embeds[idx]), idx]
-        for idx in range(len(docs_embeds))
-    ]
+    distance = [[euclidean(query_embeds, docs_embeds[idx]), idx]
+                for idx in range(len(docs_embeds))]
     distance = sorted(distance, key=lambda x: x[0])
 
     # print(distance) #if (1 - dist) >= relevancy_threshold
@@ -67,7 +64,8 @@ def base_line():
         chunk_size=500,
         max_input_tokens=3010,
         temperature=0.15,
-        system_prompt="You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: ",
+        system_prompt=
+        "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: ",
     )
     return ak
 
@@ -82,8 +80,8 @@ def test_RAG(base_line: akasha.RAG):
     assert ak.max_input_tokens == 3010
     assert ak.temperature == 0.15
     assert (
-        ak.system_prompt
-        == "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: "
+        ak.system_prompt ==
+        "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: "
     )
     response = ak("./docs/mic", query)
     assert isinstance(response, str)

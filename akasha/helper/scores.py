@@ -1,8 +1,9 @@
 # coding:utf-8
 from rouge import Rouge
 import rouge_chinese
-import jieba
+
 import warnings
+from .base import jieba_tokenizer
 from akasha.utils.prompts.gen_prompt import format_sys_prompt, format_llm_score
 from akasha.utils.prompts.format import language_dict
 from .handle_objects import handle_model_and_name
@@ -11,14 +12,13 @@ import re
 from langchain_core.language_models.base import BaseLanguageModel
 from typing import Union
 
-
 warnings.filterwarnings("ignore")
-jieba.setLogLevel(jieba.logging.INFO)  ## ignore logging jieba model information
 
 
-def get_rouge_score(
-    candidate_str: str, reference_str: str, language: str = "ch", round_digit: int = 3
-):
+def get_rouge_score(candidate_str: str,
+                    reference_str: str,
+                    language: str = "ch",
+                    round_digit: int = 3):
     """use jieba to separate words from chinese sentence, and then use rouge_l to calculate the rouge score
     the difference between bleu and rouge is that bleu is focus on precision, but rouge is focus on the recall.
 
@@ -34,8 +34,8 @@ def get_rouge_score(
     try:
         if "chinese" in language_dict[language]:
             rouge = rouge_chinese.Rouge(metrics=["rouge-l"])
-            cand = " ".join(jieba.cut(candidate_str))
-            ref = " ".join(jieba.cut(reference_str))
+            cand = " ".join(jieba_tokenizer.cut_text(candidate_str))
+            ref = " ".join(jieba_tokenizer.cut_text(reference_str))
         else:
             rouge = Rouge(metrics=["rouge-l"])
             cand = candidate_str
@@ -71,15 +71,15 @@ def get_llm_score(
 
     model, model_name = handle_model_and_name(model)
     system_prompt, prompt = format_llm_score(candidate_str, reference_str)
-    input_text = format_sys_prompt(
-        system_prompt, prompt, prompt_format_type, model_name
-    )
+    input_text = format_sys_prompt(system_prompt, prompt, prompt_format_type,
+                                   model_name)
 
     response = call_model(model, input_text, False)
 
     # find the first float number in the response string and turn to float
     try:
-        score = round(float(re.findall(r"\d+\.?\d*", response)[0]), round_digit)
+        score = round(float(re.findall(r"\d+\.?\d*", response)[0]),
+                      round_digit)
     except Exception:
         score = 0.0
     return score
