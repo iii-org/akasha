@@ -76,7 +76,8 @@ class MemoryManager:
         if not self.mem_dir_path.exists():
             self.mem_dir_path.mkdir(parents=True, exist_ok=True)
             hello_file = self.mem_dir_path / "hello memory.md"
-            hello_file.write_text("# Hello Memory\n\nThis is a new memory file.")
+            hello_file.write_text(
+                "# Hello Memory\n\nThis is a new memory file.")
 
         # create & load directory db
         suc, mis = create_directory_db(
@@ -91,13 +92,12 @@ class MemoryManager:
         )
 
         embeddings, embeddings_name = handle_embeddings_and_name(
-            self.embeddings, False, ""
-        )
+            self.embeddings, False, "")
         embed_type, embed_name = separate_name(embeddings_name)
 
-        self.storage_dir = get_storage_directory(
-            self.mem_dir_path, self.chunk_size, embed_type, embed_name
-        )
+        self.storage_dir = get_storage_directory(self.mem_dir_path,
+                                                 self.chunk_size, embed_type,
+                                                 embed_name)
         client_settings = Settings(
             is_persistent=True,
             persist_directory=self.storage_dir,
@@ -110,32 +110,23 @@ class MemoryManager:
             collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
         )
 
-    def _extract_salient_info(
-        self, user_prompt: str, ai_response: str, language: str = "ch"
-    ) -> str:
+    def _extract_salient_info(self,
+                              user_prompt: str,
+                              ai_response: str,
+                              language: str = "ch") -> str:
         """Uses an LLM to extract key information from a conversation turn."""
         if self.verbose:
             print("\n[Memory] Extracting salient information...")
 
-        conversation_context = f"User asks: {user_prompt}\nAI responds: {ai_response}"
-        extraction_prompt = default_extract_memory_prompt(language)
-
-        extracted_memory = call_model(
-            self.model_obj,
-            "System: " + extraction_prompt + "\n\nHuman: " + conversation_context,
-            verbose=self.verbose,
-        )
-
-        if "none" in extracted_memory.lower() or "無" in extracted_memory:
-            if self.verbose:
-                print("[Memory] No salient information found.")
-            return ""
+        memory = f"User: {user_prompt}\nAI: {ai_response}"
 
         if self.verbose:
-            print(f"[Memory] Extracted: {extracted_memory}")
-        return extracted_memory
+            print(f"[Memory] Extracted: {memory}")
+        return memory
 
-    def _categorize_memory(self, memory_text: str, language: str = "ch") -> str:
+    def _categorize_memory(self,
+                           memory_text: str,
+                           language: str = "ch") -> str:
         """Uses an LLM to determine a suitable topic for the memory."""
         if self.verbose:
             print(f"\n[Memory] Categorizing memory: '{memory_text[:50]}...'")
@@ -150,19 +141,22 @@ class MemoryManager:
 
         # Sanitize category to be a valid filename
         sanitized_category = "".join(
-            c for c in category if c.isalnum() or c in (" ", "_")
-        ).rstrip()
+            c for c in category if c.isalnum() or c in (" ", "_")).rstrip()
 
         if self.verbose:
             print(f"[Memory] Categorized as: {sanitized_category}")
         return sanitized_category if sanitized_category else "uncategorized"
 
-    def add_memory(self, user_prompt: str, ai_response: str, language: str = "ch"):
+    def add_memory(self,
+                   user_prompt: str,
+                   ai_response: str,
+                   language: str = "ch"):
         """
         The main pipeline to process a conversation turn and save it to memory.
         """
         # 1. Extract important information
-        extracted_info = self._extract_salient_info(user_prompt, ai_response, language)
+        extracted_info = self._extract_salient_info(user_prompt, ai_response,
+                                                    language)
         if not extracted_info:
             return
 
@@ -171,11 +165,9 @@ class MemoryManager:
 
         # 3. Save to a Markdown file
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        memory_entry = (
-            f"- **Create Time: ** {timestamp}\n"
-            f"- **Memory: ** {extracted_info}\n"
-            f"- **Source Prompt: ** {user_prompt}\n\n---\n\n"
-        )
+        memory_entry = (f"- **Create Time: ** {timestamp}\n"
+                        f"- **Memory: ** {extracted_info}\n"
+                        f"- **Source Prompt: ** {user_prompt}\n\n---\n\n")
 
         file_path = Path(self.mem_dir_path) / f"{category}.md"
 
@@ -191,7 +183,10 @@ class MemoryManager:
         formatted_date = datetime.now().strftime("%Y-%m-%d-%H_%M_%S_%f")
         self.chroma.add_texts(
             [extracted_info],
-            [{"source": str(file_path), "page": 0}],
+            [{
+                "source": str(file_path),
+                "page": 0
+            }],
             ids=[formatted_date + "_" + get_mac_address()],
         )
         self.db.merge(dbs(self.chroma))
@@ -212,7 +207,10 @@ class MemoryManager:
         file_last_changed[file_name] = last_m_time
         try:
             with open(json_file_path, "w", encoding="utf-8") as json_file:
-                json.dump(file_last_changed, json_file, ensure_ascii=False, indent=4)
+                json.dump(file_last_changed,
+                          json_file,
+                          ensure_ascii=False,
+                          indent=4)
         except Exception as e:
             logging.warning(f"Error writing last edit time JSON file: {e}")
             print(f"Error writing last edit time JSON file: {e}")
