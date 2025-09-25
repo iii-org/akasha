@@ -1,5 +1,5 @@
 from .RAG.rag import RAG
-from .RAG.memory import MemoryManager
+from .helper.memory import MemoryManager
 from .tools.ask import ask
 from .tools.summary import summary
 from .tools.websearch import websearch
