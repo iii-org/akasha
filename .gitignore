@@ -40,3 +40,4 @@ query_info.json
 tokenizers/
 *.egg-info/
 build/
+dist/
