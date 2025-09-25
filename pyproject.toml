@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akasha_terminal"
-version = "0.9.11"
+version = "0.9.12"
 description = "document QA(RAG) package using langchain and chromadb"
 readme = "README.md"
 authors = [{ name = "chih chuan chang", email = "ccchang@iii.org.tw" }]
