@@ -156,7 +156,11 @@ def extract_json(
     # Clean up the text by removing markdown formatting if present
     try:
         import json_repair
-
+        
+        #TODO: replace \n with \\n to avoid json_repair error.
+        #At the same time, avoid double \\n to be replaced.
+        text = re.sub(r'(?<!\\)\\n', r'\\\\n', text)    
+        
         json_object = json_repair.loads(text)
         return json_object
     except (json.JSONDecodeError, TypeError):

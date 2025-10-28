@@ -327,6 +327,19 @@ class agents(basic_llm):
         while round_count > 0:
             try:
                 cur_action = extract_json(response)
+                if isinstance(cur_action, dict):
+                    pass
+                elif isinstance(cur_action, list) and len(cur_action) > 0:
+                    # if multiple actions, find the action with 'action':'Answer'
+                    for action_item in cur_action:
+                        if (
+                            isinstance(action_item, dict)
+                            and action_item.get("action", "").lower()
+                            in ["final answer", "final_answer", "final", "answer"]
+                        ):
+                            cur_action = action_item
+                            break
+                
                 if (not isinstance(cur_action["action"], str)) or (
                     not isinstance(cur_action["action_input"], dict)
                     and (cur_action["action"] != "Answer")
@@ -587,6 +600,7 @@ class agents(basic_llm):
                 print(
                     "WARNING. Cannot extract JSON format action from response, retry.\n\n"
                 )
+                breakpoint()
                 text_input = format_sys_prompt(
                     self.REACT_PROMPT,
                     "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
