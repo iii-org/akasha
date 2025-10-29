@@ -600,7 +600,6 @@ class agents(basic_llm):
                 print(
                     "WARNING. Cannot extract JSON format action from response, retry.\n\n"
                 )
-                breakpoint()
                 text_input = format_sys_prompt(
                     self.REACT_PROMPT,
                     "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
