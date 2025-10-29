@@ -47,3 +47,6 @@ tokenizers/
 *.egg-info/
 build/
 dist/
+
+uv.lock
+logs*.json
