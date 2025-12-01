@@ -71,6 +71,7 @@ def add_chunks(
     embeddings: Union[str, Embeddings, Callable],
     chunk_size: int,
     env_file: str = "",
+    hyde_text: bool = False,
 ):
     """add chunk(s) to the chromadb collection of the given file_name
 
@@ -113,8 +114,11 @@ def add_chunks(
             vectors.append(embeddings.embed_query(d["text"]))
         else:
             vectors.append(embeddings.embed_query(d["search_text"]))
-
-        texts.append(d["text"])
+        
+        if hyde_text == True:
+            texts.append(d["real_text"])
+        else:
+            texts.append(d["text"])
 
     ids = [formatted_date + "_" + str(i) + "_" + mac_address for i in range(len(texts))]
     docsearch._collection.add(
