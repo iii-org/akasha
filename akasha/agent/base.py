@@ -132,10 +132,6 @@ Begin now. Output ONLY the JSON object following the schema above."""
     return ret
 
 
-# OLD DEFAULT_REMEMBER_PROMPT (for reference)
-# DEFAULT_REMEMBER_PROMPT = (
-#     "**Remember, Format is Thought: then Action:```$JSON_BLOB```\n\n"
-# )
 
 # NEW DEFAULT_REMEMBER_PROMPT
 DEFAULT_REMEMBER_PROMPT = (
