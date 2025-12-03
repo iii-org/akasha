@@ -106,10 +106,12 @@ def retri_history_messages(
         if (messages[i]["role"] != role2) or (messages[i - 1]["role"] != role1):
             i += 1
             continue
-        texta = f"{role2}: " + messages[i]["content"].replace("\n", "") + "\n"
-        textq = f"{role1}: " + messages[i - 1]["content"].replace(
-            "\n", ""
-        )  # {(i+1)//2}.
+        # texta = f"{role2}: " + messages[i]["content"].replace("\n", "") + "\n"
+        # textq = f"{role1}: " + messages[i - 1]["content"].replace(
+        #     "\n", ""
+        # )  # {(i+1)//2}.
+        texta = f"{role2}: " + messages[i]["content"] + "\n"
+        textq = f"{role1}: " + messages[i - 1]["content"]
         len_texta = myTokenizer.compute_tokens(texta, model_name)
         len_textq = myTokenizer.compute_tokens(textq, model_name)
 

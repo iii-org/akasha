@@ -346,6 +346,7 @@ class agents(basic_llm):
                 ):
                     raise ValueError("Cannot find correct action from response")
             except Exception:
+                breakpoint()
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
                 )
@@ -376,8 +377,13 @@ class agents(basic_llm):
                 continue
 
             ### get thought from response ###
-            thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
-            if thought.replace(" ", "").replace("\n", "") == "":
+            # OLD: parse Thought/Action tags from free-form text
+            # thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
+            # if thought.replace(" ", "").replace("\n", "") == "":
+            #     thought = "None."
+            # NEW: read thought from structured JSON
+            thought = cur_action.get("thought")
+            if not isinstance(thought, str) or thought.replace(" ", "").replace("\n", "") == "":
                 thought = "None."
             self.thoughts.append(thought)
 
@@ -487,7 +493,10 @@ class agents(basic_llm):
                     "content": json.dumps(cur_action, ensure_ascii=False),
                 }
             )
-            self.messages.append({"role": "Observation", "content": observation})
+            # OLD: directly store observation (may be non-str, e.g., tuple)
+            # self.messages.append({"role": "Observation", "content": observation})
+            # NEW: ensure observation is stored as string to avoid concat errors downstream
+            self.messages.append({"role": "Observation", "content": str(observation)})
 
             retri_messages, messages_len = retri_history_messages(
                 self.messages,
@@ -594,6 +603,7 @@ class agents(basic_llm):
                 ):
                     raise ValueError("Cannot find correct action from response")
             except Exception:
+                breakpoint()
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
                 )
@@ -624,8 +634,13 @@ class agents(basic_llm):
                 continue
 
             ### get thought from response ###
-            thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
-            if thought.replace(" ", "").replace("\n", "") == "":
+            # OLD: parse Thought/Action tags from free-form text
+            # thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
+            # if thought.replace(" ", "").replace("\n", "") == "":
+            #     thought = "None."
+            # NEW: read thought from structured JSON
+            thought = cur_action.get("thought")
+            if not isinstance(thought, str) or thought.replace(" ", "").replace("\n", "") == "":
                 thought = "None."
             self.thoughts.append(thought)
 
@@ -753,7 +768,10 @@ class agents(basic_llm):
                     "content": json.dumps(cur_action, ensure_ascii=False),
                 }
             )
-            self.messages.append({"role": "Observation", "content": observation})
+            # OLD: directly store observation (may be non-str, e.g., tuple)
+            # self.messages.append({"role": "Observation", "content": observation})
+            # NEW: ensure observation is stored as string to avoid concat errors downstream
+            self.messages.append({"role": "Observation", "content": str(observation)})
 
             retri_messages, messages_len = retri_history_messages(
                 self.messages,

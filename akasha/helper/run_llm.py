@@ -35,20 +35,36 @@ def call_model(
         except Exception:
             model_type = "unknown"
 
-        if "openai" in model_type:
-            response = model.invoke(input_text, verbose=verbose)
+        # if "openai" in model_type:
+        #     response = model.invoke(input_text, verbose=verbose)
 
-        elif "remote" in model_type:
-            response = model._call(input_text, verbose=verbose)
-        else:
-            response = model._call(input_text, verbose=verbose)
+        # elif "remote" in model_type:
+        #     response = model._call(input_text, verbose=verbose)
+        # else:
+        #     response = model._call(input_text, verbose=verbose)
 
-        if isinstance(response, AIMessage):
-            response = response.content
-            if isinstance(response, dict):
-                response = response.__str__()
-            if isinstance(response, list):
-                response = "\n".join(response)
+        # if isinstance(response, AIMessage):
+        #     response = response.content
+        #     if isinstance(response, dict):
+        #         response = response.__str__()
+        #     if isinstance(response, list):
+        #         response = "\n".join(response)
+        
+        response = None
+        while response is None or response == "":
+            if "openai" in model_type:
+                response = model.invoke(input_text, verbose=verbose)
+            elif "remote" in model_type:
+                response = model._call(input_text, verbose=verbose)
+            else:
+                response = model._call(input_text, verbose=verbose)
+            
+            if isinstance(response, AIMessage):
+                response = response.content
+                if isinstance(response, dict): 
+                    response = response.__str__()
+                if isinstance(response, list):
+                    response = "\n".join(response)
 
         if response is None or response == "":
             raise Exception("LLM response is empty.")
