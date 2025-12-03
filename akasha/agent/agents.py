@@ -380,10 +380,6 @@ class agents(basic_llm):
                 continue
 
             ### get thought from response ###
-            # OLD: parse Thought/Action tags from free-form text
-            # thought = "".join(response.split("Thought:")[1:]).split("Action:")[0]
-            # if thought.replace(" ", "").replace("\n", "") == "":
-            #     thought = "None."
             # NEW: read thought from structured JSON
             thought = cur_action.get("thought")
             if not isinstance(thought, str) or thought.replace(" ", "").replace("\n", "") == "":
