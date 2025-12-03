@@ -35,23 +35,10 @@ def call_model(
         except Exception:
             model_type = "unknown"
 
-        # if "openai" in model_type:
-        #     response = model.invoke(input_text, verbose=verbose)
-
-        # elif "remote" in model_type:
-        #     response = model._call(input_text, verbose=verbose)
-        # else:
-        #     response = model._call(input_text, verbose=verbose)
-
-        # if isinstance(response, AIMessage):
-        #     response = response.content
-        #     if isinstance(response, dict):
-        #         response = response.__str__()
-        #     if isinstance(response, list):
-        #         response = "\n".join(response)
-        
         response = None
-        while response is None or response == "":
+        max_retries = 3
+        attempt = 0
+        while attempt < max_retries and (response is None or response == ""):
             if "openai" in model_type:
                 response = model.invoke(input_text, verbose=verbose)
             elif "remote" in model_type:
@@ -65,6 +52,10 @@ def call_model(
                     response = response.__str__()
                 if isinstance(response, list):
                     response = "\n".join(response)
+
+            if response is None or response == "":
+                logging.warning("LLM response is empty. Retrying call_model.")
+                attempt += 1
 
         if response is None or response == "":
             raise Exception("LLM response is empty.")
@@ -109,15 +100,23 @@ def call_batch_model(
     model, model_name = handle_model_and_name(model)
 
     try:
-        response = model.batch(input_text)
-        for res in response:
-            if isinstance(res, AIMessage):
-                res = res.content
-            if isinstance(res, dict):
-                res = res.__str__()
-            if isinstance(res, list):
-                res = "\n".join(res)
-            responses.append(res)
+        max_retries = 3
+        attempt = 0
+        while attempt < max_retries and (response is None or response == "" or "".join(responses) == ""):
+            response = model.batch(input_text)
+            responses = []
+            for res in response:
+                if isinstance(res, AIMessage):
+                    res = res.content
+                if isinstance(res, dict):
+                    res = res.__str__()
+                if isinstance(res, list):
+                    res = "\n".join(res)
+                responses.append(res)
+
+            if response is None or response == "" or "".join(responses) == "":
+                logging.warning("LLM response is empty. Retrying batch call.")
+                attempt += 1
 
         if response is None or response == "" or "".join(responses) == "":
             raise Exception("LLM response is empty.")
@@ -156,23 +155,32 @@ def call_stream_model(
     ### for openai, change system prompt and prompt into system meg and human meg ###
 
     response = None
-    texts = ""
     model, model_name = handle_model_and_name(model)
     try:
-        try:
-            response = model.stream(input_text, verbose=verbose)
-        except Exception:
-            response = model._call(input_text, verbose=verbose)
+        max_retries = 3
+        attempt = 0
+        while attempt < max_retries:
+            texts = ""
+            try:
+                response = model.stream(input_text, verbose=verbose)
+            except Exception:
+                response = model._call(input_text, verbose=verbose)
 
-        for r in response:
-            if isinstance(r, AIMessage):
-                r = r.content
-                if isinstance(r, dict):
-                    r = r.__str__()
-                if isinstance(r, list):
-                    r = "\n".join(r)
-            texts += r
-            yield sim_to_trad(r)
+            for r in response:
+                if isinstance(r, AIMessage):
+                    r = r.content
+                    if isinstance(r, dict):
+                        r = r.__str__()
+                    if isinstance(r, list):
+                        r = "\n".join(r)
+                texts += r
+                yield sim_to_trad(r)
+
+            if texts != "":
+                break
+
+            logging.warning("LLM response is empty. Retrying stream call.")
+            attempt += 1
 
         if texts == "":
             yield "ERROR! LLM response is empty.\n\n"
@@ -215,6 +223,30 @@ def call_image_model(
                 response = response.__str__()
             if isinstance(response, list):
                 response = "\n".join(response)
+
+        max_retries = 3
+        attempt = 0
+        while attempt < max_retries and (response is None or response == ""):
+            logging.warning("LLM response is empty. Retrying image call.")
+            if (
+                ("openai" in model_type)
+                or ("remote" in model_type)
+                or ("gemini" in model_type)
+            ):
+                response = model.invoke(input_text, verbose=verbose)
+            else:
+                response = model.call_image(input_text, verbose=verbose)
+
+            if isinstance(response, AIMessage):
+                response = response.content
+                if isinstance(response, dict):
+                    response = response.__str__()
+                if isinstance(response, list):
+                    response = "\n".join(response)
+
+            if response is None or response == "":
+                print_flag = False
+                attempt += 1
 
         if response is None or response == "":
             print_flag = False

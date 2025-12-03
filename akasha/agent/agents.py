@@ -327,6 +327,8 @@ class agents(basic_llm):
         while round_count > 0:
             try:
                 cur_action = extract_json(response)
+                action_raw = cur_action.get("action", "")
+                action_lower = str(action_raw).lower()
                 if isinstance(cur_action, dict):
                     pass
                 elif isinstance(cur_action, list) and len(cur_action) > 0:
@@ -334,19 +336,20 @@ class agents(basic_llm):
                     for action_item in cur_action:
                         if (
                             isinstance(action_item, dict)
-                            and action_item.get("action", "").lower()
+                            and str(action_item.get("action", "")).lower()
                             in ["final answer", "final_answer", "final", "answer"]
                         ):
                             cur_action = action_item
+                            action_raw = cur_action.get("action", "")
+                            action_lower = str(action_raw).lower()
                             break
                 
-                if (not isinstance(cur_action["action"], str)) or (
+                if (not isinstance(action_raw, str)) or (
                     not isinstance(cur_action["action_input"], dict)
-                    and (cur_action["action"] != "Answer")
+                    and (action_lower != "answer")
                 ):
                     raise ValueError("Cannot find correct action from response")
             except Exception:
-                breakpoint()
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
                 )
@@ -389,7 +392,7 @@ class agents(basic_llm):
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
-            if cur_action["action"].lower() in [
+            if action_lower in [
                 "final answer",
                 "final_answer",
                 "final",
@@ -597,13 +600,14 @@ class agents(basic_llm):
         while round_count > 0:
             try:
                 cur_action = extract_json(response)
-                if (not isinstance(cur_action["action"], str)) or (
+                action_raw = cur_action.get("action", "")
+                action_lower = str(action_raw).lower()
+                if (not isinstance(action_raw, str)) or (
                     not isinstance(cur_action["action_input"], dict)
-                    and (cur_action["action"] != "Answer")
+                    and (action_lower != "answer")
                 ):
                     raise ValueError("Cannot find correct action from response")
             except Exception:
-                breakpoint()
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
                 )
@@ -650,7 +654,7 @@ class agents(basic_llm):
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
-            if cur_action["action"].lower() in [
+            if action_lower in [
                 "final answer",
                 "final_answer",
                 "final",
