@@ -773,7 +773,6 @@ class agents(basic_llm):
                 }
             )
             # OLD: directly store observation (may be non-str, e.g., tuple)
-            # self.messages.append({"role": "Observation", "content": observation})
             # NEW: ensure observation is stored as string to avoid concat errors downstream
             self.messages.append({"role": "Observation", "content": str(observation)})
 
