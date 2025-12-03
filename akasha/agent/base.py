@@ -86,21 +86,56 @@ def create_tool(
 def get_REACT_PROMPT(tool_explain_str: str, tool_name_str: str) -> str:
     """get the REACT prompt for the tool"""
 
-    ret = f"""Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tool_explain_str}\n
-Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\n
-Valid "action" values: "Answer" or {tool_name_str}\n\n
-Provide only ONE action per $JSON_BLOB, as shown:\n{{\n```\n\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```$INPUT is a dictionary that contains tool parameters and their values\n\n
-the meaning of each format:\n
-Question: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n
-... (repeat Thought/Action N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Answer",\n  "action_input": "Final response to human"\n}}\n```\n\n
-Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
-"""
+    # OLD PROMPT (kept for reference)
+    # ret = f"""Respond to the human as helpfully and accurately as possible. You have access to the following tools:\n\n{tool_explain_str}\n
+    # Use a json blob to specify a tool by providing an action key (tool name) and an action_input key (tool input).\n\n
+    # Valid "action" values: "Answer" or {tool_name_str}\n\n
+    # Provide only ONE action per $JSON_BLOB, as shown:\n{{\n```\n\n  "action": $TOOL_NAME,\n  "action_input": $INPUT\n}}\n```$INPUT is a dictionary that contains tool parameters and their values\n\n
+    # the meaning of each format:\n
+    # Question: input question to answer\nThought: consider previous and subsequent steps\nAction:\n```\n$JSON_BLOB\n```\nObservation: action result\n
+    # ... (repeat Thought/Action N times)\nThought: I know what to respond\nAction:\n```\n{{\n  "action": "Answer",\n  "action_input": "Final response to human"\n}}\n```\n\n
+    # Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use tools if necessary. Respond directly if appropriate. Format is Thought: then Action:```$JSON_BLOB```.\n
+    # """
+
+    # NEW PROMPT (strict JSON, embeds thought/action/action_input)
+    ret = f"""You are an assistant that must ALWAYS reply with exactly ONE JSON object and nothing else (no Markdown, no ``` fences, no extra text).
+You have access to these tools:
+{tool_explain_str}
+
+The JSON schema you must output every time:
+{{
+  "thought": "<brief reasoning in plain text>",
+  "action": "<tool name from: {tool_name_str} or \"Answer\">",
+  "action_input": <object with the parameters for the tool, or the final answer string when action is \"Answer\">
+}}
+
+Rules:
+- Only one action per response.
+- Do not wrap JSON in code fences.
+- Do not include any prefix like Thought: or Action: outside the JSON.
+- action_input must be an object (dictionary) for tools; if action is "Answer", action_input is the final reply string.
+
+Examples:
+{{
+  "thought": "Decide to call a tool with the parsed parameters",
+  "action": "SOME_TOOL_NAME",
+  "action_input": {{
+    "param1": "value1",
+    "param2": 123
+  }}
+}}
+
+{{"thought": "Provide the final answer to the user", "action": "Answer", "action_input": "Your final response text here."}}
+
+Begin now. Output ONLY the JSON object following the schema above."""
 
     return ret
 
 
+
+# NEW DEFAULT_REMEMBER_PROMPT
 DEFAULT_REMEMBER_PROMPT = (
-    "**Remember, Format is Thought: then Action:```$JSON_BLOB```\n\n"
+    "**Remember: Always return exactly one JSON object with keys thought, action, action_input. No extra text, no code fences.**\n\n"
 )
 
 
