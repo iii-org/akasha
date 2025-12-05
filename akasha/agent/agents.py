@@ -485,10 +485,8 @@ class agents(basic_llm):
                 else:
                     observation = firsthand_observation
 
-                if self.verbose or self.keep_logs:
-                    if self.verbose:
-                        print("\nObservation: " + observation)
-
+                if self.verbose:
+                    print("\nObservation: " + observation)
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
