@@ -699,7 +699,8 @@ class agents(basic_llm):
                     else:
                         firsthand_observation = result  # Sync result
                 except Exception:
-                    logging.warning("Cannot run the tool, retry.")
+                    if self.verbose or self.keep_logs:
+                        logging.warning("Cannot run the tool, retry.")
                     if self.verbose:
                         print("Cannot run the tool, retry.")
                     text_input = format_sys_prompt(
