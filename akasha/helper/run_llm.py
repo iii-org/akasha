@@ -217,6 +217,7 @@ def call_image_model(
     model, model_name = handle_model_and_name(model)
     try:
         model_type = model._llm_type
+        log_enabled = verbose or keep_logs
 
         if (
             ("openai" in model_type)
@@ -238,7 +239,6 @@ def call_image_model(
 
         max_retries = 3
         attempt = 0
-        log_enabled = verbose or keep_logs
         while attempt < max_retries and (response is None or response == ""):
             if log_enabled:
                 logging.warning("LLM response is empty. Retrying image call.")
