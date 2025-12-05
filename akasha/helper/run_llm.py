@@ -212,6 +212,18 @@ def call_image_model(
     verbose: bool = True,
     keep_logs: bool = False,
 ) -> str:
+    """
+    Calls an image generation model with the provided input and returns the response as a string.
+
+    Args:
+        model (BaseLanguageModel): The image generation model to use.
+        input_text (Union[str, list]): The input prompt(s) for the model.
+        verbose (bool, optional): If True, enables verbose output. Defaults to True.
+        keep_logs (bool, optional): If True, keeps logs even if verbose is False. Defaults to False.
+
+    Returns:
+        str: The response from the image generation model.
+    """
     response = ""
     print_flag = True
     model, model_name = handle_model_and_name(model)
