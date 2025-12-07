@@ -174,7 +174,9 @@ class RAG(atman):
     def _display_stream(
         self, text_input: Union[str, List[str]]
     ) -> Generator[str, None, None]:
-        ret = call_stream_model(self.model_obj, text_input, self.verbose)
+        ret = call_stream_model(
+            self.model_obj, text_input, self.verbose, keep_logs=self.keep_logs
+        )
 
         for s in ret:
             self.response += s
@@ -269,6 +271,7 @@ class RAG(atman):
             self.model_obj,
             text_input,
             self.verbose,
+            keep_logs=self.keep_logs,
         )
 
         self._add_result_log(timestamp, end_time - start_time)
@@ -348,6 +351,8 @@ class RAG(atman):
         batch_responses = call_batch_model(
             self.model_obj,
             prod_sys_prompts,
+            verbose=self.verbose,
+            keep_logs=self.keep_logs,
         )
         print(batch_responses)  ##
         for idx, res in enumerate(batch_responses):

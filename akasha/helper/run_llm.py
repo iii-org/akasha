@@ -10,7 +10,10 @@ from akasha.utils.prompts.gen_prompt import format_sys_prompt, default_translate
 
 
 def call_model(
-    model: BaseLanguageModel, input_text: Union[str, list], verbose: bool = True
+    model: BaseLanguageModel,
+    input_text: Union[str, list],
+    verbose: bool = True,
+    keep_logs: bool = False,
 ) -> str:
     """call llm model and return the response
 
@@ -36,6 +39,7 @@ def call_model(
             model_type = "unknown"
 
         response = None
+        log_enabled = verbose or keep_logs
         max_retries = 3
         attempt = 0
         while attempt < max_retries and (response is None or response == ""):
@@ -54,7 +58,8 @@ def call_model(
                     response = "\n".join(response)
 
             if response is None or response == "":
-                logging.warning("LLM response is empty. Retrying call_model.")
+                if log_enabled:
+                    logging.warning("LLM response is empty. Retrying call_model.")
                 attempt += 1
 
         if response is None or response == "":
@@ -79,6 +84,7 @@ def call_batch_model(
     model: BaseLanguageModel,
     input_text: list,
     verbose: bool = False,
+    keep_logs: bool = False,
 ) -> List[str]:
     """call llm model in batch and return the response
 
@@ -100,6 +106,7 @@ def call_batch_model(
     model, model_name = handle_model_and_name(model)
 
     try:
+        log_enabled = verbose or keep_logs
         max_retries = 3
         attempt = 0
         while attempt < max_retries and (response is None or response == "" or "".join(responses) == ""):
@@ -115,7 +122,8 @@ def call_batch_model(
                 responses.append(res)
 
             if response is None or response == "" or "".join(responses) == "":
-                logging.warning("LLM response is empty. Retrying batch call.")
+                if log_enabled:
+                    logging.warning("LLM response is empty. Retrying batch call.")
                 attempt += 1
 
         if response is None or response == "" or "".join(responses) == "":
@@ -140,6 +148,7 @@ def call_stream_model(
     model: BaseLanguageModel,
     input_text: Union[str, list],
     verbose: bool = True,
+    keep_logs: bool = False,
 ) -> Generator[str, None, None]:
     """call llm model and yield the response
 
@@ -157,6 +166,7 @@ def call_stream_model(
     response = None
     model, model_name = handle_model_and_name(model)
     try:
+        log_enabled = verbose or keep_logs
         max_retries = 3
         attempt = 0
         while attempt < max_retries:
@@ -179,7 +189,8 @@ def call_stream_model(
             if texts != "":
                 break
 
-            logging.warning("LLM response is empty. Retrying stream call.")
+            if log_enabled:
+                logging.warning("LLM response is empty. Retrying stream call.")
             attempt += 1
 
         if texts == "":
@@ -199,7 +210,20 @@ def call_image_model(
     model: BaseLanguageModel,
     input_text: Union[str, list],
     verbose: bool = True,
+    keep_logs: bool = False,
 ) -> str:
+    """
+    Calls an image generation model with the provided input and returns the response as a string.
+
+    Args:
+        model (BaseLanguageModel): The image generation model to use.
+        input_text (Union[str, list]): The input prompt(s) for the model.
+        verbose (bool, optional): If True, enables verbose output. Defaults to True.
+        keep_logs (bool, optional): If True, keeps logs even if verbose is False. Defaults to False.
+
+    Returns:
+        str: The response from the image generation model.
+    """
     response = ""
     print_flag = True
     model, model_name = handle_model_and_name(model)
@@ -226,8 +250,10 @@ def call_image_model(
 
         max_retries = 3
         attempt = 0
+        log_enabled = verbose or keep_logs
         while attempt < max_retries and (response is None or response == ""):
-            logging.warning("LLM response is empty. Retrying image call.")
+            if log_enabled:
+                logging.warning("LLM response is empty. Retrying image call.")
             if (
                 ("openai" in model_type)
                 or ("remote" in model_type)

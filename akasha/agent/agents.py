@@ -306,6 +306,7 @@ class agents(basic_llm):
             self.model_obj,
             text_input,
             self.verbose,
+            keep_logs=self.keep_logs,
         )
 
         txt = (
@@ -366,6 +367,7 @@ class agents(basic_llm):
                     self.model_obj,
                     text_input,
                     self.verbose,
+                    keep_logs=self.keep_logs,
                 )
                 round_count -= 1
                 txt = (
@@ -423,8 +425,10 @@ class agents(basic_llm):
                         firsthand_observation = result  # Sync result
 
                 except Exception:
-                    logging.warning("Cannot run the tool, retry.")
-                    print("WARNING. Cannot run the tool, retry.\n\n")
+                    if self.verbose or self.keep_logs:
+                        logging.warning("Cannot run the tool, retry.")
+                        if self.verbose:
+                            print("WARNING. Cannot run the tool, retry.\n\n")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
                         "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
@@ -435,6 +439,7 @@ class agents(basic_llm):
                         self.model_obj,
                         text_input,
                         self.verbose,
+                        keep_logs=self.keep_logs,
                     )
                     round_count -= 1
                     txt = (
@@ -464,6 +469,7 @@ class agents(basic_llm):
                         self.model_obj,
                         text_input,
                         self.verbose,
+                        keep_logs=self.keep_logs,
                     )
                     txt = (
                         "Question: "
@@ -481,7 +487,6 @@ class agents(basic_llm):
 
                 if self.verbose:
                     print("\nObservation: " + observation)
-
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
@@ -517,6 +522,7 @@ class agents(basic_llm):
                 self.model_obj,
                 text_input,
                 self.verbose,
+                keep_logs=self.keep_logs,
             )
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
@@ -525,11 +531,12 @@ class agents(basic_llm):
             round_count -= 1
 
         end_time = time.time()
-        print(
-            "\n-------------------------------------\nSpend Time: ",
-            end_time - start_time,
-            "s\n",
-        )
+        if self.verbose:
+            print(
+                "\n-------------------------------------\nSpend Time: ",
+                end_time - start_time,
+                "s\n",
+            )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
 
@@ -574,6 +581,7 @@ class agents(basic_llm):
             self.model_obj,
             text_input,
             self.verbose,
+            keep_logs=self.keep_logs,
         )
 
         txt = (
@@ -619,6 +627,7 @@ class agents(basic_llm):
                     self.model_obj,
                     text_input,
                     self.verbose,
+                    keep_logs=self.keep_logs,
                 )
                 round_count -= 1
                 txt = (
@@ -690,8 +699,10 @@ class agents(basic_llm):
                     else:
                         firsthand_observation = result  # Sync result
                 except Exception:
-                    logging.warning("Cannot run the tool, retry.")
-                    print("Cannot run the tool, retry.")
+                    if self.verbose or self.keep_logs:
+                        logging.warning("Cannot run the tool, retry.")
+                    if self.verbose:
+                        print("Cannot run the tool, retry.")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
                         "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
@@ -702,6 +713,7 @@ class agents(basic_llm):
                         self.model_obj,
                         text_input,
                         self.verbose,
+                        keep_logs=self.keep_logs,
                     )
                     round_count -= 1
                     txt = (
@@ -731,6 +743,7 @@ class agents(basic_llm):
                         self.model_obj,
                         text_input,
                         self.verbose,
+                        keep_logs=self.keep_logs,
                     )
                     txt = (
                         "Question: "
@@ -787,6 +800,7 @@ class agents(basic_llm):
                 self.model_obj,
                 text_input,
                 self.verbose,
+                keep_logs=self.keep_logs,
             )
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
@@ -795,11 +809,12 @@ class agents(basic_llm):
             round_count -= 1
 
         end_time = time.time()
-        print(
-            "\n-------------------------------------\nSpend Time: ",
-            end_time - start_time,
-            "s\n",
-        )
+        if self.verbose:
+            print(
+                "\n-------------------------------------\nSpend Time: ",
+                end_time - start_time,
+                "s\n",
+            )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
 
