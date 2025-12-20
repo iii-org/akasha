@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "akasha_terminal"
-version = "0.9.13"
+version = "0.9.14"
 description = "document QA(RAG) package using langchain and chromadb"
 readme = "README.md"
 authors = [{ name = "chih chuan chang", email = "ccchang@iii.org.tw" }]
@@ -48,11 +48,11 @@ dependencies = [
   "anthropic",
   "tavily-python",
   "faiss-cpu",
-  "langchain-mcp-adapters>=0.1.1",
+  "langchain-mcp-adapters>=0.1.1,<0.1.15",
   "mlflow",
   "json_repair",
 
-  # 各平台 Torch/torchvision（沿用你的釘版與標記）
+  # 各平台 Torch/torchvision（沿用釘版與標記）
   "torch==2.2.0; platform_system == 'Windows'",
   "torch==2.0.1; platform_system == 'Darwin'",
   "torch==2.2.0; platform_system == 'Linux'",

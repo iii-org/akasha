@@ -20,6 +20,7 @@ today_tool = akasha.create_tool(
 @pytest.mark.agent
 def test_agent():
     agent = akasha.agents(
+        model='gemini:gemini-2.5-flash',
         tools=[today_tool], temperature=1.0, verbose=True, keep_logs=True
     )
 

@@ -26,6 +26,20 @@ from .base import (
     DEFAULT_RETRI_OBSERVATION_PROMPT,
 )
 
+FINAL_ACTION_ALIASES = {
+    "final answer",
+    "final_answer",
+    "final",
+    "answer",
+}
+
+
+def _is_final_action(action_raw: str) -> bool:
+    """Return True if the action string is any accepted final-answer alias."""
+    if not isinstance(action_raw, str):
+        return False
+    return action_raw.lower() in FINAL_ACTION_ALIASES
+
 
 class agents(basic_llm):
     """basic class for akasha agent, implement _change_variables, _check_db, add_log and save_logs function."""
@@ -328,26 +342,26 @@ class agents(basic_llm):
         while round_count > 0:
             try:
                 cur_action = extract_json(response)
-                action_raw = cur_action.get("action", "")
-                action_lower = str(action_raw).lower()
-                if isinstance(cur_action, dict):
-                    pass
-                elif isinstance(cur_action, list) and len(cur_action) > 0:
-                    # if multiple actions, find the action with 'action':'Answer'
+                if isinstance(cur_action, list):
+                    action_raw = ""
                     for action_item in cur_action:
                         if (
                             isinstance(action_item, dict)
-                            and str(action_item.get("action", "")).lower()
-                            in ["final answer", "final_answer", "final", "answer"]
+                            and _is_final_action(action_item.get("action", ""))
                         ):
                             cur_action = action_item
                             action_raw = cur_action.get("action", "")
-                            action_lower = str(action_raw).lower()
                             break
-                
+                    if action_raw == "":
+                        raise ValueError("Cannot find correct action from response")
+                elif isinstance(cur_action, dict):
+                    action_raw = cur_action.get("action", "")
+                else:
+                    raise ValueError("Cannot find correct action from response")
+
                 if (not isinstance(action_raw, str)) or (
-                    not isinstance(cur_action["action_input"], dict)
-                    and (action_lower != "answer")
+                    not isinstance(cur_action.get("action_input"), dict)
+                    and not _is_final_action(action_raw)
                 ):
                     raise ValueError("Cannot find correct action from response")
             except Exception:
@@ -390,12 +404,7 @@ class agents(basic_llm):
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
-            if action_lower in [
-                "final answer",
-                "final_answer",
-                "final",
-                "answer",
-            ]:
+            if _is_final_action(action_raw):
                 if isinstance(cur_action["action_input"], (dict, list)):
                     response = json.dumps(
                         cur_action["action_input"], ensure_ascii=False
@@ -603,11 +612,26 @@ class agents(basic_llm):
         while round_count > 0:
             try:
                 cur_action = extract_json(response)
-                action_raw = cur_action.get("action", "")
-                action_lower = str(action_raw).lower()
+                if isinstance(cur_action, list):
+                    action_raw = ""
+                    for action_item in cur_action:
+                        if (
+                            isinstance(action_item, dict)
+                            and _is_final_action(action_item.get("action", ""))
+                        ):
+                            cur_action = action_item
+                            action_raw = cur_action.get("action", "")
+                            break
+                    if action_raw == "":
+                        raise ValueError("Cannot find correct action from response")
+                elif isinstance(cur_action, dict):
+                    action_raw = cur_action.get("action", "")
+                else:
+                    raise ValueError("Cannot find correct action from response")
+
                 if (not isinstance(action_raw, str)) or (
-                    not isinstance(cur_action["action_input"], dict)
-                    and (action_lower != "answer")
+                    not isinstance(cur_action.get("action_input"), dict)
+                    and not _is_final_action(action_raw)
                 ):
                     raise ValueError("Cannot find correct action from response")
             except Exception:
@@ -653,12 +677,7 @@ class agents(basic_llm):
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
-            if action_lower in [
-                "final answer",
-                "final_answer",
-                "final",
-                "answer",
-            ]:
+            if _is_final_action(action_raw):
                 if isinstance(cur_action["action_input"], (dict, list)):
                     response = json.dumps(
                         cur_action["action_input"], ensure_ascii=False
