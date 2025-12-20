@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [{ name = "chih chuan chang", email = "ccchang@iii.org.tw" }]
 requires-python = ">=3.10,<3.13"
 
-# 核心相依（環境標記照你原本的平台分流）
+# 核心相依（環境標記依照原本的平台分流）
 dependencies = [
   "pypdf",
   "langchain-core>=0.3,<0.4",

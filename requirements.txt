@@ -35,7 +35,7 @@ sentencepiece
 anthropic
 tavily-python
 faiss-cpu
-langchain-mcp-adapters>=0.1.1
+langchain-mcp-adapters>=0.1.1,<0.1.15
 mlflow
 setuptools
 json_repair
