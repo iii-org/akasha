@@ -18,6 +18,7 @@ from akasha.utils.base import (
     DEFAULT_MAX_INPUT_TOKENS,
 )
 from akasha.utils.db.db_structure import dbs
+from akasha.utils.logging_config import configure_logging
 from akasha.utils.db.load_db import process_db, load_db_by_chroma_name
 
 
@@ -73,6 +74,7 @@ class basic_llm:
         self.env_file = env_file
         self.timestamp_list = []
         self.logs: dict[dict] = {}
+        configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
 
         ### set model and embeddings ###
         self.model_obj = handle_model(
@@ -115,6 +117,8 @@ class basic_llm:
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
         ### check input argument is valid or not ###
+        prev_verbose = getattr(self, "verbose", None)
+        prev_keep_logs = getattr(self, "keep_logs", None)
         for key, value in kwargs.items():
             if (key == "model" or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = handle_model_type(value)
@@ -132,6 +136,9 @@ class basic_llm:
             else:
                 if key != "dbs":
                     logging.warning(f"argument {key} not exist")
+
+        if prev_verbose != self.verbose or prev_keep_logs != self.keep_logs:
+            configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
 
     def _add_basic_log(self, timestamp: str, fn_type: str) -> bool:
         """add pre-process log to self.logs

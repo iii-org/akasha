@@ -74,10 +74,13 @@ def _jsonSaveTool(file_path: str = "default.json", content: str = None):
             except Exception:
                 print(content)
             import json
+            from pathlib import Path
 
-            with open(file_path, "w", encoding="utf-8") as f:
+            target_path = Path(file_path).expanduser().resolve()
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            with target_path.open("w", encoding="utf-8") as f:
                 json.dump(content, f, indent=4, ensure_ascii=False)
-            return f"Success create {file_path}"
+            return f"Success create {target_path}"
         except Exception as e:
             print("content: ", content)
             return f"{e}, Cannot save file_path {file_path}, save file as default.json"

@@ -1,3 +1,7 @@
+from akasha.utils.logging_config import configure_logging
+
+configure_logging(verbose=True, keep_logs=False)
+
 from .RAG.rag import RAG
 from .tools.ask import ask
 from .helper.memory import MemoryManager
