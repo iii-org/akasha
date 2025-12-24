@@ -14,6 +14,7 @@ def call_model(
     input_text: Union[str, list],
     verbose: bool = True,
     keep_logs: bool = False,
+    max_retries: int = 3,
 ) -> str:
     """call llm model and return the response
 
@@ -21,6 +22,8 @@ def call_model(
         model (BaseLanguageModel): llm model
         input_text (str): the input_text that send to llm model
         verbose (bool, optional): whether to print the response. Defaults to True.
+        keep_logs (bool, optional): whether to keep logs. Defaults to False.
+        max_retries (int, optional): maximum number of retries for empty responses. Defaults to 3.
 
     Returns:
         str: llm response
@@ -40,7 +43,6 @@ def call_model(
 
         response = None
         log_enabled = verbose or keep_logs
-        max_retries = 20
         attempt = 0
         def normalize_response(value):
             if isinstance(value, AIMessage):
@@ -101,6 +103,7 @@ def call_batch_model(
     input_text: list,
     verbose: bool = False,
     keep_logs: bool = False,
+    max_retries: int = 3,
 ) -> List[str]:
     """call llm model in batch and return the response
 
@@ -108,6 +111,8 @@ def call_batch_model(
         model (BaseLanguageModel): llm model
         input_text (list):  the input_text that send to llm model
         verbose (bool, optional): whether to print the response. Defaults to False.
+        keep_logs (bool, optional): whether to keep logs. Defaults to False.
+        max_retries (int, optional): maximum number of retries for empty responses. Defaults to 3.
 
     Returns:
         str: llm response
@@ -123,7 +128,6 @@ def call_batch_model(
 
     try:
         log_enabled = verbose or keep_logs
-        max_retries = 3
         attempt = 0
         while attempt < max_retries and (response is None or response == "" or "".join(responses) == ""):
             response = model.batch(input_text)
@@ -165,6 +169,7 @@ def call_stream_model(
     input_text: Union[str, list],
     verbose: bool = True,
     keep_logs: bool = False,
+    max_retries: int = 3,
 ) -> Generator[str, None, None]:
     """call llm model and yield the response
 
@@ -172,6 +177,8 @@ def call_stream_model(
         model (BaseLanguageModel): llm model
         input_text (str): the input_text that send to llm model
         verbose (bool, optional): whether to print the response. Defaults to True.
+        keep_logs (bool, optional): whether to keep logs. Defaults to False.
+        max_retries (int, optional): maximum number of retries for empty responses. Defaults to 3.
 
     Returns:
         str: llm response
@@ -183,7 +190,6 @@ def call_stream_model(
     model, model_name = handle_model_and_name(model)
     try:
         log_enabled = verbose or keep_logs
-        max_retries = 3
         attempt = 0
         while attempt < max_retries:
             texts = ""
@@ -227,6 +233,7 @@ def call_image_model(
     input_text: Union[str, list],
     verbose: bool = True,
     keep_logs: bool = False,
+    max_retries: int = 3,
 ) -> str:
     """
     Calls an image generation model with the provided input and returns the response as a string.
@@ -236,6 +243,7 @@ def call_image_model(
         input_text (Union[str, list]): The input prompt(s) for the model.
         verbose (bool, optional): If True, enables verbose output. Defaults to True.
         keep_logs (bool, optional): If True, keeps logs even if verbose is False. Defaults to False.
+        max_retries (int, optional): maximum number of retries for empty responses. Defaults to 3.
 
     Returns:
         str: The response from the image generation model.
@@ -264,7 +272,6 @@ def call_image_model(
             if isinstance(response, list):
                 response = "\n".join(response)
 
-        max_retries = 3
         attempt = 0
         log_enabled = verbose or keep_logs
         while attempt < max_retries and (response is None or response == ""):
