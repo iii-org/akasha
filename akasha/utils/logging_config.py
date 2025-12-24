@@ -4,6 +4,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Union
 
+# Thread safety design:
+# - _config_lock protects all modifications to module-level state in configure_logging
+# - Boolean reads (_console_enabled) in filters are atomic and don't need locks
+# - Handler references are protected during modification but can be safely read
 _console_handler = None
 _file_handler = None
 _console_enabled = True
@@ -21,6 +25,10 @@ def _is_akasha_record(record: logging.LogRecord) -> bool:
 class _AkashaConsoleFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if _is_akasha_record(record):
+            # Reading _console_enabled without lock is safe because:
+            # 1. Boolean reads are atomic in Python
+            # 2. Avoids lock overhead on every log record
+            # 3. Worst case: temporary inconsistency during configure_logging
             return _console_enabled
         return True
 
