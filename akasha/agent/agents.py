@@ -449,12 +449,12 @@ class agents(basic_llm):
                     )
 
                 except Exception:
-                    logging.exception(
-                        "Tool execution failed: %s | input=%s",
-                        cur_action.get("action"),
-                        json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
-                    )
                     if self.verbose or self.keep_logs:
+                        logging.exception(
+                            "Tool execution failed: %s | input=%s",
+                            cur_action.get("action"),
+                            json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
+                        )
                         logging.warning("Cannot run the tool, retry.")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
@@ -748,12 +748,12 @@ class agents(basic_llm):
                         json.dumps(firsthand_observation, ensure_ascii=False, default=str),
                     )
                 except Exception:
-                    logging.exception(
-                        "Tool execution failed (stream): %s | input=%s",
-                        cur_action.get("action"),
-                        json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
-                    )
                     if self.verbose or self.keep_logs:
+                        logging.exception(
+                            "Tool execution failed (stream): %s | input=%s",
+                            cur_action.get("action"),
+                            json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
+                        )
                         logging.warning("Cannot run the tool, retry (stream).")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
