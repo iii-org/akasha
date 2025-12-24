@@ -18,6 +18,7 @@ from akasha.helper.preprocess_prompts import retri_history_messages
 from akasha.helper.base import get_doc_length, extract_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt
 from akasha.helper.run_llm import call_model
+from akasha.utils.logging_config import configure_logging
 from .base import (
     get_tool_explaination,
     get_REACT_PROMPT,
@@ -115,7 +116,6 @@ class agents(basic_llm):
         for tool in tools:
             if not isinstance(tool, BaseTool):
                 logging.warning("tools should be a list of BaseTool")
-                print("WARNING. tools should be a list of BaseTool\n\n")
                 continue
             tool_name = tool.name
             self.tools[tool_name] = tool
@@ -184,16 +184,19 @@ class agents(basic_llm):
         """display the information of the parameters if verbose is True"""
         if self.verbose is False:
             return False
-        print(f"Model: {self.model}, Temperature: {self.temperature}")
-        print("Tool: ", self.tool_name_str)
-        print(
-            f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
+        logging.info("Model: %s, Temperature: %s", self.model, self.temperature)
+        logging.info("Tool: %s", self.tool_name_str)
+        logging.info(
+            "Prompt format type: %s, Max input tokens: %s",
+            self.prompt_format_type,
+            self.max_input_tokens,
         )
 
         return True
 
     def __call__(self, question: str, messages: List[dict] = None):
         """Synchronous version of agent."""
+        configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
 
         self.question = question
 
@@ -226,7 +229,6 @@ class agents(basic_llm):
                         message_queue.put(chunk)
                 except Exception:
                     import traceback
-
                     message_queue.put(("ERROR", traceback.format_exc()))
                 finally:
                     message_queue.put(None)
@@ -270,6 +272,7 @@ class agents(basic_llm):
 
     async def acall(self, question: str, messages: List[dict] = None):
         """Asynchronous version of agent."""
+        configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
 
         self.REACT_PROMPT = self._merge_tool_explaination_and_react()
 
@@ -287,6 +290,13 @@ class agents(basic_llm):
             return self._run_agent_stream(question, tool_runner, messages)
 
         start_time = time.time()
+        step_idx = 0
+
+        def log_step(message: str) -> None:
+            nonlocal step_idx
+            step_idx += 1
+            logging.info("[step-%s] %s", step_idx, message)
+
         round_count = self.max_round
         self.response = ""
         if messages is None:
@@ -309,6 +319,7 @@ class agents(basic_llm):
         )
         if retri_messages != "":
             retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
+        log_step("Prepared history/context for model call")
 
         text_input = format_sys_prompt(
             self.REACT_PROMPT,
@@ -316,12 +327,14 @@ class agents(basic_llm):
             self.prompt_format_type,
             self.model,
         )
+        log_step("Calling LLM for initial response")
         response = call_model(
             self.model_obj,
             text_input,
             self.verbose,
             keep_logs=self.keep_logs,
         )
+        log_step("Received LLM response")
 
         txt = (
             "Question: "
@@ -341,6 +354,7 @@ class agents(basic_llm):
         ### start to run agent ###
         while round_count > 0:
             try:
+                log_step("Parsing action from model response")
                 cur_action = extract_json(response)
                 if isinstance(cur_action, list):
                     action_raw = ""
@@ -367,9 +381,6 @@ class agents(basic_llm):
             except Exception:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
-                )
-                print(
-                    "WARNING. Cannot extract JSON format action from response, retry.\n\n"
                 )
                 text_input = format_sys_prompt(
                     self.REACT_PROMPT,
@@ -418,6 +429,7 @@ class agents(basic_llm):
                         "content": json.dumps(cur_action, ensure_ascii=False),
                     }
                 )
+                log_step("Final answer produced")
 
                 break
 
@@ -425,6 +437,12 @@ class agents(basic_llm):
                 try:
                     tool_name = cur_action["action"]
                     tool_input = cur_action["action_input"]
+                    log_step(f"Invoking tool '{tool_name}'")
+                    logging.info(
+                        "Running tool: %s | input=%s",
+                        tool_name,
+                        json.dumps(tool_input, ensure_ascii=False, default=str),
+                    )
 
                     tool = self.tools[tool_name]
                     result = tool_runner(tool, tool_input)
@@ -432,12 +450,21 @@ class agents(basic_llm):
                         firsthand_observation = await result  # Await async result
                     else:
                         firsthand_observation = result  # Sync result
+                    log_step(f"Tool '{tool_name}' returned")
+                    logging.info(
+                        "Tool result: %s | output=%s",
+                        tool_name,
+                        json.dumps(firsthand_observation, ensure_ascii=False, default=str),
+                    )
 
                 except Exception:
+                    logging.exception(
+                        "Tool execution failed: %s | input=%s",
+                        cur_action.get("action"),
+                        json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
+                    )
                     if self.verbose or self.keep_logs:
                         logging.warning("Cannot run the tool, retry.")
-                        if self.verbose:
-                            print("WARNING. Cannot run the tool, retry.\n\n")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
                         "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
@@ -463,6 +490,7 @@ class agents(basic_llm):
                     continue
 
                 if self.retri_observation:
+                    log_step("Summarizing observation via LLM")
                     text_input = format_sys_prompt(
                         self.RETRI_OBSERVATION_PROMPT,
                         "Question: "
@@ -493,9 +521,10 @@ class agents(basic_llm):
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
                     observation = firsthand_observation
+                log_step("Observation recorded")
 
                 if self.verbose:
-                    print("\nObservation: " + observation)
+                    logging.info("Observation: %s", observation)
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
@@ -533,6 +562,7 @@ class agents(basic_llm):
                 self.verbose,
                 keep_logs=self.keep_logs,
             )
+            log_step("Received LLM response for next step")
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
             self.tokens += self.model_obj.get_num_tokens(txt)
@@ -541,10 +571,9 @@ class agents(basic_llm):
 
         end_time = time.time()
         if self.verbose:
-            print(
-                "\n-------------------------------------\nSpend Time: ",
+            logging.info(
+                "Time Spent: %s s",
                 end_time - start_time,
-                "s\n",
             )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
@@ -557,6 +586,13 @@ class agents(basic_llm):
         """run agent stream to get response"""
 
         start_time = time.time()
+        step_idx = 0
+
+        def log_step(message: str) -> None:
+            nonlocal step_idx
+            step_idx += 1
+            logging.info("[step-%s] %s", step_idx, message)
+
         round_count = self.max_round
         self.response = ""
         if messages is None:
@@ -579,6 +615,7 @@ class agents(basic_llm):
         )
         if retri_messages != "":
             retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
+        log_step("Prepared history/context for model call (stream)")
 
         text_input = format_sys_prompt(
             self.REACT_PROMPT,
@@ -586,12 +623,14 @@ class agents(basic_llm):
             self.prompt_format_type,
             self.model,
         )
+        log_step("Calling LLM for initial response (stream)")
         response = call_model(
             self.model_obj,
             text_input,
             self.verbose,
             keep_logs=self.keep_logs,
         )
+        log_step("Received LLM response (stream)")
 
         txt = (
             "Question: "
@@ -611,6 +650,7 @@ class agents(basic_llm):
         ### start to run agent ###
         while round_count > 0:
             try:
+                log_step("Parsing action from model response (stream)")
                 cur_action = extract_json(response)
                 if isinstance(cur_action, list):
                     action_raw = ""
@@ -637,9 +677,6 @@ class agents(basic_llm):
             except Exception:
                 logging.warning(
                     "Cannot extract JSON format action from response, retry."
-                )
-                print(
-                    "WARNING. Cannot extract JSON format action from response, retry.\n\n"
                 )
                 text_input = format_sys_prompt(
                     self.REACT_PROMPT,
@@ -700,6 +737,12 @@ class agents(basic_llm):
                 try:
                     tool_name = cur_action["action"]
                     tool_input = cur_action["action_input"]
+                    log_step(f"Invoking tool '{tool_name}' (stream)")
+                    logging.info(
+                        "Running tool: %s | input=%s",
+                        tool_name,
+                        json.dumps(tool_input, ensure_ascii=False, default=str),
+                    )
 
                     # yield action #
                     intermed_stream_text = (
@@ -717,11 +760,20 @@ class agents(basic_llm):
                         firsthand_observation = await result  # Await async result
                     else:
                         firsthand_observation = result  # Sync result
+                    log_step(f"Tool '{tool_name}' returned (stream)")
+                    logging.info(
+                        "Tool result: %s | output=%s",
+                        tool_name,
+                        json.dumps(firsthand_observation, ensure_ascii=False, default=str),
+                    )
                 except Exception:
+                    logging.exception(
+                        "Tool execution failed (stream): %s | input=%s",
+                        cur_action.get("action"),
+                        json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
+                    )
                     if self.verbose or self.keep_logs:
-                        logging.warning("Cannot run the tool, retry.")
-                    if self.verbose:
-                        print("Cannot run the tool, retry.")
+                        logging.warning("Cannot run the tool, retry (stream).")
                     text_input = format_sys_prompt(
                         self.REACT_PROMPT,
                         "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
@@ -747,6 +799,7 @@ class agents(basic_llm):
                     continue
 
                 if self.retri_observation:
+                    log_step("Summarizing observation via LLM (stream)")
                     text_input = format_sys_prompt(
                         self.RETRI_OBSERVATION_PROMPT,
                         "Question: "
@@ -777,9 +830,10 @@ class agents(basic_llm):
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
                     observation = firsthand_observation
+                log_step("Observation recorded (stream)")
 
                 if self.verbose:
-                    print("\n[OBSERVATION]: " + observation)
+                    logging.info("[OBSERVATION]: %s", observation)
                 # yield observation #
                 intermed_stream_text = "\n[OBSERVATION]: " + str(observation) + "\n"
                 yield intermed_stream_text
@@ -821,6 +875,7 @@ class agents(basic_llm):
                 self.verbose,
                 keep_logs=self.keep_logs,
             )
+            log_step("Received LLM response for next step (stream)")
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)
             self.tokens += self.model_obj.get_num_tokens(txt)
@@ -829,10 +884,9 @@ class agents(basic_llm):
 
         end_time = time.time()
         if self.verbose:
-            print(
-                "\n-------------------------------------\nSpend Time: ",
+            logging.info(
+                "Time Spent: %s s",
                 end_time - start_time,
-                "s\n",
             )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
@@ -886,7 +940,6 @@ class agents(basic_llm):
                     for tool in tools:
                         if not isinstance(tool, BaseTool):
                             logging.warning("tools should be a list of BaseTool")
-                            print("WARNING. tools should be a list of BaseTool\n\n")
                             continue
                         tool_name = tool.name
                         self.tools[tool_name] = tool
@@ -976,7 +1029,6 @@ class agents(basic_llm):
         for tool in tools:
             if not isinstance(tool, BaseTool):
                 logging.warning("tools should be a list of BaseTool")
-                print("WARNING. tools should be a list of BaseTool\n\n")
                 continue
             tool_name = tool.name
             self.tools[tool_name] = tool

@@ -40,30 +40,46 @@ def call_model(
 
         response = None
         log_enabled = verbose or keep_logs
-        max_retries = 3
+        max_retries = 20
         attempt = 0
-        while attempt < max_retries and (response is None or response == ""):
+        def normalize_response(value):
+            if isinstance(value, AIMessage):
+                value = value.content
+            if isinstance(value, dict):
+                value = value.__str__()
+            if isinstance(value, list):
+                value = "\n".join(str(item) for item in value)
+            return value
+
+        def is_empty_response(value):
+            if value is None:
+                return True
+            if isinstance(value, str):
+                return value.strip() == ""
+            return not bool(value)
+
+        while attempt < max_retries and is_empty_response(response):
             if "openai" in model_type:
                 response = model.invoke(input_text, verbose=verbose)
             elif "remote" in model_type:
                 response = model._call(input_text, verbose=verbose)
             else:
                 response = model._call(input_text, verbose=verbose)
-            
-            if isinstance(response, AIMessage):
-                response = response.content
-                if isinstance(response, dict): 
-                    response = response.__str__()
-                if isinstance(response, list):
-                    response = "\n".join(response)
 
-            if response is None or response == "":
+            response = normalize_response(response)
+            if is_empty_response(response):
                 if log_enabled:
-                    logging.warning("LLM response is empty. Retrying call_model.")
+                    logging.warning(
+                        "LLM response is empty. Retrying call_model. response_type=%s",
+                        type(response).__name__,
+                    )
                 attempt += 1
 
-        if response is None or response == "":
-            raise Exception("LLM response is empty.")
+        if is_empty_response(response):
+            error_message = "LLM response is empty after max retries; giving up."
+            if log_enabled:
+                logging.error(error_message)
+            raise Exception(error_message)
 
     except Exception as e:
         trace_text = traceback.format_exc()
