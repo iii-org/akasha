@@ -21,8 +21,7 @@ def _is_akasha_record(record: logging.LogRecord) -> bool:
 class _AkashaConsoleFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if _is_akasha_record(record):
-            with _config_lock:
-                return _console_enabled
+            return _console_enabled
         return True
 
 
