@@ -866,7 +866,7 @@ class agents(basic_llm):
         end_time = time.time()
         if self.verbose:
             logging.info(
-                "Spend Time: %s s",
+                "Time Spent: %s s",
                 end_time - start_time,
             )
         self.response = response
