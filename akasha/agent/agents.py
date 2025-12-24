@@ -26,7 +26,6 @@ from .base import (
     DEFAULT_OBSERVATION_PROMPT,
     DEFAULT_RETRI_OBSERVATION_PROMPT,
 )
-import traceback
 
 
 class agents(basic_llm):
