@@ -8,7 +8,11 @@ import time
 def get_text_from_url(url: str) -> Tuple[str, str]:
     try:
         # Send a GET request to the URL
-        response = requests.get(url)
+        headers = {
+            "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
 
         # Parse the HTML content
@@ -39,7 +43,11 @@ def get_text_from_url(url: str) -> Tuple[str, str]:
 def get_webpage_last_modified(url):
     try:
         # Send a HEAD request to get headers
-        response = requests.head(url)
+        headers = {
+            "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.head(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
 
         # Get the Last-Modified header

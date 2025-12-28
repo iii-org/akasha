@@ -817,8 +817,12 @@ def format_image_anthropic_prompt(image_path: Union[List[str], str],
             image_media_type = f"image/{imgP.split('.')[-1]}"
 
         if is_url(imgP):
+            headers = {
+                "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
             url_content = base64.standard_b64encode(
-                httpx.get(imgP).content).decode("utf-8")
+                httpx.get(imgP, headers=headers).content).decode("utf-8")
 
         else:
             url_content = base64.standard_b64encode(open(
@@ -858,7 +862,11 @@ def format_image_gemini_prompt(image_path: Union[str, List[str]], prompt: str):
             image_media_type = f"image/{imgP.split('.')[-1]}"
 
         if is_url(imgP):
-            url_content = requests.get(imgP).content
+            headers = {
+                "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            }
+            url_content = requests.get(imgP, headers=headers).content
 
         else:
             with open(imgP, "rb") as f:
