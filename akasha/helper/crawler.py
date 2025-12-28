@@ -2,13 +2,15 @@ import requests
 from bs4 import BeautifulSoup
 from typing import Tuple
 from datetime import datetime
+from akasha.constants import DEFAULT_USER_AGENT
 import time
 
 
 def get_text_from_url(url: str) -> Tuple[str, str]:
     try:
         # Send a GET request to the URL
-        response = requests.get(url)
+        headers = {"User-Agent": DEFAULT_USER_AGENT}
+        response = requests.get(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
 
         # Parse the HTML content
@@ -39,7 +41,8 @@ def get_text_from_url(url: str) -> Tuple[str, str]:
 def get_webpage_last_modified(url):
     try:
         # Send a HEAD request to get headers
-        response = requests.head(url)
+        headers = {"User-Agent": DEFAULT_USER_AGENT}
+        response = requests.head(url, headers=headers)
         response.raise_for_status()  # Raise an exception for HTTP errors
 
         # Get the Last-Modified header

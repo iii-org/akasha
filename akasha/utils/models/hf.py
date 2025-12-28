@@ -1,6 +1,7 @@
 from typing import List, Any, Optional, Generator, Union
 from langchain.llms.base import LLM
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+from akasha.constants import DEFAULT_USER_AGENT
 
 import torch
 import requests
@@ -199,7 +200,9 @@ class hf_model(LLM):
         prompt[0]["content"][0]["type"] = "image"
 
         if is_url(image_path):
-            image = Image.open(requests.get(image_path, stream=True).raw)
+            headers = {"User-Agent": DEFAULT_USER_AGENT}
+            image = Image.open(
+                requests.get(image_path, stream=True, headers=headers).raw)
         else:
             image = Image.open(image_path)
 

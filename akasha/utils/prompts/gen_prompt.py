@@ -1,5 +1,6 @@
 from typing import List, Union, Tuple
 from akasha.utils.prompts.format import language_dict
+from akasha.constants import DEFAULT_USER_AGENT
 from urllib.parse import urlparse
 import os
 # from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
@@ -817,8 +818,9 @@ def format_image_anthropic_prompt(image_path: Union[List[str], str],
             image_media_type = f"image/{imgP.split('.')[-1]}"
 
         if is_url(imgP):
+            headers = {"User-Agent": DEFAULT_USER_AGENT}
             url_content = base64.standard_b64encode(
-                httpx.get(imgP).content).decode("utf-8")
+                httpx.get(imgP, headers=headers).content).decode("utf-8")
 
         else:
             url_content = base64.standard_b64encode(open(
@@ -858,7 +860,8 @@ def format_image_gemini_prompt(image_path: Union[str, List[str]], prompt: str):
             image_media_type = f"image/{imgP.split('.')[-1]}"
 
         if is_url(imgP):
-            url_content = requests.get(imgP).content
+            headers = {"User-Agent": DEFAULT_USER_AGENT}
+            url_content = requests.get(imgP, headers=headers).content
 
         else:
             with open(imgP, "rb") as f:
