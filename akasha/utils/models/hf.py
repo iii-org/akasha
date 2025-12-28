@@ -8,6 +8,7 @@ from threading import Thread
 
 from PIL import Image
 from pydantic import Field
+from akasha.utils.base import DEFAULT_USER_AGENT
 
 
 class hf_model(LLM):
@@ -199,10 +200,7 @@ class hf_model(LLM):
         prompt[0]["content"][0]["type"] = "image"
 
         if is_url(image_path):
-            headers = {
-                "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            }
+            headers = {"User-Agent": DEFAULT_USER_AGENT}
             image = Image.open(
                 requests.get(image_path, stream=True, headers=headers).raw)
         else:
