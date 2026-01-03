@@ -3,6 +3,7 @@ import os
 
 # Optional automatic logging configuration.
 # Enable by setting AKASHA_AUTO_CONFIGURE_LOGGING to "1", "true", or "yes".
+os.environ["CHROMA_TELEMETRY_OPT_OUT"] = "True"
 if os.getenv("AKASHA_AUTO_CONFIGURE_LOGGING", "").lower() in {"1", "true", "yes"}:
     configure_logging(verbose=True, keep_logs=False)
 

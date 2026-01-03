@@ -52,6 +52,7 @@ class MemoryManager:
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         verbose: bool = False,
         memory_dirname: str = "docs",
+        env_file: str = "",
     ):
         """
         Initializes the MemoryManager.
@@ -63,10 +64,11 @@ class MemoryManager:
             memory_name (str): Directory to store memory Markdown files.
             db_path (str): Path to the ChromaDB for searching memories.
             verbose (bool): Whether to print detailed logs.
+            env_file (str): Path to the .env file.
         """
-        self.model_obj = handle_model(model, verbose, 1.0, 2048)
+        self.model_obj = handle_model(model, verbose, 1.0, 2048, env_file=env_file)
         self.model = handle_model_type(model)
-        self.embeddings_obj = handle_embeddings(embeddings, verbose)
+        self.embeddings_obj = handle_embeddings(embeddings, verbose, env_file=env_file)
         self.embeddings = handle_model_type(embeddings)
         self.chunk_size = chunk_size
         self.memory_name = memory_name
@@ -84,15 +86,17 @@ class MemoryManager:
             directory_path=self.mem_dir_path,
             embeddings=self.embeddings_obj,
             chunk_size=self.chunk_size,
+            env_file=env_file,
         )
         self.db = load_directory_db(
             directory_path=self.mem_dir_path,
             embeddings=self.embeddings_obj,
             chunk_size=self.chunk_size,
+            env_file=env_file,
         )
 
         embeddings, embeddings_name = handle_embeddings_and_name(
-            self.embeddings, False, "")
+            self.embeddings, False, env_file)
         embed_type, embed_name = separate_name(embeddings_name)
 
         self.storage_dir = get_storage_directory(self.mem_dir_path,

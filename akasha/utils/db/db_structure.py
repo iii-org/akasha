@@ -17,20 +17,21 @@ class dbs:
         else:
             data = chrdb.get(include=["embeddings", "metadatas", "documents"])
             if "ids" in data:
-                self.ids = data["ids"]
-                self.vis = set(data["ids"])
-            if "embeddings" in data:
-                self.embeds = data["embeddings"]
+                self.ids = list(data["ids"])
+                self.vis = set(self.ids)
+            if "embeddings" in data and data["embeddings"] is not None:
+                # Use tolist() if it's a numpy array, otherwise use list()
+                self.embeds = getattr(data["embeddings"], "tolist", lambda: list(data["embeddings"]))()
             else:
-                self.embeds = [[] for _ in range(len(data["ids"]))]
-            if "metadatas" in data:
-                self.metadatas = data["metadatas"]
+                self.embeds = [[] for _ in range(len(self.ids))]
+            if "metadatas" in data and data["metadatas"] is not None:
+                self.metadatas = list(data["metadatas"])
             else:
-                self.metadatas = [{} for _ in range(len(data["ids"]))]
-            if "documents" in data:
-                self.docs = data["documents"]
+                self.metadatas = [{} for _ in range(len(self.ids))]
+            if "documents" in data and data["documents"] is not None:
+                self.docs = list(data["documents"])
             else:
-                self.docs = ["" for _ in range(len(data["ids"]))]
+                self.docs = ["" for _ in range(len(self.ids))]
 
     def merge(self, db: "dbs"):
         for i in range(len(db.ids)):
@@ -48,18 +49,18 @@ class dbs:
     def add_chromadb(self, chrdb):
         data = chrdb.get(include=["embeddings", "metadatas", "documents"])
         if "ids" in data:
-            self.ids.extend(data["ids"])
+            self.ids.extend(list(data["ids"]))
 
-        if "embeddings" in data:
-            self.embeds.extend(data["embeddings"])
+        if "embeddings" in data and data["embeddings"] is not None:
+            self.embeds.extend(getattr(data["embeddings"], "tolist", lambda: list(data["embeddings"]))())
         else:
             self.embeds.extend([[] for _ in range(len(data["ids"]))])
-        if "metadatas" in data:
-            self.metadatas.extend(data["metadatas"])
+        if "metadatas" in data and data["metadatas"] is not None:
+            self.metadatas.extend(list(data["metadatas"]))
         else:
             self.metadatas.extend([{} for _ in range(len(data["ids"]))])
-        if "documents" in data:
-            self.docs.extend(data["documents"])
+        if "documents" in data and data["documents"] is not None:
+            self.docs.extend(list(data["documents"]))
         else:
             self.docs.extend(["" for _ in range(len(data["ids"]))])
 

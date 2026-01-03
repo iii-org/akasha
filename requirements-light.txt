@@ -4,8 +4,9 @@ langchain>=0.3,<0.4
 langchain-community>=0.3,<0.4
 langchain_openai>=0.1.0
 langchain-chroma==0.2.2
-chromadb==0.4.14
+chromadb>=0.5.3
 openai>=1.78.1
+posthog<6.0.0
 tiktoken
 scikit-learn>=1.3.0
 jieba3>=1.0.2
@@ -29,3 +30,8 @@ langchain-mcp-adapters>=0.1.1,<0.1.15
 mlflow
 setuptools
 json_repair
+python-dotenv
+numpy<2
+pytest
+pytest-asyncio
+pytest-cov

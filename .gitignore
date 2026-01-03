@@ -9,7 +9,6 @@ dist/
 chromadb/
 chromadb*/
 logs/
-docs/
 akasha/doc/
 _build/
 questionset/
@@ -51,5 +50,6 @@ dist/
 
 uv.lock
 logs*.json
-
+.DS_Store
 upgrade_tests/.env
+__pycache__

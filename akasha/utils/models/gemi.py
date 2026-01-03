@@ -3,7 +3,7 @@ from google.genai import types
 
 from langchain.llms.base import LLM
 from typing import Dict, List, Any, Optional, Generator, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import os
 from langchain.schema.embeddings import Embeddings
 from pathlib import Path
@@ -356,8 +356,7 @@ class gemini_embed(BaseModel, Embeddings):
     embedConfig: types.EmbedContentConfig = None
     """Keyword arguments to pass when calling the `encode` method of the model."""
 
-    class Config:
-        arbitrary_types_allowed = True  # Allow arbitrary types like genai.Client
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(self, model_name: str, api_key: str, **kwargs: Any):
         """Initialize the sentence_transformer."""

@@ -39,6 +39,11 @@ def configure_logging(
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
 
+    # 降低第三方套件的噪音
+    logging.getLogger("pypdf").setLevel(logging.ERROR)
+    logging.getLogger("urllib3").setLevel(logging.ERROR)
+    logging.getLogger("chromadb").setLevel(logging.WARNING)
+
     console_fmt = "\x1b[32m[akasha]\x1b[0m %(levelname)s %(message)s"
     file_fmt = "[akasha] %(levelname)s %(message)s"
     if verbose and keep_logs:
