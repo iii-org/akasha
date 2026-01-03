@@ -35,6 +35,7 @@ question_set2.txt
 result.csv
 test_*.py
 !tests/test_*.py
+!upgrade_tests/*
 .vscode/settings.json
 SIMYOU.TTF
 SIMYOU.cw127.pkl
