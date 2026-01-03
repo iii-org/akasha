@@ -51,3 +51,5 @@ dist/
 
 uv.lock
 logs*.json
+
+upgrade_tests/.env

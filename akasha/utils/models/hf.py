@@ -1,9 +1,19 @@
 from typing import List, Any, Optional, Generator, Union
 from langchain.llms.base import LLM
-from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+try:
+    from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+except ImportError:
+    AutoTokenizer = None
+    AutoModelForCausalLM = None
+    TextIteratorStreamer = None
+
 from akasha.constants import DEFAULT_USER_AGENT
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
+
 import requests
 from threading import Thread
 
@@ -38,6 +48,10 @@ class hf_model(LLM):
         else:
             self.hf_token = None
 
+        if torch is None:
+            raise ImportError(
+                "Feature requiring 'torch' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if temperature == 0.0:
             temperature = 0.01

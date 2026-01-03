@@ -1,8 +1,16 @@
 from typing import List, Any, Optional
 from langchain.llms.base import LLM
-from transformers import AutoTokenizer, TextStreamer
+try:
+    from transformers import AutoTokenizer, TextStreamer
+except ImportError:
+    AutoTokenizer = None
+    TextStreamer = None
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
+
 import sys
 from pydantic import Field
 
@@ -31,6 +39,10 @@ class gptq(LLM):
         max_token: int = 4096,
     ):
         super().__init__()
+        if torch is None or AutoTokenizer is None:
+             raise ImportError(
+                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
         self.tokenizer = AutoTokenizer.from_pretrained(
             model_name_or_path, use_fast=False, max_length=max_token, truncation=True
         )
@@ -124,6 +136,10 @@ class peft_Llama2(LLM):
         self, model_name_or_path: str, max_token: int = 2048, temperature: float = 0.01
     ):
         super().__init__()
+        if torch is None or AutoTokenizer is None:
+             raise ImportError(
+                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
         from peft import AutoPeftModelForCausalLM
 
         self.temperature = temperature
@@ -188,6 +204,10 @@ class TaiwanLLaMaGPTQ(LLM):
 
     def __init__(self, model_name_or_path: str, temperature: float = 0.01):
         super().__init__()
+        if torch is None or AutoTokenizer is None:
+             raise ImportError(
+                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01

@@ -157,12 +157,17 @@ def handle_embeddings(
         "transformer",
         "hf",
     ]:
-        from langchain_huggingface import HuggingFaceEmbeddings
+        try:
+            from langchain_huggingface import HuggingFaceEmbeddings
 
-        embeddings = HuggingFaceEmbeddings(
-            model_name=embedding_name, model_kwargs={"trust_remote_code": True}
-        )
-        info = "selected hugging face embeddings.\n"
+            embeddings = HuggingFaceEmbeddings(
+                model_name=embedding_name, model_kwargs={"trust_remote_code": True}
+            )
+            info = "selected hugging face embeddings.\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
 
     elif embedding_type in [
         "tf",
@@ -171,10 +176,15 @@ def handle_embeddings(
         "tensorflowhubembeddings",
         "tensorflowembeddings",
     ]:
-        from langchain_community.embeddings import TensorflowHubEmbeddings
+        try:
+            from langchain_community.embeddings import TensorflowHubEmbeddings
 
-        embeddings = TensorflowHubEmbeddings()
-        info = "selected tensorflow embeddings.\n"
+            embeddings = TensorflowHubEmbeddings()
+            info = "selected tensorflow embeddings.\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'tensorflow' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
 
     elif embedding_type in ["gemini", "gemi", "google"]:
         from akasha.utils.models.gemi import gemini_embed
@@ -333,14 +343,19 @@ def handle_model(
         model_type in ["llama-cpu", "llama-gpu", "llama", "llama2", "llama-cpp"]
         and model_name != ""
     ):
-        from akasha.utils.models.llamacpp2 import LlamaCPP
+        try:
+            from akasha.utils.models.llamacpp2 import LlamaCPP
 
-        model = LlamaCPP(
-            model_name=model_name,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-        )
-        info = "selected llama-cpp model\n"
+            model = LlamaCPP(
+                model_name=model_name,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+            )
+            info = "selected llama-cpp model\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'llama-cpp-python' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
     elif model_type in [
         "huggingface",
         "huggingfacehub",
@@ -349,50 +364,70 @@ def handle_model(
         "huggingface-hub",
         "hf",
     ]:
-        from akasha.utils.models.hf import hf_model
+        try:
+            from akasha.utils.models.hf import hf_model
 
-        model = hf_model(
-            model_name=model_name,
-            env_dict=env_dict,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-        )
-        info = f"selected huggingface model {model_name}.\n"
+            model = hf_model(
+                model_name=model_name,
+                env_dict=env_dict,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+            )
+            info = f"selected huggingface model {model_name}.\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
 
     elif model_type in ["chatglm", "chatglm2", "glm"]:
-        from akasha.utils.models.chglm import chatGLM
+        try:
+            from akasha.utils.models.chglm import chatGLM
 
-        model = chatGLM(
-            model_name=model_name,
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
-        )
-        info = f"selected chatglm model {model_name}.\n"
+            model = chatGLM(
+                model_name=model_name,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+            )
+            info = f"selected chatglm model {model_name}.\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
 
     elif model_type in ["lora", "peft"]:
-        from akasha.utils.models.gtq import peft_Llama2
+        try:
+            from akasha.utils.models.gtq import peft_Llama2
 
-        model = peft_Llama2(model_name_or_path=model_name, temperature=temperature)
-        info = f"selected peft model {model_name}.\n"
+            model = peft_Llama2(model_name_or_path=model_name, temperature=temperature)
+            info = f"selected peft model {model_name}.\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'torch/transformers/peft' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
 
     elif model_type in ["gptq"]:
-        if model_name.lower().find("taiwan-llama") != -1:
-            from akasha.utils.models.gtq import TaiwanLLaMaGPTQ
+        try:
+            if model_name.lower().find("taiwan-llama") != -1:
+                from akasha.utils.models.gtq import TaiwanLLaMaGPTQ
 
-            model = TaiwanLLaMaGPTQ(
-                model_name_or_path=model_name, temperature=temperature
+                model = TaiwanLLaMaGPTQ(
+                    model_name_or_path=model_name, temperature=temperature
+                )
+
+            else:
+                from akasha.utils.models.gtq import gptq
+
+                model = gptq(
+                    model_name_or_path=model_name,
+                    temperature=temperature,
+                    bit4=True,
+                    max_token=4096,
+                )
+            info = f"selected gptq model {model_name}.\n"
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'torch/transformers/auto-gptq' is not installed. Please install with: pip install akasha-terminal[full]"
             )
-
-        else:
-            from akasha.utils.models.gtq import gptq
-
-            model = gptq(
-                model_name_or_path=model_name,
-                temperature=temperature,
-                bit4=True,
-                max_token=4096,
-            )
-        info = f"selected gptq model {model_name}.\n"
     else:
         if model_type not in ["openai", "gpt-3.5", "gpt"]:
             info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"

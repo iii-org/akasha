@@ -46,8 +46,13 @@ from langchain.schema import Document
 
 
 def get_torch():
-    ttorch = importlib.import_module("torch")
-    return ttorch
+    try:
+        ttorch = importlib.import_module("torch")
+        return ttorch
+    except ImportError:
+        raise ImportError(
+            "Feature requiring 'torch' is not installed. Please install with: pip install akasha-terminal[full]"
+        )
 
 
 def _generate_single_choice_question(

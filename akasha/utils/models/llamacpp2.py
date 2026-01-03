@@ -24,7 +24,12 @@ class LlamaCPP(LLM):
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__(model_id=model_name)
-        from llama_cpp import Llama
+        try:
+            from llama_cpp import Llama
+        except ImportError:
+            raise ImportError(
+                "Feature requiring 'llama-cpp-python' is not installed. Please install with: pip install akasha-terminal[full]"
+            )
 
         if temperature == 0.0:
             temperature = 0.01

@@ -17,25 +17,18 @@ dependencies = [
   "langchain>=0.3,<0.4",
   "langchain-community>=0.3,<0.4",
   "langchain_openai>=0.1.0",
-  "langchain-huggingface>=0.1.2",
   "langchain-chroma==0.2.2",
   "chromadb==0.4.14",
-  "onnxruntime<=1.20.0",
   "openai>=1.78.1",
   "tiktoken",
   "scikit-learn>=1.3.0",
   "jieba3>=1.0.2",
   "opencc-python-reimplemented==0.1.7",
-  "sentence-transformers>=3.1.1",
-  "transformers>=4.50.0",
-  "accelerate>=1.7.0",
   "tqdm>=4.65.0",
   "docx2txt==0.8",
   "rouge==1.0.1",
   "rouge-chinese==1.0.3",
-  "bert-score==0.3.13",
   "click",
-  "tokenizers>=0.19.1",
   "streamlit>=1.33.0",
   "streamlit_option_menu>=0.3.6",
   "rank_bm25",
@@ -43,7 +36,6 @@ dependencies = [
   "python-pptx",
   "wikipedia",
   "numpy<2",
-  "sentencepiece",
   "google-genai>=1.15.0",
   "anthropic",
   "tavily-python",
@@ -51,18 +43,48 @@ dependencies = [
   "langchain-mcp-adapters>=0.1.1,<0.1.15",
   "mlflow",
   "json_repair",
+  "python-dotenv",
 
-  # 各平台 Torch/torchvision（沿用釘版與標記）
-  "torch==2.2.0; platform_system == 'Windows'",
-  "torch==2.0.1; platform_system == 'Darwin'",
-  "torch==2.2.0; platform_system == 'Linux'",
+  # 重度相依 (預設安裝，除非指定 [light] )
+  "langchain-huggingface>=0.1.2; extra != 'light'",
+  "onnxruntime<=1.20.0; extra != 'light'",
+  "sentence-transformers>=3.1.1; extra != 'light'",
+  "transformers>=4.50.0; extra != 'light'",
+  "accelerate>=1.7.0; extra != 'light'",
+  "bert-score==0.3.13; extra != 'light'",
+  "tokenizers>=0.19.1; extra != 'light'",
+  "sentencepiece; extra != 'light'",
 
-  "torchvision==0.17.0; platform_system == 'Windows'",
-  "torchvision==0.15.2; platform_system == 'Darwin'",
-  "torchvision==0.17.0; platform_system == 'Linux'",
+  # 各平台 Torch/torchvision
+  "torch==2.2.0; platform_system == 'Windows' and extra != 'light'",
+  "torch==2.0.1; platform_system == 'Darwin' and extra != 'light'",
+  "torch==2.2.0; platform_system == 'Linux' and extra != 'light'",
+
+  "torchvision==0.17.0; platform_system == 'Windows' and extra != 'light'",
+  "torchvision==0.15.2; platform_system == 'Darwin' and extra != 'light'",
+  "torchvision==0.17.0; platform_system == 'Linux' and extra != 'light'",
 ]
 
 [project.optional-dependencies]
+light = []
+full = [
+  "langchain-huggingface>=0.1.2",
+  "onnxruntime<=1.20.0",
+  "sentence-transformers>=3.1.1",
+  "transformers>=4.50.0",
+  "accelerate>=1.7.0",
+  "bert-score==0.3.13",
+  "tokenizers>=0.19.1",
+  "sentencepiece",
+  "torch==2.2.0; platform_system == 'Windows'",
+  "torch==2.0.1; platform_system == 'Darwin'",
+  "torch==2.2.0; platform_system == 'Linux'",
+  "torchvision==0.17.0; platform_system == 'Windows'",
+  "torchvision==0.15.2; platform_system == 'Darwin'",
+  "torchvision==0.17.0; platform_system == 'Linux'",
+  "llama-cpp-python>=0.3.8",
+  "auto-gptq==0.3.1",
+]
 llama-cpp = ["llama-cpp-python>=0.3.8"]
 peft = ["auto-gptq==0.3.1"]
 dev = ["pytest", "pytest-cov"]

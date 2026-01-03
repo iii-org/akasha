@@ -63,9 +63,14 @@ class myRerankRetriever(BaseRetriever):
 
 
 def rerank(query: str, docs: list, threshold: float, model_name: str):
-    import torch
+    try:
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    except ImportError:
+        raise ImportError(
+            "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+        )
     import gc
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -117,9 +122,14 @@ def rerank(query: str, docs: list, threshold: float, model_name: str):
 
 
 def rerank_reduce(query, docs, topK):
-    import torch
+    try:
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+    except ImportError:
+        raise ImportError(
+            "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+        )
     import gc
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
     model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
