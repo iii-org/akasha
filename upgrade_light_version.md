@@ -141,9 +141,32 @@ We will use `pytest` for verification. These tests will use real LLM APIs to ens
 5.  **CLI/UI Check**:
     -   Ensure CLI starts without crashing due to missing imports.
 
-### Execution:
-Tests should be run with:
-```bash
-pytest upgrade_tests/
-```
-*(Note: Requires `OPENAI_API_KEY`, `GEMINI_API_KEY`, etc. in `.env`)*
+### Execution with `uv` (Recommended)
+
+Using **`uv`** is the fastest way to set up a clean testing environment for both `light` and `full` versions.
+
+1.  **Prepare Environment Variables**:
+    Create a `.env` file inside the `upgrade_tests/` directory with your API keys:
+    ```env
+    OPENAI_API_KEY=sk-...
+    GEMINI_API_KEY=AIza...
+    ```
+    *Note: The included `conftest.py` will automatically load these variables when running pytest.*
+
+2.  **Run Light Version Tests**:
+    This simulates an environment without heavy dependencies:
+    ```bash
+    uv run --extra light --extra dev pytest upgrade_tests/
+    ```
+
+3.  **Run Full Version Tests**:
+    This ensures all local model features work as expected:
+    ```bash
+    uv run --extra full --extra dev pytest upgrade_tests/
+    ```
+
+4.  **Standard Test Command**:
+    If you just want to run with default dependencies:
+    ```bash
+    uv run --extra dev pytest upgrade_tests/
+    ```
