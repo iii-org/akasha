@@ -42,6 +42,9 @@ def _is_final_action(action_raw: str) -> bool:
     return action_raw.lower() in FINAL_ACTION_ALIASES
 
 
+logger = logging.getLogger("akasha.agent")
+
+
 class agents(basic_llm):
     """basic class for akasha agent, implement _change_variables, _check_db, add_log and save_logs function."""
 
@@ -209,7 +212,8 @@ class agents(basic_llm):
                     messages=messages,
                 )
 
-            return asyncio.run(collect_non_stream())
+            result = asyncio.run(collect_non_stream())
+            return result
 
         # Streaming: yield results in real time
         message_queue = queue.Queue()
@@ -430,9 +434,7 @@ class agents(basic_llm):
                     }
                 )
                 log_step("Final answer produced")
-
                 break
-
             elif cur_action["action"] in self.tools:
                 try:
                     tool_name = cur_action["action"]
@@ -577,7 +579,6 @@ class agents(basic_llm):
             )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
-
         return response
 
     async def _run_agent_stream(

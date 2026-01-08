@@ -36,10 +36,6 @@ class gemini_model(LLM):
         if "max_output_tokens" in kwargs:
             self.max_output_tokens = kwargs["max_output_tokens"]
 
-        self.generation_config = types.GenerateContentConfig(
-            max_output_tokens=self.max_output_tokens,
-            temperature=temperature,
-        )
         self.model_name = model_name
 
     @property
@@ -75,6 +71,7 @@ class gemini_model(LLM):
             top_p=self.top_p,
             stop_sequences=stop,
             system_instruction=system_prompt,
+            automatic_function_calling={"disable": True},
         )
         for chunk in self.client.models.generate_content_stream(
             model=self.model_name, contents=prompt, config=generation_config
@@ -111,6 +108,7 @@ class gemini_model(LLM):
             "top_p": self.top_p,
             "stop_sequences": stop,
             "system_instruction": system_prompt,
+            "automatic_function_calling": {"disable": True},
         }
         if response_format is not None:
             config_param["response_schema"] = list[response_format]
@@ -119,15 +117,14 @@ class gemini_model(LLM):
 
         ret = ""
 
-        for chunk in self.client.models.generate_content_stream(
+        response = self.client.models.generate_content(
             model=self.model_name, contents=prompt, config=generation_config
-        ):
-            if chunk.text:
-                if verbose:
-                    print(chunk.text, end="", flush=True)
-                ret += chunk.text
-
-        return ret
+        )
+        if response.text:
+            if verbose:
+                print(response.text, end="", flush=True)
+            return response.text
+        return ""
 
     def _invoke_helper(self, args):
         messages, stop, verbose = args
@@ -277,10 +274,11 @@ class gemini_model(LLM):
 
     def get_num_tokens(self, text: str) -> int:
         try:
-            num_tokens = calculate_token(text, model_name=self.model_name)
+            num_tokens = self.client.models.count_tokens(
+                model=self.model_name, contents=text
+            ).total_tokens
         except Exception:
             import tiktoken
-
             encoding = tiktoken.get_encoding("cl100k_base")
             num_tokens = len(encoding.encode(text))
 
