@@ -1,19 +1,23 @@
 import pytest
 import akasha
 from typing import Tuple
+from pathlib import Path
+
+ENV_FILE = Path(__file__).resolve().parents[1] / "test_upgrade" / ".env"
 
 
 @pytest.fixture
 def base_line():
     eva = akasha.eval(
-        embeddings="openai:text-embedding-3-small",
-        model="openai:gpt-3.5-turbo",
+        embeddings="gemini:gemini-embedding-001",
+        model="gemini:gemini-2.5-flash",
         verbose=True,
         search_type="bm25",
         chunk_size=500,
         max_input_tokens=2468,
         temperature=0.15,
         keep_logs=True,
+        env_file=str(ENV_FILE),
     )
     doc_path = "./docs/mic/"
     return eva, doc_path

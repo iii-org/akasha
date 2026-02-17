@@ -1,11 +1,14 @@
 import akasha
 import pytest
+from pathlib import Path
+
+ENV_FILE = Path(__file__).resolve().parents[1] / "test_upgrade" / ".env"
 
 
 @pytest.mark.summary
 def test_Summary():
     summ = akasha.summary(
-        "openai:gpt-3.5-turbo",
+        "gemini:gemini-2.5-flash",
         sum_type="map_reduce",
         sum_len=1000,
         language="en",
@@ -13,6 +16,7 @@ def test_Summary():
         max_input_tokens=3000,
         chunk_size=501,
         chunk_overlap=41,
+        env_file=str(ENV_FILE),
     )
 
     assert summ.verbose is False

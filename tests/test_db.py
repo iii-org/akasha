@@ -1,8 +1,13 @@
 import pytest
 import akasha  # noqa: F401
 from akasha.helper import handle_embeddings
+from pathlib import Path
+from dotenv import load_dotenv
 
-EMB_OBJ = handle_embeddings("openai:text-embedding-3-small", False, "")
+ENV_FILE = Path(__file__).resolve().parents[1] / "test_upgrade" / ".env"
+load_dotenv(ENV_FILE, override=True)
+
+EMB_OBJ = handle_embeddings("gemini:gemini-embedding-001", False, str(ENV_FILE))
 CHUNK_SIZE = 1000
 CERTAIN_FILE = "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf"
 

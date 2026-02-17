@@ -1,5 +1,8 @@
 import pytest
 import akasha
+from pathlib import Path
+
+ENV_FILE = Path(__file__).resolve().parents[1] / "test_upgrade" / ".env"
 
 
 def today_f():
@@ -20,7 +23,12 @@ today_tool = akasha.create_tool(
 @pytest.mark.agent
 def test_agent():
     agent = akasha.agents(
-        tools=[today_tool], temperature=1.0, verbose=True, keep_logs=True
+        tools=[today_tool],
+        temperature=1.0,
+        verbose=True,
+        keep_logs=True,
+        model="gemini:gemini-2.5-flash",
+        env_file=str(ENV_FILE),
     )
 
     res = agent("今天幾月幾號?")
