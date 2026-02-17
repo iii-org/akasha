@@ -21,7 +21,7 @@ jobs:
         run: python -V
 
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install --system -e ".[light,dev]"
 
       - name: Run pytest
         run: pytest --maxfail=1 --disable-warnings -q
