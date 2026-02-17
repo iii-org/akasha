@@ -19,7 +19,7 @@ def base_line():
         keep_logs=True,
         env_file=str(ENV_FILE),
     )
-    doc_path = "./docs/mic/"
+    doc_path = str(Path(__file__).resolve().parents[1] / "docs" / "mic")
     return eva, doc_path
 
 

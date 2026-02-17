@@ -296,6 +296,16 @@ class Model_Eval(atman):
         except Exception:
             process = "".join(response.split("問題:")).split("答案:")
             if len(process) < 2:
+                question_only = (
+                    response.replace("問題：", "").replace("問題:", "").strip()
+                )
+                if question_only and self.question_style == "essay":
+                    self.question.append(source_file_name + question_only)
+                    self.answer.append("")
+                    logging.warning(
+                        "Question parsed without answer; using empty answer."
+                    )
+                    return True
                 return False
 
         process[0] = process[0].replace("根據文件", "")

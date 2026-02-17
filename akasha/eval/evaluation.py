@@ -238,6 +238,12 @@ class eval(Model_Eval):
             table = self._update_table(table, docs)
 
         progress.close()  # end running llm progress bar
+        if len(self.question) == 0:
+            raise RuntimeError(
+                "Question set generation produced no questions. This usually means the "
+                "LLM call failed (missing/invalid API key, rate limit), or the "
+                "document source was empty/unreadable."
+            )
 
         end_time = time.time()
         self._display_info_fnl()
@@ -390,6 +396,12 @@ class eval(Model_Eval):
             table = self._update_table(table, docs)
 
         progress.close()  # end running llm progress bar
+        if len(self.question) == 0:
+            raise RuntimeError(
+                "Question set generation produced no questions. This usually means the "
+                "LLM call failed (missing/invalid API key, rate limit), or the "
+                "document source was empty/unreadable."
+            )
 
         end_time = time.time()
 
@@ -438,6 +450,11 @@ class eval(Model_Eval):
                 questionset_file, self.question_type, self.question_style
             )
         )
+        if len(question) == 0:
+            raise RuntimeError(
+                "No questions found in questionset. This usually means question generation failed "
+                "(missing/invalid API key, empty docs, or upstream LLM error)."
+            )
 
         if check_sum_type(self.question_type, self.question_style):
             if self.question_style.lower() == "essay":
@@ -510,9 +527,13 @@ class eval(Model_Eval):
         self._add_result_log(timestamp, end_time - start_time)
 
         if self.question_style.lower() == "essay":
-            avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
+            rouge_scores = self.score.get("rouge", [])
+            llm_scores = self.score.get("llm_score", [])
+            avg_rouge = round(
+                (sum(rouge_scores) / len(rouge_scores)) if rouge_scores else 0.0, 3
+            )
             avg_llm_score = round(
-                sum(self.score["llm_score"]) / len(self.score["llm_score"]), 3
+                (sum(llm_scores) / len(llm_scores)) if llm_scores else 0.0, 3
             )
 
             self._upload_logs(
@@ -526,7 +547,11 @@ class eval(Model_Eval):
             return avg_rouge, avg_llm_score, self.doc_tokens
 
         else:
-            correct_rate = self.score["correct_count"] / self.question_num
+            correct_rate = (
+                self.score.get("correct_count", 0) / self.question_num
+                if self.question_num
+                else 0.0
+            )
             self._upload_logs(
                 end_time - start_time,
                 table,
