@@ -9,7 +9,7 @@ def api_rag():
     Fixture for RAG using OpenAI (default).
     Ensure OPENAI_API_KEY is set in environment.
     """
-    if "OPENAI_API_KEY" not in os.environ:
+    if not os.environ.get("OPENAI_API_KEY"):
         pytest.skip("OPENAI_API_KEY not found in environment")
     
     return akasha.RAG(
