@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "akasha-light" ]
- # pull_request:  
+    branches: [ "akasha-light", "light-version" ]
+  pull_request:
+    branches: [ "master" ]
 
 
 jobs:
