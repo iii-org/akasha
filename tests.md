@@ -130,7 +130,7 @@
 - 使用 `pytest` 作為主要測試框架。
 - 使用 `pytest-asyncio` 測試非同步功能 (如 Agent)。
 - 使用 `pydantic` 進行參數校驗 (如果需要)。
-- 利用 `upgrade_tests/` 下的結構來進行跨平臺相容性測試。
+- 利用 `tests/upgrade_tests/` 下的結構來進行跨平臺相容性測試。
 
 ### 5.2 環境架設建議 (使用 `uv`)
 為了確保測試環境與開發代碼同步，推薦使用以下流程：
@@ -181,7 +181,7 @@ pytest tests/test_api_stability.py -s
   - [ ] **基礎文件**: 1-5 頁的 `.txt` 或 `.pdf` (RAG 基本測試)。
   - [ ] **結構化數據**: 一個簡單的 `.json` 檔案。
 - **環境設定**:
-  - [ ] 安裝 `requirements-light.txt` 內的依賴。
+- [ ] 安裝 `requirements-light.txt` 內的依賴（已包含 `bert-score` 以支援 eval 測試）。
 
 ### 6.2 [Full] 版準備事項
 **需要 GPU 算力、較大磁碟空間，包含所有本地推理功能。**

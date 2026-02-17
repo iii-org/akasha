@@ -1,5 +1,5 @@
 from typing import List, Any, Optional, Generator, Union
-from langchain.llms.base import LLM
+from langchain_core.language_models import LLM
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 except ImportError:

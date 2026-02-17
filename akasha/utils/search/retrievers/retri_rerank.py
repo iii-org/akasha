@@ -1,6 +1,7 @@
 from typing import Any, List, Optional, Tuple
 from pydantic import Field
-from langchain.schema import BaseRetriever, Document
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.documents import Document
 
 
 class myRerankRetriever(BaseRetriever):

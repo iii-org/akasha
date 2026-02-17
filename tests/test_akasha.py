@@ -1,5 +1,10 @@
 import pytest
 import akasha
+from pathlib import Path
+from dotenv import load_dotenv
+
+ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
+load_dotenv(ENV_FILE, override=True)
 
 install_requires = [
     "pypdf",
@@ -58,12 +63,13 @@ def base_embed(texts: list) -> list:
 @pytest.fixture
 def base_line():
     ak = akasha.RAG(
-        embeddings="openai:text-embedding-3-small",
-        model="openai:gpt-3.5-turbo",
+        embeddings="gemini:gemini-embedding-001",
+        model="gemini:gemini-2.5-flash",
         verbose=False,
         chunk_size=500,
         max_input_tokens=3010,
         temperature=0.15,
+        env_file=str(ENV_FILE),
         system_prompt=
         "You are the expert of Market Intelligence and Consulting Institute, please answer the following questions: ",
     )
@@ -92,11 +98,12 @@ def test_RAG(base_line: akasha.RAG):
 @pytest.mark.akasha
 def test_ask():
     ak = akasha.ask(
-        model="openai:gpt-4o",
+        model="gemini:gemini-2.5-flash",
         keep_logs=True,
         verbose=True,
         max_input_tokens=3000,
         stream=True,
+        env_file=str(ENV_FILE),
     )
     res = ak("此requirement中chromadb的版本為何?", install_requires)
     ret = ""
@@ -108,8 +115,8 @@ def test_ask():
 
     mem = akasha.MemoryManager(
         memory_name="test_memory",
-        model="openai:gpt-4o",
-        embeddings="openai:text-embedding-3-small",
+        model="gemini:gemini-2.5-flash",
+        embeddings="gemini:gemini-embedding-001",
         verbose=True,
     )
     PROMPT = "我的名字是什麼?"

@@ -2,7 +2,8 @@ from typing import Any, List, Optional, Tuple
 from pydantic import Field
 import numpy as np
 
-from langchain.schema import BaseRetriever, Document
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.documents import Document
 from akasha.helper.base import jieba_tokenizer
 from rank_bm25 import BM25Okapi
 

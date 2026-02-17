@@ -1,11 +1,11 @@
 from google import genai
 from google.genai import types
 
-from langchain.llms.base import LLM
+from langchain_core.language_models import LLM
 from typing import Dict, List, Any, Optional, Generator, Union
 from pydantic import BaseModel, ConfigDict
 import os
-from langchain.schema.embeddings import Embeddings
+from langchain_core.embeddings import Embeddings
 from pathlib import Path
 
 # from pydantic import Field

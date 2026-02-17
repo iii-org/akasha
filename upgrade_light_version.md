@@ -78,7 +78,7 @@ The following dependencies will be moved from the core `dependencies` to the `[f
 | `onnxruntime` | Medium | Inference optimization |
 | `tokenizers` | Medium | HuggingFace tokenization |
 | `sentencepiece` | Medium | HuggingFace tokenization |
-| `bert-score` | Evaluation | Uses transformers/torch |
+| `bert-score` | Evaluation | Included in light requirements |
 
 ---
 
@@ -111,15 +111,15 @@ In the `light` version, we must ensure users are properly informed when they hit
     -   Remove heavy packages from `dependencies`.
     -   Add `full` extra containing the heavy packages.
     -   Add `light` extra (which can be empty or contain a subset if preferred).
-2.  **Update `requirements.txt`**: Create a `requirements-light.txt` and a `requirements.txt` (full).
+2.  **Update `requirements.txt`**: Create a `requirements-light.txt` and a `requirements.txt` (full). Keep `bert-score` aligned with test expectations (light now includes it).
 
 ### Phase 3: Verification
-1.  Create a separate testing directory `upgrade_tests/`.
+1.  Create a separate testing directory `tests/upgrade_tests/`.
 2.  Perform tests in a clean environment without `torch`.
 
 ---
 
-## 9. Testing Plan (`upgrade_tests`)
+## 9. Testing Plan (`tests/upgrade_tests`)
 
 We will use `pytest` for verification. These tests will use real LLM APIs to ensure the package remains functional in a light environment.
 
@@ -146,7 +146,7 @@ We will use `pytest` for verification. These tests will use real LLM APIs to ens
 Using **`uv`** is the fastest way to set up a clean testing environment for both `light` and `full` versions.
 
 1.  **Prepare Environment Variables**:
-    Create a `.env` file inside the `upgrade_tests/` directory with your API keys:
+    Create a `.env` file inside the `tests/upgrade_tests/` directory with your API keys:
     ```env
     OPENAI_API_KEY=sk-...
     GEMINI_API_KEY=AIza...
@@ -156,17 +156,17 @@ Using **`uv`** is the fastest way to set up a clean testing environment for both
 2.  **Run Light Version Tests**:
     This simulates an environment without heavy dependencies:
     ```bash
-    uv run --extra light --extra dev pytest upgrade_tests/
+    uv run --extra light --extra dev pytest tests/upgrade_tests/
     ```
 
 3.  **Run Full Version Tests**:
     This ensures all local model features work as expected:
     ```bash
-    uv run --extra full --extra dev pytest upgrade_tests/
+    uv run --extra full --extra dev pytest tests/upgrade_tests/
     ```
 
 4.  **Standard Test Command**:
     If you just want to run with default dependencies:
     ```bash
-    uv run --extra dev pytest upgrade_tests/
+    uv run --extra dev pytest tests/upgrade_tests/
     ```

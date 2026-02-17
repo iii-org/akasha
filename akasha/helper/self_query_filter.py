@@ -1,7 +1,7 @@
 from langchain_core.documents import Document
 
 # from langchain_openai import OpenAIEmbeddings
-from langchain.chains.query_constructor.base import AttributeInfo
+from langchain_classic.chains.query_constructor.base import AttributeInfo
 from typing import List, Union, Set, Any, Tuple, Optional, Callable
 import json
 from pydantic import Field

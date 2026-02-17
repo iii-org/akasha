@@ -2,8 +2,8 @@ from typing import Union, List, Tuple, Callable
 from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
 from chromadb.config import Settings
-from langchain.docstore.document import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pathlib import Path
 import json
 import logging

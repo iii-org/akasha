@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, Optional, Callable
 from pydantic import BaseModel, Field
-from langchain.schema.embeddings import Embeddings
-from langchain.llms.base import LLM
+from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import LLM
 
 
 class custom_embed(BaseModel, Embeddings):
@@ -12,7 +12,7 @@ class custom_embed(BaseModel, Embeddings):
     Example:
         .. code-block:: python
 
-            from langchain.embeddings import HuggingFaceEmbeddings
+            from langchain_community.embeddings import HuggingFaceEmbeddings
 
             model_name = "sentence-transformers/all-mpnet-base-v2"
             model_kwargs = {'device': 'cpu'}

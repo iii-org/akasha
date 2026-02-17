@@ -26,7 +26,7 @@ import datetime
 import time
 from typing import List, Union, Tuple, Callable
 from pathlib import Path
-from langchain.schema import Document
+from langchain_core.documents import Document
 from tqdm import tqdm
 import logging
 
@@ -478,6 +478,17 @@ class eval(Model_Eval):
         total_docs = []
 
         self.question_num = len(question)
+        if self.question_num == 0:
+            self._upload_logs(
+                time.time() - start_time,
+                table,
+                sum(self.doc_length),
+                sum(self.doc_tokens),
+                True,
+            )
+            if self.question_style.lower() == "essay":
+                return 0.0, 0.0, 0.0, self.doc_tokens
+            return 0.0, self.doc_tokens
         progress = tqdm(total=self.question, desc=f"Run Eval({self.question_style})")
         ## add logs ##
         self._add_basic_log(timestamp, "evaluation", -1, -1, questionset_file)
@@ -518,6 +529,16 @@ class eval(Model_Eval):
         self._add_result_log(timestamp, end_time - start_time)
 
         if self.question_style.lower() == "essay":
+            if not self.score["bert"]:
+                self._upload_logs(
+                    end_time - start_time,
+                    table,
+                    sum(self.doc_length),
+                    sum(self.doc_tokens),
+                    True,
+                )
+                return 0.0, 0.0, 0.0, self.doc_tokens
+
             avg_bert = round(sum(self.score["bert"]) / len(self.score["bert"]), 3)
             avg_rouge = round(sum(self.score["rouge"]) / len(self.score["rouge"]), 3)
             avg_llm_score = round(

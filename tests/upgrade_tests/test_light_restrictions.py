@@ -27,7 +27,11 @@ def test_rerank_warning_when_torch_missing():
         # Since we only ask for rerank and it fails, it might raise ValueError later if list is empty
         with patch('builtins.print') as mock_print:
             with pytest.raises(ValueError): # No retrievers found because rerank was skipped
-                get_retrivers(mock_db, "openai:embeddings", search_type="rerank")
+                get_retrivers(
+                    mock_db,
+                    "gemini:gemini-embedding-001",
+                    search_type="rerank",
+                )
             
             # Check if warning was printed
             warning_called = any("pip install akasha-terminal[full]" in args[0] for args, _ in mock_print.call_args_list)

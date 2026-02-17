@@ -1,9 +1,11 @@
 pypdf
-langchain-core>=0.3,<0.4
-langchain>=0.3,<0.4
-langchain-community>=0.3,<0.4
-langchain_openai>=0.1.0
-langchain-chroma==0.2.2
+langchain-core>=1.0,<2.0
+langchain>=1.0,<2.0
+langchain-community>=0.4.1,<0.5
+langchain-classic>=1.0,<2.0
+langchain_openai>=1.0,<2.0
+langchain-text-splitters>=1.1,<2.0
+langchain-chroma>=1.1,<2.0
 chromadb>=0.5.3
 openai>=1.78.1
 posthog<6.0.0
@@ -14,6 +16,7 @@ tqdm>=4.65.0
 docx2txt==0.8
 rouge==1.0.1
 rouge-chinese==1.0.3
+bert-score==0.3.13
 click
 streamlit>=1.33.0
 streamlit_option_menu>=0.3.6
@@ -26,7 +29,7 @@ google-genai>=1.15.0
 anthropic
 tavily-python
 faiss-cpu
-langchain-mcp-adapters>=0.1.1,<0.1.15
+langchain-mcp-adapters>=0.2,<0.3
 mlflow
 setuptools
 json_repair

@@ -13,8 +13,8 @@ def gemini_rag():
     
     return akasha.RAG(
         model="gemini:gemini-2.5-flash",
-        embeddings="gemini:text-embedding-004",
-        verbose=True
+        embeddings="gemini:gemini-embedding-001",
+        verbose=True,
     )
 
 def test_gemini_rag_call(gemini_rag):

@@ -1,5 +1,5 @@
 from openai import OpenAI, AzureOpenAI
-from langchain.llms.base import LLM
+from langchain_core.language_models import LLM
 import base64
 from pathlib import Path
 import openai as ai

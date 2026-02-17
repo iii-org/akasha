@@ -1,4 +1,4 @@
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 from typing import Union, List
 import json
 import datetime

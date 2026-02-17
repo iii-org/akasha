@@ -1,6 +1,6 @@
 import logging
 from typing import List, Any, Optional, Generator
-from langchain.llms.base import LLM
+from langchain_core.language_models import LLM
 from openai import OpenAI
 import concurrent.futures
 
