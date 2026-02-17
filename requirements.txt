@@ -1,10 +1,12 @@
 pypdf
-langchain-core>=0.3,<0.4
-langchain>=0.3,<0.4
-langchain-community>=0.3,<0.4
+langchain-core>=1.0,<2.0
+langchain>=1.0,<2.0
+langchain-community>=0.4.1,<0.5
+langchain-classic>=1.0,<2.0
 langchain-huggingface>=0.1.2
-langchain_openai>=0.1.0
-langchain-chroma==0.2.2
+langchain_openai>=1.0,<2.0
+langchain-text-splitters>=1.1,<2.0
+langchain-chroma>=1.1,<2.0
 monotonic
 chromadb==0.4.14
 onnxruntime <= 1.20.0
@@ -30,7 +32,7 @@ sentencepiece
 anthropic
 tavily-python
 faiss-cpu
-langchain-mcp-adapters>=0.1.1
+langchain-mcp-adapters>=0.2,<0.3
 mlflow
 setuptools
 json_repair

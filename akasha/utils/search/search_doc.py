@@ -2,7 +2,8 @@ from typing import List, Tuple, Union, Callable
 from akasha.helper.base import get_doc_length
 from akasha.helper.token_counter import myTokenizer
 from .auto_search import get_relevant_doc_auto
-from langchain.schema import Document, BaseRetriever
+from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
 from langchain_core.language_models.base import BaseLanguageModel
 
 

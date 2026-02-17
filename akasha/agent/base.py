@@ -1,7 +1,7 @@
 from typing import List, Dict, Callable, Union
 import logging
 import inspect
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 
 
 def get_tool_explaination(tools: List[BaseTool]) -> Dict[str, str]:

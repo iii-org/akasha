@@ -2,7 +2,7 @@ import pytest
 import akasha
 from pathlib import Path
 
-ENV_FILE = Path(__file__).resolve().parents[1] / "test_upgrade" / ".env"
+ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
 
 
 def today_f():

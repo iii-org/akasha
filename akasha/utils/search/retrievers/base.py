@@ -10,7 +10,7 @@ from typing import List, Union, Callable
 from akasha.utils.db.db_structure import dbs
 from akasha.helper.handle_objects import handle_embeddings_and_name
 from langchain_core.embeddings import Embeddings
-from langchain.schema import BaseRetriever
+from langchain_core.retrievers import BaseRetriever
 
 
 def get_retrivers(

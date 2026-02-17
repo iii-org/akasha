@@ -1,4 +1,4 @@
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from typing import Union
 from pathlib import Path
 import re
@@ -31,8 +31,20 @@ class dbs:
                 self.docs = data["documents"]
             else:
                 self.docs = ["" for _ in range(len(data["ids"]))]
+            self._ensure_lists()
+
+    def _ensure_lists(self):
+        if not isinstance(self.ids, list):
+            self.ids = list(self.ids)
+        if not isinstance(self.embeds, list):
+            self.embeds = list(self.embeds)
+        if not isinstance(self.metadatas, list):
+            self.metadatas = list(self.metadatas)
+        if not isinstance(self.docs, list):
+            self.docs = list(self.docs)
 
     def merge(self, db: "dbs"):
+        self._ensure_lists()
         for i in range(len(db.ids)):
             if db.ids[i] not in self.vis:
                 self.ids.append(db.ids[i])
@@ -62,6 +74,7 @@ class dbs:
             self.docs.extend(data["documents"])
         else:
             self.docs.extend(["" for _ in range(len(data["ids"]))])
+        self._ensure_lists()
 
     def get_Documents(self):
         return [

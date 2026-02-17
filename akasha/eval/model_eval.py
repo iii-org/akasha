@@ -42,7 +42,7 @@ import traceback
 import logging
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 
 def _generate_single_choice_question(

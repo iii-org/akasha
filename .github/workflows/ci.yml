@@ -18,7 +18,9 @@ jobs:
         run: python -V
 
       - name: Set up environment
-        run: echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+        run: |
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
         
       - name: Install dependencies
         run: uv pip install --system -e ".[dev]"

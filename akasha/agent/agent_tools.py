@@ -1,5 +1,5 @@
 from typing import Callable, Union, List
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 from akasha.helper.base import extract_json
 from .base import create_tool
 import json

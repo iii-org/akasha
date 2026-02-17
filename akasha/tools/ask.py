@@ -23,7 +23,7 @@ from akasha.helper.run_llm import (
 )
 from typing import Union, List, Tuple, Generator
 from pathlib import Path
-from langchain.schema import Document
+from langchain_core.documents import Document
 import time
 import datetime
 from akasha.helper.token_counter import myTokenizer

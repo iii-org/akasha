@@ -26,7 +26,7 @@ import datetime
 import time
 from typing import List, Union, Tuple, Callable
 from pathlib import Path
-from langchain.schema import Document
+from langchain_core.documents import Document
 from tqdm import tqdm
 import logging
 

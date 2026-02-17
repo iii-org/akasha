@@ -4,7 +4,7 @@ from akasha.helper import handle_embeddings
 from pathlib import Path
 from dotenv import load_dotenv
 
-ENV_FILE = Path(__file__).resolve().parents[1] / "test_upgrade" / ".env"
+ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
 load_dotenv(ENV_FILE, override=True)
 
 EMB_OBJ = handle_embeddings("gemini:gemini-embedding-001", False, str(ENV_FILE))

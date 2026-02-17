@@ -5,7 +5,7 @@ from langchain_community.document_loaders import (
     UnstructuredPowerPointLoader,
 )
 from langchain_community.document_loaders.csv_loader import CSVLoader
-from langchain.schema import Document
+from langchain_core.documents import Document
 from typing import Union, List
 import warnings
 import logging
