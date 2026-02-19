@@ -8,7 +8,7 @@ def gemini_rag():
     Fixture for RAG using Gemini.
     Ensure GEMINI_API_KEY is set in environment.
     """
-    if "GEMINI_API_KEY" not in os.environ:
+    if not os.environ.get("GEMINI_API_KEY"):
         pytest.skip("GEMINI_API_KEY not found in environment")
     
     return akasha.RAG(

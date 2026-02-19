@@ -8,7 +8,7 @@ def anthropic_rag():
     Fixture for RAG using Anthropic.
     Ensure ANTHROPIC_API_KEY is set in environment.
     """
-    if "ANTHROPIC_API_KEY" not in os.environ:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
         pytest.skip("ANTHROPIC_API_KEY not found in environment")
     
     return akasha.RAG(
