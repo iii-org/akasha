@@ -197,6 +197,17 @@ class agents(basic_llm):
 
         return True
 
+    def _normalize_observation(self, observation) -> str:
+        """Normalize tool/model observation to a string for prompt/log/message safety."""
+        if isinstance(observation, str):
+            return observation
+        if isinstance(observation, (dict, list, tuple)):
+            try:
+                return json.dumps(observation, ensure_ascii=False, default=str)
+            except Exception:
+                return str(observation)
+        return str(observation)
+
     def __call__(self, question: str, messages: List[dict] = None):
         """Synchronous version of agent."""
         configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
@@ -415,6 +426,9 @@ class agents(basic_llm):
                         tool_name,
                         json.dumps(firsthand_observation, ensure_ascii=False, default=str),
                     )
+                    firsthand_observation_text = self._normalize_observation(
+                        firsthand_observation
+                    )
 
                 except Exception:
                     logging.exception(
@@ -457,7 +471,7 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation,
+                        + firsthand_observation_text,
                         self.prompt_format_type,
                         self.model,
                     )
@@ -473,17 +487,18 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation
+                        + firsthand_observation_text
                         + self.RETRI_OBSERVATION_PROMPT
                     )
                     self.input_len += get_doc_length(self.language, txt)
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
-                    observation = firsthand_observation
+                    observation = firsthand_observation_text
                 log_step("Observation recorded")
+                observation_text = self._normalize_observation(observation)
 
                 if self.verbose:
-                    logging.info("Observation: %s", observation)
+                    logging.info("Observation: %s", observation_text)
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
@@ -494,9 +509,7 @@ class agents(basic_llm):
                     "content": json.dumps(cur_action, ensure_ascii=False),
                 }
             )
-            # OLD: directly store observation (may be non-str, e.g., tuple)
-            # NEW: ensure observation is stored as string to avoid concat errors downstream
-            self.messages.append({"role": "Observation", "content": str(observation)})
+            self.messages.append({"role": "Observation", "content": observation_text})
 
             retri_messages, messages_len = retri_history_messages(
                 self.messages,
@@ -741,6 +754,9 @@ class agents(basic_llm):
                         tool_name,
                         json.dumps(firsthand_observation, ensure_ascii=False, default=str),
                     )
+                    firsthand_observation_text = self._normalize_observation(
+                        firsthand_observation
+                    )
                 except Exception:
                     logging.exception(
                         "Tool execution failed (stream): %s | input=%s",
@@ -785,7 +801,7 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation,
+                        + firsthand_observation_text,
                         self.prompt_format_type,
                         self.model,
                     )
@@ -805,19 +821,20 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation
+                        + firsthand_observation_text
                         + self.RETRI_OBSERVATION_PROMPT
                     )
                     self.input_len += get_doc_length(self.language, txt)
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
-                    observation = firsthand_observation
+                    observation = firsthand_observation_text
                 log_step("Observation recorded (stream)")
+                observation_text = self._normalize_observation(observation)
 
                 if self.verbose:
-                    logging.info("[OBSERVATION]: %s", observation)
+                    logging.info("[OBSERVATION]: %s", observation_text)
                 # yield observation #
-                intermed_stream_text = "\n[OBSERVATION]: " + str(observation) + "\n"
+                intermed_stream_text = "\n[OBSERVATION]: " + observation_text + "\n"
                 yield intermed_stream_text
 
             else:
@@ -830,9 +847,7 @@ class agents(basic_llm):
                     "content": json.dumps(cur_action, ensure_ascii=False),
                 }
             )
-            # OLD: directly store observation (may be non-str, e.g., tuple)
-            # NEW: ensure observation is stored as string to avoid concat errors downstream
-            self.messages.append({"role": "Observation", "content": str(observation)})
+            self.messages.append({"role": "Observation", "content": observation_text})
 
             retri_messages, messages_len = retri_history_messages(
                 self.messages,
