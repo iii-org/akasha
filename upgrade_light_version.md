@@ -78,7 +78,7 @@ The following dependencies will be moved from the core `dependencies` to the `[f
 | `onnxruntime` | Medium | Inference optimization |
 | `tokenizers` | Medium | HuggingFace tokenization |
 | `sentencepiece` | Medium | HuggingFace tokenization |
-| `bert-score` | Evaluation | Included in light requirements |
+| `bert-score` | Evaluation | Moved to `[full]` (requires `torch`/`transformers`) |
 
 ---
 
@@ -111,7 +111,7 @@ In the `light` version, we must ensure users are properly informed when they hit
     -   Remove heavy packages from `dependencies`.
     -   Add `full` extra containing the heavy packages.
     -   Add `light` extra (which can be empty or contain a subset if preferred).
-2.  **Update `requirements.txt`**: Create a `requirements-light.txt` and a `requirements.txt` (full). Keep `bert-score` aligned with test expectations (light now includes it).
+2.  **Update `requirements.txt`**: Create a `requirements-light.txt` and a `requirements.txt` (full). Ensure `bert-score` is only in `requirements.txt` (full), not in `requirements-light.txt`.
 
 ### Phase 3: Verification
 1.  Create a separate testing directory `tests/upgrade_tests/`.
