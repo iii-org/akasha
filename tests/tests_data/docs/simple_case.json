@@ -1,0 +1,12 @@
+[
+    {
+        "name": "Akasha Project",
+        "version": "0.9.0",
+        "status": "active"
+    },
+    {
+        "name": "Sample Module",
+        "version": "1.2.0",
+        "status": "beta"
+    }
+]

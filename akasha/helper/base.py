@@ -2,7 +2,7 @@ from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 from akasha.utils.prompts.format import language_dict
 from langchain_core.embeddings import Embeddings
 from typing import Union, Callable, Tuple, List, Dict, Any
-from langchain.schema import Document
+from langchain_core.documents import Document
 import jieba3
 import json
 import re

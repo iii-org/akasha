@@ -16,8 +16,13 @@ warnings.filterwarnings("ignore")
 
 
 def get_bert_pack():
-    bert_score = importlib.import_module("bert_score")
-    return bert_score.score
+    try:
+        bert_score = importlib.import_module("bert_score")
+        return bert_score.score
+    except ImportError:
+        raise ImportError(
+            "Feature requiring 'bert-score' is not installed. Please install with: pip install akasha-terminal[full]"
+        )
 
 
 def get_bert_score(candidate_str: str,
@@ -135,7 +140,12 @@ def get_toxic_score(texts: str, round_digit: int = 3):
     Returns:
         _type_: _description_
     """
-    from transformers import pipeline
+    try:
+        from transformers import pipeline
+    except ImportError:
+        raise ImportError(
+            "Feature requiring 'transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+        )
 
     pipe = pipeline("text-classification",
                     model="martin-ha/toxic-comment-model")

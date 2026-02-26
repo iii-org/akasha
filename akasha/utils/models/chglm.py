@@ -1,5 +1,5 @@
 from typing import List, Any, Optional
-from langchain.llms.base import LLM
+from langchain_core.language_models import LLM
 from transformers import AutoTokenizer, AutoModel
 
 from pydantic import Field

@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Tuple, Dict, Iterable
 from langchain_community.retrievers import TFIDFRetriever
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from akasha.helper.base import jieba_tokenizer
 

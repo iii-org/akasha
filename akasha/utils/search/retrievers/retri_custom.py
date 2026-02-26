@@ -1,8 +1,9 @@
 from typing import Any, Callable, List, Optional, Tuple
 from pydantic import Field
 import numpy as np
-from langchain.embeddings.base import Embeddings
-from langchain.schema import BaseRetriever, Document
+from langchain_core.embeddings import Embeddings
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.documents import Document
 from akasha.utils.db.db_structure import dbs
 
 

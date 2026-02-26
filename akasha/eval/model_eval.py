@@ -42,12 +42,17 @@ import traceback
 import logging
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 
 def get_torch():
-    ttorch = importlib.import_module("torch")
-    return ttorch
+    try:
+        ttorch = importlib.import_module("torch")
+        return ttorch
+    except ImportError:
+        raise ImportError(
+            "Feature requiring 'torch' is not installed. Please install with: pip install akasha-terminal[full]"
+        )
 
 
 def _generate_single_choice_question(

@@ -20,13 +20,13 @@ from akasha.helper.base import get_doc_length, get_docs_length
 from akasha.helper.run_llm import call_model
 from typing import Union, Tuple
 from pathlib import Path
-from langchain.schema import Document
+from langchain_core.documents import Document
 import time
 import datetime
 import math
 import logging
 from akasha.helper.token_counter import myTokenizer
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from tqdm import tqdm
 
 

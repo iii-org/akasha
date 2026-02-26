@@ -1,4 +1,4 @@
-from langchain.tools import BaseTool
+from langchain_core.tools import BaseTool
 from typing import Union, List
 import json
 import datetime
@@ -17,7 +17,7 @@ from akasha.utils.base import (
 from akasha.helper.preprocess_prompts import retri_history_messages
 from akasha.helper.base import get_doc_length, extract_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt
-from akasha.helper.run_llm import call_model
+from akasha.helper.run_llm import call_model, call_stream_model
 from akasha.utils.logging_config import configure_logging
 from .base import (
     get_tool_explaination,
@@ -40,6 +40,9 @@ def _is_final_action(action_raw: str) -> bool:
     if not isinstance(action_raw, str):
         return False
     return action_raw.lower() in FINAL_ACTION_ALIASES
+
+
+logger = logging.getLogger("akasha.agent")
 
 
 class agents(basic_llm):
@@ -194,6 +197,17 @@ class agents(basic_llm):
 
         return True
 
+    def _normalize_observation(self, observation) -> str:
+        """Normalize tool/model observation to a string for prompt/log/message safety."""
+        if isinstance(observation, str):
+            return observation
+        if isinstance(observation, (dict, list, tuple)):
+            try:
+                return json.dumps(observation, ensure_ascii=False, default=str)
+            except Exception:
+                return str(observation)
+        return str(observation)
+
     def __call__(self, question: str, messages: List[dict] = None):
         """Synchronous version of agent."""
         configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
@@ -209,66 +223,14 @@ class agents(basic_llm):
                     messages=messages,
                 )
 
-            return asyncio.run(collect_non_stream())
+            result = asyncio.run(collect_non_stream())
+            return result
 
-        # Streaming: yield results in real time
-        message_queue = queue.Queue()
-        stop_event = threading.Event()
-
-        def run_async_stream():
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            async def process_stream():
-                try:
-                    async for chunk in self._run_agent_stream(
-                        question,
-                        tool_runner=lambda tool, tool_input: tool._run(**tool_input),
-                        messages=messages,
-                    ):
-                        message_queue.put(chunk)
-                except Exception:
-                    import traceback
-                    message_queue.put(("ERROR", traceback.format_exc()))
-                finally:
-                    message_queue.put(None)
-
-            try:
-                loop.run_until_complete(process_stream())
-            finally:
-                pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
-                if pending:
-                    loop.run_until_complete(
-                        asyncio.gather(*pending, return_exceptions=True)
-                    )
-                loop.run_until_complete(loop.shutdown_asyncgens())
-                loop.close()
-
-        thread = threading.Thread(target=run_async_stream)
-        thread.daemon = True
-        thread.start()
-
-        def result_generator():
-            try:
-                while not stop_event.is_set():
-                    try:
-                        result = message_queue.get(timeout=0.1)
-                        if result is None:
-                            break
-                        if isinstance(result, tuple) and result[0] == "ERROR":
-                            raise RuntimeError(f"Error in async thread: {result[1]}")
-                        yield result
-                    except queue.Empty:
-                        if not thread.is_alive():
-                            raise RuntimeError("Background thread died unexpectedly")
-            finally:
-                stop_event.set()
-                if thread.is_alive():
-                    thread.join(timeout=5.0)
-
-        return result_generator()
+        return self._run_agent_stream(
+            question,
+            tool_runner=lambda tool, tool_input: tool._run(**tool_input),
+            messages=messages,
+        )
 
     async def acall(self, question: str, messages: List[dict] = None):
         """Asynchronous version of agent."""
@@ -430,9 +392,7 @@ class agents(basic_llm):
                     }
                 )
                 log_step("Final answer produced")
-
                 break
-
             elif cur_action["action"] in self.tools:
                 try:
                     tool_name = cur_action["action"]
@@ -447,7 +407,17 @@ class agents(basic_llm):
                     tool = self.tools[tool_name]
                     result = tool_runner(tool, tool_input)
                     if asyncio.iscoroutine(result):
-                        firsthand_observation = await result  # Await async result
+                        try:
+                            loop = asyncio.get_event_loop()
+                        except RuntimeError:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                        if loop.is_running():
+                            import concurrent.futures
+                            with concurrent.futures.ThreadPoolExecutor() as pool:
+                                firsthand_observation = pool.submit(asyncio.run, result).result()
+                        else:
+                            firsthand_observation = loop.run_until_complete(result)
                     else:
                         firsthand_observation = result  # Sync result
                     log_step(f"Tool '{tool_name}' returned")
@@ -455,6 +425,9 @@ class agents(basic_llm):
                         "Tool result: %s | output=%s",
                         tool_name,
                         json.dumps(firsthand_observation, ensure_ascii=False, default=str),
+                    )
+                    firsthand_observation_text = self._normalize_observation(
+                        firsthand_observation
                     )
 
                 except Exception:
@@ -498,7 +471,7 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation,
+                        + firsthand_observation_text,
                         self.prompt_format_type,
                         self.model,
                     )
@@ -514,17 +487,18 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation
+                        + firsthand_observation_text
                         + self.RETRI_OBSERVATION_PROMPT
                     )
                     self.input_len += get_doc_length(self.language, txt)
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
-                    observation = firsthand_observation
+                    observation = firsthand_observation_text
                 log_step("Observation recorded")
+                observation_text = self._normalize_observation(observation)
 
                 if self.verbose:
-                    logging.info("Observation: %s", observation)
+                    logging.info("Observation: %s", observation_text)
             else:
                 raise ValueError(f"Cannot find tool {cur_action['action']}")
 
@@ -535,9 +509,7 @@ class agents(basic_llm):
                     "content": json.dumps(cur_action, ensure_ascii=False),
                 }
             )
-            # OLD: directly store observation (may be non-str, e.g., tuple)
-            # NEW: ensure observation is stored as string to avoid concat errors downstream
-            self.messages.append({"role": "Observation", "content": str(observation)})
+            self.messages.append({"role": "Observation", "content": observation_text})
 
             retri_messages, messages_len = retri_history_messages(
                 self.messages,
@@ -577,10 +549,9 @@ class agents(basic_llm):
             )
         self.response = response
         self._add_result_log(timestamp, end_time - start_time)
-
         return response
 
-    async def _run_agent_stream(
+    def _run_agent_stream(
         self, question: str, tool_runner: callable, messages: List[dict] = None
     ):
         """run agent stream to get response"""
@@ -624,12 +595,17 @@ class agents(basic_llm):
             self.model,
         )
         log_step("Calling LLM for initial response (stream)")
-        response = call_model(
+        response = ""
+        
+        for chunk in call_stream_model(
             self.model_obj,
             text_input,
             self.verbose,
             keep_logs=self.keep_logs,
-        )
+        ):
+            yield chunk
+            response += chunk
+        
         log_step("Received LLM response (stream)")
 
         txt = (
@@ -684,12 +660,15 @@ class agents(basic_llm):
                     self.prompt_format_type,
                     self.model,
                 )
-                response = call_model(
+                response = ""
+                for chunk in call_stream_model(
                     self.model_obj,
                     text_input,
                     self.verbose,
                     keep_logs=self.keep_logs,
-                )
+                ):
+                    yield chunk
+                    response += chunk
                 round_count -= 1
                 txt = (
                     "Question: "
@@ -709,8 +688,8 @@ class agents(basic_llm):
             self.thoughts.append(thought)
 
             # yield thought #
-            intermed_stream_text = "\n[THOUGHT]: " + str(thought) + "\n"
-            yield intermed_stream_text
+            # intermed_stream_text = "\n[THOUGHT]: " + str(thought) + "\n"
+            # yield intermed_stream_text
 
             if cur_action is None:
                 raise ValueError("Cannot find correct action from response")
@@ -729,8 +708,7 @@ class agents(basic_llm):
                     }
                 )
 
-                yield response
-
+                # Content already streamed, just break
                 break
 
             elif cur_action["action"] in self.tools:
@@ -748,8 +726,8 @@ class agents(basic_llm):
                     intermed_stream_text = (
                         "\n[ACTION]: "
                         + tool_name
-                        + ", "
-                        + json.dumps(cur_action, ensure_ascii=False)
+                        + " "
+                        + json.dumps(tool_input, ensure_ascii=False)
                         + "\n"
                     )
                     yield intermed_stream_text
@@ -757,7 +735,17 @@ class agents(basic_llm):
                     tool = self.tools[tool_name]
                     result = tool_runner(tool, tool_input)
                     if asyncio.iscoroutine(result):
-                        firsthand_observation = await result  # Await async result
+                        try:
+                            loop = asyncio.get_event_loop()
+                        except RuntimeError:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                        if loop.is_running():
+                            import concurrent.futures
+                            with concurrent.futures.ThreadPoolExecutor() as pool:
+                                firsthand_observation = pool.submit(asyncio.run, result).result()
+                        else:
+                            firsthand_observation = loop.run_until_complete(result)
                     else:
                         firsthand_observation = result  # Sync result
                     log_step(f"Tool '{tool_name}' returned (stream)")
@@ -765,6 +753,9 @@ class agents(basic_llm):
                         "Tool result: %s | output=%s",
                         tool_name,
                         json.dumps(firsthand_observation, ensure_ascii=False, default=str),
+                    )
+                    firsthand_observation_text = self._normalize_observation(
+                        firsthand_observation
                     )
                 except Exception:
                     logging.exception(
@@ -780,12 +771,15 @@ class agents(basic_llm):
                         self.prompt_format_type,
                         self.model,
                     )
-                    response = call_model(
+                    response = ""
+                    for chunk in call_stream_model(
                         self.model_obj,
                         text_input,
                         self.verbose,
                         keep_logs=self.keep_logs,
-                    )
+                    ):
+                        yield chunk
+                        response += chunk
                     round_count -= 1
                     txt = (
                         "Question: "
@@ -807,35 +801,40 @@ class agents(basic_llm):
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation,
+                        + firsthand_observation_text,
                         self.prompt_format_type,
                         self.model,
                     )
-                    observation = call_model(
+                    observation_response = ""
+                    for chunk in call_stream_model(
                         self.model_obj,
                         text_input,
                         self.verbose,
                         keep_logs=self.keep_logs,
-                    )
+                    ):
+                        yield chunk
+                        observation_response += chunk
+                    observation = observation_response
                     txt = (
                         "Question: "
                         + question
                         + "\n\nThought: "
                         + thought
                         + "\n\nObservation: "
-                        + firsthand_observation
+                        + firsthand_observation_text
                         + self.RETRI_OBSERVATION_PROMPT
                     )
                     self.input_len += get_doc_length(self.language, txt)
                     self.tokens += self.model_obj.get_num_tokens(txt)
                 else:
-                    observation = firsthand_observation
+                    observation = firsthand_observation_text
                 log_step("Observation recorded (stream)")
+                observation_text = self._normalize_observation(observation)
 
                 if self.verbose:
-                    logging.info("[OBSERVATION]: %s", observation)
+                    logging.info("[OBSERVATION]: %s", observation_text)
                 # yield observation #
-                intermed_stream_text = "\n[OBSERVATION]: " + str(observation) + "\n"
+                intermed_stream_text = "\n[OBSERVATION]: " + observation_text + "\n"
                 yield intermed_stream_text
 
             else:
@@ -848,9 +847,7 @@ class agents(basic_llm):
                     "content": json.dumps(cur_action, ensure_ascii=False),
                 }
             )
-            # OLD: directly store observation (may be non-str, e.g., tuple)
-            # NEW: ensure observation is stored as string to avoid concat errors downstream
-            self.messages.append({"role": "Observation", "content": str(observation)})
+            self.messages.append({"role": "Observation", "content": observation_text})
 
             retri_messages, messages_len = retri_history_messages(
                 self.messages,
@@ -869,12 +866,18 @@ class agents(basic_llm):
                 self.prompt_format_type,
                 self.model,
             )
-            response = call_model(
+            log_step("Calling LLM for next step (stream)")
+            response = ""
+            
+            for chunk in call_stream_model(
                 self.model_obj,
                 text_input,
                 self.verbose,
                 keep_logs=self.keep_logs,
-            )
+            ):
+                yield chunk
+                response += chunk
+            
             log_step("Received LLM response for next step (stream)")
             txt = "Question: " + question + retri_messages + self.REACT_PROMPT
             self.input_len += get_doc_length(self.language, txt)

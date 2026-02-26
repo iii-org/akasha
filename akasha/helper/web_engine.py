@@ -1,5 +1,5 @@
 from typing import List
-from langchain.schema import Document
+from langchain_core.documents import Document
 from dotenv import dotenv_values
 import os
 from akasha.utils.prompts.format import websearch_language_dict, websearch_country_dict

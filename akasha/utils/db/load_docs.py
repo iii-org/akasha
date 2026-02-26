@@ -1,4 +1,4 @@
-from langchain.schema import Document
+from langchain_core.documents import Document
 from typing import Union, List
 from pathlib import Path
 from akasha.utils.db.db_structure import is_url

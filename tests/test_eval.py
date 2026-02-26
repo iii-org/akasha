@@ -1,19 +1,26 @@
 import pytest
 import akasha
 from typing import Tuple
+from pathlib import Path
+from dotenv import load_dotenv
+import importlib.util
+
+ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
+load_dotenv(ENV_FILE, override=True)
 
 
 @pytest.fixture
 def base_line():
     eva = akasha.eval(
-        embeddings="hf:all-MiniLM-L6-v2",
-        model="openai:gpt-3.5-turbo",
+        embeddings="gemini:gemini-embedding-001",
+        model="gemini:gemini-2.5-flash",
         verbose=True,
         search_type="tfidf",
         chunk_size=500,
         max_input_tokens=2468,
         temperature=0.15,
         keep_logs=True,
+        env_file=str(ENV_FILE),
     )
     doc_path = "./docs/mic/"
     return eva, doc_path
@@ -21,6 +28,8 @@ def base_line():
 
 @pytest.mark.eval
 def test_Model_Eval(base_line: Tuple[akasha.eval, str]):
+    if importlib.util.find_spec("bert_score") is None:
+        pytest.skip("bert_score not installed")
     eva, doc_path = base_line
 
     assert eva.verbose is True

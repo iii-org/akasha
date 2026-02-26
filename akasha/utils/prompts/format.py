@@ -1,4 +1,4 @@
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from typing import Union, List
 
 
