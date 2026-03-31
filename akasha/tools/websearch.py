@@ -11,6 +11,7 @@ from akasha.utils.prompts.gen_prompt import (
 )
 import time
 import datetime
+import logging
 from akasha.utils.prompts.format import handle_params, handle_metrics, handle_table
 from akasha.helper.base import get_doc_length
 from akasha.helper.run_llm import call_model, call_batch_model, check_relevant_answer
@@ -80,18 +81,36 @@ class websearch(ask):
             self.system_prompt = default_ask_prompt(self.language)
 
     def _display_info(self, batch: int = 1) -> bool:
-        if self.verbose is False:
+        if self.verbose is False and self.keep_logs is False:
             return False
 
-        print(f"Model: {self.model}, Temperature: {self.temperature}")
-        print(f"Search engine: {self.search_engine}, Search num: {self.search_num}")
-        print(
-            f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
-        )
-        print(
-            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
-        )
-        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
+        if self.keep_logs:
+            logging.info("Model: %s, Temperature: %s", self.model, self.temperature)
+            logging.info(
+                "Search engine: %s, Search num: %s", self.search_engine, self.search_num
+            )
+            logging.info(
+                "Prompt format type: %s, Max input tokens: %s",
+                self.prompt_format_type,
+                self.max_input_tokens,
+            )
+            logging.info(
+                "Prompt tokens: %s, Prompt length: %s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
+            logging.info("Doc tokens: %s, Doc length: %s", self.doc_tokens, self.doc_length)
+
+        if self.verbose:
+            print(f"Model: {self.model}, Temperature: {self.temperature}")
+            print(f"Search engine: {self.search_engine}, Search num: {self.search_num}")
+            print(
+                f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
+            )
+            print(
+                f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+            )
+            print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
 
         return True
 
@@ -162,6 +181,8 @@ class websearch(ask):
         self.response = ""
 
         start_time = time.time()
+        if self.keep_logs:
+            logging.info("Websearch request started")
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self._add_basic_log(timestamp, "websearch")
         self.docs = load_docs_from_webengine(
@@ -171,11 +192,19 @@ class websearch(ask):
             self.language,
             self.env_file,
         )
+        if self.keep_logs:
+            logging.info("Loaded web documents: %s", len(self.docs))
 
         ### check if prompt <= max_input_tokens ###
         tot_prompts = self.prompt + self.system_prompt
         self.prompt_length = get_doc_length(self.language, tot_prompts)
         self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model)
+        if self.keep_logs:
+            logging.info(
+                "Computed prompt size. tokens=%s, length=%s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
 
         if self.prompt_tokens > self.max_input_tokens:
             print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
@@ -195,9 +224,15 @@ class websearch(ask):
         ### start to ask llm ###
         if len(cur_documents) > 1:
             ## call batch model ##
+            if self.keep_logs:
+                logging.info(
+                    "Calling LLM in websearch batch mode, chunks=%s",
+                    len(prod_sys_prompts),
+                )
             batch_responses = call_batch_model(
                 self.model_obj,
                 prod_sys_prompts,
+                keep_logs=self.keep_logs,
             )
             fnl_conclusion_prompt = default_conclusion_prompt(prompt, self.language)
             ## check relevant answer if batch_responses > 10 ##
@@ -224,21 +259,39 @@ class websearch(ask):
             )
 
             if self.stream:
+                if self.keep_logs:
+                    logging.info("Streaming final websearch answer")
                 return self._display_stream(
                     fnl_input,
                 )
 
-            self.response = call_model(self.model_obj, fnl_input, self.verbose)
+            self.response = call_model(
+                self.model_obj,
+                fnl_input,
+                self.verbose,
+                keep_logs=self.keep_logs,
+            )
 
         else:
             if self.stream:
+                if self.keep_logs:
+                    logging.info("Streaming single-pass websearch answer")
                 return self._display_stream(prod_sys_prompts[0])
 
+            if self.keep_logs:
+                logging.info("Calling LLM in websearch single-pass mode")
             self.response = call_model(
-                self.model_obj, prod_sys_prompts[0], self.verbose
+                self.model_obj,
+                prod_sys_prompts[0],
+                self.verbose,
+                keep_logs=self.keep_logs,
             )
 
         end_time = time.time()
+        if self.keep_logs:
+            logging.info(
+                "Websearch request finished. Time Spent: %s s", end_time - start_time
+            )
         self._add_result_log(timestamp, end_time - start_time)
 
         self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)

@@ -40,6 +40,12 @@ python examples/ex_agent.py
 
 # Change log
 
+- 1.1
+
+    1. fixed `keep_logs` consistency for `ask`, `RAG`, `summary`, `websearch`, and `eval`
+    2. added INFO-level runtime logging for main execution flows
+    3. improved exception-path logging to ensure ERROR entries are written to log files
+
 - 1.0
 
     1. bug fixes

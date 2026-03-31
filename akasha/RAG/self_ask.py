@@ -1,4 +1,5 @@
 import time
+import logging
 from akasha.utils.atman import atman
 from akasha.utils.prompts.gen_prompt import (
     default_self_ask_prompt,
@@ -49,10 +50,13 @@ def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
         self_ask_sys_prompt, self_ask_prompt, self.prompt_format_type, self.model
     )
 
+    if self.keep_logs:
+        logging.info("Self-ask: deciding follow-up questions")
     ret = call_model(
         self.model_obj,
         prod_sys_prompt,
         self.verbose,
+        keep_logs=self.keep_logs,
     )
     parse_json = extract_json(ret)
 
@@ -70,6 +74,8 @@ def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
     tot_doc_len, tot_doc_tokens = 0, 0
 
     for each_fol_up in self.follow_up:
+        if self.keep_logs:
+            logging.info("Self-ask: resolving follow-up question: %s", each_fol_up)
         each_fol_ans = self(self.db, each_fol_up)
         inter_q.append(each_fol_up)
         inter_a.append(each_fol_ans)
@@ -93,18 +99,23 @@ def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
     self.doc_tokens = tot_doc_tokens
     self.prompt = final_prompt
 
-    end_time = time.time()
     if self.stream:
+        if self.keep_logs:
+            logging.info("Self-ask: streaming final merged answer")
         return self._display_stream(
             text_input,
         )
 
+    if self.keep_logs:
+        logging.info("Self-ask: calling LLM for final merged answer")
     self.response = call_model(
         self.model_obj,
         text_input,
         self.verbose,
+        keep_logs=self.keep_logs,
     )
 
+    end_time = time.time()
     self._add_result_log(timestamp, end_time - start_time)
 
     self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)

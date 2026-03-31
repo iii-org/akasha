@@ -97,18 +97,39 @@ class summary(basic_llm):
         self.chunk_overlap = chunk_overlap
 
     def _display_info(self, batch: int = 1) -> bool:
-        if self.verbose is False:
+        if self.verbose is False and self.keep_logs is False:
             return False
-        print(
-            f"Model: {self.model}, Temperature: {self.temperature}, Summary Type: {self.sum_type}"
-        )
-        print(
-            f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
-        )
-        print(
-            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
-        )
-        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}")
+
+        if self.keep_logs:
+            logging.info(
+                "Model: %s, Temperature: %s, Summary Type: %s",
+                self.model,
+                self.temperature,
+                self.sum_type,
+            )
+            logging.info(
+                "Prompt format type: %s, Max input tokens: %s",
+                self.prompt_format_type,
+                self.max_input_tokens,
+            )
+            logging.info(
+                "Prompt tokens: %s, Prompt length: %s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
+            logging.info("Doc tokens: %s, Doc length: %s", self.doc_tokens, self.doc_length)
+
+        if self.verbose:
+            print(
+                f"Model: {self.model}, Temperature: {self.temperature}, Summary Type: {self.sum_type}"
+            )
+            print(
+                f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
+            )
+            print(
+                f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+            )
+            print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}")
 
         return True
 
@@ -210,7 +231,12 @@ class summary(basic_llm):
                     self.prompt_format_type,
                     self.model,
                 )
-                response = call_model(self.model_obj, input_text, self.verbose)
+                response = call_model(
+                    self.model_obj,
+                    input_text,
+                    self.verbose,
+                    keep_logs=self.keep_logs,
+                )
 
                 total_list.append(response)
 
@@ -220,7 +246,12 @@ class summary(basic_llm):
             input_text = format_sys_prompt(
                 self.system_prompt, "\n" + prompt, self.prompt_format_type, self.model
             )
-            response = call_model(self.model_obj, input_text, self.verbose)
+            response = call_model(
+                self.model_obj,
+                input_text,
+                self.verbose,
+                keep_logs=self.keep_logs,
+            )
 
             i = newi
 
@@ -291,7 +322,12 @@ class summary(basic_llm):
             text_input = format_sys_prompt(
                 self.system_prompt, "\n" + prompt, self.prompt_format_type, self.model
             )
-            response = call_model(self.model_obj, text_input, self.verbose)
+            response = call_model(
+                self.model_obj,
+                text_input,
+                self.verbose,
+                keep_logs=self.keep_logs,
+            )
 
             response_list.append(response)
             previous_summary = response
@@ -336,14 +372,24 @@ class summary(basic_llm):
         self._change_variables(**kwargs)
 
         start_time = time.time()
+        if self.keep_logs:
+            logging.info("Summary request started")
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self.docs = load_docs_from_info(content)
+        if self.keep_logs:
+            logging.info("Loaded docs for summary: %s", len(self.docs))
         self.doc_length = get_docs_length(self.language, self.docs)
         self.doc_tokens = myTokenizer.compute_tokens(
             "".join([d.page_content for d in self.docs]), self.model
         )
         self.prompt_length = get_doc_length(self.language, self.system_prompt)
         self.prompt_tokens = myTokenizer.compute_tokens(self.system_prompt, self.model)
+        if self.keep_logs:
+            logging.info(
+                "Computed summary input size. prompt_tokens=%s, doc_tokens=%s",
+                self.prompt_tokens,
+                self.doc_tokens,
+            )
 
         ### check if docs do not has any content ###
         if self.doc_tokens == 0:
@@ -363,12 +409,22 @@ class summary(basic_llm):
         )
         split_docs = text_splitter.split_documents(self.docs)
         split_texts = [doc.page_content for doc in split_docs]
+        if self.keep_logs:
+            logging.info(
+                "Prepared summary chunks: %s (sum_type=%s)",
+                len(split_texts),
+                self.sum_type,
+            )
 
         ### start to ask llm ###
         if self.sum_type == "refine":
+            if self.keep_logs:
+                logging.info("Running refine summary flow")
             response_list, self.doc_tokens = self._refine_summary(split_texts)
 
         else:
+            if self.keep_logs:
+                logging.info("Running map-reduce summary flow")
             per_sum_chunks = _calculate_per_summary_chunks(
                 self.language, self.max_input_tokens, self.sum_len, self.chunk_size
             )
@@ -388,6 +444,10 @@ class summary(basic_llm):
         self.summary = response_list[-1]
 
         end_time = time.time()
+        if self.keep_logs:
+            logging.info(
+                "Summary request finished. Time Spent: %s s", end_time - start_time
+            )
 
         self._add_result_log(timestamp, end_time - start_time, response_list)
 

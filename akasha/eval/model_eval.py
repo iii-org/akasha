@@ -62,6 +62,7 @@ def _generate_single_choice_question(
     model,
     system_prompt: str,
     choice_num: int,
+    keep_logs: bool = False,
 ) -> list:
     """Based on gernerated question and answer, generate wrong answers for single choice question
 
@@ -85,7 +86,7 @@ def _generate_single_choice_question(
     q_prompt = format_wrong_answer(choice_num - 1, doc_text, question, cor_ans)
 
     input_text = format_sys_prompt(system_prompt, q_prompt)
-    response = call_model(model, input_text, False)
+    response = call_model(model, input_text, False, keep_logs=keep_logs)
 
     ### separate the response into wrong answers ###
     try:
@@ -232,20 +233,36 @@ class Model_Eval(atman):
         return True
 
     def _display_info(self) -> bool:
-        if self.verbose is False:
+        if self.verbose is False and self.keep_logs is False:
             return False
-        print(f"Model: {self.model}, Embeddings: {self.embeddings}")
-        print(f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
+
+        if self.keep_logs:
+            logging.info("Model: %s, Embeddings: %s", self.model, self.embeddings)
+            logging.info("Chunk size: %s, Search type: %s", self.chunk_size, self.search_type)
+
+        if self.verbose:
+            print(f"Model: {self.model}, Embeddings: {self.embeddings}")
+            print(f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
 
         return True
 
     def _display_info_fnl(self) -> bool:
-        if self.verbose is False:
+        if self.verbose is False and self.keep_logs is False:
             return False
-        print(
-            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
-        )
-        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
+
+        if self.keep_logs:
+            logging.info(
+                "Prompt tokens: %s, Prompt length: %s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
+            logging.info("Doc tokens: %s, Doc length: %s", self.doc_tokens, self.doc_length)
+
+        if self.verbose:
+            print(
+                f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+            )
+            print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
 
         return True
 
@@ -322,6 +339,7 @@ class Model_Eval(atman):
                 self.model_obj,
                 self.system_prompt,
                 choice_num,
+                keep_logs=self.keep_logs,
             )
             self.answer.append(anss)
 
@@ -427,7 +445,12 @@ class Model_Eval(atman):
                 try:
                     ## ask model to get category & nouns, add to category ##
                     category_prompt = format_category_prompt(doc_text, self.language)
-                    response = call_model(self.model_obj, category_prompt, False)
+                    response = call_model(
+                        self.model_obj,
+                        category_prompt,
+                        False,
+                        keep_logs=self.keep_logs,
+                    )
 
                     json_response = extract_json(response)
                     if json_response is None:
@@ -441,6 +464,7 @@ class Model_Eval(atman):
 
                 except Exception as e:
                     print("error during generate categories\n", e)
+                    logging.exception("Error during category generation for compare questionset")
                     count -= 1
                     if count == 0:
                         break
@@ -451,7 +475,9 @@ class Model_Eval(atman):
                 q_prompt = compare_question_prompt(
                     self.question_style, topic, nouns, used_texts
                 )
-                response = call_model(self.model_obj, q_prompt, False)
+                response = call_model(
+                    self.model_obj, q_prompt, False, keep_logs=self.keep_logs
+                )
 
                 if not self._process_response(response, used_texts, choice_num, ""):
                     raise Exception(f"Question Format Error, got {response}")
@@ -463,6 +489,9 @@ class Model_Eval(atman):
                 self.docs.extend(docs)
 
             except Exception as e:
+                logging.exception(
+                    "Create compare questionset iteration failed (topic=%s)", topic
+                )
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
@@ -553,18 +582,25 @@ class Model_Eval(atman):
                 self.prompt_format_type,
                 self.model,
             )
-            response = call_model(self.model_obj, intput_text, False)
+            response = call_model(
+                self.model_obj,
+                intput_text,
+                False,
+                keep_logs=self.keep_logs,
+            )
             self.response.append(response)
             self.doc_length.append(doc_length)
             self.doc_tokens.append(doc_tokens)
             self.prompt_length.append(query_len)
             self.prompt_tokens.append(query_tokens)
         except Exception as e:
-            traceback.print_exc()
-            # response = ["running model error"]
-            torch = get_torch()
-            torch.cuda.empty_cache()
-            logging.error(f"running model error\n {e}")
+            logging.exception("Running model error in _eval_get_res_fact")
+            # Best-effort GPU cache cleanup; do not mask original exception if torch is absent.
+            try:
+                torch = get_torch()
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
             raise e
 
         if self.question_style.lower() == "essay":
@@ -627,7 +663,12 @@ class Model_Eval(atman):
         self.docs = [Document(page_content=sum_doc, metadata={"source": "", "page": 0})]
 
         try:
-            response = call_model(self.model_obj, intput_text, False)
+            response = call_model(
+                self.model_obj,
+                intput_text,
+                False,
+                keep_logs=self.keep_logs,
+            )
             self.response.append(response)
             self.doc_length.append(get_doc_length(self.language, sum_doc))
             self.doc_tokens.append(self.model_obj.get_num_tokens(sum_doc))
@@ -635,11 +676,13 @@ class Model_Eval(atman):
             self.prompt_tokens.append(15)
 
         except Exception as e:
-            traceback.print_exc()
-            # response = ["running model error"]
-            torch = get_torch()
-            torch.cuda.empty_cache()
-            logging.error(f"running model error\n {e}")
+            logging.exception("Running model error in _eval_get_res_summary")
+            # Best-effort GPU cache cleanup; do not mask original exception if torch is absent.
+            try:
+                torch = get_torch()
+                torch.cuda.empty_cache()
+            except Exception:
+                pass
             raise e
 
         if self.verbose:

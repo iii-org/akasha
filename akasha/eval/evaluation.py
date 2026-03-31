@@ -143,6 +143,8 @@ class eval(Model_Eval):
         self._change_variables(**kwargs)
         self.data_source = self._check_doc_path(data_source)
         self.question_num = question_num
+        if self.keep_logs:
+            logging.info("Create questionset request started")
         vis_doc_range = set()
         doc_range = (
             (1999 + self.chunk_size) // self.chunk_size
@@ -154,6 +156,14 @@ class eval(Model_Eval):
         self._display_info()
         self._get_db(data_source)
         self._check_db()
+        if self.keep_logs:
+            logging.info(
+                "Create questionset config: question_num=%s, choice_num=%s, question_type=%s, question_style=%s",
+                question_num,
+                choice_num,
+                self.question_type,
+                self.question_style,
+            )
 
         ## process of creating compare question is different from other, so we separate it ##
         if self.question_type in [
@@ -210,6 +220,7 @@ class eval(Model_Eval):
                     self.model_obj,
                     q_prompt,
                     self.verbose,
+                    keep_logs=self.keep_logs,
                 )
 
                 if not self._process_response(
@@ -229,6 +240,11 @@ class eval(Model_Eval):
 
             except Exception as e:
                 print(e)
+                logging.exception(
+                    "Create questionset iteration failed (question_type=%s, index=%s)",
+                    self.question_type,
+                    i,
+                )
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
@@ -244,6 +260,10 @@ class eval(Model_Eval):
         progress.close()  # end running llm progress bar
 
         end_time = time.time()
+        if self.keep_logs:
+            logging.info(
+                "Create questionset finished. Time Spent: %s s", end_time - start_time
+            )
         self._display_info_fnl()
         self._add_result_log(timestamp, end_time - start_time)
         self._upload_logs(
@@ -285,6 +305,8 @@ class eval(Model_Eval):
         self._change_variables(**kwargs)
         self.data_source = self._check_doc_path(data_source)
         self.question_num = question_num
+        if self.keep_logs:
+            logging.info("Create topic questionset request started")
         vis_doc_range = set()
         doc_range = (
             (1999 + self.chunk_size) // self.chunk_size
@@ -296,6 +318,13 @@ class eval(Model_Eval):
         self._display_info()
         self._get_db(data_source)
         self._check_db()
+        if self.keep_logs:
+            logging.info(
+                "Create topic questionset config: topic=%s, question_num=%s, choice_num=%s",
+                topic,
+                question_num,
+                choice_num,
+            )
 
         ## set local variables ##
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
@@ -329,6 +358,8 @@ class eval(Model_Eval):
             self.search_type,
             self.language,
         )
+        if self.keep_logs:
+            logging.info("Retrieved topic documents: %s", len(self.docs))
 
         texts = [doc.page_content for doc in self.docs]
         metadata = [doc.metadata for doc in self.docs]
@@ -368,6 +399,7 @@ class eval(Model_Eval):
                     self.model_obj,
                     q_prompt,
                     self.verbose,
+                    keep_logs=self.keep_logs,
                 )
                 if not self._process_response(
                     response, doc_text, choice_num, source_files_name
@@ -385,6 +417,11 @@ class eval(Model_Eval):
                 self.docs.extend(docs)
 
             except Exception as e:
+                logging.exception(
+                    "Create topic questionset iteration failed (topic=%s, index=%s)",
+                    topic,
+                    i,
+                )
                 if regenerate_limit > 0:
                     regenerate_limit -= 1
                     i -= 1
@@ -400,6 +437,11 @@ class eval(Model_Eval):
         progress.close()  # end running llm progress bar
 
         end_time = time.time()
+        if self.keep_logs:
+            logging.info(
+                "Create topic questionset finished. Time Spent: %s s",
+                end_time - start_time,
+            )
 
         ### record logs ###
         self._display_info_fnl()
@@ -439,6 +481,8 @@ class eval(Model_Eval):
         self._change_variables(**kwargs)
         self.data_source = self._check_doc_path(data_source)
         self._decide_eval_model(eval_model)
+        if self.keep_logs:
+            logging.info("Evaluation request started")
 
         ### get question and answer from questionset file ###
         question, answer, self.question_type, self.question_style = (
@@ -446,6 +490,13 @@ class eval(Model_Eval):
                 questionset_file, self.question_type, self.question_style
             )
         )
+        if self.keep_logs:
+            logging.info(
+                "Loaded questionset: %s questions, question_type=%s, question_style=%s",
+                len(question),
+                self.question_type,
+                self.question_style,
+            )
 
         if check_sum_type(self.question_type, self.question_style):
             if self.question_style.lower() == "essay":
@@ -523,6 +574,8 @@ class eval(Model_Eval):
         self.docs = total_docs
         ### record logs ###
         end_time = time.time()
+        if self.keep_logs:
+            logging.info("Evaluation finished. Time Spent: %s s", end_time - start_time)
         self.question = question
         self.answer = answer
         self._display_info_fnl()

@@ -160,14 +160,26 @@ class RAG(atman):
         return True
 
     def _display_info(self) -> bool:
-        if self.verbose is False:
+        if self.verbose is False and self.keep_logs is False:
             return False
-        print(f"Model: {self.model}, Embeddings: {self.embeddings}")
-        print(f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
-        print(
-            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
-        )
-        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
+
+        if self.keep_logs:
+            logging.info("Model: %s, Embeddings: %s", self.model, self.embeddings)
+            logging.info("Chunk size: %s, Search type: %s", self.chunk_size, self.search_type)
+            logging.info(
+                "Prompt tokens: %s, Prompt length: %s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
+            logging.info("Doc tokens: %s, Doc length: %s", self.doc_tokens, self.doc_length)
+
+        if self.verbose:
+            print(f"Model: {self.model}, Embeddings: {self.embeddings}")
+            print(f"Chunk size: {self.chunk_size}, Search type: {self.search_type}")
+            print(
+                f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+            )
+            print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}\n\n")
 
         return True
 
@@ -212,6 +224,8 @@ class RAG(atman):
         self.prompt = prompt
 
         start_time = time.time()
+        if self.keep_logs:
+            logging.info("RAG request started")
         self._check_db()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self._add_basic_log(timestamp, "RAG", history_messages)
@@ -220,6 +234,12 @@ class RAG(atman):
         tot_prompts = self.prompt + self.system_prompt + "\n\n".join(history_messages)
         self.prompt_length = get_doc_length(self.language, tot_prompts)
         self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model) + 10
+        if self.keep_logs:
+            logging.info(
+                "Computed prompt size. tokens=%s, length=%s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
 
         if self.prompt_tokens > self.max_input_tokens:
             print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
@@ -244,6 +264,8 @@ class RAG(atman):
             self.search_type,
             self.language,
         )
+        if self.keep_logs:
+            logging.info("Retrieved docs: %s", len(self.docs))
         if self.doc_tokens == 0:
             print(
                 "Warning: Unable to retrieve any documents, possibly due to insufficient remaining tokens.\n\n"
@@ -261,12 +283,15 @@ class RAG(atman):
             model=self.model,
         )
 
-        end_time = time.time()
         if self.stream:
+            if self.keep_logs:
+                logging.info("Streaming RAG answer")
             return self._display_stream(
                 text_input,
             )
 
+        if self.keep_logs:
+            logging.info("Calling LLM for RAG answer")
         self.response = call_model(
             self.model_obj,
             text_input,
@@ -274,6 +299,9 @@ class RAG(atman):
             keep_logs=self.keep_logs,
         )
 
+        end_time = time.time()
+        if self.keep_logs:
+            logging.info("RAG request finished. Time Spent: %s s", end_time - start_time)
         self._add_result_log(timestamp, end_time - start_time)
 
         self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
@@ -348,6 +376,8 @@ class RAG(atman):
             m_key_list.append(m_key)
 
         ## call batch model ##
+        if self.keep_logs:
+            logging.info("Resolving references from %s candidates", len(prod_sys_prompts))
         batch_responses = call_batch_model(
             self.model_obj,
             prod_sys_prompts,
@@ -405,6 +435,8 @@ class RAG(atman):
         self.prompt = prompt
 
         start_time = time.time()
+        if self.keep_logs:
+            logging.info("Self-ask RAG request started")
         self._check_db()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         self._add_basic_log(timestamp, "selfask_RAG")
@@ -419,5 +451,7 @@ class RAG(atman):
             raise ValueError("The tokens of prompt is larger than max_input_tokens.")
 
         self.response = self_ask_f(self, start_time, timestamp)
+        if self.keep_logs:
+            logging.info("Self-ask RAG request finished")
 
         return self.response

@@ -26,6 +26,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 import time
 import datetime
+import logging
 from akasha.helper.token_counter import myTokenizer
 
 
@@ -85,17 +86,34 @@ class ask(basic_llm):
 
     def _display_info(self, batch: int = 1) -> bool:
         """display the information of the parameters if verbose is True"""
-        if self.verbose is False:
+        if self.verbose is False and self.keep_logs is False:
             return False
-        print(f"Model: {self.model}, Temperature: {self.temperature}")
-        print(
-            f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
-        )
-        print(
-            f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
-        )
-        print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}")
-        print(f"Batch:  {max(batch, 1)}\n\n")
+
+        if self.keep_logs:
+            logging.info("Model: %s, Temperature: %s", self.model, self.temperature)
+            logging.info(
+                "Prompt format type: %s, Max input tokens: %s",
+                self.prompt_format_type,
+                self.max_input_tokens,
+            )
+            logging.info(
+                "Prompt tokens: %s, Prompt length: %s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
+            logging.info("Doc tokens: %s, Doc length: %s", self.doc_tokens, self.doc_length)
+            logging.info("Batch: %s", max(batch, 1))
+
+        if self.verbose:
+            print(f"Model: {self.model}, Temperature: {self.temperature}")
+            print(
+                f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
+            )
+            print(
+                f"Prompt tokens: {self.prompt_tokens}, Prompt length: {self.prompt_length}"
+            )
+            print(f"Doc tokens: {self.doc_tokens}, Doc length: {self.doc_length}")
+            print(f"Batch:  {max(batch, 1)}\n\n")
 
         return True
 
@@ -167,11 +185,21 @@ class ask(basic_llm):
 
         start_time = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        if self.keep_logs:
+            logging.info("Ask request started")
         self.docs = load_docs_from_info(info)
+        if self.keep_logs:
+            logging.info("Loaded reference docs: %s", len(self.docs))
         ### check if prompt <= max_input_tokens ###
         tot_prompts = self.prompt + self.system_prompt + "\n\n".join(history_messages)
         self.prompt_length = get_doc_length(self.language, tot_prompts)
         self.prompt_tokens = myTokenizer.compute_tokens(tot_prompts, self.model) + 10
+        if self.keep_logs:
+            logging.info(
+                "Computed prompt size. tokens=%s, length=%s",
+                self.prompt_tokens,
+                self.prompt_length,
+            )
 
         if self.prompt_tokens > self.max_input_tokens:
             print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
@@ -192,9 +220,12 @@ class ask(basic_llm):
         ### start to ask llm ###
         if len(cur_documents) > 1:
             ## call batch model ##
+            if self.keep_logs:
+                logging.info("Calling LLM in batch mode, chunks=%s", len(prod_sys_prompts))
             batch_responses = call_batch_model(
                 self.model_obj,
                 prod_sys_prompts,
+                keep_logs=self.keep_logs,
             )
             fnl_conclusion_prompt = default_conclusion_prompt(prompt, self.language)
             ## check relevant answer if batch_responses > 10 ##
@@ -219,21 +250,37 @@ class ask(basic_llm):
                 self.model,
             )
             if self.stream:
+                if self.keep_logs:
+                    logging.info("Streaming final merged answer")
                 return self._display_stream(
                     fnl_input,
                 )
 
-            self.response = call_model(self.model_obj, fnl_input, self.verbose)
+            self.response = call_model(
+                self.model_obj,
+                fnl_input,
+                self.verbose,
+                keep_logs=self.keep_logs,
+            )
 
         else:
             if self.stream:
+                if self.keep_logs:
+                    logging.info("Streaming single-pass answer")
                 return self._display_stream(prod_sys_prompts[0])
 
+            if self.keep_logs:
+                logging.info("Calling LLM in single-pass mode")
             self.response = call_model(
-                self.model_obj, prod_sys_prompts[0], self.verbose
+                self.model_obj,
+                prod_sys_prompts[0],
+                self.verbose,
+                keep_logs=self.keep_logs,
             )
 
         end_time = time.time()
+        if self.keep_logs:
+            logging.info("Ask request finished. Time Spent: %s s", end_time - start_time)
         self._add_result_log(timestamp, end_time - start_time)
         self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
         return self.response
@@ -304,7 +351,14 @@ class ask(basic_llm):
             return self._display_stream(
                 fnl_input,
             )
-        self.response = call_image_model(self.model_obj, fnl_input, self.verbose)
+        if self.keep_logs:
+            logging.info("Calling vision model")
+        self.response = call_image_model(
+            self.model_obj,
+            fnl_input,
+            self.verbose,
+            keep_logs=self.keep_logs,
+        )
         self._add_result_log_vision(timestamp, time.time() - start_time, image_path)
 
         return self.response
@@ -312,7 +366,9 @@ class ask(basic_llm):
     def _display_stream(
         self, text_input: Union[str, List[str]]
     ) -> Generator[str, None, None]:
-        ret = call_stream_model(self.model_obj, text_input, self.verbose)
+        ret = call_stream_model(
+            self.model_obj, text_input, self.verbose, keep_logs=self.keep_logs
+        )
 
         for s in ret:
             self.response += s
