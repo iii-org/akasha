@@ -43,6 +43,8 @@ def _get_env_var(env_file: str = "") -> dict:
         "HUGGINGFACEHUB_API_TOKEN",
         "ANTHROPIC_API_KEY",
         "REMOTE_API_KEY",
+        "OLLAMA_API_BASE",
+        "OLLAMA_API_KEY",
     ]
     if env_file == "" or not Path(env_file).exists():
         env_dict = {}
@@ -306,6 +308,34 @@ def handle_model(
             temperature,
             api_key=remote_api_key,
             model_name=remote_model_name,
+            max_output_tokens=max_output_tokens,
+        )
+
+    elif model_type in ["ollama"]:
+        from akasha.utils.models.remo import remote_model
+
+        ollama_api_base = env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
+        ollama_api_key = env_dict.get("OLLAMA_API_KEY", "ollama")
+
+        if "@" in model_name:
+            ollama_api_base, ollama_model_name = model_name.split("@", 1)
+            if not ollama_api_base.strip():
+                ollama_api_base = env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
+        else:
+            ollama_model_name = model_name
+
+        if ollama_model_name.strip() == "":
+            raise ValueError(
+                "ollama model name is required. Use 'ollama:<model>' or "
+                "'ollama:<base_url>@<model>'."
+            )
+
+        info = "selected ollama model via OpenAI-compatible API. \n"
+        model = remote_model(
+            ollama_api_base,
+            temperature,
+            api_key=ollama_api_key,
+            model_name=ollama_model_name,
             max_output_tokens=max_output_tokens,
         )
 

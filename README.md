@@ -201,6 +201,24 @@ response = ak(
 
 ```
 
+If you want to use a local Ollama server, Akasha supports an `ollama:` model type through Ollama's OpenAI-compatible chat API:
+
+```python
+import akasha
+
+qa = akasha.ask(model="ollama:llama3.1")
+response = qa(prompt="請用一句話介紹 Akasha")
+```
+
+By default, `ollama:<model>` uses `http://localhost:11434/v1`.
+If your Ollama server is on another host, use `ollama:<base_url>@<model>`:
+
+```python
+qa = akasha.ask(model="ollama:http://192.168.1.10:11434@qwen3:8b")
+```
+
+You can also set `OLLAMA_API_BASE` to change the default server location.
+
 And then run a RAG example:
 
 ```python
@@ -221,6 +239,8 @@ Please note that for OpenAI models, you need to set the environment variable 'OP
 openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
 openai4_model = "openai:gpt-4"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
 gemini_flash_model = "gemini:gemini-2.5-flash" # need environment variable "GEMINI_API_KEY"
+ollama_model = "ollama:llama3.1"  # default server: http://localhost:11434/v1
+ollama_remote_model = "ollama:http://192.168.1.10:11434@qwen3:8b"
 huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
 quantized_ch_llama_model = "gptq:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
 taiwan_llama_gptq = "gptq:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
