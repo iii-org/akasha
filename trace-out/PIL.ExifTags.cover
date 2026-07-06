@@ -1,0 +1,384 @@
+       #
+       # The Python Imaging Library.
+       # $Id$
+       #
+       # EXIF tags
+       #
+       # Copyright (c) 2003 by Secret Labs AB
+       #
+       # See the README file for information on usage and redistribution.
+       #
+       
+    1: """
+       This module provides constants and clear-text names for various
+       well-known EXIF tags.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from enum import IntEnum
+       
+       
+    2: class Base(IntEnum):
+           # possibly incomplete
+    1:     InteropIndex = 0x0001
+    1:     ProcessingSoftware = 0x000B
+    1:     NewSubfileType = 0x00FE
+    1:     SubfileType = 0x00FF
+    1:     ImageWidth = 0x0100
+    1:     ImageLength = 0x0101
+    1:     BitsPerSample = 0x0102
+    1:     Compression = 0x0103
+    1:     PhotometricInterpretation = 0x0106
+    1:     Thresholding = 0x0107
+    1:     CellWidth = 0x0108
+    1:     CellLength = 0x0109
+    1:     FillOrder = 0x010A
+    1:     DocumentName = 0x010D
+    1:     ImageDescription = 0x010E
+    1:     Make = 0x010F
+    1:     Model = 0x0110
+    1:     StripOffsets = 0x0111
+    1:     Orientation = 0x0112
+    1:     SamplesPerPixel = 0x0115
+    1:     RowsPerStrip = 0x0116
+    1:     StripByteCounts = 0x0117
+    1:     MinSampleValue = 0x0118
+    1:     MaxSampleValue = 0x0119
+    1:     XResolution = 0x011A
+    1:     YResolution = 0x011B
+    1:     PlanarConfiguration = 0x011C
+    1:     PageName = 0x011D
+    1:     FreeOffsets = 0x0120
+    1:     FreeByteCounts = 0x0121
+    1:     GrayResponseUnit = 0x0122
+    1:     GrayResponseCurve = 0x0123
+    1:     T4Options = 0x0124
+    1:     T6Options = 0x0125
+    1:     ResolutionUnit = 0x0128
+    1:     PageNumber = 0x0129
+    1:     TransferFunction = 0x012D
+    1:     Software = 0x0131
+    1:     DateTime = 0x0132
+    1:     Artist = 0x013B
+    1:     HostComputer = 0x013C
+    1:     Predictor = 0x013D
+    1:     WhitePoint = 0x013E
+    1:     PrimaryChromaticities = 0x013F
+    1:     ColorMap = 0x0140
+    1:     HalftoneHints = 0x0141
+    1:     TileWidth = 0x0142
+    1:     TileLength = 0x0143
+    1:     TileOffsets = 0x0144
+    1:     TileByteCounts = 0x0145
+    1:     SubIFDs = 0x014A
+    1:     InkSet = 0x014C
+    1:     InkNames = 0x014D
+    1:     NumberOfInks = 0x014E
+    1:     DotRange = 0x0150
+    1:     TargetPrinter = 0x0151
+    1:     ExtraSamples = 0x0152
+    1:     SampleFormat = 0x0153
+    1:     SMinSampleValue = 0x0154
+    1:     SMaxSampleValue = 0x0155
+    1:     TransferRange = 0x0156
+    1:     ClipPath = 0x0157
+    1:     XClipPathUnits = 0x0158
+    1:     YClipPathUnits = 0x0159
+    1:     Indexed = 0x015A
+    1:     JPEGTables = 0x015B
+    1:     OPIProxy = 0x015F
+    1:     JPEGProc = 0x0200
+    1:     JpegIFOffset = 0x0201
+    1:     JpegIFByteCount = 0x0202
+    1:     JpegRestartInterval = 0x0203
+    1:     JpegLosslessPredictors = 0x0205
+    1:     JpegPointTransforms = 0x0206
+    1:     JpegQTables = 0x0207
+    1:     JpegDCTables = 0x0208
+    1:     JpegACTables = 0x0209
+    1:     YCbCrCoefficients = 0x0211
+    1:     YCbCrSubSampling = 0x0212
+    1:     YCbCrPositioning = 0x0213
+    1:     ReferenceBlackWhite = 0x0214
+    1:     XMLPacket = 0x02BC
+    1:     RelatedImageFileFormat = 0x1000
+    1:     RelatedImageWidth = 0x1001
+    1:     RelatedImageLength = 0x1002
+    1:     Rating = 0x4746
+    1:     RatingPercent = 0x4749
+    1:     ImageID = 0x800D
+    1:     CFARepeatPatternDim = 0x828D
+    1:     BatteryLevel = 0x828F
+    1:     Copyright = 0x8298
+    1:     ExposureTime = 0x829A
+    1:     FNumber = 0x829D
+    1:     IPTCNAA = 0x83BB
+    1:     ImageResources = 0x8649
+    1:     ExifOffset = 0x8769
+    1:     InterColorProfile = 0x8773
+    1:     ExposureProgram = 0x8822
+    1:     SpectralSensitivity = 0x8824
+    1:     GPSInfo = 0x8825
+    1:     ISOSpeedRatings = 0x8827
+    1:     OECF = 0x8828
+    1:     Interlace = 0x8829
+    1:     TimeZoneOffset = 0x882A
+    1:     SelfTimerMode = 0x882B
+    1:     SensitivityType = 0x8830
+    1:     StandardOutputSensitivity = 0x8831
+    1:     RecommendedExposureIndex = 0x8832
+    1:     ISOSpeed = 0x8833
+    1:     ISOSpeedLatitudeyyy = 0x8834
+    1:     ISOSpeedLatitudezzz = 0x8835
+    1:     ExifVersion = 0x9000
+    1:     DateTimeOriginal = 0x9003
+    1:     DateTimeDigitized = 0x9004
+    1:     OffsetTime = 0x9010
+    1:     OffsetTimeOriginal = 0x9011
+    1:     OffsetTimeDigitized = 0x9012
+    1:     ComponentsConfiguration = 0x9101
+    1:     CompressedBitsPerPixel = 0x9102
+    1:     ShutterSpeedValue = 0x9201
+    1:     ApertureValue = 0x9202
+    1:     BrightnessValue = 0x9203
+    1:     ExposureBiasValue = 0x9204
+    1:     MaxApertureValue = 0x9205
+    1:     SubjectDistance = 0x9206
+    1:     MeteringMode = 0x9207
+    1:     LightSource = 0x9208
+    1:     Flash = 0x9209
+    1:     FocalLength = 0x920A
+    1:     Noise = 0x920D
+    1:     ImageNumber = 0x9211
+    1:     SecurityClassification = 0x9212
+    1:     ImageHistory = 0x9213
+    1:     TIFFEPStandardID = 0x9216
+    1:     MakerNote = 0x927C
+    1:     UserComment = 0x9286
+    1:     SubsecTime = 0x9290
+    1:     SubsecTimeOriginal = 0x9291
+    1:     SubsecTimeDigitized = 0x9292
+    1:     AmbientTemperature = 0x9400
+    1:     Humidity = 0x9401
+    1:     Pressure = 0x9402
+    1:     WaterDepth = 0x9403
+    1:     Acceleration = 0x9404
+    1:     CameraElevationAngle = 0x9405
+    1:     XPTitle = 0x9C9B
+    1:     XPComment = 0x9C9C
+    1:     XPAuthor = 0x9C9D
+    1:     XPKeywords = 0x9C9E
+    1:     XPSubject = 0x9C9F
+    1:     FlashPixVersion = 0xA000
+    1:     ColorSpace = 0xA001
+    1:     ExifImageWidth = 0xA002
+    1:     ExifImageHeight = 0xA003
+    1:     RelatedSoundFile = 0xA004
+    1:     ExifInteroperabilityOffset = 0xA005
+    1:     FlashEnergy = 0xA20B
+    1:     SpatialFrequencyResponse = 0xA20C
+    1:     FocalPlaneXResolution = 0xA20E
+    1:     FocalPlaneYResolution = 0xA20F
+    1:     FocalPlaneResolutionUnit = 0xA210
+    1:     SubjectLocation = 0xA214
+    1:     ExposureIndex = 0xA215
+    1:     SensingMethod = 0xA217
+    1:     FileSource = 0xA300
+    1:     SceneType = 0xA301
+    1:     CFAPattern = 0xA302
+    1:     CustomRendered = 0xA401
+    1:     ExposureMode = 0xA402
+    1:     WhiteBalance = 0xA403
+    1:     DigitalZoomRatio = 0xA404
+    1:     FocalLengthIn35mmFilm = 0xA405
+    1:     SceneCaptureType = 0xA406
+    1:     GainControl = 0xA407
+    1:     Contrast = 0xA408
+    1:     Saturation = 0xA409
+    1:     Sharpness = 0xA40A
+    1:     DeviceSettingDescription = 0xA40B
+    1:     SubjectDistanceRange = 0xA40C
+    1:     ImageUniqueID = 0xA420
+    1:     CameraOwnerName = 0xA430
+    1:     BodySerialNumber = 0xA431
+    1:     LensSpecification = 0xA432
+    1:     LensMake = 0xA433
+    1:     LensModel = 0xA434
+    1:     LensSerialNumber = 0xA435
+    1:     CompositeImage = 0xA460
+    1:     CompositeImageCount = 0xA461
+    1:     CompositeImageExposureTimes = 0xA462
+    1:     Gamma = 0xA500
+    1:     PrintImageMatching = 0xC4A5
+    1:     DNGVersion = 0xC612
+    1:     DNGBackwardVersion = 0xC613
+    1:     UniqueCameraModel = 0xC614
+    1:     LocalizedCameraModel = 0xC615
+    1:     CFAPlaneColor = 0xC616
+    1:     CFALayout = 0xC617
+    1:     LinearizationTable = 0xC618
+    1:     BlackLevelRepeatDim = 0xC619
+    1:     BlackLevel = 0xC61A
+    1:     BlackLevelDeltaH = 0xC61B
+    1:     BlackLevelDeltaV = 0xC61C
+    1:     WhiteLevel = 0xC61D
+    1:     DefaultScale = 0xC61E
+    1:     DefaultCropOrigin = 0xC61F
+    1:     DefaultCropSize = 0xC620
+    1:     ColorMatrix1 = 0xC621
+    1:     ColorMatrix2 = 0xC622
+    1:     CameraCalibration1 = 0xC623
+    1:     CameraCalibration2 = 0xC624
+    1:     ReductionMatrix1 = 0xC625
+    1:     ReductionMatrix2 = 0xC626
+    1:     AnalogBalance = 0xC627
+    1:     AsShotNeutral = 0xC628
+    1:     AsShotWhiteXY = 0xC629
+    1:     BaselineExposure = 0xC62A
+    1:     BaselineNoise = 0xC62B
+    1:     BaselineSharpness = 0xC62C
+    1:     BayerGreenSplit = 0xC62D
+    1:     LinearResponseLimit = 0xC62E
+    1:     CameraSerialNumber = 0xC62F
+    1:     LensInfo = 0xC630
+    1:     ChromaBlurRadius = 0xC631
+    1:     AntiAliasStrength = 0xC632
+    1:     ShadowScale = 0xC633
+    1:     DNGPrivateData = 0xC634
+    1:     MakerNoteSafety = 0xC635
+    1:     CalibrationIlluminant1 = 0xC65A
+    1:     CalibrationIlluminant2 = 0xC65B
+    1:     BestQualityScale = 0xC65C
+    1:     RawDataUniqueID = 0xC65D
+    1:     OriginalRawFileName = 0xC68B
+    1:     OriginalRawFileData = 0xC68C
+    1:     ActiveArea = 0xC68D
+    1:     MaskedAreas = 0xC68E
+    1:     AsShotICCProfile = 0xC68F
+    1:     AsShotPreProfileMatrix = 0xC690
+    1:     CurrentICCProfile = 0xC691
+    1:     CurrentPreProfileMatrix = 0xC692
+    1:     ColorimetricReference = 0xC6BF
+    1:     CameraCalibrationSignature = 0xC6F3
+    1:     ProfileCalibrationSignature = 0xC6F4
+    1:     AsShotProfileName = 0xC6F6
+    1:     NoiseReductionApplied = 0xC6F7
+    1:     ProfileName = 0xC6F8
+    1:     ProfileHueSatMapDims = 0xC6F9
+    1:     ProfileHueSatMapData1 = 0xC6FA
+    1:     ProfileHueSatMapData2 = 0xC6FB
+    1:     ProfileToneCurve = 0xC6FC
+    1:     ProfileEmbedPolicy = 0xC6FD
+    1:     ProfileCopyright = 0xC6FE
+    1:     ForwardMatrix1 = 0xC714
+    1:     ForwardMatrix2 = 0xC715
+    1:     PreviewApplicationName = 0xC716
+    1:     PreviewApplicationVersion = 0xC717
+    1:     PreviewSettingsName = 0xC718
+    1:     PreviewSettingsDigest = 0xC719
+    1:     PreviewColorSpace = 0xC71A
+    1:     PreviewDateTime = 0xC71B
+    1:     RawImageDigest = 0xC71C
+    1:     OriginalRawFileDigest = 0xC71D
+    1:     SubTileBlockSize = 0xC71E
+    1:     RowInterleaveFactor = 0xC71F
+    1:     ProfileLookTableDims = 0xC725
+    1:     ProfileLookTableData = 0xC726
+    1:     OpcodeList1 = 0xC740
+    1:     OpcodeList2 = 0xC741
+    1:     OpcodeList3 = 0xC74E
+    1:     NoiseProfile = 0xC761
+    1:     FrameRate = 0xC764
+       
+       
+    1: """Maps EXIF tags to tag names."""
+    3: TAGS = {
+  271:     **{i.value: i.name for i in Base},
+    1:     0x920C: "SpatialFrequencyResponse",
+    1:     0x9214: "SubjectLocation",
+    1:     0x9215: "ExposureIndex",
+    1:     0x828E: "CFAPattern",
+    1:     0x920B: "FlashEnergy",
+    1:     0x9216: "TIFF/EPStandardID",
+       }
+       
+       
+    2: class GPS(IntEnum):
+    1:     GPSVersionID = 0x00
+    1:     GPSLatitudeRef = 0x01
+    1:     GPSLatitude = 0x02
+    1:     GPSLongitudeRef = 0x03
+    1:     GPSLongitude = 0x04
+    1:     GPSAltitudeRef = 0x05
+    1:     GPSAltitude = 0x06
+    1:     GPSTimeStamp = 0x07
+    1:     GPSSatellites = 0x08
+    1:     GPSStatus = 0x09
+    1:     GPSMeasureMode = 0x0A
+    1:     GPSDOP = 0x0B
+    1:     GPSSpeedRef = 0x0C
+    1:     GPSSpeed = 0x0D
+    1:     GPSTrackRef = 0x0E
+    1:     GPSTrack = 0x0F
+    1:     GPSImgDirectionRef = 0x10
+    1:     GPSImgDirection = 0x11
+    1:     GPSMapDatum = 0x12
+    1:     GPSDestLatitudeRef = 0x13
+    1:     GPSDestLatitude = 0x14
+    1:     GPSDestLongitudeRef = 0x15
+    1:     GPSDestLongitude = 0x16
+    1:     GPSDestBearingRef = 0x17
+    1:     GPSDestBearing = 0x18
+    1:     GPSDestDistanceRef = 0x19
+    1:     GPSDestDistance = 0x1A
+    1:     GPSProcessingMethod = 0x1B
+    1:     GPSAreaInformation = 0x1C
+    1:     GPSDateStamp = 0x1D
+    1:     GPSDifferential = 0x1E
+    1:     GPSHPositioningError = 0x1F
+       
+       
+    1: """Maps EXIF GPS tags to tag names."""
+   34: GPSTAGS = {i.value: i.name for i in GPS}
+       
+       
+    2: class Interop(IntEnum):
+    1:     InteropIndex = 0x0001
+    1:     InteropVersion = 0x0002
+    1:     RelatedImageFileFormat = 0x1000
+    1:     RelatedImageWidth = 0x1001
+    1:     RelatedImageHeight = 0x1002
+       
+       
+    2: class IFD(IntEnum):
+    1:     Exif = 0x8769
+    1:     GPSInfo = 0x8825
+    1:     MakerNote = 0x927C
+    1:     Makernote = 0x927C  # Deprecated
+    1:     Interop = 0xA005
+    1:     IFD1 = -1
+       
+       
+    2: class LightSource(IntEnum):
+    1:     Unknown = 0x00
+    1:     Daylight = 0x01
+    1:     Fluorescent = 0x02
+    1:     Tungsten = 0x03
+    1:     Flash = 0x04
+    1:     Fine = 0x09
+    1:     Cloudy = 0x0A
+    1:     Shade = 0x0B
+    1:     DaylightFluorescent = 0x0C
+    1:     DayWhiteFluorescent = 0x0D
+    1:     CoolWhiteFluorescent = 0x0E
+    1:     WhiteFluorescent = 0x0F
+    1:     StandardLightA = 0x11
+    1:     StandardLightB = 0x12
+    1:     StandardLightC = 0x13
+    1:     D55 = 0x14
+    1:     D65 = 0x15
+    1:     D75 = 0x16
+    1:     D50 = 0x17
+    1:     ISO = 0x18
+    1:     Other = 0xFF

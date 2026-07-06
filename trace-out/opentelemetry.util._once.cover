@@ -1,0 +1,36 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: from collections.abc import Callable
+    1: from threading import Lock
+       
+       
+    2: class Once:
+    1:     """Execute a function exactly once and block all callers until the function returns
+       
+           Same as golang's `sync.Once <https://pkg.go.dev/sync#Once>`_
+           """
+       
+    1:     def __init__(self) -> None:
+    3:         self._lock = Lock()
+    3:         self._done = False
+       
+    1:     def do_once(self, func: Callable[[], None]) -> bool:
+               """Execute ``func`` if it hasn't been executed or return.
+       
+               Will block until ``func`` has been called by one thread.
+       
+               Returns:
+                   Whether or not ``func`` was executed in this call
+               """
+       
+               # fast path, try to avoid locking
+               if self._done:
+                   return False
+       
+               with self._lock:
+                   if not self._done:
+                       func()
+                       self._done = True
+                       return True
+               return False

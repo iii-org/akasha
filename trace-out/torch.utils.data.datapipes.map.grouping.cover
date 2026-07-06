@@ -1,0 +1,75 @@
+       # mypy: allow-untyped-defs
+    1: from collections.abc import Sized
+    1: from typing import TypeVar
+       
+    1: from torch.utils.data.datapipes._decorator import functional_datapipe
+    1: from torch.utils.data.datapipes.datapipe import DataChunk, MapDataPipe
+       
+       
+    1: __all__ = ["BatcherMapDataPipe"]
+       
+       
+    1: _T = TypeVar("_T")
+       
+       
+    3: @functional_datapipe("batch")
+    2: class BatcherMapDataPipe(MapDataPipe[DataChunk]):
+    1:     r"""
+           Create mini-batches of data (functional name: ``batch``).
+       
+           An outer dimension will be added as ``batch_size`` if ``drop_last`` is set to ``True``,
+           or ``length % batch_size`` for the last batch if ``drop_last`` is set to ``False``.
+       
+           Args:
+               datapipe: Iterable DataPipe being batched
+               batch_size: The size of each batch
+               drop_last: Option to drop the last batch if it's not full
+       
+           Example:
+               >>> # xdoctest: +SKIP
+               >>> from torchdata.datapipes.map import SequenceWrapper
+               >>> dp = SequenceWrapper(range(10))
+               >>> batch_dp = dp.batch(batch_size=2)
+               >>> list(batch_dp)
+               [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9]]
+           """
+       
+    1:     datapipe: MapDataPipe
+    1:     batch_size: int
+    1:     drop_last: bool
+       
+    6:     def __init__(
+               self,
+    1:         datapipe: MapDataPipe[_T],
+    1:         batch_size: int,
+    2:         drop_last: bool = False,
+    2:         wrapper_class: type[DataChunk] = DataChunk,
+    1:     ) -> None:
+               if batch_size <= 0:
+                   raise AssertionError("Batch size is required to be larger than 0!")
+               super().__init__()
+               self.datapipe = datapipe
+               self.batch_size = batch_size
+               self.drop_last = drop_last
+               self.wrapper_class = wrapper_class
+       
+    1:     def __getitem__(self, index) -> DataChunk:
+               batch: list = []
+               indices = range(index * self.batch_size, (index + 1) * self.batch_size)
+               try:
+                   batch.extend(self.datapipe[i] for i in indices)
+                   return self.wrapper_class(batch)
+               except IndexError as e:
+                   if not self.drop_last and len(batch) > 0:
+                       return self.wrapper_class(batch)
+                   else:
+                       raise IndexError(f"Index {index} is out of bound.") from e
+       
+    1:     def __len__(self) -> int:
+               if isinstance(self.datapipe, Sized):
+                   if self.drop_last:
+                       return len(self.datapipe) // self.batch_size
+                   else:
+                       return (len(self.datapipe) + self.batch_size - 1) // self.batch_size
+               else:
+                   raise TypeError(f"{type(self).__name__} instance doesn't have valid length")

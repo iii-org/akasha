@@ -1,0 +1,104 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from .._models import BaseModel
+    1: from .batch_error import BatchError
+    1: from .batch_usage import BatchUsage
+    1: from .shared.metadata import Metadata
+    1: from .batch_request_counts import BatchRequestCounts
+       
+    1: __all__ = ["Batch", "Errors"]
+       
+       
+    2: class Errors(BaseModel):
+    1:     data: Optional[List[BatchError]] = None
+       
+    1:     object: Optional[str] = None
+    1:     """The object type, which is always `list`."""
+       
+       
+    2: class Batch(BaseModel):
+    1:     id: str
+       
+    1:     completion_window: str
+    1:     """The time frame within which the batch should be processed."""
+       
+    1:     created_at: int
+    1:     """The Unix timestamp (in seconds) for when the batch was created."""
+       
+    1:     endpoint: str
+    1:     """The OpenAI API endpoint used by the batch."""
+       
+    1:     input_file_id: str
+    1:     """The ID of the input file for the batch."""
+       
+    1:     object: Literal["batch"]
+    1:     """The object type, which is always `batch`."""
+       
+    2:     status: Literal[
+    1:         "validating", "failed", "in_progress", "finalizing", "completed", "expired", "cancelling", "cancelled"
+           ]
+    1:     """The current status of the batch."""
+       
+    1:     cancelled_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch was cancelled."""
+       
+    1:     cancelling_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch started cancelling."""
+       
+    1:     completed_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch was completed."""
+       
+    1:     error_file_id: Optional[str] = None
+    1:     """The ID of the file containing the outputs of requests with errors."""
+       
+    1:     errors: Optional[Errors] = None
+       
+    1:     expired_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch expired."""
+       
+    1:     expires_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch will expire."""
+       
+    1:     failed_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch failed."""
+       
+    1:     finalizing_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch started finalizing."""
+       
+    1:     in_progress_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the batch started processing."""
+       
+    1:     metadata: Optional[Metadata] = None
+    1:     """Set of 16 key-value pairs that can be attached to an object.
+       
+           This can be useful for storing additional information about the object in a
+           structured format, and querying for objects via API or the dashboard.
+       
+           Keys are strings with a maximum length of 64 characters. Values are strings with
+           a maximum length of 512 characters.
+           """
+       
+    1:     model: Optional[str] = None
+    1:     """Model ID used to process the batch, like `gpt-5-2025-08-07`.
+       
+           OpenAI offers a wide range of models with different capabilities, performance
+           characteristics, and price points. Refer to the
+           [model guide](https://platform.openai.com/docs/models) to browse and compare
+           available models.
+           """
+       
+    1:     output_file_id: Optional[str] = None
+    1:     """The ID of the file containing the outputs of successfully executed requests."""
+       
+    1:     request_counts: Optional[BatchRequestCounts] = None
+    1:     """The request counts for different statuses within the batch."""
+       
+    1:     usage: Optional[BatchUsage] = None
+    1:     """
+           Represents token usage details including input tokens, output tokens, a
+           breakdown of output tokens, and the total tokens used. Only populated on batches
+           created after September 7, 2025.
+           """

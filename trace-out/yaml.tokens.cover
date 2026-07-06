@@ -1,0 +1,104 @@
+       
+    2: class Token(object):
+    1:     def __init__(self, start_mark, end_mark):
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+    1:     def __repr__(self):
+               attributes = [key for key in self.__dict__
+                       if not key.endswith('_mark')]
+               attributes.sort()
+               arguments = ', '.join(['%s=%r' % (key, getattr(self, key))
+                       for key in attributes])
+               return '%s(%s)' % (self.__class__.__name__, arguments)
+       
+       #class BOMToken(Token):
+       #    id = '<byte order mark>'
+       
+    2: class DirectiveToken(Token):
+    1:     id = '<directive>'
+    1:     def __init__(self, name, value, start_mark, end_mark):
+               self.name = name
+               self.value = value
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+       
+    2: class DocumentStartToken(Token):
+    1:     id = '<document start>'
+       
+    2: class DocumentEndToken(Token):
+    1:     id = '<document end>'
+       
+    2: class StreamStartToken(Token):
+    1:     id = '<stream start>'
+    2:     def __init__(self, start_mark=None, end_mark=None,
+    1:             encoding=None):
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.encoding = encoding
+       
+    2: class StreamEndToken(Token):
+    1:     id = '<stream end>'
+       
+    2: class BlockSequenceStartToken(Token):
+    1:     id = '<block sequence start>'
+       
+    2: class BlockMappingStartToken(Token):
+    1:     id = '<block mapping start>'
+       
+    2: class BlockEndToken(Token):
+    1:     id = '<block end>'
+       
+    2: class FlowSequenceStartToken(Token):
+    1:     id = '['
+       
+    2: class FlowMappingStartToken(Token):
+    1:     id = '{'
+       
+    2: class FlowSequenceEndToken(Token):
+    1:     id = ']'
+       
+    2: class FlowMappingEndToken(Token):
+    1:     id = '}'
+       
+    2: class KeyToken(Token):
+    1:     id = '?'
+       
+    2: class ValueToken(Token):
+    1:     id = ':'
+       
+    2: class BlockEntryToken(Token):
+    1:     id = '-'
+       
+    2: class FlowEntryToken(Token):
+    1:     id = ','
+       
+    2: class AliasToken(Token):
+    1:     id = '<alias>'
+    1:     def __init__(self, value, start_mark, end_mark):
+               self.value = value
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+       
+    2: class AnchorToken(Token):
+    1:     id = '<anchor>'
+    1:     def __init__(self, value, start_mark, end_mark):
+               self.value = value
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+       
+    2: class TagToken(Token):
+    1:     id = '<tag>'
+    1:     def __init__(self, value, start_mark, end_mark):
+               self.value = value
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+       
+    2: class ScalarToken(Token):
+    1:     id = '<scalar>'
+    1:     def __init__(self, value, plain, start_mark, end_mark, style=None):
+               self.value = value
+               self.plain = plain
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.style = style
+       

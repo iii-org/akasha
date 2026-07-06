@@ -36,20 +36,46 @@ def get_retrivers(
     Returns:
         List[BaseRetriever]: selected list of retrievers that the search_type needed .
     """
-
     topK = 10000
 
     retriver_list = []
+    search_type_value = search_type
+    search_type_normalized = (
+        search_type.lower() if isinstance(search_type, str) else search_type
+    )
 
-    embeddings, embed_name = handle_embeddings_and_name(embeddings, False, env_file)
-    if callable(search_type):
+    if (
+        isinstance(search_type_normalized, str)
+        and search_type_normalized.startswith("rerank")
+        and search_type_normalized not in {"auto_rerank"}
+    ):
+        try:
+            import torch  # noqa: F401
+        except ImportError:
+            print(
+                "\nWarning: Rerank requires local model support (torch/transformers). "
+                "This is only available in the 'full' version.\n"
+                "Please install with: pip install akasha-terminal[full]\n"
+                "Switching to standard retrieval...\n"
+            )
+            raise ValueError(f"cannot find search type {search_type_normalized}, end process\n")
+
+    requires_embeddings = callable(search_type_value) or (
+        isinstance(search_type_normalized, str)
+        and search_type_normalized not in {"tfidf", "bm25", "rerank"}
+    )
+
+    if requires_embeddings:
+        embeddings, _embed_name = handle_embeddings_and_name(embeddings, False, env_file)
+
+    if callable(search_type_value):
         custom_retriver = customRetriever.from_db(
             db, embeddings, search_type, topK, threshold
         )
         retriver_list.append(custom_retriver)
 
     else:
-        search_type = search_type.lower()
+        search_type = search_type_normalized
 
         if search_type in ["merge", "tfidf", "auto", "auto_rerank", "bm25", "rerank"]:
             docs_list = db.get_Documents()

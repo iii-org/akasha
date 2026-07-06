@@ -1,0 +1,20 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+       
+    1: __all__ = ["RefusalDeltaBlock"]
+       
+       
+    2: class RefusalDeltaBlock(BaseModel):
+    1:     """The refusal content that is part of a message."""
+       
+    1:     index: int
+    1:     """The index of the refusal part in the message."""
+       
+    1:     type: Literal["refusal"]
+    1:     """Always `refusal`."""
+       
+    1:     refusal: Optional[str] = None

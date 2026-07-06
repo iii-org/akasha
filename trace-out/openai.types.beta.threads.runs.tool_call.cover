@@ -1,0 +1,15 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union
+    1: from typing_extensions import Annotated, TypeAlias
+       
+    1: from ....._utils import PropertyInfo
+    1: from .function_tool_call import FunctionToolCall
+    1: from .file_search_tool_call import FileSearchToolCall
+    1: from .code_interpreter_tool_call import CodeInterpreterToolCall
+       
+    1: __all__ = ["ToolCall"]
+       
+    2: ToolCall: TypeAlias = Annotated[
+    1:     Union[CodeInterpreterToolCall, FileSearchToolCall, FunctionToolCall], PropertyInfo(discriminator="type")
+       ]

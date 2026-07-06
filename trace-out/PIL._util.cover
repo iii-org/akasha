@@ -1,0 +1,29 @@
+    1: from __future__ import annotations
+       
+    1: import os
+       
+    1: TYPE_CHECKING = False
+    1: if TYPE_CHECKING:
+           from typing import Any, NoReturn, TypeGuard
+       
+           from ._typing import StrOrBytesPath
+       
+       
+    1: def is_path(f: Any) -> TypeGuard[StrOrBytesPath]:
+           return isinstance(f, (bytes, str, os.PathLike))
+       
+       
+    2: class DeferredError:
+    1:     def __init__(self, ex: BaseException):
+               self.ex = ex
+       
+    1:     def __getattr__(self, elt: str) -> NoReturn:
+               raise self.ex
+       
+    2:     @staticmethod
+    2:     def new(ex: BaseException) -> Any:
+               """
+               Creates an object that raises the wrapped exception ``ex`` when used,
+               and casts it to :py:obj:`~typing.Any` type.
+               """
+               return DeferredError(ex)

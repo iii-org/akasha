@@ -1,0 +1,25 @@
+    1: from typing import Callable, List, Tuple, TypeVar, cast
+       
+    1: from ..config import registry
+    1: from ..model import Model
+    1: from ..types import ArrayXd, ListXd, Ragged
+       
+    1: InT = TypeVar("InT", bound=ListXd)
+    1: OutT = Ragged
+       
+       
+    2: @registry.layers("list2ragged.v1")
+    2: def list2ragged() -> Model[InT, OutT]:
+           """Transform sequences to ragged arrays if necessary and return the ragged
+           array. If sequences are already ragged, do nothing. A ragged array is a
+           tuple (data, lengths), where data is the concatenated data.
+           """
+           return Model("list2ragged", forward)
+       
+       
+    1: def forward(model: Model[InT, OutT], Xs: InT, is_train: bool) -> Tuple[OutT, Callable]:
+           def backprop(dYr: OutT) -> InT:
+               return cast(InT, model.ops.unflatten(dYr.data, dYr.lengths))
+       
+           lengths = model.ops.asarray1i([len(x) for x in Xs])
+           return Ragged(model.ops.flatten(Xs), lengths), backprop

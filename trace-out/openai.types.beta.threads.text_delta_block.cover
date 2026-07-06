@@ -1,0 +1,21 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+    1: from .text_delta import TextDelta
+       
+    1: __all__ = ["TextDeltaBlock"]
+       
+       
+    2: class TextDeltaBlock(BaseModel):
+    1:     """The text content that is part of a message."""
+       
+    1:     index: int
+    1:     """The index of the content part in the message."""
+       
+    1:     type: Literal["text"]
+    1:     """Always `text`."""
+       
+    1:     text: Optional[TextDelta] = None

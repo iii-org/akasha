@@ -1,0 +1,73 @@
+    1: from itertools import filterfalse
+       
+       
+    1: def unique_everseen(iterable, key=None):
+           "List unique elements, preserving order. Remember all elements ever seen."
+           # unique_everseen('AAAABBBCCDAABBB') --> A B C D
+           # unique_everseen('ABBCcAD', str.lower) --> A B C D
+    2:     seen = set()
+    2:     seen_add = seen.add
+    2:     if key is None:
+               for element in filterfalse(seen.__contains__, iterable):
+                   seen_add(element)
+                   yield element
+           else:
+  554:         for element in iterable:
+  552:             k = key(element)
+  552:             if k not in seen:
+  548:                 seen_add(k)
+  548:                 yield element
+       
+       
+       # copied from more_itertools 8.8
+    1: def always_iterable(obj, base_type=(str, bytes)):
+           """If *obj* is iterable, return an iterator over its items::
+       
+               >>> obj = (1, 2, 3)
+               >>> list(always_iterable(obj))
+               [1, 2, 3]
+       
+           If *obj* is not iterable, return a one-item iterable containing *obj*::
+       
+               >>> obj = 1
+               >>> list(always_iterable(obj))
+               [1]
+       
+           If *obj* is ``None``, return an empty iterable:
+       
+               >>> obj = None
+               >>> list(always_iterable(None))
+               []
+       
+           By default, binary and text strings are not considered iterable::
+       
+               >>> obj = 'foo'
+               >>> list(always_iterable(obj))
+               ['foo']
+       
+           If *base_type* is set, objects for which ``isinstance(obj, base_type)``
+           returns ``True`` won't be considered iterable.
+       
+               >>> obj = {'a': 1}
+               >>> list(always_iterable(obj))  # Iterate over the dict's keys
+               ['a']
+               >>> list(always_iterable(obj, base_type=dict))  # Treat dicts as a unit
+               [{'a': 1}]
+       
+           Set *base_type* to ``None`` to avoid any special handling and treat objects
+           Python considers iterable as iterable:
+       
+               >>> obj = 'foo'
+               >>> list(always_iterable(obj, base_type=None))
+               ['f', 'o', 'o']
+           """
+  102:     if obj is None:
+               return iter(())
+       
+  102:     if (base_type is not None) and isinstance(obj, base_type):
+               return iter((obj,))
+       
+  102:     try:
+  102:         return iter(obj)
+           except TypeError:
+               return iter((obj,))

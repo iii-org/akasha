@@ -1,0 +1,456 @@
+       # Copyright (c) Facebook, Inc. and its affiliates.
+       #
+       # This source code is licensed under the MIT license found in the
+       # LICENSE file in the root directory of this source tree.
+       
+       
+       # start delvewheel patch
+    1: def _delvewheel_patch_1_13_0():
+    1:     import os
+    1:     if os.path.isdir(libs_dir := os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'faiss_cpu.libs'))):
+    1:         os.add_dll_directory(libs_dir)
+       
+       
+    1: _delvewheel_patch_1_13_0()
+    1: del _delvewheel_patch_1_13_0
+       # end delvewheel patch
+       
+       # @nolint
+       
+       # not linting this file because it imports * from swigfaiss, which
+       # causes a ton of useless warnings.
+       
+    1: import numpy as np
+    1: import logging
+    1: import sys
+    1: import inspect
+       
+       
+    1: def _preload_gpu_libs():
+           """Pre-load CUDA shared libraries from nvidia-*-cu12 pip packages.
+       
+           The libcudart.so / libcublas.so / libcurand.so files live in
+           site-packages/nvidia/{cuda_runtime,cublas,curand}/lib/ — not on the
+           default ld.so search path. Pre-load them with RTLD_GLOBAL before the
+           SWIG extension dlopen()s libfaiss.so (which has CUDA undefined symbols).
+       
+           Gating: keyed on the `faiss._gpu_build` module, which CMake writes only
+           when FAISS_ENABLE_GPU=ON. We can't gate on `nvidia.cuda_runtime`
+           importability — PyTorch and cupy CUDA wheels pull that in transitively,
+           so a faiss-cpu user with PyTorch+CUDA would otherwise hit this path and
+           see a misleading error if any nvidia-* package were missing.
+       
+           Behavior:
+           - faiss-cpu install (no `_gpu_build` marker): silent no-op.
+           - faiss-gpu install with missing nvidia-cuda-runtime / cublas / curand:
+             raises RuntimeError with fix-it message.
+           """
+    1:     try:
+    1:         from . import _gpu_build  # noqa: F401
+    1:     except ImportError:
+    1:         return  # faiss-cpu install: marker absent, nothing to preload
+       
+           import ctypes
+           import os
+       
+           try:
+               import nvidia.cuda_runtime
+           except ImportError as e:
+               raise RuntimeError(
+                   "faiss-gpu installed but nvidia-cuda-runtime-cu12 is missing — "
+                   "pip install 'nvidia-cuda-runtime-cu12>=12.6,<13'"
+               ) from e
+       
+           try:
+               import nvidia.cublas
+           except ImportError as e:
+               raise RuntimeError(
+                   "faiss-gpu installed but nvidia-cublas-cu12 is missing — "
+                   "pip install 'nvidia-cublas-cu12>=12.6,<13'"
+               ) from e
+       
+           try:
+               import nvidia.curand
+           except ImportError as e:
+               raise RuntimeError(
+                   "faiss-gpu installed but nvidia-curand-cu12 is missing — "
+                   "pip install 'nvidia-curand-cu12>=10.3.7,<11'"
+               ) from e
+       
+           # Order matters: libcudart provides symbols that libcublas* / libcurand depend on.
+           _LIBS = [
+               (nvidia.cuda_runtime, "libcudart.so.12"),
+               (nvidia.cublas,       "libcublas.so.12"),
+               (nvidia.cublas,       "libcublasLt.so.12"),
+               (nvidia.curand,       "libcurand.so.10"),
+           ]
+           for pkg, soname in _LIBS:
+               # Use __path__[0] not __file__ — the nvidia-*-cu12 wheels are PEP 420
+               # implicit namespace packages, so pkg.__file__ is None.
+               so_path = os.path.join(pkg.__path__[0], "lib", soname)
+               try:
+                   ctypes.CDLL(so_path, mode=ctypes.RTLD_GLOBAL)
+               except OSError as e:
+                   raise RuntimeError(
+                       f"faiss-gpu: failed to load {soname} from {so_path} — "
+                       f"corrupt nvidia-*-cu12 wheel? Try: pip install --force-reinstall "
+                       f"'nvidia-cuda-runtime-cu12>=12.6,<13' "
+                       f"'nvidia-cublas-cu12>=12.6,<13' "
+                       f"'nvidia-curand-cu12>=10.3.7,<11'"
+                   ) from e
+       
+       
+    1: _preload_gpu_libs()
+    1: del _preload_gpu_libs
+       
+       # We import * so that the symbol foo can be accessed as faiss.foo.
+    1: from .loader import *
+       
+       # additional wrappers
+    1: from faiss import class_wrappers
+    1: from faiss.gpu_wrappers import *
+    1: from faiss.array_conversions import *
+    1: from faiss.extra_wrappers import kmin, kmax, pairwise_distances, rand, randint, \
+           lrand, randn, rand_smooth_vectors, eval_intersection, normalize_L2, \
+           ResultHeap, knn, Kmeans, SuperKmeans, checksum, matrix_bucket_sort_inplace, \
+           bucket_sort, merge_knn_results, MapInt64ToInt64, knn_hamming, \
+           pack_bitstrings, unpack_bitstrings
+       
+       
+    2: __version__ = "%d.%d.%d" % (FAISS_VERSION_MAJOR,
+    1:                             FAISS_VERSION_MINOR,
+    1:                             FAISS_VERSION_PATCH)
+       
+    1: logger = logging.getLogger(__name__)
+       
+    1: class_wrappers.handle_Clustering(Clustering)
+    1: class_wrappers.handle_SuperKMeans(SuperKMeans)
+    1: class_wrappers.handle_Clustering1D(Clustering1D)
+    1: class_wrappers.handle_MatrixStats(MatrixStats)
+    1: class_wrappers.handle_IOWriter(IOWriter)
+    1: class_wrappers.handle_IOReader(IOReader)
+    1: class_wrappers.handle_AutoTuneCriterion(AutoTuneCriterion)
+    1: class_wrappers.handle_ParameterSpace(ParameterSpace)
+    1: class_wrappers.handle_NSG(IndexNSG)
+    1: class_wrappers.handle_MapLong2Long(MapLong2Long)
+    1: class_wrappers.handle_IDSelectorSubset(IDSelectorBatch, class_owns=True)
+    1: class_wrappers.handle_IDSelectorSubset(IDSelectorArray, class_owns=False)
+    1: class_wrappers.handle_IDSelectorSubset(IDSelectorBitmap, class_owns=False, force_int64=False)
+    1: class_wrappers.handle_CodeSet(CodeSet)
+       
+    1: class_wrappers.handle_Tensor2D(Tensor2D)
+    1: class_wrappers.handle_Tensor2D(Int32Tensor2D)
+    1: class_wrappers.handle_Embedding(Embedding)
+    1: class_wrappers.handle_Linear(Linear)
+    1: class_wrappers.handle_QINCo(QINCo)
+    1: class_wrappers.handle_QINCoStep(QINCoStep)
+    1: shard_ivf_index_centroids = class_wrappers.handle_shard_ivf_index_centroids(shard_ivf_index_centroids)
+       
+       
+    1: this_module = sys.modules[__name__]
+       
+       # handle sub-classes
+  650: for symbol in dir(this_module):
+  649:     obj = getattr(this_module, symbol)
+           # print symbol, isinstance(obj, (type, types.ClassType))
+  649:     if inspect.isclass(obj):
+  330:         the_class = obj
+  330:         if issubclass(the_class, Index):
+   86:             class_wrappers.handle_Index(the_class)
+       
+  330:         if issubclass(the_class, IndexBinary):
+   13:             class_wrappers.handle_IndexBinary(the_class)
+       
+  330:         if issubclass(the_class, VectorTransform):
+   11:             class_wrappers.handle_VectorTransform(the_class)
+       
+  330:         if issubclass(the_class, Quantizer):
+   10:             class_wrappers.handle_Quantizer(the_class)
+       
+  659:         if issubclass(the_class, IndexRowwiseMinMax) or \
+  329:                 issubclass(the_class, IndexRowwiseMinMaxFP16):
+    2:             class_wrappers.handle_IndexRowwiseMinMax(the_class)
+       
+  330:         if issubclass(the_class, SearchParameters):
+   11:             class_wrappers.handle_SearchParameters(the_class)
+       
+  330:         if issubclass(the_class, CodePacker):
+    2:             class_wrappers.handle_CodePacker(the_class)
+       
+       ##############################################################################
+       # For some classes (IndexIVF, IDSelector), the object holds a reference to
+       # a C++ object (eg. the quantizer object of IndexIVF). We don't transfer the
+       # ownership to the C++ object (ie. set own_quantizer=true), but instead we add
+       # a reference in the Python class wrapper instead. This is done via an
+       # additional referenced_objects field.
+       #
+       # Since the semantics of ownership in the C++ classes are sometimes irregular,
+       # these references are added manually using the functions below.
+       ##############################################################################
+       
+       
+    1: def add_ref_in_constructor(the_class, parameter_no):
+           # adds a reference to parameter parameter_no in self
+           # so that that parameter does not get deallocated before self
+   38:     original_init = the_class.__init__
+       
+   38:     def replacement_init(self, *args):
+               original_init(self, *args)
+               self.referenced_objects = [args[parameter_no]]
+       
+   38:     def replacement_init_multiple(self, *args):
+               original_init(self, *args)
+               pset = parameter_no[len(args)]
+               self.referenced_objects = [args[no] for no in pset]
+       
+   38:     if type(parameter_no) == dict:
+               # a list of parameters to keep, depending on the number of arguments
+    4:         the_class.__init__ = replacement_init_multiple
+           else:
+   34:         the_class.__init__ = replacement_init
+       
+    1: def add_to_referenced_objects(self, ref):
+           if not hasattr(self, 'referenced_objects'):
+               self.referenced_objects = [ref]
+           else:
+               self.referenced_objects.append(ref)
+       
+       
+    1: def add_ref_in_method(the_class, method_name, parameter_no):
+    5:     original_method = getattr(the_class, method_name)
+       
+    5:     def replacement_method(self, *args):
+               ref = args[parameter_no]
+               add_to_referenced_objects(self, ref)
+               return original_method(self, *args)
+    5:     setattr(the_class, method_name, replacement_method)
+       
+       
+    1: def add_ref_in_method_explicit_own(the_class, method_name):
+           # for methods of format set_XXX(object, own)
+    1:     original_method = getattr(the_class, method_name)
+       
+    1:     def replacement_method(self, ref, own=False):
+               if not own:
+                   if not hasattr(self, 'referenced_objects'):
+                       self.referenced_objects = [ref]
+                   else:
+                       self.referenced_objects.append(ref)
+               else:
+                   # transfer ownership to C++ class
+                   ref.this.disown()
+               return original_method(self, ref, own)
+    1:     setattr(the_class, method_name, replacement_method)
+       
+       
+    1: def add_ref_in_function(function_name, parameter_no):
+           # assumes the function returns an object
+           original_function = getattr(this_module, function_name)
+       
+           def replacement_function(*args):
+               result = original_function(*args)
+               ref = args[parameter_no]
+               result.referenced_objects = [ref]
+               return result
+           setattr(this_module, function_name, replacement_function)
+       
+       
+    1: if "GPU" in get_compile_options():
+           add_ref_in_constructor(GpuIndexIVFFlat, 1)
+           add_ref_in_constructor(GpuIndexBinaryFlat, 1)
+           add_ref_in_constructor(GpuIndexFlat, 1)
+           add_ref_in_constructor(GpuIndexIVFPQ, 1)
+           add_ref_in_constructor(GpuIndexIVFScalarQuantizer, 1)
+       
+    1: add_ref_in_constructor(IndexIVFFlat, 0)
+    1: add_ref_in_constructor(IndexIVFFlatDedup, 0)
+    1: add_ref_in_constructor(IndexIVFFlatPanorama, 0)
+    1: add_ref_in_constructor(IndexPreTransform, {2: [0, 1], 1: [0]})
+    1: add_ref_in_method(IndexPreTransform, 'prepend_transform', 0)
+    1: add_ref_in_constructor(IndexIVFPQ, 0)
+    1: add_ref_in_constructor(IndexIVFPQR, 0)
+    1: add_ref_in_constructor(IndexIVFPQFastScan, 0)
+    1: add_ref_in_constructor(IndexIVFResidualQuantizer, 0)
+    1: add_ref_in_constructor(IndexIVFLocalSearchQuantizer, 0)
+    1: add_ref_in_constructor(IndexIVFResidualQuantizerFastScan, 0)
+    1: add_ref_in_constructor(IndexIVFLocalSearchQuantizerFastScan, 0)
+    1: add_ref_in_constructor(IndexIVFSpectralHash, 0)
+    1: add_ref_in_method_explicit_own(IndexIVFSpectralHash, "replace_vt")
+       
+    1: add_ref_in_constructor(Index2Layer, 0)
+    1: add_ref_in_constructor(Level1Quantizer, 0)
+    1: add_ref_in_constructor(IndexIVFScalarQuantizer, 0)
+    1: add_ref_in_constructor(IndexRowwiseMinMax, 0)
+    1: add_ref_in_constructor(IndexRowwiseMinMaxFP16, 0)
+    1: add_ref_in_constructor(IndexIDMap, 0)
+    1: add_ref_in_constructor(IndexIDMap2, 0)
+    1: add_ref_in_constructor(IndexHNSW, 0)
+    1: add_ref_in_method(IndexShards, 'add_shard', 0)
+    1: add_ref_in_method(IndexBinaryShards, 'add_shard', 0)
+    1: add_ref_in_constructor(IndexRefineFlat, {2: [0], 1: [0]})
+    1: add_ref_in_constructor(IndexRefinePanorama, {2: [0, 1]})
+    1: add_ref_in_constructor(IndexRefine, {2: [0, 1]})
+       
+    1: add_ref_in_constructor(IndexBinaryIVF, 0)
+    1: add_ref_in_constructor(IndexBinaryFromFloat, 0)
+    1: add_ref_in_constructor(IndexBinaryIDMap, 0)
+    1: add_ref_in_constructor(IndexBinaryIDMap2, 0)
+       
+    1: add_ref_in_method(IndexReplicas, 'addIndex', 0)
+    1: add_ref_in_method(IndexBinaryReplicas, 'addIndex', 0)
+       
+    1: add_ref_in_constructor(BufferedIOWriter, 0)
+    1: add_ref_in_constructor(BufferedIOReader, 0)
+       
+    1: add_ref_in_constructor(IDSelectorNot, 0)
+    1: add_ref_in_constructor(IDSelectorAnd, slice(2))
+    1: add_ref_in_constructor(IDSelectorOr, slice(2))
+    1: add_ref_in_constructor(IDSelectorXOr, slice(2))
+    1: add_ref_in_constructor(IDSelectorTranslated, slice(2))
+       
+    1: add_ref_in_constructor(IDSelectorXOr, slice(2))
+    1: add_ref_in_constructor(IndexIVFIndependentQuantizer, slice(3))
+       
+    1: add_ref_in_constructor(IndexIVFRaBitQ, 0)
+    1: add_ref_in_constructor(IndexIVFRaBitQFastScan, 0)
+       
+    1: if "SVS" in get_compile_options():
+           add_ref_in_constructor(IndexSVSVamana, 0)
+           add_ref_in_constructor(IndexSVSVamanaLVQ, 0)
+           add_ref_in_constructor(IndexSVSVamanaLeanVec, 0)
+           add_ref_in_constructor(IndexSVSFlat, 0)
+       
+       # seems really marginal...
+       # remove_ref_from_method(IndexReplicas, 'removeIndex', 0)
+       
+       
+       ######################################################
+       # search_with_parameters interface
+       ######################################################
+       
+    1: search_with_parameters_c = search_with_parameters
+       
+       
+    1: def search_with_parameters(index, x, k, params=None, output_stats=False):
+           x = np.ascontiguousarray(x, dtype='float32')
+           n, d = x.shape
+           assert d == index.d
+           if not params:
+               # if not provided use the ones set in the IVF object
+               params = IVFSearchParameters()
+               index_ivf = extract_index_ivf(index)
+               params.nprobe = index_ivf.nprobe
+               params.max_codes = index_ivf.max_codes
+           nb_dis = np.empty(1, 'uint64')
+           ms_per_stage = np.empty(3, 'float64')
+           distances = np.empty((n, k), dtype=np.float32)
+           labels = np.empty((n, k), dtype=np.int64)
+           search_with_parameters_c(
+               index, n, swig_ptr(x),
+               k, swig_ptr(distances),
+               swig_ptr(labels),
+               params, swig_ptr(nb_dis), swig_ptr(ms_per_stage)
+           )
+           if not output_stats:
+               return distances, labels
+           else:
+               stats = {
+                   'ndis': nb_dis[0],
+                   'pre_transform_ms': ms_per_stage[0],
+                   'coarse_quantizer_ms': ms_per_stage[1],
+                   'invlist_scan_ms': ms_per_stage[2],
+               }
+               return distances, labels, stats
+       
+       
+    1: range_search_with_parameters_c = range_search_with_parameters
+       
+       
+    1: def range_search_with_parameters(index, x, radius, params=None, output_stats=False):
+           x = np.ascontiguousarray(x, dtype='float32')
+           n, d = x.shape
+           assert d == index.d
+           if not params:
+               # if not provided use the ones set in the IVF object
+               params = IVFSearchParameters()
+               index_ivf = extract_index_ivf(index)
+               params.nprobe = index_ivf.nprobe
+               params.max_codes = index_ivf.max_codes
+           nb_dis = np.empty(1, 'uint64')
+           ms_per_stage = np.empty(3, 'float64')
+           res = RangeSearchResult(n)
+           range_search_with_parameters_c(
+               index, n, swig_ptr(x),
+               radius, res,
+               params, swig_ptr(nb_dis), swig_ptr(ms_per_stage)
+           )
+           lims = rev_swig_ptr(res.lims, n + 1).copy()
+           nd = int(lims[-1])
+           Dout = rev_swig_ptr(res.distances, nd).copy()
+           Iout = rev_swig_ptr(res.labels, nd).copy()
+           if not output_stats:
+               return lims, Dout, Iout
+           else:
+               stats = {
+                   'ndis': nb_dis[0],
+                   'pre_transform_ms': ms_per_stage[0],
+                   'coarse_quantizer_ms': ms_per_stage[1],
+                   'invlist_scan_ms': ms_per_stage[2],
+               }
+               return lims, Dout, Iout, stats
+       
+       
+       # IndexProxy was renamed to IndexReplicas, remap the old name for any old code
+       # people may have
+    1: IndexProxy = IndexReplicas
+    1: ConcatenatedInvertedLists = HStackInvertedLists
+    1: IndexResidual = IndexResidualQuantizer
+       
+    1: IVFSearchParameters = SearchParametersIVF
+       
+       ###########################################
+       # serialization of indexes to byte arrays
+       ###########################################
+       
+       
+    1: def serialize_index(index, io_flags=0):
+           """ convert an index to a numpy uint8 array  """
+           writer = VectorIOWriter()
+           write_index(index, writer, io_flags)
+           return vector_to_array(writer.data)
+       
+       
+    1: def deserialize_index(data, io_flags=0):
+           reader = VectorIOReader()
+           copy_array_to_vector(data, reader.data)
+           return read_index(reader, io_flags)
+       
+       
+    1: def serialize_index_binary(index):
+           """ convert an index to a numpy uint8 array  """
+           writer = VectorIOWriter()
+           write_index_binary(index, writer)
+           return vector_to_array(writer.data)
+       
+       
+    1: def deserialize_index_binary(data):
+           reader = VectorIOReader()
+           copy_array_to_vector(data, reader.data)
+           return read_index_binary(reader)
+       
+       
+    2: class TimeoutGuard:
+    1:     def __init__(self, timeout_in_seconds: float):
+               self.timeout = timeout_in_seconds
+       
+    1:     def __enter__(self):
+               TimeoutCallback.reset(self.timeout)
+       
+    1:     def __exit__(self, exc_type, exc_value, traceback):
+               PythonInterruptCallback.reset()
+       
+       
+    1: try:
+    1:     post_init_hook()
+    1: except NameError:
+    1:     pass

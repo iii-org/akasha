@@ -1,0 +1,7 @@
+    1: """LangChain integration for Chroma vector database."""
+       
+    1: from langchain_chroma.vectorstores import Chroma
+       
+    1: __all__ = [
+    1:     "Chroma",
+       ]

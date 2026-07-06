@@ -1,0 +1,202 @@
+       # The most useful windows datatypes
+    1: import ctypes
+       
+    1: BYTE = ctypes.c_byte
+    1: WORD = ctypes.c_ushort
+    1: DWORD = ctypes.c_ulong
+       
+       #UCHAR = ctypes.c_uchar
+    1: CHAR = ctypes.c_char
+    1: WCHAR = ctypes.c_wchar
+    1: UINT = ctypes.c_uint
+    1: INT = ctypes.c_int
+       
+    1: DOUBLE = ctypes.c_double
+    1: FLOAT = ctypes.c_float
+       
+    1: BOOLEAN = BYTE
+    1: BOOL = ctypes.c_long
+       
+    2: class VARIANT_BOOL(ctypes._SimpleCData):
+    1:     _type_ = "v"
+    1:     def __repr__(self):
+               return "%s(%r)" % (self.__class__.__name__, self.value)
+       
+    1: ULONG = ctypes.c_ulong
+    1: LONG = ctypes.c_long
+       
+    1: USHORT = ctypes.c_ushort
+    1: SHORT = ctypes.c_short
+       
+       # in the windows header files, these are structures.
+    1: _LARGE_INTEGER = LARGE_INTEGER = ctypes.c_longlong
+    1: _ULARGE_INTEGER = ULARGE_INTEGER = ctypes.c_ulonglong
+       
+    1: LPCOLESTR = LPOLESTR = OLESTR = ctypes.c_wchar_p
+    1: LPCWSTR = LPWSTR = ctypes.c_wchar_p
+    1: LPCSTR = LPSTR = ctypes.c_char_p
+    1: LPCVOID = LPVOID = ctypes.c_void_p
+       
+       # WPARAM is defined as UINT_PTR (unsigned type)
+       # LPARAM is defined as LONG_PTR (signed type)
+    1: if ctypes.sizeof(ctypes.c_long) == ctypes.sizeof(ctypes.c_void_p):
+           WPARAM = ctypes.c_ulong
+           LPARAM = ctypes.c_long
+    1: elif ctypes.sizeof(ctypes.c_longlong) == ctypes.sizeof(ctypes.c_void_p):
+    1:     WPARAM = ctypes.c_ulonglong
+    1:     LPARAM = ctypes.c_longlong
+       
+    1: ATOM = WORD
+    1: LANGID = WORD
+       
+    1: COLORREF = DWORD
+    1: LGRPID = DWORD
+    1: LCTYPE = DWORD
+       
+    1: LCID = DWORD
+       
+       ################################################################
+       # HANDLE types
+    1: HANDLE = ctypes.c_void_p # in the header files: void *
+       
+    1: HACCEL = HANDLE
+    1: HBITMAP = HANDLE
+    1: HBRUSH = HANDLE
+    1: HCOLORSPACE = HANDLE
+    1: HDC = HANDLE
+    1: HDESK = HANDLE
+    1: HDWP = HANDLE
+    1: HENHMETAFILE = HANDLE
+    1: HFONT = HANDLE
+    1: HGDIOBJ = HANDLE
+    1: HGLOBAL = HANDLE
+    1: HHOOK = HANDLE
+    1: HICON = HANDLE
+    1: HINSTANCE = HANDLE
+    1: HKEY = HANDLE
+    1: HKL = HANDLE
+    1: HLOCAL = HANDLE
+    1: HMENU = HANDLE
+    1: HMETAFILE = HANDLE
+    1: HMODULE = HANDLE
+    1: HMONITOR = HANDLE
+    1: HPALETTE = HANDLE
+    1: HPEN = HANDLE
+    1: HRGN = HANDLE
+    1: HRSRC = HANDLE
+    1: HSTR = HANDLE
+    1: HTASK = HANDLE
+    1: HWINSTA = HANDLE
+    1: HWND = HANDLE
+    1: SC_HANDLE = HANDLE
+    1: SERVICE_STATUS_HANDLE = HANDLE
+       
+       ################################################################
+       # Some important structure definitions
+       
+    2: class RECT(ctypes.Structure):
+    2:     _fields_ = [("left", LONG),
+    1:                 ("top", LONG),
+    1:                 ("right", LONG),
+    1:                 ("bottom", LONG)]
+    1: tagRECT = _RECTL = RECTL = RECT
+       
+    2: class _SMALL_RECT(ctypes.Structure):
+    2:     _fields_ = [('Left', SHORT),
+    1:                 ('Top', SHORT),
+    1:                 ('Right', SHORT),
+    1:                 ('Bottom', SHORT)]
+    1: SMALL_RECT = _SMALL_RECT
+       
+    2: class _COORD(ctypes.Structure):
+    2:     _fields_ = [('X', SHORT),
+    1:                 ('Y', SHORT)]
+       
+    2: class POINT(ctypes.Structure):
+    2:     _fields_ = [("x", LONG),
+    1:                 ("y", LONG)]
+    1: tagPOINT = _POINTL = POINTL = POINT
+       
+    2: class SIZE(ctypes.Structure):
+    2:     _fields_ = [("cx", LONG),
+    1:                 ("cy", LONG)]
+    1: tagSIZE = SIZEL = SIZE
+       
+    1: def RGB(red, green, blue):
+           return red + (green << 8) + (blue << 16)
+       
+    2: class FILETIME(ctypes.Structure):
+    2:     _fields_ = [("dwLowDateTime", DWORD),
+    1:                 ("dwHighDateTime", DWORD)]
+    1: _FILETIME = FILETIME
+       
+    2: class MSG(ctypes.Structure):
+    2:     _fields_ = [("hWnd", HWND),
+    1:                 ("message", UINT),
+    1:                 ("wParam", WPARAM),
+    1:                 ("lParam", LPARAM),
+    1:                 ("time", DWORD),
+    1:                 ("pt", POINT)]
+    1: tagMSG = MSG
+    1: MAX_PATH = 260
+       
+    2: class WIN32_FIND_DATAA(ctypes.Structure):
+    2:     _fields_ = [("dwFileAttributes", DWORD),
+    1:                 ("ftCreationTime", FILETIME),
+    1:                 ("ftLastAccessTime", FILETIME),
+    1:                 ("ftLastWriteTime", FILETIME),
+    1:                 ("nFileSizeHigh", DWORD),
+    1:                 ("nFileSizeLow", DWORD),
+    1:                 ("dwReserved0", DWORD),
+    1:                 ("dwReserved1", DWORD),
+    1:                 ("cFileName", CHAR * MAX_PATH),
+    1:                 ("cAlternateFileName", CHAR * 14)]
+       
+    2: class WIN32_FIND_DATAW(ctypes.Structure):
+    2:     _fields_ = [("dwFileAttributes", DWORD),
+    1:                 ("ftCreationTime", FILETIME),
+    1:                 ("ftLastAccessTime", FILETIME),
+    1:                 ("ftLastWriteTime", FILETIME),
+    1:                 ("nFileSizeHigh", DWORD),
+    1:                 ("nFileSizeLow", DWORD),
+    1:                 ("dwReserved0", DWORD),
+    1:                 ("dwReserved1", DWORD),
+    1:                 ("cFileName", WCHAR * MAX_PATH),
+    1:                 ("cAlternateFileName", WCHAR * 14)]
+       
+       ################################################################
+       # Pointer types
+       
+    1: LPBOOL = PBOOL = ctypes.POINTER(BOOL)
+    1: PBOOLEAN = ctypes.POINTER(BOOLEAN)
+    1: LPBYTE = PBYTE = ctypes.POINTER(BYTE)
+    1: PCHAR = ctypes.POINTER(CHAR)
+    1: LPCOLORREF = ctypes.POINTER(COLORREF)
+    1: LPDWORD = PDWORD = ctypes.POINTER(DWORD)
+    1: LPFILETIME = PFILETIME = ctypes.POINTER(FILETIME)
+    1: PFLOAT = ctypes.POINTER(FLOAT)
+    1: LPHANDLE = PHANDLE = ctypes.POINTER(HANDLE)
+    1: PHKEY = ctypes.POINTER(HKEY)
+    1: LPHKL = ctypes.POINTER(HKL)
+    1: LPINT = PINT = ctypes.POINTER(INT)
+    1: PLARGE_INTEGER = ctypes.POINTER(LARGE_INTEGER)
+    1: PLCID = ctypes.POINTER(LCID)
+    1: LPLONG = PLONG = ctypes.POINTER(LONG)
+    1: LPMSG = PMSG = ctypes.POINTER(MSG)
+    1: LPPOINT = PPOINT = ctypes.POINTER(POINT)
+    1: PPOINTL = ctypes.POINTER(POINTL)
+    1: LPRECT = PRECT = ctypes.POINTER(RECT)
+    1: LPRECTL = PRECTL = ctypes.POINTER(RECTL)
+    1: LPSC_HANDLE = ctypes.POINTER(SC_HANDLE)
+    1: PSHORT = ctypes.POINTER(SHORT)
+    1: LPSIZE = PSIZE = ctypes.POINTER(SIZE)
+    1: LPSIZEL = PSIZEL = ctypes.POINTER(SIZEL)
+    1: PSMALL_RECT = ctypes.POINTER(SMALL_RECT)
+    1: LPUINT = PUINT = ctypes.POINTER(UINT)
+    1: PULARGE_INTEGER = ctypes.POINTER(ULARGE_INTEGER)
+    1: PULONG = ctypes.POINTER(ULONG)
+    1: PUSHORT = ctypes.POINTER(USHORT)
+    1: PWCHAR = ctypes.POINTER(WCHAR)
+    1: LPWIN32_FIND_DATAA = PWIN32_FIND_DATAA = ctypes.POINTER(WIN32_FIND_DATAA)
+    1: LPWIN32_FIND_DATAW = PWIN32_FIND_DATAW = ctypes.POINTER(WIN32_FIND_DATAW)
+    1: LPWORD = PWORD = ctypes.POINTER(WORD)

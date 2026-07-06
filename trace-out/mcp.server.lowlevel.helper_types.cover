@@ -1,0 +1,11 @@
+    1: from dataclasses import dataclass
+    1: from typing import Any
+       
+       
+    3: @dataclass
+    2: class ReadResourceContents:
+    1:     """Contents returned from a read_resource call."""
+       
+    1:     content: str | bytes
+    1:     mime_type: str | None = None
+    1:     meta: dict[str, Any] | None = None

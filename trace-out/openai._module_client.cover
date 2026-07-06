@@ -1,0 +1,189 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import TYPE_CHECKING
+    1: from typing_extensions import override
+       
+    1: if TYPE_CHECKING:
+           from .resources.files import Files
+           from .resources.images import Images
+           from .resources.models import Models
+           from .resources.videos import Videos
+           from .resources.batches import Batches
+           from .resources.beta.beta import Beta
+           from .resources.chat.chat import Chat
+           from .resources.embeddings import Embeddings
+           from .resources.admin.admin import Admin
+           from .resources.audio.audio import Audio
+           from .resources.completions import Completions
+           from .resources.evals.evals import Evals
+           from .resources.moderations import Moderations
+           from .resources.skills.skills import Skills
+           from .resources.uploads.uploads import Uploads
+           from .resources.realtime.realtime import Realtime
+           from .resources.webhooks.webhooks import Webhooks
+           from .resources.responses.responses import Responses
+           from .resources.containers.containers import Containers
+           from .resources.fine_tuning.fine_tuning import FineTuning
+           from .resources.conversations.conversations import Conversations
+           from .resources.vector_stores.vector_stores import VectorStores
+       
+    1: from . import _load_client
+    1: from ._utils import LazyProxy
+       
+       
+    2: class ChatProxy(LazyProxy["Chat"]):
+    2:     @override
+    2:     def __load__(self) -> Chat:
+               return _load_client().chat
+       
+       
+    2: class BetaProxy(LazyProxy["Beta"]):
+    2:     @override
+    2:     def __load__(self) -> Beta:
+               return _load_client().beta
+       
+       
+    2: class FilesProxy(LazyProxy["Files"]):
+    2:     @override
+    2:     def __load__(self) -> Files:
+               return _load_client().files
+       
+       
+    2: class AudioProxy(LazyProxy["Audio"]):
+    2:     @override
+    2:     def __load__(self) -> Audio:
+               return _load_client().audio
+       
+       
+    2: class AdminProxy(LazyProxy["Admin"]):
+    2:     @override
+    2:     def __load__(self) -> Admin:
+               return _load_client().admin
+       
+       
+    2: class EvalsProxy(LazyProxy["Evals"]):
+    2:     @override
+    2:     def __load__(self) -> Evals:
+               return _load_client().evals
+       
+       
+    2: class ImagesProxy(LazyProxy["Images"]):
+    2:     @override
+    2:     def __load__(self) -> Images:
+               return _load_client().images
+       
+       
+    2: class ModelsProxy(LazyProxy["Models"]):
+    2:     @override
+    2:     def __load__(self) -> Models:
+               return _load_client().models
+       
+       
+    2: class SkillsProxy(LazyProxy["Skills"]):
+    2:     @override
+    2:     def __load__(self) -> Skills:
+               return _load_client().skills
+       
+       
+    2: class VideosProxy(LazyProxy["Videos"]):
+    2:     @override
+    2:     def __load__(self) -> Videos:
+               return _load_client().videos
+       
+       
+    2: class BatchesProxy(LazyProxy["Batches"]):
+    2:     @override
+    2:     def __load__(self) -> Batches:
+               return _load_client().batches
+       
+       
+    2: class UploadsProxy(LazyProxy["Uploads"]):
+    2:     @override
+    2:     def __load__(self) -> Uploads:
+               return _load_client().uploads
+       
+       
+    2: class WebhooksProxy(LazyProxy["Webhooks"]):
+    2:     @override
+    2:     def __load__(self) -> Webhooks:
+               return _load_client().webhooks
+       
+       
+    2: class RealtimeProxy(LazyProxy["Realtime"]):
+    2:     @override
+    2:     def __load__(self) -> Realtime:
+               return _load_client().realtime
+       
+       
+    2: class ResponsesProxy(LazyProxy["Responses"]):
+    2:     @override
+    2:     def __load__(self) -> Responses:
+               return _load_client().responses
+       
+       
+    2: class EmbeddingsProxy(LazyProxy["Embeddings"]):
+    2:     @override
+    2:     def __load__(self) -> Embeddings:
+               return _load_client().embeddings
+       
+       
+    2: class ContainersProxy(LazyProxy["Containers"]):
+    2:     @override
+    2:     def __load__(self) -> Containers:
+               return _load_client().containers
+       
+       
+    2: class CompletionsProxy(LazyProxy["Completions"]):
+    2:     @override
+    2:     def __load__(self) -> Completions:
+               return _load_client().completions
+       
+       
+    2: class ModerationsProxy(LazyProxy["Moderations"]):
+    2:     @override
+    2:     def __load__(self) -> Moderations:
+               return _load_client().moderations
+       
+       
+    2: class FineTuningProxy(LazyProxy["FineTuning"]):
+    2:     @override
+    2:     def __load__(self) -> FineTuning:
+               return _load_client().fine_tuning
+       
+       
+    2: class VectorStoresProxy(LazyProxy["VectorStores"]):
+    2:     @override
+    2:     def __load__(self) -> VectorStores:
+               return _load_client().vector_stores
+       
+       
+    2: class ConversationsProxy(LazyProxy["Conversations"]):
+    2:     @override
+    2:     def __load__(self) -> Conversations:
+               return _load_client().conversations
+       
+       
+    1: chat: Chat = ChatProxy().__as_proxied__()
+    1: beta: Beta = BetaProxy().__as_proxied__()
+    1: files: Files = FilesProxy().__as_proxied__()
+    1: audio: Audio = AudioProxy().__as_proxied__()
+    1: admin: Admin = AdminProxy().__as_proxied__()
+    1: evals: Evals = EvalsProxy().__as_proxied__()
+    1: images: Images = ImagesProxy().__as_proxied__()
+    1: models: Models = ModelsProxy().__as_proxied__()
+    1: skills: Skills = SkillsProxy().__as_proxied__()
+    1: videos: Videos = VideosProxy().__as_proxied__()
+    1: batches: Batches = BatchesProxy().__as_proxied__()
+    1: uploads: Uploads = UploadsProxy().__as_proxied__()
+    1: webhooks: Webhooks = WebhooksProxy().__as_proxied__()
+    1: realtime: Realtime = RealtimeProxy().__as_proxied__()
+    1: responses: Responses = ResponsesProxy().__as_proxied__()
+    1: embeddings: Embeddings = EmbeddingsProxy().__as_proxied__()
+    1: containers: Containers = ContainersProxy().__as_proxied__()
+    1: completions: Completions = CompletionsProxy().__as_proxied__()
+    1: moderations: Moderations = ModerationsProxy().__as_proxied__()
+    1: fine_tuning: FineTuning = FineTuningProxy().__as_proxied__()
+    1: vector_stores: VectorStores = VectorStoresProxy().__as_proxied__()
+    1: conversations: Conversations = ConversationsProxy().__as_proxied__()

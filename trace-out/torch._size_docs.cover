@@ -1,0 +1,39 @@
+    1: """Adds docstrings to torch.Size functions"""
+       
+    1: import torch._C
+    1: from torch._C import _add_docstr as add_docstr
+       
+       
+    1: def add_docstr_all(method: str, docstr: str) -> None:
+    1:     add_docstr(getattr(torch._C.Size, method), docstr)
+       
+       
+    2: add_docstr_all(
+    1:     "numel",
+    1:     """
+       numel() -> int
+       
+       Returns the number of elements a :class:`torch.Tensor` with the given size would contain.
+       
+       More formally, for a tensor ``x = tensor.ones(10, 10)`` with size ``s = torch.Size([10, 10])``,
+       ``x.numel() == x.size().numel() == s.numel() == 100`` holds true.
+       
+       Example::
+       
+           >>> x=torch.ones(10, 10)
+           >>> s=x.size()
+           >>> s
+           torch.Size([10, 10])
+           >>> s.numel()
+           100
+           >>> x.numel() == s.numel()
+           True
+       
+       
+       .. warning::
+       
+           This function does not return the number of dimensions described by :class:`torch.Size`, but instead the number
+           of elements a :class:`torch.Tensor` with that size would contain.
+       
+       """,
+       )

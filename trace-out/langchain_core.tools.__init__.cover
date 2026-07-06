@@ -1,0 +1,95 @@
+    1: """Tools are classes that an Agent uses to interact with the world.
+       
+       Each tool has a description. Agent uses the description to choose the right tool for the
+       job.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from typing import TYPE_CHECKING
+       
+    1: from langchain_core._import_utils import import_attr
+       
+    1: if TYPE_CHECKING:
+           from langchain_core.tools.base import (
+               FILTERED_ARGS,
+               ArgsSchema,
+               BaseTool,
+               BaseToolkit,
+               InjectedToolArg,
+               InjectedToolCallId,
+               SchemaAnnotationError,
+               ToolException,
+               _get_runnable_config_param,
+               create_schema_from_function,
+           )
+           from langchain_core.tools.convert import (
+               convert_runnable_to_tool,
+               tool,
+           )
+           from langchain_core.tools.render import (
+               ToolsRenderer,
+               render_text_description,
+               render_text_description_and_args,
+           )
+           from langchain_core.tools.retriever import (
+               RetrieverInput,
+               create_retriever_tool,
+           )
+           from langchain_core.tools.simple import Tool
+           from langchain_core.tools.structured import StructuredTool
+       
+    1: __all__ = (
+           "FILTERED_ARGS",
+           "ArgsSchema",
+           "BaseTool",
+           "BaseToolkit",
+           "InjectedToolArg",
+           "InjectedToolCallId",
+           "RetrieverInput",
+           "SchemaAnnotationError",
+           "StructuredTool",
+           "Tool",
+           "ToolException",
+           "ToolsRenderer",
+           "_get_runnable_config_param",
+           "convert_runnable_to_tool",
+           "create_retriever_tool",
+           "create_schema_from_function",
+           "render_text_description",
+           "render_text_description_and_args",
+           "tool",
+       )
+       
+   19: _dynamic_imports = {
+    1:     "FILTERED_ARGS": "base",
+    1:     "ArgsSchema": "base",
+    1:     "BaseTool": "base",
+    1:     "BaseToolkit": "base",
+    1:     "InjectedToolArg": "base",
+    1:     "InjectedToolCallId": "base",
+    1:     "SchemaAnnotationError": "base",
+    1:     "ToolException": "base",
+    1:     "_get_runnable_config_param": "base",
+    1:     "create_schema_from_function": "base",
+    1:     "convert_runnable_to_tool": "convert",
+    1:     "tool": "convert",
+    1:     "ToolsRenderer": "render",
+    1:     "render_text_description": "render",
+    1:     "render_text_description_and_args": "render",
+    1:     "RetrieverInput": "retriever",
+    1:     "create_retriever_tool": "retriever",
+    1:     "Tool": "simple",
+    1:     "StructuredTool": "structured",
+       }
+       
+       
+    1: def __getattr__(attr_name: str) -> object:
+    5:     module_name = _dynamic_imports.get(attr_name)
+    5:     result = import_attr(attr_name, module_name, __spec__.parent)
+    5:     globals()[attr_name] = result
+    5:     return result
+       
+       
+    1: def __dir__() -> list[str]:
+           return list(__all__)

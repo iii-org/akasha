@@ -1,0 +1,194 @@
+    1: from abc import abstractmethod
+    1: from typing import Dict, Optional, Type
+    1: from overrides import overrides, EnforceOverrides
+       
+       
+    2: class ChromaError(Exception, EnforceOverrides):
+    1:     trace_id: Optional[str] = None
+       
+    1:     def code(self) -> int:
+               """Return an appropriate HTTP response code for this error"""
+               return 400  # Bad Request
+       
+    1:     def message(self) -> str:
+               return ", ".join(self.args)
+       
+    2:     @classmethod
+    2:     @abstractmethod
+    2:     def name(cls) -> str:
+               """Return the error name"""
+               pass
+       
+       
+    2: class InvalidDimensionException(ChromaError):
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "InvalidDimension"
+       
+       
+    2: class IDAlreadyExistsError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 409  # Conflict
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "IDAlreadyExists"
+       
+       
+    2: class ChromaAuthError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 403
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "AuthError"
+       
+    2:     @overrides
+    2:     def message(self) -> str:
+               return "Forbidden"
+       
+       
+    2: class DuplicateIDError(ChromaError):
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "DuplicateID"
+       
+       
+    2: class InvalidArgumentError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 400
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "InvalidArgument"
+       
+       
+    2: class InvalidUUIDError(ChromaError):
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "InvalidUUID"
+       
+       
+    2: class InvalidHTTPVersion(ChromaError):
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "InvalidHTTPVersion"
+       
+       
+    2: class AuthorizationError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 401
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "AuthorizationError"
+       
+       
+    2: class NotFoundError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 404
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "NotFoundError"
+       
+       
+    2: class UniqueConstraintError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 409
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "UniqueConstraintError"
+       
+       
+    2: class BatchSizeExceededError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 413
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "BatchSizeExceededError"
+       
+       
+    2: class VersionMismatchError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 500
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "VersionMismatchError"
+       
+       
+    2: class InternalError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 500
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "InternalError"
+       
+       
+    2: class RateLimitError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 429
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "RateLimitError"
+       
+       
+    2: class QuotaError(ChromaError):
+    2:     @overrides
+    2:     def code(self) -> int:
+               return 400
+       
+    2:     @classmethod
+    2:     @overrides
+    2:     def name(cls) -> str:
+               return "QuotaError"
+       
+       
+   17: error_types: Dict[str, Type[ChromaError]] = {
+    1:     "InvalidDimension": InvalidDimensionException,
+    1:     "InvalidArgumentError": InvalidArgumentError,
+    1:     "IDAlreadyExists": IDAlreadyExistsError,
+    1:     "DuplicateID": DuplicateIDError,
+    1:     "InvalidUUID": InvalidUUIDError,
+    1:     "InvalidHTTPVersion": InvalidHTTPVersion,
+    1:     "AuthorizationError": AuthorizationError,
+    1:     "NotFoundError": NotFoundError,
+    1:     "BatchSizeExceededError": BatchSizeExceededError,
+    1:     "VersionMismatchError": VersionMismatchError,
+    1:     "RateLimitError": RateLimitError,
+    1:     "AuthError": ChromaAuthError,
+    1:     "UniqueConstraintError": UniqueConstraintError,
+    1:     "QuotaError": QuotaError,
+    1:     "InternalError": InternalError,
+           # Catch-all for any other errors
+    1:     "ChromaError": ChromaError,
+       }

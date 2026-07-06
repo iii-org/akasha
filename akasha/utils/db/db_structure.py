@@ -1,6 +1,6 @@
 from langchain_core.documents import Document
 from typing import Union
-from pathlib import Path
+from pathlib import Path, PurePath
 import re
 
 
@@ -93,7 +93,7 @@ HNSW_THRESHOLD = 400000
 
 
 def get_storage_directory(
-    dir_path: Union[Path, str],
+    dir_path: Union[PurePath, str],
     chunk_size: int,
     embed_type: str,
     embed_name: str,
@@ -115,12 +115,15 @@ def get_storage_directory(
         else:
             dir_path = Path(dir_path)
 
-    if dir_path != Path("."):
-        db_dir = "-".join(
-            [part.replace(" ", "").replace("_", "") for part in dir_path.parts if part]
-        )
-    else:
+    if dir_path == Path("."):
         db_dir = NO_PARENT_DIR_NAME
+    else:
+        sanitized_parts = [
+            _sanitize_path_part(part)
+            for part in dir_path.parts
+            if part not in {"", ".", "/", "\\"}
+        ]
+        db_dir = "-".join([part for part in sanitized_parts if part]) or NO_PARENT_DIR_NAME
 
     storage_directory = (
         "chromadb/"
@@ -139,6 +142,12 @@ def get_storage_directory(
 def _sanitize_path_string(path: str, max_len: int = 30) -> str:
     # Remove special characters and limit length to 30
     sanitized = re.sub(r"[^a-zA-Z0-9]", "", path)[:max_len]
+    return sanitized
+
+
+def _sanitize_path_part(part: str) -> str:
+    stripped = part.strip().strip("\\/")
+    sanitized = re.sub(r"[^a-zA-Z0-9.-]", "", stripped)
     return sanitized
 
 

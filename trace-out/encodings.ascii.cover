@@ -1,0 +1,50 @@
+    1: """ Python 'ascii' Codec
+       
+       
+       Written by Marc-Andre Lemburg (mal@lemburg.com).
+       
+       (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
+       
+       """
+    1: import codecs
+       
+       ### Codec APIs
+       
+    2: class Codec(codecs.Codec):
+       
+           # Note: Binding these as C functions will result in the class not
+           # converting them to methods. This is intended.
+    1:     encode = codecs.ascii_encode
+    1:     decode = codecs.ascii_decode
+       
+    2: class IncrementalEncoder(codecs.IncrementalEncoder):
+    1:     def encode(self, input, final=False):
+               return codecs.ascii_encode(input, self.errors)[0]
+       
+    2: class IncrementalDecoder(codecs.IncrementalDecoder):
+    1:     def decode(self, input, final=False):
+               return codecs.ascii_decode(input, self.errors)[0]
+       
+    2: class StreamWriter(Codec,codecs.StreamWriter):
+    1:     pass
+       
+    2: class StreamReader(Codec,codecs.StreamReader):
+    1:     pass
+       
+    2: class StreamConverter(StreamWriter,StreamReader):
+       
+    1:     encode = codecs.ascii_decode
+    1:     decode = codecs.ascii_encode
+       
+       ### encodings module API
+       
+    1: def getregentry():
+           return codecs.CodecInfo(
+               name='ascii',
+               encode=Codec.encode,
+               decode=Codec.decode,
+               incrementalencoder=IncrementalEncoder,
+               incrementaldecoder=IncrementalDecoder,
+               streamwriter=StreamWriter,
+               streamreader=StreamReader,
+           )

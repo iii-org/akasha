@@ -1,0 +1,23 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union, Optional
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: from .container_auto_param import ContainerAutoParam
+    1: from .local_environment_param import LocalEnvironmentParam
+    1: from .container_reference_param import ContainerReferenceParam
+       
+    1: __all__ = ["FunctionShellToolParam", "Environment"]
+       
+    1: Environment: TypeAlias = Union[ContainerAutoParam, LocalEnvironmentParam, ContainerReferenceParam]
+       
+       
+    2: class FunctionShellToolParam(TypedDict, total=False):
+    1:     """A tool that allows the model to execute shell commands."""
+       
+    1:     type: Required[Literal["shell"]]
+    1:     """The type of the shell tool. Always `shell`."""
+       
+    1:     environment: Optional[Environment]

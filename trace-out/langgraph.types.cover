@@ -1,0 +1,984 @@
+    1: from __future__ import annotations
+       
+    1: import sys
+    1: from collections import deque
+    1: from collections.abc import Callable, Hashable, Sequence
+    1: from dataclasses import asdict, dataclass
+    1: from datetime import timedelta
+    1: from typing import (
+           TYPE_CHECKING,
+           Any,
+           ClassVar,
+           Generic,
+           Literal,
+           NamedTuple,
+           TypeVar,
+           final,
+       )
+    1: from warnings import warn
+       
+    1: from langchain_core.messages import AnyMessage
+    1: from langchain_core.runnables import Runnable, RunnableConfig
+    1: from langgraph.checkpoint.base import BaseCheckpointSaver, CheckpointMetadata
+    1: from typing_extensions import NotRequired, TypeAliasType, TypedDict, Unpack, deprecated
+    1: from xxhash import xxh3_128_hexdigest
+       
+    1: from langgraph._internal._cache import default_cache_key
+    1: from langgraph._internal._constants import INTERRUPT as _INTERRUPT_KEY
+    1: from langgraph._internal._fields import get_cached_annotated_keys, get_update_as_tuples
+    1: from langgraph._internal._retry import default_retry_on
+    1: from langgraph._internal._typing import MISSING, DeprecatedKwargs
+    1: from langgraph.warnings import LangGraphDeprecatedSinceV10, LangGraphDeprecatedSinceV11
+       
+       # Local TypeVars for generic stream TypedDicts.
+       # We use separate TypeVars here (rather than importing from langgraph.typing)
+       # because the typing module TypeVars have defaults that cause type checker issues
+       # when used in standalone type aliases.
+    1: StateT = TypeVar("StateT")
+    1: OutputT = TypeVar("OutputT")
+       
+    1: if TYPE_CHECKING:
+           from langgraph.pregel.protocol import PregelProtocol
+       
+       
+    1: try:
+    1:     from langchain_core.messages.tool import ToolOutputMixin
+       except ImportError:
+       
+           class ToolOutputMixin:  # type: ignore[no-redef]
+               pass
+       
+       
+    1: __all__ = (
+           "All",
+           "Checkpointer",
+           "StreamMode",
+           "StreamWriter",
+           "StreamPart",
+           "ValuesStreamPart",
+           "UpdatesStreamPart",
+           "MessagesStreamPart",
+           "CustomStreamPart",
+           "CheckpointStreamPart",
+           "TasksStreamPart",
+           "DebugStreamPart",
+           "TaskPayload",
+           "TaskResultPayload",
+           "CheckpointTask",
+           "CheckpointPayload",
+           "DebugPayload",
+           "RetryPolicy",
+           "TimeoutPolicy",
+           "CachePolicy",
+           "Interrupt",
+           "StateUpdate",
+           "PregelTask",
+           "PregelExecutableTask",
+           "StateSnapshot",
+           "Send",
+           "Command",
+           "Durability",
+           "interrupt",
+           "Overwrite",
+           "GraphOutput",
+           "ensure_valid_checkpointer",
+       )
+       
+    1: Durability = Literal["sync", "async", "exit"]
+    1: """Durability mode for the graph execution.
+       
+       - `'sync'`: Changes are persisted synchronously before the next step starts.
+       - `'async'`: Changes are persisted asynchronously while the next step executes.
+       - `'exit'`: Changes are persisted only when the graph exits.
+       """
+       
+    1: All = Literal["*"]
+    1: """Special value to indicate that graph should interrupt on all nodes."""
+       
+    1: Checkpointer = None | bool | BaseCheckpointSaver
+    1: """Type of the checkpointer to use for a subgraph.
+       
+       - `True` enables persistent checkpointing for this subgraph.
+       - `False` disables checkpointing, even if the parent graph has a checkpointer.
+       - `None` inherits checkpointer from the parent graph.
+       """
+       
+       
+    1: def ensure_valid_checkpointer(checkpointer: Checkpointer) -> Checkpointer:
+           if checkpointer not in (None, True, False) and not isinstance(
+               checkpointer, BaseCheckpointSaver
+           ):
+               raise TypeError(
+                   "Invalid checkpointer provided. Expected an instance of "
+                   "`BaseCheckpointSaver`, `True`, `False`, or `None`. "
+                   f"Received {type(checkpointer).__name__!s}. "
+                   "Pass a proper saver (e.g., InMemorySaver, AsyncPostgresSaver)."
+               )
+           return checkpointer
+       
+       
+    2: StreamMode = Literal[
+    1:     "values", "updates", "checkpoints", "tasks", "debug", "messages", "custom"
+       ]
+    1: """How the stream method should emit outputs.
+       
+       - `"values"`: Emit all values in the state after each step, including interrupts.
+           When used with functional API, values are emitted once at the end of the workflow.
+       - `"updates"`: Emit only the node or task names and updates returned by the nodes or tasks after each step.
+           If multiple updates are made in the same step (e.g. multiple nodes are run) then those updates are emitted separately.
+       - `"custom"`: Emit custom data using from inside nodes or tasks using `StreamWriter`.
+       - `"messages"`: Emit LLM messages token-by-token together with metadata for any LLM invocations inside nodes or tasks.
+       - `"checkpoints"`: Emit an event when a checkpoint is created, in the same format as returned by `get_state()`.
+       - `"tasks"`: Emit events when tasks start and finish, including their results and errors.
+       - `"debug"`: Emit `"checkpoints"` and `"tasks"` events for debugging purposes.
+       """
+       
+    1: StreamWriter = Callable[[Any], None]
+    1: """`Callable` that accepts a single argument and writes it to the output stream.
+       Always injected into nodes if requested as a keyword argument, but it's a no-op
+       when not using `stream_mode="custom"`."""
+       
+       
+    2: class TaskPayload(TypedDict):
+    1:     """Payload for a task start event."""
+       
+    1:     id: str
+    1:     """Unique identifier for this task."""
+    1:     name: str
+    1:     """Name of the node being executed."""
+    1:     input: Any
+    1:     """Input data passed to the task."""
+    1:     triggers: list[str]
+    1:     """List of triggers that caused this task to be executed (e.g. channel writes)."""
+    1:     metadata: NotRequired[dict[str, Any]]
+    1:     """Framework-resolved metadata associated with the task.
+       
+           Generic dict carrier following the messages-stream pattern. Populated by
+           `map_debug_tasks` from `task.config["metadata"]` when non-empty, so the
+           same keys `stream_mode="messages"` consumers see (e.g. `lc_agent_name`,
+           `langgraph_node`, `langgraph_step`) are available to stream transformers.
+       
+           Consumers should ignore unrecognized keys.
+           """
+       
+       
+    2: class TaskResultPayload(TypedDict):
+    1:     """Payload for a task result event."""
+       
+    1:     id: str
+    1:     """Unique identifier for this task."""
+    1:     name: str
+    1:     """Name of the node that was executed."""
+    1:     error: str | None
+    1:     """Error message if the task failed, otherwise `None`."""
+    1:     interrupts: list[dict]
+    1:     """List of interrupts that occurred during task execution."""
+    1:     result: dict[str, Any]
+    1:     """Mapping of channel names to the values written by this task."""
+       
+       
+    2: class CheckpointTask(TypedDict):
+    1:     """A task entry within a `CheckpointPayload`.
+       
+           The keys present depend on the task's state:
+       
+           - **Error:** `id`, `name`, `error`, `state`
+           - **Has result:** `id`, `name`, `result`, `interrupts`, `state`
+           - **Pending:** `id`, `name`, `interrupts`, `state`
+           """
+       
+    1:     id: str
+    1:     """Unique identifier for this task."""
+    1:     name: str
+    1:     """Name of the node being executed."""
+    1:     error: NotRequired[str]
+    1:     """Error message, present only if the task failed."""
+    1:     result: NotRequired[Any]
+    1:     """Result of the task, present only if the task completed successfully."""
+    1:     interrupts: NotRequired[list[dict]]
+    1:     """List of interrupts, present when the task has been interrupted or completed."""
+    1:     state: StateSnapshot | RunnableConfig | None
+    1:     """Snapshot of the subgraph state, or a `RunnableConfig` pointing to it. `None` if not a subgraph."""
+       
+       
+    2: class CheckpointPayload(TypedDict, Generic[StateT]):
+    1:     """Payload for a checkpoint event."""
+       
+    1:     config: RunnableConfig | None
+    1:     """Configuration for this checkpoint, including the `thread_id` and `checkpoint_id`."""
+    1:     metadata: CheckpointMetadata
+    1:     """Metadata associated with this checkpoint (e.g. step number, source, writes)."""
+    1:     values: StateT
+    1:     """Current state values at the time of this checkpoint."""
+    1:     next: list[str]
+    1:     """Names of the nodes scheduled to execute next."""
+    1:     parent_config: RunnableConfig | None
+    1:     """Configuration of the parent checkpoint, or `None` if this is the first checkpoint."""
+    1:     tasks: list[CheckpointTask]
+    1:     """List of tasks associated with this checkpoint."""
+       
+       
+    2: class _DebugCheckpointPayload(TypedDict, Generic[StateT]):
+    1:     step: int
+    1:     """The step number in the graph execution."""
+    1:     timestamp: str
+    1:     """ISO 8601 timestamp of when this event occurred."""
+    1:     type: Literal["checkpoint"]
+    1:     """Event type discriminator, always `"checkpoint"`."""
+    1:     payload: CheckpointPayload[StateT]
+    1:     """The checkpoint payload."""
+       
+       
+    2: class _DebugTaskPayload(TypedDict):
+    1:     step: int
+    1:     """The step number in the graph execution."""
+    1:     timestamp: str
+    1:     """ISO 8601 timestamp of when this event occurred."""
+    1:     type: Literal["task"]
+    1:     """Event type discriminator, always `"task"`."""
+    1:     payload: TaskPayload
+    1:     """The task start payload."""
+       
+       
+    2: class _DebugTaskResultPayload(TypedDict):
+    1:     step: int
+    1:     """The step number in the graph execution."""
+    1:     timestamp: str
+    1:     """ISO 8601 timestamp of when this event occurred."""
+    1:     type: Literal["task_result"]
+    1:     """Event type discriminator, always `"task_result"`."""
+    1:     payload: TaskResultPayload
+    1:     """The task result payload."""
+       
+       
+    2: DebugPayload = TypeAliasType(
+    1:     "DebugPayload",
+    1:     _DebugCheckpointPayload[StateT] | _DebugTaskPayload | _DebugTaskResultPayload,
+    1:     type_params=(StateT,),
+       )
+    1: """Wrapper payload for debug events. Discriminate on `type`."""
+       
+       
+    2: class ValuesStreamPart(TypedDict, Generic[OutputT]):
+    1:     """Stream part emitted for `stream_mode="values"`.
+       
+           `data` contains the full state after each step, as returned by `read_channels()`.
+           """
+       
+    1:     type: Literal["values"]
+    1:     ns: tuple[str, ...]
+    1:     data: OutputT
+    1:     interrupts: tuple[Interrupt, ...]
+       
+       
+    2: class UpdatesStreamPart(TypedDict):
+    1:     """Stream part emitted for `stream_mode="updates"`.
+       
+           `data` maps node names to their outputs. May also contain
+           `__interrupt__` (tuple of `Interrupt` dicts) and `__metadata__` keys.
+           """
+       
+    1:     type: Literal["updates"]
+    1:     ns: tuple[str, ...]
+    1:     data: dict[str, Any]
+       
+       
+    2: class MessagesStreamPart(TypedDict):
+    1:     """Stream part emitted for `stream_mode="messages"`.
+       
+           `data` is a 2-tuple of `(message, metadata)` where `message` is a
+           `BaseMessage` (e.g. `AIMessageChunk`) and `metadata` is a dict containing
+           keys like `langgraph_step`, `langgraph_node`, `langgraph_triggers`, etc.
+           """
+       
+    1:     type: Literal["messages"]
+    1:     ns: tuple[str, ...]
+    1:     data: tuple[AnyMessage, dict[str, Any]]
+       
+       
+    2: class CustomStreamPart(TypedDict):
+    1:     """Stream part emitted for `stream_mode="custom"`.
+       
+           `data` is whatever value was passed to `StreamWriter` inside a node.
+           """
+       
+    1:     type: Literal["custom"]
+    1:     ns: tuple[str, ...]
+    1:     data: Any
+       
+       
+    2: class CheckpointStreamPart(TypedDict, Generic[StateT]):
+    1:     """Stream part emitted for `stream_mode="checkpoints"`."""
+       
+    1:     type: Literal["checkpoints"]
+    1:     ns: tuple[str, ...]
+    1:     data: CheckpointPayload[StateT]
+       
+       
+    2: class TasksStreamPart(TypedDict):
+    1:     """Stream part emitted for `stream_mode="tasks"`.
+       
+           For task start events, `data` is a `TaskPayload` with `id`, `name`,
+           `input`, and `triggers` keys.
+       
+           For task result events, `data` is a `TaskResultPayload` with `id`,
+           `name`, `error`, `interrupts`, and `result` keys.
+           """
+       
+    1:     type: Literal["tasks"]
+    1:     ns: tuple[str, ...]
+    1:     data: TaskPayload | TaskResultPayload
+       
+       
+    2: class DebugStreamPart(TypedDict, Generic[StateT]):
+    1:     """Stream part emitted for `stream_mode="debug"`."""
+       
+    1:     type: Literal["debug"]
+    1:     ns: tuple[str, ...]
+    1:     data: DebugPayload[StateT]
+       
+       
+    2: StreamPart = TypeAliasType(
+    1:     "StreamPart",
+    7:     ValuesStreamPart[OutputT]
+    1:     | UpdatesStreamPart
+    1:     | MessagesStreamPart
+    1:     | CustomStreamPart
+    1:     | CheckpointStreamPart[StateT]
+    1:     | TasksStreamPart
+    1:     | DebugStreamPart[StateT],
+    1:     type_params=(StateT, OutputT),
+       )
+    1: """A discriminated union of all v2 stream part types.
+       
+       Use `part["type"]` to narrow the type:
+       
+       ```python
+       async for part in graph.astream(input, version="v2"):
+           if part["type"] == "values":
+               part["data"]  # OutputT — full state (pydantic/dataclass/dict)
+           elif part["type"] == "messages":
+               part["data"]  # tuple[BaseMessage, dict] — (message, metadata)
+           elif part["type"] == "custom":
+               part["data"]  # Any — user-defined
+       ```
+       """
+       
+       
+    3: @dataclass(frozen=True)
+    2: class GraphOutput(Generic[OutputT]):
+    1:     """Typed container returned by `invoke()` / `ainvoke()` with `version="v2"`.
+       
+           Attributes:
+               value: The final output of the graph (dict, Pydantic model, dataclass, etc.).
+               interrupts: Any interrupts that occurred during execution.
+           """
+       
+    1:     value: OutputT
+    1:     interrupts: tuple[Interrupt, ...] = ()
+       
+    1:     def __getitem__(self, key: str) -> Any:
+               """Backward compat: `result['__interrupt__']` and dict-key access."""
+               warn(
+                   "Accessing GraphOutput via `result[key]` is deprecated. "
+                   "Use `result.value` to access the output value directly, "
+                   "or `result.interrupts` for interrupts.",
+                   LangGraphDeprecatedSinceV11,
+                   stacklevel=2,
+               )
+               if key == _INTERRUPT_KEY:
+                   return self.interrupts
+               if isinstance(self.value, dict):
+                   return self.value[key]
+               try:
+                   return getattr(self.value, key)
+               except AttributeError:
+                   raise KeyError(key)
+       
+    1:     def __contains__(self, key: object) -> bool:
+               warn(
+                   "Accessing GraphOutput via `key in result` is deprecated. "
+                   "Use `result.value` to access the output value directly, "
+                   "or `result.interrupts` for interrupts.",
+                   LangGraphDeprecatedSinceV11,
+                   stacklevel=2,
+               )
+               if key == _INTERRUPT_KEY:
+                   return bool(self.interrupts)
+               if isinstance(self.value, dict):
+                   return key in self.value
+               return isinstance(key, str) and hasattr(self.value, key)
+       
+       
+    1: _DC_KWARGS = {"kw_only": True, "slots": True, "frozen": True}
+       
+       
+    2: class RetryPolicy(NamedTuple):
+    1:     """Configuration for retrying nodes.
+       
+           !!! version-added "Added in version 0.2.24"
+           """
+       
+    1:     initial_interval: float = 0.5
+    1:     """Amount of time that must elapse before the first retry occurs. In seconds."""
+    1:     backoff_factor: float = 2.0
+    1:     """Multiplier by which the interval increases after each retry."""
+    1:     max_interval: float = 128.0
+    1:     """Maximum amount of time that may elapse between retries. In seconds."""
+    1:     max_attempts: int = 3
+    1:     """Maximum number of attempts to make before giving up, including the first."""
+    1:     jitter: bool = True
+    1:     """Whether to add random jitter to the interval between retries."""
+    1:     retry_on: (
+               type[Exception] | Sequence[type[Exception]] | Callable[[Exception], bool]
+    1:     ) = default_retry_on
+    1:     """List of exception classes that should trigger a retry, or a callable that returns `True` for exceptions that should trigger a retry."""
+       
+       
+    1: def _coerce_timeout_seconds(
+           value: float | timedelta | None, *, field: str
+       ) -> float | None:
+           if value is None:
+               return None
+           seconds = value.total_seconds() if isinstance(value, timedelta) else float(value)
+           if seconds <= 0:
+               raise ValueError(f"{field} must be greater than 0")
+           return seconds
+       
+       
+    3: @dataclass(**_DC_KWARGS)
+    2: class TimeoutPolicy:
+    1:     """Configuration for timing out node attempts.
+       
+           !!! note "Cooperative cancellation"
+       
+               Timeouts rely on asyncio cancellation. If your node uses synchronous
+               time.sleep() or other CPU-bound work that blocks the GIL, the timeout will not
+               be fired until after the event loop has been released.
+       
+           !!! note "Inline callback dispatch"
+       
+               Under `refresh_on="auto"`, an internal handler refreshes the timeout on any
+               callback event that occurs in the execution of the node or its nested descendants.
+           """
+       
+    1:     run_timeout: float | timedelta | None = None
+    1:     """Hard wall-clock cap (in seconds) for a single node attempt.
+       
+           This timeout is never refreshed by progress signals or `runtime.heartbeat()`.
+           """
+       
+    1:     idle_timeout: float | timedelta | None = None
+    1:     """Maximum time (in seconds) a single node attempt may go without observable progress."""
+       
+    1:     refresh_on: Literal["auto", "heartbeat"] = "auto"
+    1:     """Which signals refresh `idle_timeout`.
+       
+           `"auto"` refreshes on standard graph progress signals and explicit heartbeats.
+           `"heartbeat"` refreshes only on explicit `runtime.heartbeat()` calls.
+           """
+       
+    2:     @classmethod
+    2:     def coerce(
+               cls, value: float | timedelta | TimeoutPolicy | None
+           ) -> TimeoutPolicy | None:
+               """Normalize a timeout value to positive-second policy fields."""
+               if value is None:
+                   return None
+               if isinstance(value, TimeoutPolicy):
+                   # Fast path: a policy already produced by coerce() has float
+                   # timeouts and a validated refresh_on, so we can return it as-is.
+                   # `frozen=True` makes this safe to share.
+                   rt, it = value.run_timeout, value.idle_timeout
+                   if (
+                       value.refresh_on in ("auto", "heartbeat")
+                       and (rt is None or (type(rt) is float and rt > 0))
+                       and (it is None or (type(it) is float and it > 0))
+                       and (rt is not None or it is not None)
+                   ):
+                       return value
+               else:
+                   value = cls(run_timeout=value)
+               if value.refresh_on not in ("auto", "heartbeat"):
+                   raise ValueError("refresh_on must be 'auto' or 'heartbeat'")
+               run_timeout = _coerce_timeout_seconds(value.run_timeout, field="run_timeout")
+               idle_timeout = _coerce_timeout_seconds(value.idle_timeout, field="idle_timeout")
+               if run_timeout is None and idle_timeout is None:
+                   return None
+               return cls(
+                   run_timeout=run_timeout,
+                   idle_timeout=idle_timeout,
+                   refresh_on=value.refresh_on,
+               )
+       
+       
+    1: KeyFuncT = TypeVar("KeyFuncT", bound=Callable[..., str | bytes])
+       
+       
+    3: @dataclass(**_DC_KWARGS)
+    2: class CachePolicy(Generic[KeyFuncT]):
+    1:     """Configuration for caching nodes."""
+       
+    1:     key_func: KeyFuncT = default_cache_key  # type: ignore[assignment]
+    1:     """Function to generate a cache key from the node's input.
+           Defaults to hashing the input with pickle."""
+       
+    1:     ttl: int | None = None
+    1:     """Time to live for the cache entry in seconds. If `None`, the entry never expires."""
+       
+       
+    1: _DEFAULT_INTERRUPT_ID = "placeholder-id"
+       
+       
+    3: @final
+    2: @dataclass(init=False, slots=True)
+    2: class Interrupt:
+    1:     """Information about an interrupt that occurred in a node.
+       
+           !!! version-added "Added in version 0.2.24"
+       
+           !!! version-changed "Changed in version v0.4.0"
+               * `interrupt_id` was introduced as a property
+       
+           !!! version-changed "Changed in version v0.6.0"
+       
+               The following attributes have been removed:
+       
+               * `ns`
+               * `when`
+               * `resumable`
+               * `interrupt_id`, deprecated in favor of `id`
+           """
+       
+    1:     value: Any
+    1:     """The value associated with the interrupt."""
+       
+    1:     id: str
+    1:     """The ID of the interrupt. Can be used to resume the interrupt directly."""
+       
+    1:     def __init__(
+               self,
+               value: Any,
+    1:         id: str = _DEFAULT_INTERRUPT_ID,
+               **deprecated_kwargs: Unpack[DeprecatedKwargs],
+           ) -> None:
+               self.value = value
+       
+               if (
+                   (ns := deprecated_kwargs.get("ns", MISSING)) is not MISSING
+                   and (id == _DEFAULT_INTERRUPT_ID)
+                   and (isinstance(ns, Sequence))
+               ):
+                   self.id = xxh3_128_hexdigest("|".join(ns).encode())
+               else:
+                   self.id = id
+       
+    2:     @classmethod
+    2:     def from_ns(cls, value: Any, ns: str) -> Interrupt:
+               return cls(value=value, id=xxh3_128_hexdigest(ns.encode()))
+       
+    2:     @property
+    2:     @deprecated("`interrupt_id` is deprecated. Use `id` instead.", category=None)
+    2:     def interrupt_id(self) -> str:
+               warn(
+                   "`interrupt_id` is deprecated. Use `id` instead.",
+                   LangGraphDeprecatedSinceV10,
+                   stacklevel=2,
+               )
+               return self.id
+       
+       
+    2: class StateUpdate(NamedTuple):
+    1:     values: dict[str, Any] | None
+    1:     as_node: str | None = None
+    1:     task_id: str | None = None
+       
+       
+    2: class PregelTask(NamedTuple):
+    1:     """A Pregel task."""
+       
+    1:     id: str
+    1:     name: str
+    1:     path: tuple[str | int | tuple, ...]
+    1:     error: Exception | None = None
+    1:     interrupts: tuple[Interrupt, ...] = ()
+    1:     state: None | RunnableConfig | StateSnapshot = None
+    1:     result: Any | None = None
+       
+       
+    1: if sys.version_info > (3, 11):
+    1:     _T_DC_KWARGS = {"weakref_slot": True, "slots": True, "frozen": True}
+       else:
+           _T_DC_KWARGS = {"frozen": True}
+       
+       
+    2: class CacheKey(NamedTuple):
+    1:     """Cache key for a task."""
+       
+    1:     ns: tuple[str, ...]
+    1:     """Namespace for the cache entry."""
+    1:     key: str
+    1:     """Key for the cache entry."""
+    1:     ttl: int | None
+    1:     """Time to live for the cache entry in seconds."""
+       
+       
+    3: @dataclass(**_T_DC_KWARGS)
+    2: class PregelExecutableTask:
+    1:     name: str
+    1:     input: Any
+    1:     proc: Runnable
+    1:     writes: deque[tuple[str, Any]]
+    1:     config: RunnableConfig
+    1:     triggers: Sequence[str]
+    1:     retry_policy: Sequence[RetryPolicy]
+    1:     cache_key: CacheKey | None
+    1:     id: str
+    1:     path: tuple[str | int | tuple, ...]
+    1:     writers: Sequence[Runnable] = ()
+    1:     subgraphs: Sequence[PregelProtocol] = ()
+    1:     timeout: TimeoutPolicy | None = None
+       
+       
+    2: class StateSnapshot(NamedTuple):
+    1:     """Snapshot of the state of the graph at the beginning of a step."""
+       
+    1:     values: dict[str, Any] | Any
+    1:     """Current values of channels."""
+    1:     next: tuple[str, ...]
+    1:     """The name of the node to execute in each task for this step."""
+    1:     config: RunnableConfig
+    1:     """Config used to fetch this snapshot."""
+    1:     metadata: CheckpointMetadata | None
+    1:     """Metadata associated with this snapshot."""
+    1:     created_at: str | None
+    1:     """Timestamp of snapshot creation."""
+    1:     parent_config: RunnableConfig | None
+    1:     """Config used to fetch the parent snapshot, if any."""
+    1:     tasks: tuple[PregelTask, ...]
+    1:     """Tasks to execute in this step. If already attempted, may contain an error."""
+    1:     interrupts: tuple[Interrupt, ...]
+    1:     """Interrupts that occurred in this step that are pending resolution."""
+       
+       
+    2: class Send:
+    1:     """A message or packet to send to a specific node in the graph.
+       
+           The `Send` class is used within a `StateGraph`'s conditional edges to
+           dynamically invoke a node with a custom state at the next step.
+       
+           Importantly, the sent state can differ from the core graph's state,
+           allowing for flexible and dynamic workflow management.
+       
+           One such example is a "map-reduce" workflow where your graph invokes
+           the same node multiple times in parallel with different states,
+           before aggregating the results back into the main graph's state.
+       
+           Attributes:
+               node (str): The name of the target node to send the message to.
+               arg (Any): The state or message to send to the target node.
+               timeout (TimeoutPolicy | None): Optional timeout policy for this specific
+                   pushed task. If omitted, the target node's timeout policy is used.
+       
+           !!! example
+       
+               ```python
+               from typing import Annotated
+               from langgraph.types import Send
+               from langgraph.graph import END, START
+               from langgraph.graph import StateGraph
+               import operator
+       
+               class OverallState(TypedDict):
+                   subjects: list[str]
+                   jokes: Annotated[list[str], operator.add]
+       
+               def continue_to_jokes(state: OverallState):
+                   return [Send("generate_joke", {"subject": s}) for s in state["subjects"]]
+       
+               builder = StateGraph(OverallState)
+               builder.add_node("generate_joke", lambda state: {"jokes": [f"Joke about {state['subject']}"]})
+               builder.add_conditional_edges(START, continue_to_jokes)
+               builder.add_edge("generate_joke", END)
+               graph = builder.compile()
+       
+               # Invoking with two subjects results in a generated joke for each
+               graph.invoke({"subjects": ["cats", "dogs"]})
+               # {'subjects': ['cats', 'dogs'], 'jokes': ['Joke about cats', 'Joke about dogs']}
+               ```
+           """
+       
+    1:     __slots__ = ("node", "arg", "timeout")
+       
+    1:     node: str
+    1:     arg: Any
+    1:     timeout: TimeoutPolicy | None
+       
+    1:     def __init__(
+               self,
+               /,
+               node: str,
+               arg: Any,
+               *,
+    1:         timeout: float | timedelta | TimeoutPolicy | None = None,
+           ) -> None:
+               """
+               Initialize a new instance of the `Send` class.
+       
+               Args:
+                   node: The name of the target node to send the message to.
+                   arg: The state or message to send to the target node.
+                   timeout: Optional timeout policy for this specific pushed task. A
+                       number or `timedelta` is treated as a hard `run_timeout`.
+               """
+               self.node = node
+               self.arg = arg
+               self.timeout = TimeoutPolicy.coerce(timeout)
+       
+    1:     def __hash__(self) -> int:
+               return hash((self.node, self.arg, self.timeout))
+       
+    1:     def __repr__(self) -> str:
+               if self.timeout is None:
+                   return f"Send(node={self.node!r}, arg={self.arg!r})"
+               return f"Send(node={self.node!r}, arg={self.arg!r}, timeout={self.timeout!r})"
+       
+    1:     def __eq__(self, value: object) -> bool:
+               return (
+                   isinstance(value, Send)
+                   and self.node == value.node
+                   and self.arg == value.arg
+                   and self.timeout == value.timeout
+               )
+       
+       
+    1: N = TypeVar("N", bound=Hashable)
+       
+       
+    3: @dataclass(**_DC_KWARGS)
+    2: class Command(Generic[N], ToolOutputMixin):
+    1:     """One or more commands to update the graph's state and send messages to nodes.
+       
+           Args:
+               graph: Graph to send the command to. Supported values are:
+       
+                   - `None`: the current graph
+                   - `Command.PARENT`: closest parent graph
+               update: Update to apply to the graph's state.
+               resume: Value to resume execution with. To be used together with [`interrupt()`][langgraph.types.interrupt].
+                   Can be one of the following:
+       
+                   - Mapping of interrupt ids to resume values
+                   - A single value with which to resume the next interrupt
+               goto: Can be one of the following:
+       
+                   - Name of the node to navigate to next (any node that belongs to the specified `graph`)
+                   - Sequence of node names to navigate to next
+                   - `Send` object (to execute a node with the input provided)
+                   - Sequence of `Send` objects
+           """
+       
+    1:     graph: str | None = None
+    1:     update: Any | None = None
+    1:     resume: dict[str, Any] | Any | None = None
+    1:     goto: Send | Sequence[Send | N] | N = ()
+       
+    1:     def __repr__(self) -> str:
+               # get all non-None values
+               contents = ", ".join(
+                   f"{key}={value!r}" for key, value in asdict(self).items() if value
+               )
+               return f"Command({contents})"
+       
+    1:     def _update_as_tuples(self) -> Sequence[tuple[str, Any]]:
+               if isinstance(self.update, dict):
+                   return list(self.update.items())
+               elif isinstance(self.update, (list, tuple)) and all(
+                   isinstance(t, tuple) and len(t) == 2 and isinstance(t[0], str)
+                   for t in self.update
+               ):
+                   return self.update
+               elif keys := get_cached_annotated_keys(type(self.update)):
+                   return get_update_as_tuples(self.update, keys)
+               elif self.update is not None:
+                   return [("__root__", self.update)]
+               else:
+                   return []
+       
+    1:     PARENT: ClassVar[Literal["__parent__"]] = "__parent__"
+       
+       
+    1: def interrupt(value: Any) -> Any:
+           """Interrupt the graph with a resumable exception from within a node.
+       
+           The `interrupt` function enables human-in-the-loop workflows by pausing graph
+           execution and surfacing a value to the client. This value can communicate context
+           or request input required to resume execution.
+       
+           In a given node, the first invocation of this function raises a `GraphInterrupt`
+           exception, halting execution. The provided `value` is included with the exception
+           and sent to the client executing the graph.
+       
+           A client resuming the graph must use the [`Command`][langgraph.types.Command]
+           primitive to specify a value for the interrupt and continue execution.
+           The graph resumes from the start of the node, **re-executing** all logic.
+       
+           If a node contains multiple `interrupt` calls, LangGraph matches resume values
+           to interrupts based on their order in the node. This list of resume values
+           is scoped to the specific task executing the node and is not shared across tasks.
+       
+           To use an `interrupt`, you must enable a checkpointer, as the feature relies
+           on persisting the graph state.
+       
+           !!! example
+       
+               ```python
+               import uuid
+               from typing import Optional
+               from typing_extensions import TypedDict
+       
+               from langgraph.checkpoint.memory import InMemorySaver
+               from langgraph.constants import START
+               from langgraph.graph import StateGraph
+               from langgraph.types import interrupt, Command
+       
+       
+               class State(TypedDict):
+                   \"\"\"The graph state.\"\"\"
+       
+                   foo: str
+                   human_value: Optional[str]
+                   \"\"\"Human value will be updated using an interrupt.\"\"\"
+       
+       
+               def node(state: State):
+                   answer = interrupt(
+                       # This value will be sent to the client
+                       # as part of the interrupt information.
+                       \"what is your age?\"
+                   )
+                   print(f\"> Received an input from the interrupt: {answer}\")
+                   return {\"human_value\": answer}
+       
+       
+               builder = StateGraph(State)
+               builder.add_node(\"node\", node)
+               builder.add_edge(START, \"node\")
+       
+               # A checkpointer must be enabled for interrupts to work!
+               checkpointer = InMemorySaver()
+               graph = builder.compile(checkpointer=checkpointer)
+       
+               config = {
+                   \"configurable\": {
+                       \"thread_id\": uuid.uuid4(),
+                   }
+               }
+       
+               for chunk in graph.stream({\"foo\": \"abc\"}, config):
+                   print(chunk)
+       
+               # > {'__interrupt__': (Interrupt(value='what is your age?', id='45fda8478b2ef754419799e10992af06'),)}
+       
+               command = Command(resume=\"some input from a human!!!\")
+       
+               for chunk in graph.stream(Command(resume=\"some input from a human!!!\"), config):
+                   print(chunk)
+       
+               # > Received an input from the interrupt: some input from a human!!!
+               # > {'node': {'human_value': 'some input from a human!!!'}}
+               ```
+       
+           Args:
+               value: The value to surface to the client when the graph is interrupted.
+       
+           Returns:
+               Any: On subsequent invocations within the same node (same task to be precise), returns the value provided during the first invocation
+       
+           Raises:
+               GraphInterrupt: On the first invocation within the node, halts execution and surfaces the provided value to the client.
+           """
+           from langgraph._internal._constants import (
+               CONFIG_KEY_CHECKPOINT_NS,
+               CONFIG_KEY_SCRATCHPAD,
+               CONFIG_KEY_SEND,
+               RESUME,
+           )
+           from langgraph.config import get_config
+           from langgraph.errors import GraphInterrupt
+       
+           conf = get_config()["configurable"]
+           # track interrupt index
+           scratchpad = conf[CONFIG_KEY_SCRATCHPAD]
+           idx = scratchpad.interrupt_counter()
+           # find previous resume values
+           if scratchpad.resume:
+               if idx < len(scratchpad.resume):
+                   conf[CONFIG_KEY_SEND]([(RESUME, scratchpad.resume)])
+                   return scratchpad.resume[idx]
+           # find current resume value
+           v = scratchpad.get_null_resume(True)
+           if v is not None:
+               assert len(scratchpad.resume) == idx, (scratchpad.resume, idx)
+               scratchpad.resume.append(v)
+               conf[CONFIG_KEY_SEND]([(RESUME, scratchpad.resume)])
+               return v
+           # no resume value found
+           raise GraphInterrupt(
+               (
+                   Interrupt.from_ns(
+                       value=value,
+                       ns=conf[CONFIG_KEY_CHECKPOINT_NS],
+                   ),
+               )
+           )
+       
+       
+    3: @dataclass(slots=True)
+    2: class Overwrite:
+    1:     """Bypass a reducer and write the wrapped value directly to a `BinaryOperatorAggregate` channel.
+       
+           Receiving multiple `Overwrite` values for the same channel in a single super-step
+           will raise an `InvalidUpdateError`.
+       
+           !!! example
+       
+               ```python
+               from typing import Annotated
+               import operator
+               from langgraph.graph import StateGraph
+               from langgraph.types import Overwrite
+       
+               class State(TypedDict):
+                   messages: Annotated[list, operator.add]
+       
+               def node_a(state: TypedDict):
+                   # Normal update: uses the reducer (operator.add)
+                   return {"messages": ["a"]}
+       
+               def node_b(state: State):
+                   # Overwrite: bypasses the reducer and replaces the entire value
+                   return {"messages": Overwrite(value=["b"])}
+       
+               builder = StateGraph(State)
+               builder.add_node("node_a", node_a)
+               builder.add_node("node_b", node_b)
+               builder.set_entry_point("node_a")
+               builder.add_edge("node_a", "node_b")
+               graph = builder.compile()
+       
+               # Without Overwrite in node_b, messages would be ["START", "a", "b"]
+               # With Overwrite, messages is just ["b"]
+               result = graph.invoke({"messages": ["START"]})
+               assert result == {"messages": ["b"]}
+               ```
+           """
+       
+    1:     value: Any
+    1:     """The value to write directly to the channel, bypassing any reducer."""
+       
+    1:     type: Literal["__overwrite__"] = "__overwrite__"
+    1:     """Discriminator field. Lets the channel reducer recognise an `Overwrite`
+           even after its dataclass form is JSON-serialised and the typed instance
+           is lost (e.g. an `orjson`-encoded state update routed through the
+           LangGraph API server)."""

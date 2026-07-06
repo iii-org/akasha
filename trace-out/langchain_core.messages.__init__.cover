@@ -1,0 +1,198 @@
+    1: """**Messages** are objects used in prompts and chat conversations."""
+       
+    1: from typing import TYPE_CHECKING
+       
+    1: from langchain_core._import_utils import import_attr
+    1: from langchain_core.utils.utils import LC_AUTO_PREFIX, LC_ID_PREFIX, ensure_id
+       
+    1: if TYPE_CHECKING:
+           from langchain_core.messages.ai import (
+               AIMessage,
+               AIMessageChunk,
+               InputTokenDetails,
+               OutputTokenDetails,
+               UsageMetadata,
+           )
+           from langchain_core.messages.base import (
+               BaseMessage,
+               BaseMessageChunk,
+               merge_content,
+               message_to_dict,
+               messages_to_dict,
+           )
+           from langchain_core.messages.block_translators.openai import (
+               convert_to_openai_data_block,
+               convert_to_openai_image_block,
+           )
+           from langchain_core.messages.chat import ChatMessage, ChatMessageChunk
+           from langchain_core.messages.content import (
+               Annotation,
+               AudioContentBlock,
+               Citation,
+               ContentBlock,
+               DataContentBlock,
+               FileContentBlock,
+               ImageContentBlock,
+               InvalidToolCall,
+               NonStandardAnnotation,
+               NonStandardContentBlock,
+               PlainTextContentBlock,
+               ReasoningContentBlock,
+               ServerToolCall,
+               ServerToolCallChunk,
+               ServerToolResult,
+               TextContentBlock,
+               VideoContentBlock,
+               is_data_content_block,
+           )
+           from langchain_core.messages.function import FunctionMessage, FunctionMessageChunk
+           from langchain_core.messages.human import HumanMessage, HumanMessageChunk
+           from langchain_core.messages.modifier import RemoveMessage
+           from langchain_core.messages.system import SystemMessage, SystemMessageChunk
+           from langchain_core.messages.tool import (
+               ToolCall,
+               ToolCallChunk,
+               ToolMessage,
+               ToolMessageChunk,
+           )
+           from langchain_core.messages.utils import (
+               AnyMessage,
+               MessageLikeRepresentation,
+               _message_from_dict,
+               convert_to_messages,
+               convert_to_openai_messages,
+               filter_messages,
+               get_buffer_string,
+               merge_message_runs,
+               message_chunk_to_message,
+               messages_from_dict,
+               trim_messages,
+           )
+       
+    1: __all__ = (
+           "LC_AUTO_PREFIX",
+           "LC_ID_PREFIX",
+           "AIMessage",
+           "AIMessageChunk",
+           "Annotation",
+           "AnyMessage",
+           "AudioContentBlock",
+           "BaseMessage",
+           "BaseMessageChunk",
+           "ChatMessage",
+           "ChatMessageChunk",
+           "Citation",
+           "ContentBlock",
+           "DataContentBlock",
+           "FileContentBlock",
+           "FunctionMessage",
+           "FunctionMessageChunk",
+           "HumanMessage",
+           "HumanMessageChunk",
+           "ImageContentBlock",
+           "InputTokenDetails",
+           "InvalidToolCall",
+           "MessageLikeRepresentation",
+           "NonStandardAnnotation",
+           "NonStandardContentBlock",
+           "OutputTokenDetails",
+           "PlainTextContentBlock",
+           "ReasoningContentBlock",
+           "RemoveMessage",
+           "ServerToolCall",
+           "ServerToolCallChunk",
+           "ServerToolResult",
+           "SystemMessage",
+           "SystemMessageChunk",
+           "TextContentBlock",
+           "ToolCall",
+           "ToolCallChunk",
+           "ToolMessage",
+           "ToolMessageChunk",
+           "UsageMetadata",
+           "VideoContentBlock",
+           "_message_from_dict",
+           "convert_to_messages",
+           "convert_to_openai_data_block",
+           "convert_to_openai_image_block",
+           "convert_to_openai_messages",
+           "ensure_id",
+           "filter_messages",
+           "get_buffer_string",
+           "is_data_content_block",
+           "merge_content",
+           "merge_message_runs",
+           "message_chunk_to_message",
+           "message_to_dict",
+           "messages_from_dict",
+           "messages_to_dict",
+           "trim_messages",
+       )
+       
+   53: _dynamic_imports = {
+    1:     "AIMessage": "ai",
+    1:     "AIMessageChunk": "ai",
+    1:     "Annotation": "content",
+    1:     "AudioContentBlock": "content",
+    1:     "BaseMessage": "base",
+    1:     "BaseMessageChunk": "base",
+    1:     "merge_content": "base",
+    1:     "message_to_dict": "base",
+    1:     "messages_to_dict": "base",
+    1:     "Citation": "content",
+    1:     "ContentBlock": "content",
+    1:     "ChatMessage": "chat",
+    1:     "ChatMessageChunk": "chat",
+    1:     "DataContentBlock": "content",
+    1:     "FileContentBlock": "content",
+    1:     "FunctionMessage": "function",
+    1:     "FunctionMessageChunk": "function",
+    1:     "HumanMessage": "human",
+    1:     "HumanMessageChunk": "human",
+    1:     "NonStandardAnnotation": "content",
+    1:     "NonStandardContentBlock": "content",
+    1:     "OutputTokenDetails": "ai",
+    1:     "PlainTextContentBlock": "content",
+    1:     "ReasoningContentBlock": "content",
+    1:     "RemoveMessage": "modifier",
+    1:     "ServerToolCall": "content",
+    1:     "ServerToolCallChunk": "content",
+    1:     "ServerToolResult": "content",
+    1:     "SystemMessage": "system",
+    1:     "SystemMessageChunk": "system",
+    1:     "ImageContentBlock": "content",
+    1:     "InputTokenDetails": "ai",
+    1:     "InvalidToolCall": "tool",
+    1:     "TextContentBlock": "content",
+    1:     "ToolCall": "tool",
+    1:     "ToolCallChunk": "tool",
+    1:     "ToolMessage": "tool",
+    1:     "ToolMessageChunk": "tool",
+    1:     "UsageMetadata": "ai",
+    1:     "VideoContentBlock": "content",
+    1:     "AnyMessage": "utils",
+    1:     "MessageLikeRepresentation": "utils",
+    1:     "_message_from_dict": "utils",
+    1:     "convert_to_messages": "utils",
+    1:     "convert_to_openai_data_block": "block_translators.openai",
+    1:     "convert_to_openai_image_block": "block_translators.openai",
+    1:     "convert_to_openai_messages": "utils",
+    1:     "filter_messages": "utils",
+    1:     "get_buffer_string": "utils",
+    1:     "is_data_content_block": "content",
+    1:     "merge_message_runs": "utils",
+    1:     "message_chunk_to_message": "utils",
+    1:     "messages_from_dict": "utils",
+    1:     "trim_messages": "utils",
+       }
+       
+       
+    1: def __getattr__(attr_name: str) -> object:
+   25:     module_name = _dynamic_imports.get(attr_name)
+   25:     result = import_attr(attr_name, module_name, __spec__.parent)
+   25:     globals()[attr_name] = result
+   25:     return result
+       
+       
+    1: def __dir__() -> list[str]:
+           return list(__all__)

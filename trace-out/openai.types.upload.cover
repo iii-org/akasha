@@ -1,0 +1,44 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from .._models import BaseModel
+    1: from .file_object import FileObject
+       
+    1: __all__ = ["Upload"]
+       
+       
+    2: class Upload(BaseModel):
+    1:     """The Upload object can accept byte chunks in the form of Parts."""
+       
+    1:     id: str
+    1:     """The Upload unique identifier, which can be referenced in API endpoints."""
+       
+    1:     bytes: int
+    1:     """The intended number of bytes to be uploaded."""
+       
+    1:     created_at: int
+    1:     """The Unix timestamp (in seconds) for when the Upload was created."""
+       
+    1:     expires_at: int
+    1:     """The Unix timestamp (in seconds) for when the Upload will expire."""
+       
+    1:     filename: str
+    1:     """The name of the file to be uploaded."""
+       
+    1:     object: Literal["upload"]
+    1:     """The object type, which is always "upload"."""
+       
+    1:     purpose: str
+    1:     """The intended purpose of the file.
+       
+           [Please refer here](https://platform.openai.com/docs/api-reference/files/object#files/object-purpose)
+           for acceptable values.
+           """
+       
+    1:     status: Literal["pending", "completed", "cancelled", "expired"]
+    1:     """The status of the Upload."""
+       
+    1:     file: Optional[FileObject] = None
+    1:     """The `File` object represents a document that has been uploaded to OpenAI."""

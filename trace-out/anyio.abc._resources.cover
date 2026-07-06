@@ -1,0 +1,33 @@
+    1: from __future__ import annotations
+       
+    1: from abc import ABCMeta, abstractmethod
+    1: from types import TracebackType
+    1: from typing import TypeVar
+       
+    1: T = TypeVar("T")
+       
+       
+    2: class AsyncResource(metaclass=ABCMeta):
+    1:     """
+           Abstract base class for all closeable asynchronous resources.
+       
+           Works as an asynchronous context manager which returns the instance itself on enter,
+           and calls :meth:`aclose` on exit.
+           """
+       
+    1:     __slots__ = ()
+       
+    1:     async def __aenter__(self: T) -> T:
+               return self
+       
+    1:     async def __aexit__(
+               self,
+               exc_type: type[BaseException] | None,
+               exc_val: BaseException | None,
+               exc_tb: TracebackType | None,
+           ) -> None:
+               await self.aclose()
+       
+    2:     @abstractmethod
+    2:     async def aclose(self) -> None:
+               """Close the resource."""

@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ToolSearchToolParam"]
+       
+       
+    2: class ToolSearchToolParam(TypedDict, total=False):
+    1:     """Hosted or BYOT tool search configuration for deferred tools."""
+       
+    1:     type: Required[Literal["tool_search"]]
+    1:     """The type of the tool. Always `tool_search`."""
+       
+    1:     description: Optional[str]
+    1:     """Description shown to the model for a client-executed tool search tool."""
+       
+    1:     execution: Literal["server", "client"]
+    1:     """Whether tool search is executed by the server or by the client."""
+       
+    1:     parameters: Optional[object]
+    1:     """Parameter schema for a client-executed tool search tool."""

@@ -1,0 +1,51 @@
+    1: from abc import abstractmethod
+    1: from typing import Any, Dict, Generic, Protocol, TypeVar
+    1: from typing_extensions import Self
+    1: import json
+       
+    1: T = TypeVar("T", covariant=True)
+       
+       
+    2: class JSONSerializable(Protocol[T]):
+    1:     """A generic interface for objects that can be serialized to JSON"""
+       
+    1:     def to_json_str(self) -> str:
+               """Serializes the object to JSON"""
+               ...
+       
+    2:     @classmethod
+    2:     def from_json_str(cls, json_str: str) -> Self:
+               """Deserializes the object from JSON"""
+               ...
+       
+    1:     def to_json(self) -> Dict[str, Any]:
+               """Serializes the object to a JSON compatible dictionary"""
+               ...
+       
+    2:     @classmethod
+    2:     def from_json(cls, json_map: Dict[str, Any]) -> Self:
+               """Deserializes the object from JSON"""
+               ...
+       
+       
+    2: class BaseModelJSONSerializable(Generic[T]):
+    1:     """A mixin for BaseModels that allows a class to be serialized to JSON"""
+       
+    1:     def to_json_str(self) -> str:
+               """Serializes the object to JSON"""
+               return self.model_dump_json()
+       
+    1:     def to_json(self) -> Dict[str, Any]:
+               """Serializes the object to a JSON compatible dictionary"""
+               return json.loads(self.model_dump_json())  # type: ignore[no-any-return]
+       
+    2:     @abstractmethod
+    2:     def model_dump_json(self) -> str:
+               """Abstract method that should be implemented to dump the model to JSON"""
+               pass
+       
+    2:     @classmethod
+    2:     @abstractmethod
+    2:     def from_json(cls, json_map: Dict[str, Any]) -> T:
+               """Deserializes the object from JSON"""
+               pass

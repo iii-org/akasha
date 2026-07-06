@@ -1,0 +1,51 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union, Iterable
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: from .._types import SequenceNotStr
+    1: from .responses.inline_skill_param import InlineSkillParam
+    1: from .responses.skill_reference_param import SkillReferenceParam
+    1: from .responses.container_network_policy_disabled_param import ContainerNetworkPolicyDisabledParam
+    1: from .responses.container_network_policy_allowlist_param import ContainerNetworkPolicyAllowlistParam
+       
+    1: __all__ = ["ContainerCreateParams", "ExpiresAfter", "NetworkPolicy", "Skill"]
+       
+       
+    2: class ContainerCreateParams(TypedDict, total=False):
+    1:     name: Required[str]
+    1:     """Name of the container to create."""
+       
+    1:     expires_after: ExpiresAfter
+    1:     """Container expiration time in seconds relative to the 'anchor' time."""
+       
+    1:     file_ids: SequenceNotStr[str]
+    1:     """IDs of files to copy to the container."""
+       
+    1:     memory_limit: Literal["1g", "4g", "16g", "64g"]
+    1:     """Optional memory limit for the container. Defaults to "1g"."""
+       
+    1:     network_policy: NetworkPolicy
+    1:     """Network access policy for the container."""
+       
+    1:     skills: Iterable[Skill]
+    1:     """An optional list of skills referenced by id or inline data."""
+       
+       
+    2: class ExpiresAfter(TypedDict, total=False):
+    1:     """Container expiration time in seconds relative to the 'anchor' time."""
+       
+    1:     anchor: Required[Literal["last_active_at"]]
+    1:     """Time anchor for the expiration time.
+       
+           Currently only 'last_active_at' is supported.
+           """
+       
+    1:     minutes: Required[int]
+       
+       
+    1: NetworkPolicy: TypeAlias = Union[ContainerNetworkPolicyDisabledParam, ContainerNetworkPolicyAllowlistParam]
+       
+    1: Skill: TypeAlias = Union[SkillReferenceParam, InlineSkillParam]

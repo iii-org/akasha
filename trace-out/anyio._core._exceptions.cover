@@ -1,0 +1,177 @@
+    1: from __future__ import annotations
+       
+    1: import sys
+    1: from collections.abc import Generator
+    1: from textwrap import dedent
+    1: from typing import Any
+       
+    1: if sys.version_info < (3, 11):
+           from exceptiongroup import BaseExceptionGroup
+       
+       
+    2: class BrokenResourceError(Exception):
+    1:     """
+           Raised when trying to use a resource that has been rendered unusable due to external
+           causes (e.g. a send stream whose peer has disconnected).
+           """
+       
+       
+    2: class BrokenWorkerProcess(Exception):
+    1:     """
+           Raised by :meth:`~anyio.to_process.run_sync` if the worker process terminates abruptly or
+           otherwise misbehaves.
+           """
+       
+       
+    2: class BrokenWorkerInterpreter(Exception):
+    1:     """
+           Raised by :meth:`~anyio.to_interpreter.run_sync` if an unexpected exception is
+           raised in the subinterpreter.
+           """
+       
+    1:     def __init__(self, excinfo: Any):
+               # This was adapted from concurrent.futures.interpreter.ExecutionFailed
+               msg = excinfo.formatted
+               if not msg:
+                   if excinfo.type and excinfo.msg:
+                       msg = f"{excinfo.type.__name__}: {excinfo.msg}"
+                   else:
+                       msg = excinfo.type.__name__ or excinfo.msg
+       
+               super().__init__(msg)
+               self.excinfo = excinfo
+       
+    1:     def __str__(self) -> str:
+               try:
+                   formatted = self.excinfo.errdisplay
+               except Exception:
+                   return super().__str__()
+               else:
+                   return dedent(
+                       f"""
+                       {super().__str__()}
+       
+                       Uncaught in the interpreter:
+       
+                       {formatted}
+                       """.strip()
+                   )
+       
+       
+    2: class BusyResourceError(Exception):
+    1:     """
+           Raised when two tasks are trying to read from or write to the same resource
+           concurrently.
+           """
+       
+    1:     def __init__(self, action: str):
+               super().__init__(f"Another task is already {action} this resource")
+       
+       
+    2: class ClosedResourceError(Exception):
+    1:     """Raised when trying to use a resource that has been closed."""
+       
+       
+    2: class ConnectionFailed(OSError):
+    1:     """
+           Raised when a connection attempt fails.
+       
+           .. note:: This class inherits from :exc:`OSError` for backwards compatibility.
+           """
+       
+       
+    1: def iterate_exceptions(
+           exception: BaseException,
+       ) -> Generator[BaseException, None, None]:
+           if isinstance(exception, BaseExceptionGroup):
+               for exc in exception.exceptions:
+                   yield from iterate_exceptions(exc)
+           else:
+               yield exception
+       
+       
+    2: class DelimiterNotFound(Exception):
+    1:     """
+           Raised during
+           :meth:`~anyio.streams.buffered.BufferedByteReceiveStream.receive_until` if the
+           maximum number of bytes has been read without the delimiter being found.
+           """
+       
+    1:     def __init__(self, max_bytes: int) -> None:
+               super().__init__(
+                   f"The delimiter was not found among the first {max_bytes} bytes"
+               )
+       
+       
+    2: class EndOfStream(Exception):
+    1:     """
+           Raised when trying to read from a stream that has been closed from the other end.
+           """
+       
+       
+    2: class IncompleteRead(Exception):
+    1:     """
+           Raised during
+           :meth:`~anyio.streams.buffered.BufferedByteReceiveStream.receive_exactly` or
+           :meth:`~anyio.streams.buffered.BufferedByteReceiveStream.receive_until` if the
+           connection is closed before the requested amount of bytes has been read.
+           """
+       
+    1:     def __init__(self) -> None:
+               super().__init__(
+                   "The stream was closed before the read operation could be completed"
+               )
+       
+       
+    2: class TypedAttributeLookupError(LookupError):
+    1:     """
+           Raised by :meth:`~anyio.TypedAttributeProvider.extra` when the given typed attribute
+           is not found and no default value has been given.
+           """
+       
+       
+    2: class WouldBlock(Exception):
+    1:     """Raised by ``X_nowait`` functions if ``X()`` would block."""
+       
+       
+    2: class NoEventLoopError(RuntimeError):
+    1:     """
+           Raised by several functions that require an event loop to be running in the current
+           thread when there is no running event loop.
+       
+           This is also raised by :func:`.from_thread.run` and :func:`.from_thread.run_sync`
+           if not calling from an AnyIO worker thread, and no ``token`` was passed.
+           """
+       
+       
+    2: class RunFinishedError(RuntimeError):
+    1:     """
+           Raised by :func:`.from_thread.run` and :func:`.from_thread.run_sync` if the event
+           loop associated with the explicitly passed token has already finished.
+           """
+       
+    1:     def __init__(self) -> None:
+               super().__init__(
+                   "The event loop associated with the given token has already finished"
+               )
+       
+       
+    2: class TaskFailed(Exception):
+    1:     """
+           Raised when awaiting on, or attempting to access the return value of, a
+           :class:`.TaskHandle` that raised an exception.
+           """
+       
+       
+    2: class TaskCancelled(TaskFailed):
+    1:     """
+           Raised when awaiting on, or attempting to access the return value of, a
+           :class:`.TaskHandle` that was cancelled.
+           """
+       
+       
+    2: class TaskNotFinished(Exception):
+    1:     """
+           Raised when attempting to access the return value or exception of a
+           :class:`.TaskHandle` that is still pending completion.
+           """

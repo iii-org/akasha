@@ -1,0 +1,28 @@
+    1: from typing import TYPE_CHECKING
+       
+    1: import numpy
+       
+    1: from .. import registry
+    1: from .numpy_ops import NumpyOps
+    1: from .ops import Ops
+       
+    1: if TYPE_CHECKING:
+           # Type checking does not work with dynamic base classes, since MyPy cannot
+           # determine against which base class to check. So, always derive from Ops
+           # during type checking.
+           _Ops = Ops
+       else:
+    1:     try:
+    1:         from thinc_apple_ops import AppleOps
+       
+               _Ops = AppleOps
+    1:     except ImportError:
+    1:         _Ops = NumpyOps
+       
+       
+    3: @registry.ops("MPSOps")
+    2: class MPSOps(_Ops):
+    1:     """Ops class for Metal Performance shaders."""
+       
+    1:     name = "mps"
+    1:     xp = numpy

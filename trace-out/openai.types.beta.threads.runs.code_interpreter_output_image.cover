@@ -1,0 +1,26 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ....._models import BaseModel
+       
+    1: __all__ = ["CodeInterpreterOutputImage", "Image"]
+       
+       
+    2: class Image(BaseModel):
+    1:     file_id: Optional[str] = None
+    1:     """
+           The [file](https://platform.openai.com/docs/api-reference/files) ID of the
+           image.
+           """
+       
+       
+    2: class CodeInterpreterOutputImage(BaseModel):
+    1:     index: int
+    1:     """The index of the output in the outputs array."""
+       
+    1:     type: Literal["image"]
+    1:     """Always `image`."""
+       
+    1:     image: Optional[Image] = None

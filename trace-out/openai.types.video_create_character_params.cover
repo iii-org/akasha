@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Required, TypedDict
+       
+    1: from .._types import FileTypes
+       
+    1: __all__ = ["VideoCreateCharacterParams"]
+       
+       
+    2: class VideoCreateCharacterParams(TypedDict, total=False):
+    1:     name: Required[str]
+    1:     """Display name for this API character."""
+       
+    1:     video: Required[FileTypes]
+    1:     """Video file used to create a character."""

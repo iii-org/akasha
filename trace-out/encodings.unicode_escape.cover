@@ -1,0 +1,46 @@
+    1: """ Python 'unicode-escape' Codec
+       
+       
+       Written by Marc-Andre Lemburg (mal@lemburg.com).
+       
+       (c) Copyright CNRI, All Rights Reserved. NO WARRANTY.
+       
+       """
+    1: import codecs
+       
+       ### Codec APIs
+       
+    2: class Codec(codecs.Codec):
+       
+           # Note: Binding these as C functions will result in the class not
+           # converting them to methods. This is intended.
+    1:     encode = codecs.unicode_escape_encode
+    1:     decode = codecs.unicode_escape_decode
+       
+    2: class IncrementalEncoder(codecs.IncrementalEncoder):
+    1:     def encode(self, input, final=False):
+               return codecs.unicode_escape_encode(input, self.errors)[0]
+       
+    2: class IncrementalDecoder(codecs.BufferedIncrementalDecoder):
+    1:     def _buffer_decode(self, input, errors, final):
+               return codecs.unicode_escape_decode(input, errors, final)
+       
+    2: class StreamWriter(Codec,codecs.StreamWriter):
+    1:     pass
+       
+    2: class StreamReader(Codec,codecs.StreamReader):
+    1:     def decode(self, input, errors='strict'):
+               return codecs.unicode_escape_decode(input, errors, False)
+       
+       ### encodings module API
+       
+    1: def getregentry():
+           return codecs.CodecInfo(
+               name='unicode-escape',
+               encode=Codec.encode,
+               decode=Codec.decode,
+               incrementalencoder=IncrementalEncoder,
+               incrementaldecoder=IncrementalDecoder,
+               streamwriter=StreamWriter,
+               streamreader=StreamReader,
+           )

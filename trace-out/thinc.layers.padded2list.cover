@@ -1,0 +1,27 @@
+    1: from typing import Callable, Tuple, TypeVar, cast
+       
+    1: from ..config import registry
+    1: from ..model import Model
+    1: from ..types import List2d, Padded
+       
+    1: InT = Padded
+    1: OutT = TypeVar("OutT", bound=List2d)
+       
+       
+    2: @registry.layers("padded2list.v1")
+    2: def padded2list() -> Model[InT, OutT]:
+           """Create a layer to convert a Padded input into a list of arrays."""
+           return Model(f"padded2list", forward)
+       
+       
+    5: def forward(
+    3:     model: Model[InT, OutT], Xp: InT, is_train: bool
+    1: ) -> Tuple[OutT, Callable[[OutT], InT]]:
+           Ys = cast(OutT, model.ops.padded2list(Xp))
+       
+           def backprop(dYs: OutT) -> InT:
+               dYp = model.ops.list2padded(dYs)
+               assert isinstance(dYp, Padded)
+               return dYp
+       
+           return Ys, backprop

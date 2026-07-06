@@ -1,0 +1,105 @@
+       # pylint: disable=useless-parent-delegation
+    1: from __future__ import annotations
+       
+    1: from typing import Optional, Union
+    1: from typing_extensions import Self
+       
+    1: import torch
+       
+       
+    1: _POOL_HANDLE = tuple[int, int]
+       
+       
+    1: def graph_pool_handle() -> _POOL_HANDLE:
+           """
+           Return an opaque token representing the id of a graph memory pool.
+           """
+           return torch._C._mtia_graphPoolHandle()
+       
+       
+    2: class MTIAGraph(torch._C._MTIAGraph):
+    1:     """
+           Wrapper around a MTIA graph.
+           """
+       
+    1:     def __new__(cls, keep_graph: bool = False) -> Self:
+               return super().__new__(cls, keep_graph)
+       
+    1:     def capture_begin(self, pool: _POOL_HANDLE) -> None:
+               """
+               Begin capturing a MTIA graph.
+               """
+               super().capture_begin(pool)
+       
+    1:     def capture_end(self) -> None:
+               """
+               End the capture of a MTIA graph.
+               """
+               super().capture_end()
+       
+    1:     def instantiate(self) -> None:
+               """
+               Instantiate the captured MTIA graph.
+               """
+               super().instantiate()
+       
+    1:     def replay(self) -> None:
+               """
+               Replay the captured MTIA graph.
+               """
+               super().replay()
+       
+    1:     def reset(self) -> None:
+               """
+               Destroy the captured graph and reset the states.
+               """
+               super().reset()
+       
+    1:     def pool(self) -> _POOL_HANDLE:
+               """
+               Return an opaque token representing the id of this graph's memory pool
+               """
+               return super().pool()
+       
+       
+    2: class graph:
+    1:     default_capture_stream: Optional[torch.mtia.Stream] = None
+       
+    1:     def __init__(
+               self,
+               mtia_graph: MTIAGraph,
+    1:         pool: Optional[_POOL_HANDLE] = None,
+    1:         stream: Optional[torch.mtia.Stream] = None,
+           ):
+               if self.__class__.default_capture_stream is None:
+                   self.__class__.default_capture_stream = torch.mtia.current_stream()
+       
+               self.pool: Union[tuple[()], tuple[_POOL_HANDLE]] = (
+                   () if pool is None else (pool,)
+               )
+               self.capture_stream = (
+                   stream if stream is not None else self.__class__.default_capture_stream
+               )
+               assert self.capture_stream is not None
+               self.stream_ctx = torch.mtia.stream(self.capture_stream)
+               self.mtia_graph = mtia_graph
+       
+    1:     def __enter__(self) -> None:
+               torch.mtia.synchronize()
+               torch.mtia.empty_cache()
+       
+               self.stream_ctx.__enter__()
+       
+               pool_arg = self.pool[0] if self.pool else (0, 0)
+               self.mtia_graph.capture_begin(pool_arg)
+       
+    1:     def __exit__(self, *args: object) -> None:
+               self.mtia_graph.capture_end()
+               self.stream_ctx.__exit__(*args)
+       
+       
+    1: __all__ = [
+           "MTIAGraph",
+           "graph",
+           "graph_pool_handle",
+       ]

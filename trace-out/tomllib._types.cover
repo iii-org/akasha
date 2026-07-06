@@ -1,0 +1,10 @@
+       # SPDX-License-Identifier: MIT
+       # SPDX-FileCopyrightText: 2021 Taneli Hukkinen
+       # Licensed to PSF under a Contributor Agreement.
+       
+    1: from typing import Any, Callable, Tuple
+       
+       # Type annotations
+    1: ParseFloat = Callable[[str], Any]
+    1: Key = Tuple[str, ...]
+    1: Pos = int

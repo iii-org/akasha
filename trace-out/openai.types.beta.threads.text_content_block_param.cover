@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["TextContentBlockParam"]
+       
+       
+    2: class TextContentBlockParam(TypedDict, total=False):
+    1:     """The text content that is part of a message."""
+       
+    1:     text: Required[str]
+    1:     """Text content to be sent to the model"""
+       
+    1:     type: Required[Literal["text"]]
+    1:     """Always `text`."""

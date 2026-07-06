@@ -1,0 +1,112 @@
+    1: import datetime
+    1: from collections import deque
+    1: from decimal import Decimal
+    1: from enum import Enum
+    1: from ipaddress import IPv4Address, IPv4Interface, IPv4Network, IPv6Address, IPv6Interface, IPv6Network
+    1: from pathlib import Path
+    1: from re import Pattern
+    1: from types import GeneratorType
+    1: from typing import Any, Callable, Dict, Type, Union
+    1: from uuid import UUID
+       
+    1: from pydantic.v1.color import Color
+    1: from pydantic.v1.networks import NameEmail
+    1: from pydantic.v1.types import SecretBytes, SecretStr
+       
+    1: __all__ = 'pydantic_encoder', 'custom_pydantic_encoder', 'timedelta_isoformat'
+       
+       
+    1: def isoformat(o: Union[datetime.date, datetime.time]) -> str:
+           return o.isoformat()
+       
+       
+    1: def decimal_encoder(dec_value: Decimal) -> Union[int, float]:
+           """
+           Encodes a Decimal as int of there's no exponent, otherwise float
+       
+           This is useful when we use ConstrainedDecimal to represent Numeric(x,0)
+           where a integer (but not int typed) is used. Encoding this as a float
+           results in failed round-tripping between encode and parse.
+           Our Id type is a prime example of this.
+       
+           >>> decimal_encoder(Decimal("1.0"))
+           1.0
+       
+           >>> decimal_encoder(Decimal("1"))
+           1
+           """
+           if dec_value.as_tuple().exponent >= 0:
+               return int(dec_value)
+           else:
+               return float(dec_value)
+       
+       
+   19: ENCODERS_BY_TYPE: Dict[Type[Any], Callable[[Any], Any]] = {
+    1:     bytes: lambda o: o.decode(),
+    1:     Color: str,
+    1:     datetime.date: isoformat,
+    1:     datetime.datetime: isoformat,
+    1:     datetime.time: isoformat,
+    1:     datetime.timedelta: lambda td: td.total_seconds(),
+    1:     Decimal: decimal_encoder,
+    1:     Enum: lambda o: o.value,
+    1:     frozenset: list,
+    1:     deque: list,
+    1:     GeneratorType: list,
+    1:     IPv4Address: str,
+    1:     IPv4Interface: str,
+    1:     IPv4Network: str,
+    1:     IPv6Address: str,
+    1:     IPv6Interface: str,
+    1:     IPv6Network: str,
+    1:     NameEmail: str,
+    1:     Path: str,
+    1:     Pattern: lambda o: o.pattern,
+    1:     SecretBytes: str,
+    1:     SecretStr: str,
+    1:     set: list,
+    1:     UUID: str,
+       }
+       
+       
+    1: def pydantic_encoder(obj: Any) -> Any:
+           from dataclasses import asdict, is_dataclass
+       
+           from pydantic.v1.main import BaseModel
+       
+           if isinstance(obj, BaseModel):
+               return obj.dict()
+           elif is_dataclass(obj):
+               return asdict(obj)
+       
+           # Check the class type and its superclasses for a matching encoder
+           for base in obj.__class__.__mro__[:-1]:
+               try:
+                   encoder = ENCODERS_BY_TYPE[base]
+               except KeyError:
+                   continue
+               return encoder(obj)
+           else:  # We have exited the for loop without finding a suitable encoder
+               raise TypeError(f"Object of type '{obj.__class__.__name__}' is not JSON serializable")
+       
+       
+    1: def custom_pydantic_encoder(type_encoders: Dict[Any, Callable[[Type[Any]], Any]], obj: Any) -> Any:
+           # Check the class type and its superclasses for a matching encoder
+           for base in obj.__class__.__mro__[:-1]:
+               try:
+                   encoder = type_encoders[base]
+               except KeyError:
+                   continue
+       
+               return encoder(obj)
+           else:  # We have exited the for loop without finding a suitable encoder
+               return pydantic_encoder(obj)
+       
+       
+    1: def timedelta_isoformat(td: datetime.timedelta) -> str:
+           """
+           ISO 8601 encoding for Python timedelta object.
+           """
+           minutes, seconds = divmod(td.seconds, 60)
+           hours, minutes = divmod(minutes, 60)
+           return f'{"-" if td.days < 0 else ""}P{abs(td.days)}DT{hours:d}H{minutes:d}M{seconds:d}.{td.microseconds:06d}S'

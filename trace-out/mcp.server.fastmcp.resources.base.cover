@@ -1,0 +1,50 @@
+    1: """Base classes and interfaces for FastMCP resources."""
+       
+    1: import abc
+    1: from typing import Annotated, Any
+       
+    1: from pydantic import (
+           AnyUrl,
+           BaseModel,
+           ConfigDict,
+           Field,
+           UrlConstraints,
+           ValidationInfo,
+           field_validator,
+       )
+       
+    1: from mcp.types import Annotations, Icon
+       
+       
+    2: class Resource(BaseModel, abc.ABC):
+    1:     """Base class for all resources."""
+       
+    1:     model_config = ConfigDict(validate_default=True)
+       
+    1:     uri: Annotated[AnyUrl, UrlConstraints(host_required=False)] = Field(default=..., description="URI of the resource")
+    1:     name: str | None = Field(description="Name of the resource", default=None)
+    1:     title: str | None = Field(description="Human-readable title of the resource", default=None)
+    1:     description: str | None = Field(description="Description of the resource", default=None)
+    2:     mime_type: str = Field(
+    1:         default="text/plain",
+    1:         description="MIME type of the resource content",
+    1:         pattern=r"^[a-zA-Z0-9]+/[a-zA-Z0-9\-+.]+(;\s*[a-zA-Z0-9\-_.]+=[a-zA-Z0-9\-_.]+)*$",
+           )
+    1:     icons: list[Icon] | None = Field(default=None, description="Optional list of icons for this resource")
+    1:     annotations: Annotations | None = Field(default=None, description="Optional annotations for the resource")
+    1:     meta: dict[str, Any] | None = Field(default=None, description="Optional metadata for this resource")
+       
+    2:     @field_validator("name", mode="before")
+    2:     @classmethod
+    2:     def set_default_name(cls, name: str | None, info: ValidationInfo) -> str:
+               """Set default name from URI if not provided."""
+               if name:
+                   return name
+               if uri := info.data.get("uri"):
+                   return str(uri)
+               raise ValueError("Either name or uri must be provided")
+       
+    2:     @abc.abstractmethod
+    2:     async def read(self) -> str | bytes:
+               """Read the resource content."""
+               pass  # pragma: no cover

@@ -1,0 +1,43 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Union, Optional
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: from ..._models import BaseModel
+    1: from ..responses.response_input_text import ResponseInputText
+    1: from ..responses.response_input_audio import ResponseInputAudio
+       
+    1: __all__ = ["GraderInputs", "GraderInputItem", "GraderInputItemOutputText", "GraderInputItemInputImage"]
+       
+       
+    2: class GraderInputItemOutputText(BaseModel):
+    1:     """A text output from the model."""
+       
+    1:     text: str
+    1:     """The text output from the model."""
+       
+    1:     type: Literal["output_text"]
+    1:     """The type of the output text. Always `output_text`."""
+       
+       
+    2: class GraderInputItemInputImage(BaseModel):
+    1:     """An image input block used within EvalItem content arrays."""
+       
+    1:     image_url: str
+    1:     """The URL of the image input."""
+       
+    1:     type: Literal["input_image"]
+    1:     """The type of the image input. Always `input_image`."""
+       
+    1:     detail: Optional[str] = None
+    1:     """The detail level of the image to be sent to the model.
+       
+           One of `high`, `low`, or `auto`. Defaults to `auto`.
+           """
+       
+       
+    2: GraderInputItem: TypeAlias = Union[
+    1:     str, ResponseInputText, GraderInputItemOutputText, GraderInputItemInputImage, ResponseInputAudio
+       ]
+       
+    1: GraderInputs: TypeAlias = List[GraderInputItem]

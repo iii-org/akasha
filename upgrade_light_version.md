@@ -49,18 +49,18 @@ The removal of **Rerank** and **BERTScore** from the light version is driven by 
 
 ## 5. Is RAG still functional in `[light]`?
 
-**YES.** Standard RAG remains fully functional because its core steps can be entirely API-based:
+**YES.** Standard RAG remains functional in `light`. The key difference is that vectors are generated through remote embedding APIs, while Chroma still handles storage and retrieval.
 
-1.  **Embeddings**: You can use OpenAI/Gemini/Anthropic APIs to generate vectors.
-2.  **Vector Search**: The similarity calculation (KNN) and keyword search (BM25) use standard Python libraries (scikit-learn, numpy, or pure math) and do not strictly require `torch`.
-3.  **Generation**: The retrieval context is passed to the LLM API as usual.
+1.  **Embeddings**: use OpenAI/Gemini/Anthropic APIs to generate vectors.
+2.  **Vector Store**: Chroma still stores vectors and performs similarity search locally.
+3.  **Tradeoff**: current `chromadb` releases may still install `onnxruntime` transitively, even if your actual embedding path is remote-only.
 
 **Standard Usage in `[light]`:**
 ```python
 ak = akasha.RAG(model="openai:gpt-4o", search_type="auto")
 ak(data_source="./data", prompt="Your question")
 ```
-*(Note: `search_type="auto"` in light mode will skip the rerank step if torch is missing.)*
+*(Note: `search_type="auto"` in light mode still skips rerank if torch is missing.)*
 
 ---
 
@@ -111,7 +111,7 @@ In the `light` version, we must ensure users are properly informed when they hit
     -   Remove heavy packages from `dependencies`.
     -   Add `full` extra containing the heavy packages.
     -   Add `light` extra (which can be empty or contain a subset if preferred).
-2.  **Update `requirements.txt`**: Create a `requirements-light.txt` and a `requirements.txt` (full). Ensure `bert-score` is only in `requirements.txt` (full), not in `requirements-light.txt`.
+2.  **Update `requirements.txt`**: Keep `requirements-light.txt` and `requirements.txt` synchronized from `pyproject.toml`. Ensure `bert-score` is only in `requirements.txt` (full), not in `requirements-light.txt`.
 
 ### Phase 3: Verification
 1.  Create a separate testing directory `tests/upgrade_tests/`.

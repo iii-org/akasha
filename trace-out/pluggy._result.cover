@@ -1,0 +1,107 @@
+    1: """
+       Hook wrapper "result" utilities.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from types import TracebackType
+    1: from typing import Callable
+    1: from typing import cast
+    1: from typing import final
+    1: from typing import Generic
+    1: from typing import Optional
+    1: from typing import TypeVar
+       
+       
+    1: _ExcInfo = tuple[type[BaseException], BaseException, Optional[TracebackType]]
+    1: ResultType = TypeVar("ResultType")
+       
+       
+    2: class HookCallError(Exception):
+    1:     """Hook was called incorrectly."""
+       
+       
+    3: @final
+    2: class Result(Generic[ResultType]):
+    1:     """An object used to inspect and set the result in a :ref:`hook wrapper
+           <hookwrappers>`."""
+       
+    1:     __slots__ = ("_result", "_exception", "_traceback")
+       
+    1:     def __init__(
+               self,
+               result: ResultType | None,
+               exception: BaseException | None,
+           ) -> None:
+               """:meta private:"""
+               self._result = result
+               self._exception = exception
+               # Exception __traceback__ is mutable, this keeps the original.
+               self._traceback = exception.__traceback__ if exception is not None else None
+       
+    2:     @property
+    2:     def excinfo(self) -> _ExcInfo | None:
+               """:meta private:"""
+               exc = self._exception
+               if exc is None:
+                   return None
+               else:
+                   return (type(exc), exc, self._traceback)
+       
+    2:     @property
+    2:     def exception(self) -> BaseException | None:
+               """:meta private:"""
+               return self._exception
+       
+    2:     @classmethod
+    2:     def from_call(cls, func: Callable[[], ResultType]) -> Result[ResultType]:
+               """:meta private:"""
+               __tracebackhide__ = True
+               result = exception = None
+               try:
+                   result = func()
+               except BaseException as exc:
+                   exception = exc
+               return cls(result, exception)
+       
+    1:     def force_result(self, result: ResultType) -> None:
+               """Force the result(s) to ``result``.
+       
+               If the hook was marked as a ``firstresult`` a single value should
+               be set, otherwise set a (modified) list of results. Any exceptions
+               found during invocation will be deleted.
+       
+               This overrides any previous result or exception.
+               """
+               self._result = result
+               self._exception = None
+               self._traceback = None
+       
+    1:     def force_exception(self, exception: BaseException) -> None:
+               """Force the result to fail with ``exception``.
+       
+               This overrides any previous result or exception.
+       
+               .. versionadded:: 1.1.0
+               """
+               self._result = None
+               self._exception = exception
+               self._traceback = exception.__traceback__ if exception is not None else None
+       
+    1:     def get_result(self) -> ResultType:
+               """Get the result(s) for this hook call.
+       
+               If the hook was marked as a ``firstresult`` only a single value
+               will be returned, otherwise a list of results.
+               """
+               __tracebackhide__ = True
+               exc = self._exception
+               tb = self._traceback
+               if exc is None:
+                   return cast(ResultType, self._result)
+               else:
+                   raise exc.with_traceback(tb)
+       
+       
+       # Historical name (pluggy<=1.2), kept for backward compatibility.
+    1: _Result = Result

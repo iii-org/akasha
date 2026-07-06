@@ -1,0 +1,20 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["InlineSkillSource"]
+       
+       
+    2: class InlineSkillSource(BaseModel):
+    1:     """Inline skill payload"""
+       
+    1:     data: str
+    1:     """Base64-encoded skill zip bundle."""
+       
+    1:     media_type: Literal["application/zip"]
+    1:     """The media type of the inline skill payload. Must be `application/zip`."""
+       
+    1:     type: Literal["base64"]
+    1:     """The type of the inline skill source. Must be `base64`."""

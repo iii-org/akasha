@@ -1,0 +1,390 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union, Optional
+    1: from typing_extensions import Literal, Annotated, TypeAlias
+       
+    1: from .thread import Thread
+    1: from ..._utils import PropertyInfo
+    1: from ..._models import BaseModel
+    1: from .threads.run import Run
+    1: from .threads.message import Message
+    1: from ..shared.error_object import ErrorObject
+    1: from .threads.runs.run_step import RunStep
+    1: from .threads.message_delta_event import MessageDeltaEvent
+    1: from .threads.runs.run_step_delta_event import RunStepDeltaEvent
+       
+    1: __all__ = [
+           "AssistantStreamEvent",
+           "ThreadCreated",
+           "ThreadRunCreated",
+           "ThreadRunQueued",
+           "ThreadRunInProgress",
+           "ThreadRunRequiresAction",
+           "ThreadRunCompleted",
+           "ThreadRunIncomplete",
+           "ThreadRunFailed",
+           "ThreadRunCancelling",
+           "ThreadRunCancelled",
+           "ThreadRunExpired",
+           "ThreadRunStepCreated",
+           "ThreadRunStepInProgress",
+           "ThreadRunStepDelta",
+           "ThreadRunStepCompleted",
+           "ThreadRunStepFailed",
+           "ThreadRunStepCancelled",
+           "ThreadRunStepExpired",
+           "ThreadMessageCreated",
+           "ThreadMessageInProgress",
+           "ThreadMessageDelta",
+           "ThreadMessageCompleted",
+           "ThreadMessageIncomplete",
+           "ErrorEvent",
+       ]
+       
+       
+    2: class ThreadCreated(BaseModel):
+    1:     """
+           Occurs when a new [thread](https://platform.openai.com/docs/api-reference/threads/object) is created.
+           """
+       
+    1:     data: Thread
+    1:     """
+           Represents a thread that contains
+           [messages](https://platform.openai.com/docs/api-reference/messages).
+           """
+       
+    1:     event: Literal["thread.created"]
+       
+    1:     enabled: Optional[bool] = None
+    1:     """Whether to enable input audio transcription."""
+       
+       
+    2: class ThreadRunCreated(BaseModel):
+    1:     """
+           Occurs when a new [run](https://platform.openai.com/docs/api-reference/runs/object) is created.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.created"]
+       
+       
+    2: class ThreadRunQueued(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) moves to a `queued` status.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.queued"]
+       
+       
+    2: class ThreadRunInProgress(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) moves to an `in_progress` status.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.in_progress"]
+       
+       
+    2: class ThreadRunRequiresAction(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) moves to a `requires_action` status.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.requires_action"]
+       
+       
+    2: class ThreadRunCompleted(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) is completed.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.completed"]
+       
+       
+    2: class ThreadRunIncomplete(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) ends with status `incomplete`.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.incomplete"]
+       
+       
+    2: class ThreadRunFailed(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) fails.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.failed"]
+       
+       
+    2: class ThreadRunCancelling(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) moves to a `cancelling` status.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.cancelling"]
+       
+       
+    2: class ThreadRunCancelled(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) is cancelled.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.cancelled"]
+       
+       
+    2: class ThreadRunExpired(BaseModel):
+    1:     """
+           Occurs when a [run](https://platform.openai.com/docs/api-reference/runs/object) expires.
+           """
+       
+    1:     data: Run
+    1:     """
+           Represents an execution run on a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.run.expired"]
+       
+       
+    2: class ThreadRunStepCreated(BaseModel):
+    1:     """
+           Occurs when a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) is created.
+           """
+       
+    1:     data: RunStep
+    1:     """Represents a step in execution of a run."""
+       
+    1:     event: Literal["thread.run.step.created"]
+       
+       
+    2: class ThreadRunStepInProgress(BaseModel):
+    1:     """
+           Occurs when a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) moves to an `in_progress` state.
+           """
+       
+    1:     data: RunStep
+    1:     """Represents a step in execution of a run."""
+       
+    1:     event: Literal["thread.run.step.in_progress"]
+       
+       
+    2: class ThreadRunStepDelta(BaseModel):
+    1:     """
+           Occurs when parts of a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) are being streamed.
+           """
+       
+    1:     data: RunStepDeltaEvent
+    1:     """Represents a run step delta i.e.
+       
+           any changed fields on a run step during streaming.
+           """
+       
+    1:     event: Literal["thread.run.step.delta"]
+       
+       
+    2: class ThreadRunStepCompleted(BaseModel):
+    1:     """
+           Occurs when a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) is completed.
+           """
+       
+    1:     data: RunStep
+    1:     """Represents a step in execution of a run."""
+       
+    1:     event: Literal["thread.run.step.completed"]
+       
+       
+    2: class ThreadRunStepFailed(BaseModel):
+    1:     """
+           Occurs when a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) fails.
+           """
+       
+    1:     data: RunStep
+    1:     """Represents a step in execution of a run."""
+       
+    1:     event: Literal["thread.run.step.failed"]
+       
+       
+    2: class ThreadRunStepCancelled(BaseModel):
+    1:     """
+           Occurs when a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) is cancelled.
+           """
+       
+    1:     data: RunStep
+    1:     """Represents a step in execution of a run."""
+       
+    1:     event: Literal["thread.run.step.cancelled"]
+       
+       
+    2: class ThreadRunStepExpired(BaseModel):
+    1:     """
+           Occurs when a [run step](https://platform.openai.com/docs/api-reference/run-steps/step-object) expires.
+           """
+       
+    1:     data: RunStep
+    1:     """Represents a step in execution of a run."""
+       
+    1:     event: Literal["thread.run.step.expired"]
+       
+       
+    2: class ThreadMessageCreated(BaseModel):
+    1:     """
+           Occurs when a [message](https://platform.openai.com/docs/api-reference/messages/object) is created.
+           """
+       
+    1:     data: Message
+    1:     """
+           Represents a message within a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.message.created"]
+       
+       
+    2: class ThreadMessageInProgress(BaseModel):
+    1:     """
+           Occurs when a [message](https://platform.openai.com/docs/api-reference/messages/object) moves to an `in_progress` state.
+           """
+       
+    1:     data: Message
+    1:     """
+           Represents a message within a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.message.in_progress"]
+       
+       
+    2: class ThreadMessageDelta(BaseModel):
+    1:     """
+           Occurs when parts of a [Message](https://platform.openai.com/docs/api-reference/messages/object) are being streamed.
+           """
+       
+    1:     data: MessageDeltaEvent
+    1:     """Represents a message delta i.e.
+       
+           any changed fields on a message during streaming.
+           """
+       
+    1:     event: Literal["thread.message.delta"]
+       
+       
+    2: class ThreadMessageCompleted(BaseModel):
+    1:     """
+           Occurs when a [message](https://platform.openai.com/docs/api-reference/messages/object) is completed.
+           """
+       
+    1:     data: Message
+    1:     """
+           Represents a message within a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.message.completed"]
+       
+       
+    2: class ThreadMessageIncomplete(BaseModel):
+    1:     """
+           Occurs when a [message](https://platform.openai.com/docs/api-reference/messages/object) ends before it is completed.
+           """
+       
+    1:     data: Message
+    1:     """
+           Represents a message within a
+           [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     event: Literal["thread.message.incomplete"]
+       
+       
+    2: class ErrorEvent(BaseModel):
+    1:     """
+           Occurs when an [error](https://platform.openai.com/docs/guides/error-codes#api-errors) occurs. This can happen due to an internal server error or a timeout.
+           """
+       
+    1:     data: ErrorObject
+       
+    1:     event: Literal["error"]
+       
+       
+    2: AssistantStreamEvent: TypeAlias = Annotated[
+    3:     Union[
+    2:         ThreadCreated,
+    1:         ThreadRunCreated,
+    1:         ThreadRunQueued,
+    1:         ThreadRunInProgress,
+    1:         ThreadRunRequiresAction,
+    1:         ThreadRunCompleted,
+    1:         ThreadRunIncomplete,
+    1:         ThreadRunFailed,
+    1:         ThreadRunCancelling,
+    1:         ThreadRunCancelled,
+    1:         ThreadRunExpired,
+    1:         ThreadRunStepCreated,
+    1:         ThreadRunStepInProgress,
+    1:         ThreadRunStepDelta,
+    1:         ThreadRunStepCompleted,
+    1:         ThreadRunStepFailed,
+    1:         ThreadRunStepCancelled,
+    1:         ThreadRunStepExpired,
+    1:         ThreadMessageCreated,
+    1:         ThreadMessageInProgress,
+    1:         ThreadMessageDelta,
+    1:         ThreadMessageCompleted,
+    1:         ThreadMessageIncomplete,
+    1:         ErrorEvent,
+           ],
+    1:     PropertyInfo(discriminator="event"),
+       ]

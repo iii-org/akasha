@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from .local_skill import LocalSkill
+       
+    1: __all__ = ["LocalEnvironment"]
+       
+       
+    2: class LocalEnvironment(BaseModel):
+    1:     type: Literal["local"]
+    1:     """Use a local computer environment."""
+       
+    1:     skills: Optional[List[LocalSkill]] = None
+    1:     """An optional list of skills."""

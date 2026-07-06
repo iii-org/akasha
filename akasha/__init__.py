@@ -1,21 +1,13 @@
-from akasha.utils.logging_config import configure_logging
+from importlib import import_module
 import os
 
 # Optional automatic logging configuration.
 # Enable by setting AKASHA_AUTO_CONFIGURE_LOGGING to "1", "true", or "yes".
 os.environ["CHROMA_TELEMETRY_OPT_OUT"] = "True"
 if os.getenv("AKASHA_AUTO_CONFIGURE_LOGGING", "").lower() in {"1", "true", "yes"}:
-    configure_logging(verbose=True, keep_logs=False)
+    from akasha.utils.logging_config import configure_logging
 
-from .RAG.rag import RAG
-from .tools.ask import ask
-from .helper.memory import MemoryManager
-from .tools.summary import summary
-from .tools.websearch import websearch
-from .tools.gen_img import gen_image, edit_image
-from .eval import eval
-from .agent import agents
-from .agent import create_tool
+    configure_logging(verbose=True, keep_logs=False)
 
 __all__ = [
     "RAG",
@@ -29,3 +21,26 @@ __all__ = [
     "edit_image",
     "MemoryManager",
 ]
+
+_LAZY_IMPORTS = {
+    "RAG": (".RAG.rag", "RAG"),
+    "ask": (".tools.ask", "ask"),
+    "summary": (".tools.summary", "summary"),
+    "websearch": (".tools.websearch", "websearch"),
+    "eval": (".eval", "eval"),
+    "agents": (".agent", "agents"),
+    "create_tool": (".agent", "create_tool"),
+    "gen_image": (".tools.gen_img", "gen_image"),
+    "edit_image": (".tools.gen_img", "edit_image"),
+    "MemoryManager": (".helper.memory", "MemoryManager"),
+}
+
+
+def __getattr__(name: str):
+    if name not in _LAZY_IMPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module_name, attr_name = _LAZY_IMPORTS[name]
+    value = getattr(import_module(module_name, __name__), attr_name)
+    globals()[name] = value
+    return value

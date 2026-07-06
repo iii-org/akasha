@@ -1,0 +1,8 @@
+       
+    1: version = "1.26.4"
+    1: __version__ = version
+    1: full_version = version
+       
+    1: git_revision = "9815c16f449e12915ef35a8255329ba26dacd5c0"
+    1: release = 'dev' not in version and '+' not in version
+    1: short_version = version.split("+")[0]

@@ -1,0 +1,97 @@
+    1: from collections import defaultdict
+    1: from typing import Any, Dict, List, Optional, Type, Union
+       
+    1: from pydantic import BaseModel, ConfigDict, Field, StrictStr, ValidationError, model_validator
+    1: from wasabi import msg
+       
+       
+    1: def validate(schema: Type[BaseModel], obj: Dict[str, Any]) -> List[str]:
+           """Validate data against a given pydantic schema.
+       
+           obj (Dict[str, Any]): JSON-serializable data to validate.
+           schema (pydantic.BaseModel): The schema to validate against.
+           RETURNS (List[str]): A list of error messages, if available.
+           """
+           try:
+               schema(**obj)
+               return []
+           except ValidationError as e:
+               errors = e.errors()
+               data = defaultdict(list)
+               for error in errors:
+                   err_loc = " -> ".join([str(p) for p in error.get("loc", [])])
+                   data[err_loc].append(error.get("msg"))
+               return [f"[{loc}] {', '.join(msg)}" for loc, msg in data.items()]  # type: ignore[arg-type]
+       
+       
+       # Project config Schema
+       
+       
+    2: class ProjectConfigAssetGitItem(BaseModel):
+           # fmt: off
+    1:     repo: StrictStr = Field(..., title="URL of Git repo to download from")
+    1:     path: StrictStr = Field(..., title="File path or sub-directory to download (used for sparse checkout)")
+    1:     branch: StrictStr = Field("master", title="Branch to clone from")
+           # fmt: on
+       
+       
+    2: class ProjectConfigAssetURL(BaseModel):
+           # fmt: off
+    1:     dest: StrictStr = Field(..., title="Destination of downloaded asset")
+    1:     url: Optional[StrictStr] = Field(None, title="URL of asset")
+    1:     checksum: Optional[str] = Field(None, title="MD5 hash of file", pattern=r"([a-fA-F\d]{32})")
+    1:     description: StrictStr = Field("", title="Description of asset")
+           # fmt: on
+       
+       
+    2: class ProjectConfigAssetGit(BaseModel):
+           # fmt: off
+    1:     git: ProjectConfigAssetGitItem = Field(..., title="Git repo information")
+    1:     checksum: Optional[str] = Field(None, title="MD5 hash of file", pattern=r"([a-fA-F\d]{32})")
+    1:     description: Optional[StrictStr] = Field(None, title="Description of asset")
+           # fmt: on
+       
+       
+    2: class ProjectConfigCommand(BaseModel):
+           # fmt: off
+    1:     name: StrictStr = Field(..., title="Name of command")
+    1:     help: Optional[StrictStr] = Field(None, title="Command description")
+    1:     script: List[StrictStr] = Field([], title="List of CLI commands to run, in order")
+    1:     deps: List[StrictStr] = Field([], title="File dependencies required by this command")
+    1:     outputs: List[StrictStr] = Field([], title="Outputs produced by this command")
+    1:     outputs_no_cache: List[StrictStr] = Field([], title="Outputs not tracked by DVC (DVC only)")
+    1:     no_skip: bool = Field(False, title="Never skip this command, even if nothing changed")
+           # fmt: on
+       
+    2:     model_config = ConfigDict(
+    1:         title="A single named command specified in a project config",
+    1:         extra="forbid",
+           )
+       
+       
+    2: class ProjectConfigSchema(BaseModel):
+           # fmt: off
+    1:     vars: Dict[StrictStr, Any] = Field({}, title="Optional variables to substitute in commands")
+    1:     env: Dict[StrictStr, Any] = Field({}, title="Optional variable names to substitute in commands, mapped to environment variable names")
+    1:     assets: List[Union[ProjectConfigAssetURL, ProjectConfigAssetGit]] = Field([], title="Data assets")
+    1:     workflows: Dict[StrictStr, List[StrictStr]] = Field({}, title="Named workflows, mapped to list of project commands to run in order")
+    1:     commands: List[ProjectConfigCommand] = Field([], title="Project command shortucts")
+    1:     title: Optional[str] = Field(None, title="Project title")
+           # fmt: on
+       
+    1:     model_config = ConfigDict(title="Schema for project configuration file")
+       
+    2:     @model_validator(mode="before")
+    2:     @classmethod
+    2:     def check_legacy_keys(cls, obj: Dict[str, Any]) -> Dict[str, Any]:
+               if "spacy_version" in obj:
+                   msg.warn(
+                       "Your project configuration file includes a `spacy_version` key, "
+                       "which is now deprecated. Weasel will not validate your version of spaCy.",
+                   )
+               if "check_requirements" in obj:
+                   msg.warn(
+                       "Your project configuration file includes a `check_requirements` key, "
+                       "which is now deprecated. Weasel will not validate your requirements.",
+                   )
+               return obj

@@ -1,0 +1,93 @@
+    1: """
+       A platform independent file lock that supports the with-statement.
+       
+       .. autodata:: filelock.__version__
+           :no-value:
+       
+       """
+       
+    1: from __future__ import annotations
+       
+    1: import sys
+    1: import warnings
+    1: from typing import TYPE_CHECKING
+       
+    1: from ._api import AcquireReturnProxy, BaseFileLock
+    1: from ._error import Timeout
+       
+    1: if TYPE_CHECKING:
+           from ._async_read_write import (
+               AsyncAcquireReadWriteReturnProxy,
+               AsyncReadWriteLock,
+           )
+           from ._read_write import ReadWriteLock
+       else:
+    1:     try:
+    1:         from ._async_read_write import AsyncAcquireReadWriteReturnProxy, AsyncReadWriteLock
+    1:         from ._read_write import ReadWriteLock
+           except ImportError:  # sqlite3 may be unavailable if Python was built without it or the C library is missing
+               AsyncAcquireReadWriteReturnProxy = None
+               AsyncReadWriteLock = None
+               ReadWriteLock = None
+       
+    1: from ._soft import SoftFileLock
+    1: from ._soft_rw import AsyncAcquireSoftReadWriteReturnProxy, AsyncSoftReadWriteLock, SoftReadWriteLock
+    1: from ._unix import UnixFileLock, has_fcntl
+    1: from ._windows import WindowsFileLock
+    1: from .asyncio import (
+           AsyncAcquireReturnProxy,
+           AsyncSoftFileLock,
+           AsyncUnixFileLock,
+           AsyncWindowsFileLock,
+           BaseAsyncFileLock,
+       )
+    1: from .version import version
+       
+       #: version of the project as a string
+    1: __version__: str = version
+       
+       
+    1: if sys.platform == "win32":  # pragma: win32 cover
+    1:     _FileLock: type[BaseFileLock] = WindowsFileLock
+    1:     _AsyncFileLock: type[BaseAsyncFileLock] = AsyncWindowsFileLock
+       else:  # pragma: win32 no cover # noqa: PLR5501
+           if has_fcntl:
+               _FileLock: type[BaseFileLock] = UnixFileLock
+               _AsyncFileLock: type[BaseAsyncFileLock] = AsyncUnixFileLock
+           else:
+               _FileLock = SoftFileLock
+               _AsyncFileLock = AsyncSoftFileLock
+               if warnings is not None:
+                   warnings.warn("only soft file lock is available", stacklevel=2)
+       
+    1: if TYPE_CHECKING:
+           FileLock = SoftFileLock
+           AsyncFileLock = AsyncSoftFileLock
+       else:
+           #: Alias for the lock, which should be used for the current platform.
+    1:     FileLock = _FileLock
+    1:     AsyncFileLock = _AsyncFileLock
+       
+       
+    1: __all__ = [
+           "AcquireReturnProxy",
+           "AsyncAcquireReadWriteReturnProxy",
+           "AsyncAcquireReturnProxy",
+           "AsyncAcquireSoftReadWriteReturnProxy",
+           "AsyncFileLock",
+           "AsyncReadWriteLock",
+           "AsyncSoftFileLock",
+           "AsyncSoftReadWriteLock",
+           "AsyncUnixFileLock",
+           "AsyncWindowsFileLock",
+           "BaseAsyncFileLock",
+           "BaseFileLock",
+           "FileLock",
+           "ReadWriteLock",
+           "SoftFileLock",
+           "SoftReadWriteLock",
+           "Timeout",
+           "UnixFileLock",
+           "WindowsFileLock",
+           "__version__",
+       ]

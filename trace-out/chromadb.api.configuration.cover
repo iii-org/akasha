@@ -1,0 +1,410 @@
+    1: from abc import abstractmethod
+    1: import json
+    1: from overrides import override
+    1: from typing import (
+           Any,
+           ClassVar,
+           Dict,
+           List,
+           Optional,
+           Protocol,
+           Union,
+           TypeVar,
+           cast,
+       )
+    1: from typing_extensions import Self
+    1: from multiprocessing import cpu_count
+       
+    1: from chromadb.serde import JSONSerializable
+       
+       # TODO: move out of API
+       
+       
+    2: class StaticParameterError(Exception):
+    1:     """Represents an error that occurs when a static parameter is set."""
+       
+    1:     pass
+       
+       
+    2: class InvalidConfigurationError(ValueError):
+    1:     """Represents an error that occurs when a configuration is invalid."""
+       
+    1:     pass
+       
+       
+    1: ParameterValue = Union[str, int, float, bool, "ConfigurationInternal"]
+       
+       
+    2: class ParameterValidator(Protocol):
+    1:     """Represents an abstract parameter validator."""
+       
+    2:     @abstractmethod
+    2:     def __call__(self, value: ParameterValue) -> bool:
+               """Returns whether the given value is valid."""
+               raise NotImplementedError()
+       
+       
+    2: class ConfigurationDefinition:
+    1:     """Represents the definition of a configuration."""
+       
+    1:     name: str
+    1:     validator: ParameterValidator
+    1:     is_static: bool
+    1:     default_value: ParameterValue
+       
+    5:     def __init__(
+               self,
+    1:         name: str,
+    1:         validator: ParameterValidator,
+    1:         is_static: bool,
+    1:         default_value: ParameterValue,
+           ):
+   10:         self.name = name
+   10:         self.validator = validator
+   10:         self.is_static = is_static
+   10:         self.default_value = default_value
+       
+       
+    2: class ConfigurationParameter:
+    1:     """Represents a parameter of a configuration."""
+       
+    1:     name: str
+    1:     value: ParameterValue
+       
+    1:     def __init__(self, name: str, value: ParameterValue):
+    8:         self.name = name
+    8:         self.value = value
+       
+    1:     def __repr__(self) -> str:
+               return f"ConfigurationParameter({self.name}, {self.value})"
+       
+    1:     def __eq__(self, __value: object) -> bool:
+               if not isinstance(__value, ConfigurationParameter):
+                   return NotImplemented
+               return self.name == __value.name and self.value == __value.value
+       
+       
+    1: T = TypeVar("T", bound="ConfigurationInternal")
+       
+       
+    2: class ConfigurationInternal(JSONSerializable["ConfigurationInternal"]):
+    1:     """Represents an abstract configuration, used internally by Chroma."""
+       
+           # The internal data structure used to store the parameters
+           # All expected parameters must be present with defaults or None values at initialization
+    1:     parameter_map: Dict[str, ConfigurationParameter]
+    1:     definitions: ClassVar[Dict[str, ConfigurationDefinition]]
+       
+    1:     def __init__(self, parameters: Optional[List[ConfigurationParameter]] = None):
+               """Initializes a new instance of the Configuration class. Respecting defaults and
+               validators."""
+    1:         self.parameter_map = {}
+    1:         if parameters is not None:
+                   for parameter in parameters:
+                       if parameter.name not in self.definitions:
+                           raise ValueError(f"Invalid parameter name: {parameter.name}")
+       
+                       definition = self.definitions[parameter.name]
+                       # Handle the case where we have a recursive configuration definition
+                       if isinstance(parameter.value, dict):
+                           child_type = globals().get(parameter.value.get("_type", None))
+                           if child_type is None:
+                               raise ValueError(
+                                   f"Invalid configuration type: {parameter.value}"
+                               )
+                           parameter.value = child_type.from_json(parameter.value)
+                       if not isinstance(parameter.value, type(definition.default_value)):
+                           raise ValueError(f"Invalid parameter value: {parameter.value}")
+       
+                       parameter_validator = definition.validator
+                       if not parameter_validator(parameter.value):
+                           raise ValueError(f"Invalid parameter value: {parameter.value}")
+                       self.parameter_map[parameter.name] = parameter
+               # Apply the defaults for any missing parameters
+    9:         for name, definition in self.definitions.items():
+    8:             if name not in self.parameter_map:
+   16:                 self.parameter_map[name] = ConfigurationParameter(
+    8:                     name=name, value=definition.default_value
+                       )
+       
+    1:         self.configuration_validator()
+       
+    1:     def __repr__(self) -> str:
+               return f"Configuration({self.parameter_map.values()})"
+       
+    1:     def __eq__(self, __value: object) -> bool:
+               if not isinstance(__value, ConfigurationInternal):
+                   return NotImplemented
+               return self.parameter_map == __value.parameter_map
+       
+    2:     @abstractmethod
+    2:     def configuration_validator(self) -> None:
+               """Perform custom validation when parameters are dependent on each other.
+       
+               Raises an InvalidConfigurationError if the configuration is invalid.
+               """
+               pass
+       
+    1:     def get_parameters(self) -> List[ConfigurationParameter]:
+               """Returns the parameters of the configuration."""
+               return list(self.parameter_map.values())
+       
+    1:     def get_parameter(self, name: str) -> ConfigurationParameter:
+               """Returns the parameter with the given name, or except if it doesn't exist."""
+               if name not in self.parameter_map:
+                   raise ValueError(
+                       f"Invalid parameter name: {name} for configuration {self.__class__.__name__}"
+                   )
+               param_value = cast(ConfigurationParameter, self.parameter_map.get(name))
+               return param_value
+       
+    1:     def set_parameter(self, name: str, value: Union[str, int, float, bool]) -> None:
+               """Sets the parameter with the given name to the given value."""
+               if name not in self.definitions:
+                   raise ValueError(f"Invalid parameter name: {name}")
+               definition = self.definitions[name]
+               parameter = self.parameter_map[name]
+               if definition.is_static:
+                   raise StaticParameterError(f"Cannot set static parameter: {name}")
+               if not definition.validator(value):
+                   raise ValueError(f"Invalid value for parameter {name}: {value}")
+               parameter.value = value
+       
+    2:     @override
+    2:     def to_json_str(self) -> str:
+               """Returns the JSON representation of the configuration."""
+               return json.dumps(self.to_json())
+       
+    2:     @classmethod
+    2:     @override
+    2:     def from_json_str(cls, json_str: str) -> Self:
+               """Returns a configuration from the given JSON string."""
+               try:
+                   config_json = json.loads(json_str)
+               except json.JSONDecodeError:
+                   raise ValueError(
+                       f"Unable to decode configuration from JSON string: {json_str}"
+                   )
+               return cls.from_json(config_json) if config_json else cls()
+       
+    2:     @override
+    2:     def to_json(self) -> Dict[str, Any]:
+               """Returns the JSON compatible dictionary representation of the configuration."""
+               json_dict = {
+                   name: parameter.value.to_json()
+                   if isinstance(parameter.value, ConfigurationInternal)
+                   else parameter.value
+                   for name, parameter in self.parameter_map.items()
+               }
+               # What kind of configuration is this?
+               json_dict["_type"] = self.__class__.__name__
+               return json_dict
+       
+    2:     @classmethod
+    2:     @override
+    2:     def from_json(cls, json_map: Dict[str, Any]) -> Self:
+               """Returns a configuration from the given JSON string."""
+               if cls.__name__ != json_map.get("_type", None):
+                   raise ValueError(
+                       f"Trying to instantiate configuration of type {cls.__name__} from JSON with type {json_map['_type']}"
+                   )
+               parameters = []
+               for name, value in json_map.items():
+                   # Type value is only for storage
+                   if name == "_type":
+                       continue
+                   parameters.append(ConfigurationParameter(name=name, value=value))
+               return cls(parameters=parameters)
+       
+       
+    2: class HNSWConfigurationInternal(ConfigurationInternal):
+    1:     """Internal representation of the HNSW configuration.
+           Used for validation, defaults, serialization and deserialization."""
+       
+    1:     definitions = {
+    2:         "space": ConfigurationDefinition(
+    1:             name="space",
+    1:             validator=lambda value: isinstance(value, str)
+                   and value in ["l2", "ip", "cosine"],
+    1:             is_static=True,
+    1:             default_value="l2",
+               ),
+    2:         "ef_construction": ConfigurationDefinition(
+    1:             name="ef_construction",
+    1:             validator=lambda value: isinstance(value, int) and value >= 1,
+    1:             is_static=True,
+    1:             default_value=100,
+               ),
+    2:         "ef_search": ConfigurationDefinition(
+    1:             name="ef_search",
+    1:             validator=lambda value: isinstance(value, int) and value >= 1,
+    1:             is_static=False,
+    1:             default_value=100,
+               ),
+    2:         "num_threads": ConfigurationDefinition(
+    1:             name="num_threads",
+    1:             validator=lambda value: isinstance(value, int) and value >= 1,
+    1:             is_static=False,
+    1:             default_value=cpu_count(),  # By default use all cores available
+               ),
+    2:         "M": ConfigurationDefinition(
+    1:             name="M",
+    1:             validator=lambda value: isinstance(value, int) and value >= 1,
+    1:             is_static=True,
+    1:             default_value=16,
+               ),
+    2:         "resize_factor": ConfigurationDefinition(
+    1:             name="resize_factor",
+    1:             validator=lambda value: isinstance(value, float) and value >= 1,
+    1:             is_static=True,
+    1:             default_value=1.2,
+               ),
+    2:         "batch_size": ConfigurationDefinition(
+    1:             name="batch_size",
+    1:             validator=lambda value: isinstance(value, int) and value >= 1,
+    1:             is_static=True,
+    1:             default_value=100,
+               ),
+    2:         "sync_threshold": ConfigurationDefinition(
+    1:             name="sync_threshold",
+    1:             validator=lambda value: isinstance(value, int) and value >= 1,
+    1:             is_static=True,
+    1:             default_value=1000,
+               ),
+           }
+       
+    2:     @override
+    2:     def configuration_validator(self) -> None:
+    1:         batch_size = self.parameter_map.get("batch_size")
+    1:         sync_threshold = self.parameter_map.get("sync_threshold")
+       
+    2:         if (
+    1:             batch_size
+    1:             and sync_threshold
+    1:             and cast(int, batch_size.value) > cast(int, sync_threshold.value)
+               ):
+                   raise InvalidConfigurationError(
+                       "batch_size must be less than or equal to sync_threshold"
+                   )
+       
+    2:     @classmethod
+    2:     def from_legacy_params(cls, params: Dict[str, Any]) -> Self:
+               """Returns an HNSWConfiguration from a metadata dict containing legacy HNSW parameters. Used for migration."""
+       
+               # We maintain this map to avoid a circular import with HnswParams, and
+               # because then names won't change since we intend to deprecate HNSWParams
+               # in favor of this type of configuration.
+               old_to_new = {
+                   "hnsw:space": "space",
+                   "hnsw:construction_ef": "ef_construction",
+                   "hnsw:search_ef": "ef_search",
+                   "hnsw:M": "M",
+                   "hnsw:num_threads": "num_threads",
+                   "hnsw:resize_factor": "resize_factor",
+                   "hnsw:batch_size": "batch_size",
+                   "hnsw:sync_threshold": "sync_threshold",
+               }
+       
+               parameters = []
+               for name, value in params.items():
+                   if name not in old_to_new:
+                       raise ValueError(f"Invalid legacy HNSW parameter name: {name}")
+                   parameters.append(
+                       ConfigurationParameter(name=old_to_new[name], value=value)
+                   )
+               return cls(parameters)
+       
+       
+       # This is the user-facing interface for HNSW index configuration parameters.
+       # Internally, we pass around HNSWConfigurationInternal objects, which perform
+       # validation, serialization and deserialization. Users don't need to know
+       # about that and instead get a clean constructor with default arguments.
+    2: class HNSWConfigurationInterface(HNSWConfigurationInternal):
+    1:     """HNSW index configuration parameters.
+           See https://docs.trychroma.com/guides#changing-the-distance-function for more information.
+           """
+       
+    9:     def __init__(
+               self,
+    2:         space: str = "l2",
+    2:         ef_construction: int = 100,
+    2:         ef_search: int = 100,
+    2:         num_threads: int = cpu_count(),
+    2:         M: int = 16,
+    2:         resize_factor: float = 1.2,
+    2:         batch_size: int = 100,
+    2:         sync_threshold: int = 1000,
+           ):
+               parameters = [
+                   ConfigurationParameter(name="space", value=space),
+                   ConfigurationParameter(name="ef_construction", value=ef_construction),
+                   ConfigurationParameter(name="ef_search", value=ef_search),
+                   ConfigurationParameter(name="num_threads", value=num_threads),
+                   ConfigurationParameter(name="M", value=M),
+                   ConfigurationParameter(name="resize_factor", value=resize_factor),
+                   ConfigurationParameter(name="batch_size", value=batch_size),
+                   ConfigurationParameter(name="sync_threshold", value=sync_threshold),
+               ]
+       
+               super().__init__(parameters=parameters)
+       
+       
+       # Alias for user convenience - the user doesn't need to know this is an 'Interface'
+    1: HNSWConfiguration = HNSWConfigurationInterface
+       
+       
+    2: class CollectionConfigurationInternal(ConfigurationInternal):
+    1:     """Internal representation of the collection configuration.
+           Used for validation, defaults, and serialization / deserialization."""
+       
+    1:     definitions = {
+    2:         "hnsw_configuration": ConfigurationDefinition(
+    1:             name="hnsw_configuration",
+    1:             validator=lambda value: isinstance(value, HNSWConfigurationInternal),
+    1:             is_static=True,
+    1:             default_value=HNSWConfigurationInternal(),
+               ),
+           }
+       
+    2:     @override
+    2:     def configuration_validator(self) -> None:
+               pass
+       
+       
+       # This is the user-facing interface for HNSW index configuration parameters.
+       # Internally, we pass around HNSWConfigurationInternal objects, which perform
+       # validation, serialization and deserialization. Users don't need to know
+       # about that and instead get a clean constructor with default arguments.
+    2: class CollectionConfigurationInterface(CollectionConfigurationInternal):
+    1:     """Configuration parameters for creating a collection."""
+       
+    1:     def __init__(self, hnsw_configuration: Optional[HNSWConfigurationInternal]):
+               """Initializes a new instance of the CollectionConfiguration class.
+               Args:
+                   hnsw_configuration: The HNSW configuration to use for the collection.
+               """
+               if hnsw_configuration is None:
+                   hnsw_configuration = HNSWConfigurationInternal()
+               parameters = [
+                   ConfigurationParameter(name="hnsw_configuration", value=hnsw_configuration)
+               ]
+               super().__init__(parameters=parameters)
+       
+       
+       # Alias for user convenience - the user doesn't need to know this is an 'Interface'.
+    1: CollectionConfiguration = CollectionConfigurationInterface
+       
+       
+    2: class EmbeddingsQueueConfigurationInternal(ConfigurationInternal):
+    1:     definitions = {
+    2:         "automatically_purge": ConfigurationDefinition(
+    1:             name="automatically_purge",
+    1:             validator=lambda value: isinstance(value, bool),
+    1:             is_static=False,
+    1:             default_value=True,
+               ),
+           }
+       
+    2:     @override
+    2:     def configuration_validator(self) -> None:
+               pass

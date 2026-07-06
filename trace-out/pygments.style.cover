@@ -1,0 +1,203 @@
+    1: """
+           pygments.style
+           ~~~~~~~~~~~~~~
+       
+           Basic style object.
+       
+           :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+           :license: BSD, see LICENSE for details.
+       """
+       
+    1: from pygments.token import Token, STANDARD_TYPES
+       
+       # Default mapping of ansixxx to RGB colors.
+   17: _ansimap = {
+           # dark
+    1:     'ansiblack': '000000',
+    1:     'ansired': '7f0000',
+    1:     'ansigreen': '007f00',
+    1:     'ansiyellow': '7f7fe0',
+    1:     'ansiblue': '00007f',
+    1:     'ansimagenta': '7f007f',
+    1:     'ansicyan': '007f7f',
+    1:     'ansigray': 'e5e5e5',
+           # normal
+    1:     'ansibrightblack': '555555',
+    1:     'ansibrightred': 'ff0000',
+    1:     'ansibrightgreen': '00ff00',
+    1:     'ansibrightyellow': 'ffff00',
+    1:     'ansibrightblue': '0000ff',
+    1:     'ansibrightmagenta': 'ff00ff',
+    1:     'ansibrightcyan': '00ffff',
+    1:     'ansiwhite': 'ffffff',
+       }
+       # mapping of deprecated #ansixxx colors to new color names
+   17: _deprecated_ansicolors = {
+           # dark
+    1:     '#ansiblack': 'ansiblack',
+    1:     '#ansidarkred': 'ansired',
+    1:     '#ansidarkgreen': 'ansigreen',
+    1:     '#ansibrown': 'ansiyellow',
+    1:     '#ansidarkblue': 'ansiblue',
+    1:     '#ansipurple': 'ansimagenta',
+    1:     '#ansiteal': 'ansicyan',
+    1:     '#ansilightgray': 'ansigray',
+           # normal
+    1:     '#ansidarkgray': 'ansibrightblack',
+    1:     '#ansired': 'ansibrightred',
+    1:     '#ansigreen': 'ansibrightgreen',
+    1:     '#ansiyellow': 'ansibrightyellow',
+    1:     '#ansiblue': 'ansibrightblue',
+    1:     '#ansifuchsia': 'ansibrightmagenta',
+    1:     '#ansiturquoise': 'ansibrightcyan',
+    1:     '#ansiwhite': 'ansiwhite',
+       }
+    1: ansicolors = set(_ansimap)
+       
+       
+    2: class StyleMeta(type):
+       
+    1:     def __new__(mcs, name, bases, dct):
+    1:         obj = type.__new__(mcs, name, bases, dct)
+   81:         for token in STANDARD_TYPES:
+   80:             if token not in obj.styles:
+   80:                 obj.styles[token] = ''
+       
+    1:         def colorformat(text):
+                   if text in ansicolors:
+                       return text
+                   if text[0:1] == '#':
+                       col = text[1:]
+                       if len(col) == 6:
+                           return col
+                       elif len(col) == 3:
+                           return col[0] * 2 + col[1] * 2 + col[2] * 2
+                   elif text == '':
+                       return ''
+                   elif text.startswith('var') or text.startswith('calc'):
+                       return text
+                   assert False, f"wrong color format {text!r}"
+       
+    1:         _styles = obj._styles = {}
+       
+   81:         for ttype in obj.styles:
+  333:             for token in ttype.split():
+  253:                 if token in _styles:
+  173:                     continue
+   80:                 ndef = _styles.get(token.parent, None)
+   80:                 styledefs = obj.styles.get(token, '').split()
+   80:                 if not ndef or token is None:
+    1:                     ndef = ['', 0, 0, 0, '', '', 0, 0, 0]
+   79:                 elif 'noinherit' in styledefs and token is not Token:
+                           ndef = _styles[Token][:]
+                       else:
+   79:                     ndef = ndef[:]
+   80:                 _styles[token] = ndef
+   80:                 for styledef in obj.styles.get(token, '').split():
+                           if styledef == 'noinherit':
+                               pass
+                           elif styledef == 'bold':
+                               ndef[1] = 1
+                           elif styledef == 'nobold':
+                               ndef[1] = 0
+                           elif styledef == 'italic':
+                               ndef[2] = 1
+                           elif styledef == 'noitalic':
+                               ndef[2] = 0
+                           elif styledef == 'underline':
+                               ndef[3] = 1
+                           elif styledef == 'nounderline':
+                               ndef[3] = 0
+                           elif styledef[:3] == 'bg:':
+                               ndef[4] = colorformat(styledef[3:])
+                           elif styledef[:7] == 'border:':
+                               ndef[5] = colorformat(styledef[7:])
+                           elif styledef == 'roman':
+                               ndef[6] = 1
+                           elif styledef == 'sans':
+                               ndef[7] = 1
+                           elif styledef == 'mono':
+                               ndef[8] = 1
+                           else:
+                               ndef[0] = colorformat(styledef)
+       
+    1:         return obj
+       
+    1:     def style_for_token(cls, token):
+               t = cls._styles[token]
+               ansicolor = bgansicolor = None
+               color = t[0]
+               if color in _deprecated_ansicolors:
+                   color = _deprecated_ansicolors[color]
+               if color in ansicolors:
+                   ansicolor = color
+                   color = _ansimap[color]
+               bgcolor = t[4]
+               if bgcolor in _deprecated_ansicolors:
+                   bgcolor = _deprecated_ansicolors[bgcolor]
+               if bgcolor in ansicolors:
+                   bgansicolor = bgcolor
+                   bgcolor = _ansimap[bgcolor]
+       
+               return {
+                   'color':        color or None,
+                   'bold':         bool(t[1]),
+                   'italic':       bool(t[2]),
+                   'underline':    bool(t[3]),
+                   'bgcolor':      bgcolor or None,
+                   'border':       t[5] or None,
+                   'roman':        bool(t[6]) or None,
+                   'sans':         bool(t[7]) or None,
+                   'mono':         bool(t[8]) or None,
+                   'ansicolor':    ansicolor,
+                   'bgansicolor':  bgansicolor,
+               }
+       
+    1:     def list_styles(cls):
+               return list(cls)
+       
+    1:     def styles_token(cls, ttype):
+               return ttype in cls._styles
+       
+    1:     def __iter__(cls):
+               for token in cls._styles:
+                   yield token, cls.style_for_token(token)
+       
+    1:     def __len__(cls):
+               return len(cls._styles)
+       
+       
+    2: class Style(metaclass=StyleMeta):
+       
+           #: overall background color (``None`` means transparent)
+    1:     background_color = '#ffffff'
+       
+           #: highlight background color
+    1:     highlight_color = '#ffffcc'
+       
+           #: line number font color
+    1:     line_number_color = 'inherit'
+       
+           #: line number background color
+    1:     line_number_background_color = 'transparent'
+       
+           #: special line number font color
+    1:     line_number_special_color = '#000000'
+       
+           #: special line number background color
+    1:     line_number_special_background_color = '#ffffc0'
+       
+           #: Style definitions for individual token types.
+    1:     styles = {}
+       
+           #: user-friendly style name (used when selecting the style, so this
+           # should be all-lowercase, no spaces, hyphens)
+    1:     name = 'unnamed'
+       
+    1:     aliases = []
+       
+           # Attribute for lexers defined within Pygments. If set
+           # to True, the style is not shown in the style gallery
+           # on the website. This is intended for language-specific
+           # styles.
+    1:     web_style_gallery_exclude = False

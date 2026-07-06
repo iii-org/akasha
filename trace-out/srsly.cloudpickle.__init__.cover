@@ -1,0 +1,18 @@
+    1: from . import cloudpickle
+    1: from .cloudpickle import *  # noqa
+       
+    1: __doc__ = cloudpickle.__doc__
+       
+    1: __version__ = "3.1.2"
+       
+    1: __all__ = [  # noqa
+           "__version__",
+           "Pickler",
+           "CloudPickler",
+           "dumps",
+           "loads",
+           "dump",
+           "load",
+           "register_pickle_by_value",
+           "unregister_pickle_by_value",
+       ]

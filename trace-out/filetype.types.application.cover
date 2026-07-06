@@ -1,0 +1,22 @@
+       # -*- coding: utf-8 -*-
+       
+    1: from __future__ import absolute_import
+       
+    1: from .base import Type
+       
+       
+    2: class Wasm(Type):
+    1:     """Implements the Wasm image type matcher."""
+       
+    1:     MIME = 'application/wasm'
+    1:     EXTENSION = 'wasm'
+       
+    1:     def __init__(self):
+    2:         super(Wasm, self).__init__(
+    1:             mime=Wasm.MIME,
+    1:             extension=Wasm.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return buf[:8] == bytearray([0x00, 0x61, 0x73, 0x6d,
+                                            0x01, 0x00, 0x00, 0x00])

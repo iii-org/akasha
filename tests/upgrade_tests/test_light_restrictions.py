@@ -2,6 +2,7 @@ import pytest
 import sys
 from unittest.mock import patch, MagicMock
 
+
 def test_torch_missing_hf_model():
     """Test that hf_model raises ImportError when torch is missing."""
     with patch.dict(sys.modules, {'torch': None, 'transformers': None}):
@@ -46,6 +47,22 @@ def test_bert_score_missing():
             scores.get_bert_score("cand", "ref")
         
         assert "Feature requiring 'bert-score' is not installed" in str(excinfo.value)
+
+
+def test_chromadb_missing_raises_clear_error():
+    """Test that Chroma-backed features point users to a light/base install."""
+    with patch.dict(sys.modules, {"langchain_chroma": None, "chromadb": None}):
+        import akasha.utils.db.chroma_compat as chroma_compat
+
+        importlib_reload(chroma_compat)
+
+        with pytest.raises(ImportError) as excinfo:
+            chroma_compat.get_chroma_components()
+
+        assert "Feature requiring 'chromadb/langchain-chroma' is not installed" in str(
+            excinfo.value
+        )
+        assert "pip install akasha-terminal[light]" in str(excinfo.value)
 
 def importlib_reload(module):
     import importlib

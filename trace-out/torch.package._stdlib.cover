@@ -1,0 +1,21 @@
+       # mypy: allow-untyped-defs
+    1: """List of Python standard library modules.
+       
+       Sadly, there is no reliable way to tell whether a module is part of the
+       standard library except by comparing to a canonical list.
+       
+       This is taken from https://github.com/PyCQA/isort/tree/develop/isort/stdlibs,
+       which itself is sourced from the Python documentation.
+       """
+       
+    1: import sys
+       
+       
+    1: def is_stdlib_module(module: str) -> bool:
+           base_module = module.partition(".")[0]
+           return base_module in _get_stdlib_modules()
+       
+       
+    1: def _get_stdlib_modules():
+           assert sys.version_info >= (3, 10)
+           return sys.stdlib_module_names

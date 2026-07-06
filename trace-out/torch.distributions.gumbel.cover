@@ -1,0 +1,92 @@
+       # mypy: allow-untyped-defs
+    1: import math
+    1: from typing import Optional, Union
+       
+    1: import torch
+    1: from torch import Tensor
+    1: from torch.distributions import constraints
+    1: from torch.distributions.transformed_distribution import TransformedDistribution
+    1: from torch.distributions.transforms import AffineTransform, ExpTransform
+    1: from torch.distributions.uniform import Uniform
+    1: from torch.distributions.utils import broadcast_all, euler_constant
+    1: from torch.types import _Number
+       
+       
+    1: __all__ = ["Gumbel"]
+       
+       
+    2: class Gumbel(TransformedDistribution):
+    1:     r"""
+           Samples from a Gumbel Distribution.
+       
+           Examples::
+       
+               >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+               >>> m = Gumbel(torch.tensor([1.0]), torch.tensor([2.0]))
+               >>> m.sample()  # sample from Gumbel distribution with loc=1, scale=2
+               tensor([ 1.0124])
+       
+           Args:
+               loc (float or Tensor): Location parameter of the distribution
+               scale (float or Tensor): Scale parameter of the distribution
+           """
+       
+    1:     arg_constraints = {"loc": constraints.real, "scale": constraints.positive}
+           # pyrefly: ignore [bad-override]
+    1:     support = constraints.real
+       
+    5:     def __init__(
+               self,
+    1:         loc: Union[Tensor, float],
+    1:         scale: Union[Tensor, float],
+    2:         validate_args: Optional[bool] = None,
+    1:     ) -> None:
+               self.loc, self.scale = broadcast_all(loc, scale)
+               finfo = torch.finfo(self.loc.dtype)
+               if isinstance(loc, _Number) and isinstance(scale, _Number):
+                   base_dist = Uniform(finfo.tiny, 1 - finfo.eps, validate_args=validate_args)
+               else:
+                   base_dist = Uniform(
+                       torch.full_like(self.loc, finfo.tiny),
+                       torch.full_like(self.loc, 1 - finfo.eps),
+                       validate_args=validate_args,
+                   )
+               transforms = [
+                   ExpTransform().inv,
+                   AffineTransform(loc=0, scale=-torch.ones_like(self.scale)),
+                   ExpTransform().inv,
+                   AffineTransform(loc=loc, scale=-self.scale),
+               ]
+               super().__init__(base_dist, transforms, validate_args=validate_args)
+       
+    1:     def expand(self, batch_shape, _instance=None):
+               new = self._get_checked_instance(Gumbel, _instance)
+               new.loc = self.loc.expand(batch_shape)
+               new.scale = self.scale.expand(batch_shape)
+               return super().expand(batch_shape, _instance=new)
+       
+           # Explicitly defining the log probability function for Gumbel due to precision issues
+    1:     def log_prob(self, value):
+               if self._validate_args:
+                   self._validate_sample(value)
+               y = (self.loc - value) / self.scale
+               return (y - y.exp()) - self.scale.log()
+       
+    2:     @property
+    2:     def mean(self) -> Tensor:
+               return self.loc + self.scale * euler_constant
+       
+    2:     @property
+    2:     def mode(self) -> Tensor:
+               return self.loc
+       
+    2:     @property
+    2:     def stddev(self) -> Tensor:
+               return (math.pi / math.sqrt(6)) * self.scale
+       
+    2:     @property
+    2:     def variance(self) -> Tensor:
+               return self.stddev.pow(2)
+       
+    1:     def entropy(self):
+               return self.scale.log() + (1 + euler_constant)

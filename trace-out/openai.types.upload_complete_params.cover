@@ -1,0 +1,20 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Required, TypedDict
+       
+    1: from .._types import SequenceNotStr
+       
+    1: __all__ = ["UploadCompleteParams"]
+       
+       
+    2: class UploadCompleteParams(TypedDict, total=False):
+    1:     part_ids: Required[SequenceNotStr[str]]
+    1:     """The ordered list of Part IDs."""
+       
+    1:     md5: str
+    1:     """
+           The optional md5 checksum for the file contents to verify if the bytes uploaded
+           matches what you expect.
+           """

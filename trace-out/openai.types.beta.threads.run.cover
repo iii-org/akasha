@@ -1,0 +1,273 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+    1: from .run_status import RunStatus
+    1: from ..assistant_tool import AssistantTool
+    1: from ...shared.metadata import Metadata
+    1: from ..assistant_tool_choice_option import AssistantToolChoiceOption
+    1: from ..assistant_response_format_option import AssistantResponseFormatOption
+    1: from .required_action_function_tool_call import RequiredActionFunctionToolCall
+       
+    1: __all__ = [
+           "Run",
+           "IncompleteDetails",
+           "LastError",
+           "RequiredAction",
+           "RequiredActionSubmitToolOutputs",
+           "TruncationStrategy",
+           "Usage",
+       ]
+       
+       
+    2: class IncompleteDetails(BaseModel):
+    1:     """Details on why the run is incomplete.
+       
+           Will be `null` if the run is not incomplete.
+           """
+       
+    1:     reason: Optional[Literal["max_completion_tokens", "max_prompt_tokens"]] = None
+    1:     """The reason why the run is incomplete.
+       
+           This will point to which specific token limit was reached over the course of the
+           run.
+           """
+       
+       
+    2: class LastError(BaseModel):
+    1:     """The last error associated with this run. Will be `null` if there are no errors."""
+       
+    1:     code: Literal["server_error", "rate_limit_exceeded", "invalid_prompt"]
+    1:     """One of `server_error`, `rate_limit_exceeded`, or `invalid_prompt`."""
+       
+    1:     message: str
+    1:     """A human-readable description of the error."""
+       
+       
+    2: class RequiredActionSubmitToolOutputs(BaseModel):
+    1:     """Details on the tool outputs needed for this run to continue."""
+       
+    1:     tool_calls: List[RequiredActionFunctionToolCall]
+    1:     """A list of the relevant tool calls."""
+       
+       
+    2: class RequiredAction(BaseModel):
+    1:     """Details on the action required to continue the run.
+       
+           Will be `null` if no action is required.
+           """
+       
+    1:     submit_tool_outputs: RequiredActionSubmitToolOutputs
+    1:     """Details on the tool outputs needed for this run to continue."""
+       
+    1:     type: Literal["submit_tool_outputs"]
+    1:     """For now, this is always `submit_tool_outputs`."""
+       
+       
+    2: class TruncationStrategy(BaseModel):
+    1:     """Controls for how a thread will be truncated prior to the run.
+       
+           Use this to control the initial context window of the run.
+           """
+       
+    1:     type: Literal["auto", "last_messages"]
+    1:     """The truncation strategy to use for the thread.
+       
+           The default is `auto`. If set to `last_messages`, the thread will be truncated
+           to the n most recent messages in the thread. When set to `auto`, messages in the
+           middle of the thread will be dropped to fit the context length of the model,
+           `max_prompt_tokens`.
+           """
+       
+    1:     last_messages: Optional[int] = None
+    1:     """
+           The number of most recent messages from the thread when constructing the context
+           for the run.
+           """
+       
+       
+    2: class Usage(BaseModel):
+    1:     """Usage statistics related to the run.
+       
+           This value will be `null` if the run is not in a terminal state (i.e. `in_progress`, `queued`, etc.).
+           """
+       
+    1:     completion_tokens: int
+    1:     """Number of completion tokens used over the course of the run."""
+       
+    1:     prompt_tokens: int
+    1:     """Number of prompt tokens used over the course of the run."""
+       
+    1:     total_tokens: int
+    1:     """Total number of tokens used (prompt + completion)."""
+       
+       
+    2: class Run(BaseModel):
+    1:     """
+           Represents an execution run on a [thread](https://platform.openai.com/docs/api-reference/threads).
+           """
+       
+    1:     id: str
+    1:     """The identifier, which can be referenced in API endpoints."""
+       
+    1:     assistant_id: str
+    1:     """
+           The ID of the
+           [assistant](https://platform.openai.com/docs/api-reference/assistants) used for
+           execution of this run.
+           """
+       
+    1:     cancelled_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the run was cancelled."""
+       
+    1:     completed_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the run was completed."""
+       
+    1:     created_at: int
+    1:     """The Unix timestamp (in seconds) for when the run was created."""
+       
+    1:     expires_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the run will expire."""
+       
+    1:     failed_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the run failed."""
+       
+    1:     incomplete_details: Optional[IncompleteDetails] = None
+    1:     """Details on why the run is incomplete.
+       
+           Will be `null` if the run is not incomplete.
+           """
+       
+    1:     instructions: str
+    1:     """
+           The instructions that the
+           [assistant](https://platform.openai.com/docs/api-reference/assistants) used for
+           this run.
+           """
+       
+    1:     last_error: Optional[LastError] = None
+    1:     """The last error associated with this run. Will be `null` if there are no errors."""
+       
+    1:     max_completion_tokens: Optional[int] = None
+    1:     """
+           The maximum number of completion tokens specified to have been used over the
+           course of the run.
+           """
+       
+    1:     max_prompt_tokens: Optional[int] = None
+    1:     """
+           The maximum number of prompt tokens specified to have been used over the course
+           of the run.
+           """
+       
+    1:     metadata: Optional[Metadata] = None
+    1:     """Set of 16 key-value pairs that can be attached to an object.
+       
+           This can be useful for storing additional information about the object in a
+           structured format, and querying for objects via API or the dashboard.
+       
+           Keys are strings with a maximum length of 64 characters. Values are strings with
+           a maximum length of 512 characters.
+           """
+       
+    1:     model: str
+    1:     """
+           The model that the
+           [assistant](https://platform.openai.com/docs/api-reference/assistants) used for
+           this run.
+           """
+       
+    1:     object: Literal["thread.run"]
+    1:     """The object type, which is always `thread.run`."""
+       
+    1:     parallel_tool_calls: bool
+    1:     """
+           Whether to enable
+           [parallel function calling](https://platform.openai.com/docs/guides/function-calling#configuring-parallel-function-calling)
+           during tool use.
+           """
+       
+    1:     required_action: Optional[RequiredAction] = None
+    1:     """Details on the action required to continue the run.
+       
+           Will be `null` if no action is required.
+           """
+       
+    1:     response_format: Optional[AssistantResponseFormatOption] = None
+    1:     """Specifies the format that the model must output.
+       
+           Compatible with [GPT-4o](https://platform.openai.com/docs/models#gpt-4o),
+           [GPT-4 Turbo](https://platform.openai.com/docs/models#gpt-4-turbo-and-gpt-4),
+           and all GPT-3.5 Turbo models since `gpt-3.5-turbo-1106`.
+       
+           Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured
+           Outputs which ensures the model will match your supplied JSON schema. Learn more
+           in the
+           [Structured Outputs guide](https://platform.openai.com/docs/guides/structured-outputs).
+       
+           Setting to `{ "type": "json_object" }` enables JSON mode, which ensures the
+           message the model generates is valid JSON.
+       
+           **Important:** when using JSON mode, you **must** also instruct the model to
+           produce JSON yourself via a system or user message. Without this, the model may
+           generate an unending stream of whitespace until the generation reaches the token
+           limit, resulting in a long-running and seemingly "stuck" request. Also note that
+           the message content may be partially cut off if `finish_reason="length"`, which
+           indicates the generation exceeded `max_tokens` or the conversation exceeded the
+           max context length.
+           """
+       
+    1:     started_at: Optional[int] = None
+    1:     """The Unix timestamp (in seconds) for when the run was started."""
+       
+    1:     status: RunStatus
+    1:     """
+           The status of the run, which can be either `queued`, `in_progress`,
+           `requires_action`, `cancelling`, `cancelled`, `failed`, `completed`,
+           `incomplete`, or `expired`.
+           """
+       
+    1:     thread_id: str
+    1:     """
+           The ID of the [thread](https://platform.openai.com/docs/api-reference/threads)
+           that was executed on as a part of this run.
+           """
+       
+    1:     tool_choice: Optional[AssistantToolChoiceOption] = None
+    1:     """
+           Controls which (if any) tool is called by the model. `none` means the model will
+           not call any tools and instead generates a message. `auto` is the default value
+           and means the model can pick between generating a message or calling one or more
+           tools. `required` means the model must call one or more tools before responding
+           to the user. Specifying a particular tool like `{"type": "file_search"}` or
+           `{"type": "function", "function": {"name": "my_function"}}` forces the model to
+           call that tool.
+           """
+       
+    1:     tools: List[AssistantTool]
+    1:     """
+           The list of tools that the
+           [assistant](https://platform.openai.com/docs/api-reference/assistants) used for
+           this run.
+           """
+       
+    1:     truncation_strategy: Optional[TruncationStrategy] = None
+    1:     """Controls for how a thread will be truncated prior to the run.
+       
+           Use this to control the initial context window of the run.
+           """
+       
+    1:     usage: Optional[Usage] = None
+    1:     """Usage statistics related to the run.
+       
+           This value will be `null` if the run is not in a terminal state (i.e.
+           `in_progress`, `queued`, etc.).
+           """
+       
+    1:     temperature: Optional[float] = None
+    1:     """The sampling temperature used for this run. If not set, defaults to 1."""
+       
+    1:     top_p: Optional[float] = None
+    1:     """The nucleus sampling value used for this run. If not set, defaults to 1."""

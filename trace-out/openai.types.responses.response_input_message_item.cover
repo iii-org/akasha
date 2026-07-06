@@ -1,0 +1,33 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from .response_input_message_content_list import ResponseInputMessageContentList
+       
+    1: __all__ = ["ResponseInputMessageItem"]
+       
+       
+    2: class ResponseInputMessageItem(BaseModel):
+    1:     id: str
+    1:     """The unique ID of the message input."""
+       
+    1:     content: ResponseInputMessageContentList
+    1:     """
+           A list of one or many input items to the model, containing different content
+           types.
+           """
+       
+    1:     role: Literal["user", "system", "developer"]
+    1:     """The role of the message input. One of `user`, `system`, or `developer`."""
+       
+    1:     type: Literal["message"]
+    1:     """The type of the message input. Always set to `message`."""
+       
+    1:     status: Optional[Literal["in_progress", "completed", "incomplete"]] = None
+    1:     """The status of item.
+       
+           One of `in_progress`, `completed`, or `incomplete`. Populated when items are
+           returned via API.
+           """

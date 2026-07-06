@@ -1,0 +1,11 @@
+       # mypy: allow-untyped-defs
+    1: from importlib.util import find_spec
+       
+    1: import torch
+       
+       
+    1: __all__ = ["amp_definitely_not_available"]
+       
+       
+    1: def amp_definitely_not_available():
+    1:     return not (torch.cuda.is_available() or find_spec("torch_xla"))

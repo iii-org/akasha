@@ -1,0 +1,86 @@
+    1: from __future__ import annotations
+       
+    1: import typing
+    1: from types import TracebackType
+       
+    1: from .._models import Request, Response
+       
+    1: T = typing.TypeVar("T", bound="BaseTransport")
+    1: A = typing.TypeVar("A", bound="AsyncBaseTransport")
+       
+    1: __all__ = ["AsyncBaseTransport", "BaseTransport"]
+       
+       
+    2: class BaseTransport:
+    1:     def __enter__(self: T) -> T:
+               return self
+       
+    1:     def __exit__(
+               self,
+    1:         exc_type: type[BaseException] | None = None,
+    1:         exc_value: BaseException | None = None,
+    1:         traceback: TracebackType | None = None,
+           ) -> None:
+               self.close()
+       
+    1:     def handle_request(self, request: Request) -> Response:
+               """
+               Send a single HTTP request and return a response.
+       
+               Developers shouldn't typically ever need to call into this API directly,
+               since the Client class provides all the higher level user-facing API
+               niceties.
+       
+               In order to properly release any network resources, the response
+               stream should *either* be consumed immediately, with a call to
+               `response.stream.read()`, or else the `handle_request` call should
+               be followed with a try/finally block to ensuring the stream is
+               always closed.
+       
+               Example usage:
+       
+                   with httpx.HTTPTransport() as transport:
+                       req = httpx.Request(
+                           method=b"GET",
+                           url=(b"https", b"www.example.com", 443, b"/"),
+                           headers=[(b"Host", b"www.example.com")],
+                       )
+                       resp = transport.handle_request(req)
+                       body = resp.stream.read()
+                       print(resp.status_code, resp.headers, body)
+       
+       
+               Takes a `Request` instance as the only argument.
+       
+               Returns a `Response` instance.
+               """
+               raise NotImplementedError(
+                   "The 'handle_request' method must be implemented."
+               )  # pragma: no cover
+       
+    1:     def close(self) -> None:
+               pass
+       
+       
+    2: class AsyncBaseTransport:
+    1:     async def __aenter__(self: A) -> A:
+               return self
+       
+    1:     async def __aexit__(
+               self,
+    1:         exc_type: type[BaseException] | None = None,
+    1:         exc_value: BaseException | None = None,
+    1:         traceback: TracebackType | None = None,
+           ) -> None:
+               await self.aclose()
+       
+    1:     async def handle_async_request(
+               self,
+               request: Request,
+           ) -> Response:
+               raise NotImplementedError(
+                   "The 'handle_async_request' method must be implemented."
+               )  # pragma: no cover
+       
+    1:     async def aclose(self) -> None:
+               pass

@@ -1,0 +1,305 @@
+    1: from dataclasses import dataclass
+    1: from typing import Any, Generic, Literal, Protocol, TypeVar
+    1: from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
+       
+    1: from pydantic import AnyUrl, BaseModel
+       
+    1: from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
+       
+       
+    2: class AuthorizationParams(BaseModel):
+    1:     state: str | None
+    1:     scopes: list[str] | None
+    1:     code_challenge: str
+    1:     redirect_uri: AnyUrl
+    1:     redirect_uri_provided_explicitly: bool
+    1:     resource: str | None = None  # RFC 8707 resource indicator
+       
+       
+    2: class AuthorizationCode(BaseModel):
+    1:     code: str
+    1:     scopes: list[str]
+    1:     expires_at: float
+    1:     client_id: str
+    1:     code_challenge: str
+    1:     redirect_uri: AnyUrl
+    1:     redirect_uri_provided_explicitly: bool
+    1:     resource: str | None = None  # RFC 8707 resource indicator
+    1:     subject: str | None = None  # resource owner; propagate to the issued AccessToken
+       
+       
+    2: class RefreshToken(BaseModel):
+    1:     token: str
+    1:     client_id: str
+    1:     scopes: list[str]
+    1:     expires_at: int | None = None
+    1:     subject: str | None = None  # resource owner; propagate to refreshed AccessTokens
+       
+       
+    2: class AccessToken(BaseModel):
+    1:     token: str
+    1:     client_id: str
+    1:     scopes: list[str]
+    1:     expires_at: int | None = None
+    1:     resource: str | None = None  # RFC 8707 resource indicator
+    1:     subject: str | None = None  # RFC 7662/9068 `sub`: resource owner; unique only per issuer
+    1:     claims: dict[str, Any] | None = None  # additional claims (e.g. `iss`, `act`)
+       
+       
+    2: RegistrationErrorCode = Literal[
+    1:     "invalid_redirect_uri",
+           "invalid_client_metadata",
+           "invalid_software_statement",
+           "unapproved_software_statement",
+       ]
+       
+       
+    3: @dataclass(frozen=True)
+    2: class RegistrationError(Exception):
+    1:     error: RegistrationErrorCode
+    1:     error_description: str | None = None
+       
+       
+    2: AuthorizationErrorCode = Literal[
+    1:     "invalid_request",
+           "unauthorized_client",
+           "access_denied",
+           "unsupported_response_type",
+           "invalid_scope",
+           "server_error",
+           "temporarily_unavailable",
+       ]
+       
+       
+    3: @dataclass(frozen=True)
+    2: class AuthorizeError(Exception):
+    1:     error: AuthorizationErrorCode
+    1:     error_description: str | None = None
+       
+       
+    2: TokenErrorCode = Literal[
+    1:     "invalid_request",
+           "invalid_client",
+           "invalid_grant",
+           "unauthorized_client",
+           "unsupported_grant_type",
+           "invalid_scope",
+       ]
+       
+       
+    3: @dataclass(frozen=True)
+    2: class TokenError(Exception):
+    1:     error: TokenErrorCode
+    1:     error_description: str | None = None
+       
+       
+    2: class TokenVerifier(Protocol):
+    1:     """Protocol for verifying bearer tokens."""
+       
+    1:     async def verify_token(self, token: str) -> AccessToken | None:
+               """Verify a bearer token and return access info if valid."""
+       
+       
+       # NOTE: FastMCP doesn't render any of these types in the user response, so it's
+       # OK to add fields to subclasses which should not be exposed externally.
+    1: AuthorizationCodeT = TypeVar("AuthorizationCodeT", bound=AuthorizationCode)
+    1: RefreshTokenT = TypeVar("RefreshTokenT", bound=RefreshToken)
+    1: AccessTokenT = TypeVar("AccessTokenT", bound=AccessToken)
+       
+       
+    2: class OAuthAuthorizationServerProvider(Protocol, Generic[AuthorizationCodeT, RefreshTokenT, AccessTokenT]):
+    1:     async def get_client(self, client_id: str) -> OAuthClientInformationFull | None:
+               """
+               Retrieves client information by client ID.
+       
+               Implementors MAY raise NotImplementedError if dynamic client registration is
+               disabled in ClientRegistrationOptions.
+       
+               Args:
+                   client_id: The ID of the client to retrieve.
+       
+               Returns:
+                   The client information, or None if the client does not exist.
+               """
+       
+    1:     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
+               """
+               Saves client information as part of registering it.
+       
+               Implementors MAY raise NotImplementedError if dynamic client registration is
+               disabled in ClientRegistrationOptions.
+       
+               Args:
+                   client_info: The client metadata to register.
+       
+               Raises:
+                   RegistrationError: If the client metadata is invalid.
+               """
+       
+    1:     async def authorize(self, client: OAuthClientInformationFull, params: AuthorizationParams) -> str:
+               """
+               Called as part of the /authorize endpoint, and returns a URL that the client
+               will be redirected to.
+               Many MCP implementations will redirect to a third-party provider to perform
+               a second OAuth exchange with that provider. In this sort of setup, the client
+               has an OAuth connection with the MCP server, and the MCP server has an OAuth
+               connection with the 3rd-party provider. At the end of this flow, the client
+               should be redirected to the redirect_uri from params.redirect_uri.
+       
+               +--------+     +------------+     +-------------------+
+               |        |     |            |     |                   |
+               | Client | --> | MCP Server | --> | 3rd Party OAuth   |
+               |        |     |            |     | Server            |
+               +--------+     +------------+     +-------------------+
+                                   |   ^                  |
+               +------------+      |   |                  |
+               |            |      |   |    Redirect      |
+               |redirect_uri|<-----+   +------------------+
+               |            |
+               +------------+
+       
+               Implementations will need to define another handler on the MCP server return
+               flow to perform the second redirect, and generate and store an authorization
+               code as part of completing the OAuth authorization step.
+       
+               Implementations SHOULD generate an authorization code with at least 160 bits of
+               entropy,
+               and MUST generate an authorization code with at least 128 bits of entropy.
+               See https://datatracker.ietf.org/doc/html/rfc6749#section-10.10.
+       
+               Args:
+                   client: The client requesting authorization.
+                   params: The parameters of the authorization request.
+       
+               Returns:
+                   A URL to redirect the client to for authorization.
+       
+               Raises:
+                   AuthorizeError: If the authorization request is invalid.
+               """
+               ...
+       
+    4:     async def load_authorization_code(
+    2:         self, client: OAuthClientInformationFull, authorization_code: str
+    1:     ) -> AuthorizationCodeT | None:
+               """
+               Loads an AuthorizationCode by its code.
+       
+               Args:
+                   client: The client that requested the authorization code.
+                   authorization_code: The authorization code to get the challenge for.
+       
+               Returns:
+                   The AuthorizationCode, or None if not found
+               """
+               ...
+       
+    4:     async def exchange_authorization_code(
+    2:         self, client: OAuthClientInformationFull, authorization_code: AuthorizationCodeT
+    1:     ) -> OAuthToken:
+               """
+               Exchanges an authorization code for an access token and refresh token.
+       
+               Args:
+                   client: The client exchanging the authorization code.
+                   authorization_code: The authorization code to exchange.
+       
+               Returns:
+                   The OAuth token, containing access and refresh tokens.
+       
+               Raises:
+                   TokenError: If the request is invalid
+               """
+               ...
+       
+    1:     async def load_refresh_token(self, client: OAuthClientInformationFull, refresh_token: str) -> RefreshTokenT | None:
+               """
+               Loads a RefreshToken by its token string.
+       
+               Args:
+                   client: The client that is requesting to load the refresh token.
+                   refresh_token: The refresh token string to load.
+       
+               Returns:
+                   The RefreshToken object if found, or None if not found.
+               """
+               ...
+       
+    5:     async def exchange_refresh_token(
+               self,
+    1:         client: OAuthClientInformationFull,
+    1:         refresh_token: RefreshTokenT,
+    1:         scopes: list[str],
+    1:     ) -> OAuthToken:
+               """
+               Exchanges a refresh token for an access token and refresh token.
+       
+               Implementations SHOULD rotate both the access token and refresh token.
+       
+               Args:
+                   client: The client exchanging the refresh token.
+                   refresh_token: The refresh token to exchange.
+                   scopes: Optional scopes to request with the new access token.
+       
+               Returns:
+                   The OAuth token, containing access and refresh tokens.
+       
+               Raises:
+                   TokenError: If the request is invalid
+               """
+               ...
+       
+    1:     async def load_access_token(self, token: str) -> AccessTokenT | None:
+               """
+               Loads an access token by its token.
+       
+               Args:
+                   token: The access token to verify.
+       
+               Returns:
+                   The AuthInfo, or None if the token is invalid.
+               """
+       
+    3:     async def revoke_token(
+               self,
+    1:         token: AccessTokenT | RefreshTokenT,
+    1:     ) -> None:
+               """
+               Revokes an access or refresh token.
+       
+               If the given token is invalid or already revoked, this method should do nothing.
+       
+               Implementations SHOULD revoke both the access token and its corresponding
+               refresh token, regardless of which of the access token or refresh token is
+               provided.
+       
+               Args:
+                   token: the token to revoke
+               """
+       
+       
+    1: def construct_redirect_uri(redirect_uri_base: str, **params: str | None) -> str:
+           parsed_uri = urlparse(redirect_uri_base)
+           query_params = [(k, v) for k, vs in parse_qs(parsed_uri.query).items() for v in vs]
+           for k, v in params.items():
+               if v is not None:
+                   query_params.append((k, v))
+       
+           redirect_uri = urlunparse(parsed_uri._replace(query=urlencode(query_params)))
+           return redirect_uri
+       
+       
+    2: class ProviderTokenVerifier(TokenVerifier):
+    1:     """Token verifier that uses an OAuthAuthorizationServerProvider.
+       
+           This is provided for backwards compatibility with existing auth_server_provider
+           configurations. For new implementations using AS/RS separation, consider using
+           the TokenVerifier protocol with a dedicated implementation like IntrospectionTokenVerifier.
+           """
+       
+    1:     def __init__(self, provider: "OAuthAuthorizationServerProvider[AuthorizationCode, RefreshToken, AccessToken]"):
+               self.provider = provider
+       
+    1:     async def verify_token(self, token: str) -> AccessToken | None:
+               """Verify token using the provider's load_access_token method."""
+               return await self.provider.load_access_token(token)

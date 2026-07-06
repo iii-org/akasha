@@ -1,0 +1,23 @@
+    1: import sys
+       
+    1: from .compat import chardet
+       
+       # This code exists for backwards compatibility reasons.
+       # I don't like it either. Just look the other way. :)
+       
+    3: for package in ("urllib3", "idna"):
+    2:     locals()[package] = __import__(package)
+           # This traversal is apparently necessary such that the identities are
+           # preserved (requests.packages.urllib3.* is urllib3.*)
+ 2745:     for mod in list(sys.modules):
+ 2743:         if mod == package or mod.startswith(f"{package}."):
+   32:             sys.modules[f"requests.packages.{mod}"] = sys.modules[mod]
+       
+    1: if chardet is not None:
+    1:     target = chardet.__name__
+ 1391:     for mod in list(sys.modules):
+ 1390:         if mod == target or mod.startswith(f"{target}."):
+    9:             imported_mod = sys.modules[mod]
+    9:             sys.modules[f"requests.packages.{mod}"] = imported_mod
+    9:             mod = mod.replace(target, "chardet")
+    9:             sys.modules[f"requests.packages.{mod}"] = imported_mod

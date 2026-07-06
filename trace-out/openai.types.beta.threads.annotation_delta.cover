@@ -1,0 +1,14 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union
+    1: from typing_extensions import Annotated, TypeAlias
+       
+    1: from ...._utils import PropertyInfo
+    1: from .file_path_delta_annotation import FilePathDeltaAnnotation
+    1: from .file_citation_delta_annotation import FileCitationDeltaAnnotation
+       
+    1: __all__ = ["AnnotationDelta"]
+       
+    2: AnnotationDelta: TypeAlias = Annotated[
+    1:     Union[FileCitationDeltaAnnotation, FilePathDeltaAnnotation], PropertyInfo(discriminator="type")
+       ]

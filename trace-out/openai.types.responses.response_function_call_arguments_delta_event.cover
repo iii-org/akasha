@@ -1,0 +1,28 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseFunctionCallArgumentsDeltaEvent"]
+       
+       
+    2: class ResponseFunctionCallArgumentsDeltaEvent(BaseModel):
+    1:     """Emitted when there is a partial function-call arguments delta."""
+       
+    1:     delta: str
+    1:     """The function-call arguments delta that is added."""
+       
+    1:     item_id: str
+    1:     """The ID of the output item that the function-call arguments delta is added to."""
+       
+    1:     output_index: int
+    1:     """
+           The index of the output item that the function-call arguments delta is added to.
+           """
+       
+    1:     sequence_number: int
+    1:     """The sequence number of this event."""
+       
+    1:     type: Literal["response.function_call_arguments.delta"]
+    1:     """The type of the event. Always `response.function_call_arguments.delta`."""

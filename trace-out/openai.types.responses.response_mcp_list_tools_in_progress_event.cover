@@ -1,0 +1,25 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseMcpListToolsInProgressEvent"]
+       
+       
+    2: class ResponseMcpListToolsInProgressEvent(BaseModel):
+    1:     """
+           Emitted when the system is in the process of retrieving the list of available MCP tools.
+           """
+       
+    1:     item_id: str
+    1:     """The ID of the MCP tool call item that is being processed."""
+       
+    1:     output_index: int
+    1:     """The index of the output item that is being processed."""
+       
+    1:     sequence_number: int
+    1:     """The sequence number of this event."""
+       
+    1:     type: Literal["response.mcp_list_tools.in_progress"]
+    1:     """The type of the event. Always 'response.mcp_list_tools.in_progress'."""

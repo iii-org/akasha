@@ -1,0 +1,58 @@
+    1: from abc import ABCMeta
+       
+       
+    2: class EnforceOverridesMeta(ABCMeta):
+    1:     def __new__(mcls, name, bases, namespace, **kwargs):
+               # Ignore any methods defined on the metaclass when enforcing overrides.
+ 1595:         for method in dir(mcls):
+ 1566:             if not method.startswith("__") and method != "mro":
+  203:                 value = getattr(mcls, method)
+  203:                 if not isinstance(value, (bool, str, int, float, tuple, list, dict)):
+  203:                     setattr(getattr(mcls, method), "__ignored__", True)
+       
+   29:         cls = super().__new__(mcls, name, bases, namespace, **kwargs)
+  228:         for name, value in namespace.items():
+  199:             mcls._check_if_overrides_final_method(name, bases)
+  199:             if not name.startswith("__"):
+  111:                 value = mcls._handle_special_value(value)
+  111:                 mcls._check_if_overrides_without_overrides_decorator(name, value, bases)
+   29:         return cls
+       
+    2:     @staticmethod
+    2:     def _check_if_overrides_without_overrides_decorator(name, value, bases):
+  111:         is_override = getattr(value, "__override__", False)
+  317:         for base in bases:
+  206:             base_class_method = getattr(base, name, False)
+  314:             if (
+  206:                 not base_class_method
+   54:                 or not callable(base_class_method)
+   54:                 or getattr(base_class_method, "__ignored__", False)
+                   ):
+  152:                 continue
+   54:             if not is_override:
+                       raise TypeError(
+                           f"Method {name} overrides method from {base} but does not have @override decorator"
+                       )
+       
+    2:     @staticmethod
+    2:     def _check_if_overrides_final_method(name, bases):
+  509:         for base in bases:
+  310:             base_class_method = getattr(base, name, False)
+                   # `__final__` is added by `@final` decorator
+  310:             if getattr(base_class_method, "__final__", False):
+                       raise TypeError(
+                           f"Method {name} is finalized in {base}, it cannot be overridden"
+                       )
+       
+    2:     @staticmethod
+    2:     def _handle_special_value(value):
+  111:         if isinstance(value, classmethod) or isinstance(value, staticmethod):
+   20:             value = value.__get__(None, dict)
+   91:         elif isinstance(value, property):
+    3:             value = value.fget
+  111:         return value
+       
+       
+    2: class EnforceOverrides(metaclass=EnforceOverridesMeta):
+    1:     "Use this as the parent class for your custom classes"
+    1:     pass

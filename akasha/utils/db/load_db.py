@@ -10,12 +10,11 @@ from akasha.utils.db.create_db import (
 )
 from akasha.helper import separate_name
 from akasha.helper.handle_objects import handle_embeddings_and_name
-from langchain_chroma import Chroma
-from chromadb.config import Settings
 import logging
 import gc
 from collections import defaultdict
 from tqdm import tqdm
+from akasha.utils.db.chroma_compat import get_chroma_components
 
 
 def process_db(
@@ -170,6 +169,7 @@ def load_db_by_chroma_name(
 
     ignored_files = []
     tot_db = dbs()
+    Chroma, Settings = get_chroma_components()
     for chroma_name in chroma_name_list:
         if isinstance(chroma_name, Path):
             chroma_name = chroma_name.__str__()
@@ -218,6 +218,7 @@ def load_directory_db(
     else:
         embeddings_name = embeddings
     embed_type, embed_name = separate_name(embeddings_name)
+    Chroma, Settings = get_chroma_components()
 
     storage_directory = get_storage_directory(
         directory_path, chunk_size, embed_type, embed_name
@@ -260,6 +261,7 @@ def load_files_db(
     else:
         embeddings_name = embeddings
     embed_type, embed_name = separate_name(embeddings_name)
+    Chroma, Settings = get_chroma_components()
 
     ### get the chromadb directory names and file names###
     for file_path in file_path_list:

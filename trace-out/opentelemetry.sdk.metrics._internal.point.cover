@@ -1,0 +1,266 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+       # pylint: disable=unused-import
+       
+    1: from collections.abc import Sequence
+    1: from dataclasses import asdict, dataclass, field
+    1: from json import dumps, loads
+       
+       # This kind of import is needed to avoid Sphinx errors.
+    1: import opentelemetry.sdk.metrics._internal
+    1: from opentelemetry.sdk.metrics._internal.exemplar import Exemplar
+    1: from opentelemetry.sdk.resources import Resource
+    1: from opentelemetry.sdk.util.instrumentation import InstrumentationScope
+    1: from opentelemetry.util.types import Attributes
+       
+       
+    3: @dataclass(frozen=True)
+    2: class NumberDataPoint:
+    1:     """Single data point in a timeseries that describes the time-varying scalar
+           value of a metric.
+           """
+       
+    1:     attributes: Attributes
+    1:     start_time_unix_nano: int
+    1:     time_unix_nano: int
+    1:     value: int | float
+    1:     exemplars: Sequence[Exemplar] = field(default_factory=list)
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(asdict(self), indent=indent)
+       
+       
+    3: @dataclass(frozen=True)
+    2: class HistogramDataPoint:
+    1:     """Single data point in a timeseries that describes the time-varying scalar
+           value of a metric.
+           """
+       
+    1:     attributes: Attributes
+    1:     start_time_unix_nano: int
+    1:     time_unix_nano: int
+    1:     count: int
+    1:     sum: int | float
+    1:     bucket_counts: Sequence[int]
+    1:     explicit_bounds: Sequence[float]
+    1:     min: float
+    1:     max: float
+    1:     exemplars: Sequence[Exemplar] = field(default_factory=list)
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(asdict(self), indent=indent)
+       
+       
+    3: @dataclass(frozen=True)
+    2: class Buckets:
+    1:     offset: int
+    1:     bucket_counts: Sequence[int]
+       
+       
+    3: @dataclass(frozen=True)
+    2: class ExponentialHistogramDataPoint:
+    1:     """Single data point in a timeseries whose boundaries are defined by an
+           exponential function. This timeseries describes the time-varying scalar
+           value of a metric.
+           """
+       
+    1:     attributes: Attributes
+    1:     start_time_unix_nano: int
+    1:     time_unix_nano: int
+    1:     count: int
+    1:     sum: int | float
+    1:     scale: int
+    1:     zero_count: int
+    1:     positive: Buckets
+    1:     negative: Buckets
+    1:     flags: int
+    1:     min: float
+    1:     max: float
+    1:     exemplars: Sequence[Exemplar] = field(default_factory=list)
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(asdict(self), indent=indent)
+       
+       
+    3: @dataclass(frozen=True)
+    2: class ExponentialHistogram:
+    1:     """Represents the type of a metric that is calculated by aggregating as an
+           ExponentialHistogram of all reported measurements over a time interval.
+           """
+       
+    1:     data_points: Sequence[ExponentialHistogramDataPoint]
+    1:     aggregation_temporality: (
+    1:         "opentelemetry.sdk.metrics.export.AggregationTemporality"
+           )
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "data_points": [
+                           loads(data_point.to_json(indent=indent))
+                           for data_point in self.data_points
+                       ],
+                       "aggregation_temporality": self.aggregation_temporality,
+                   },
+                   indent=indent,
+               )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class Sum:
+    1:     """Represents the type of a scalar metric that is calculated as a sum of
+           all reported measurements over a time interval."""
+       
+    1:     data_points: Sequence[NumberDataPoint]
+    1:     aggregation_temporality: (
+    1:         "opentelemetry.sdk.metrics.export.AggregationTemporality"
+           )
+    1:     is_monotonic: bool
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "data_points": [
+                           loads(data_point.to_json(indent=indent))
+                           for data_point in self.data_points
+                       ],
+                       "aggregation_temporality": self.aggregation_temporality,
+                       "is_monotonic": self.is_monotonic,
+                   },
+                   indent=indent,
+               )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class Gauge:
+    1:     """Represents the type of a scalar metric that always exports the current
+           value for every data point. It should be used for an unknown
+           aggregation."""
+       
+    1:     data_points: Sequence[NumberDataPoint]
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "data_points": [
+                           loads(data_point.to_json(indent=indent))
+                           for data_point in self.data_points
+                       ],
+                   },
+                   indent=indent,
+               )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class Histogram:
+    1:     """Represents the type of a metric that is calculated by aggregating as a
+           histogram of all reported measurements over a time interval."""
+       
+    1:     data_points: Sequence[HistogramDataPoint]
+    1:     aggregation_temporality: (
+    1:         "opentelemetry.sdk.metrics.export.AggregationTemporality"
+           )
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "data_points": [
+                           loads(data_point.to_json(indent=indent))
+                           for data_point in self.data_points
+                       ],
+                       "aggregation_temporality": self.aggregation_temporality,
+                   },
+                   indent=indent,
+               )
+       
+       
+       # pylint: disable=invalid-name
+    1: DataT = Sum | Gauge | Histogram | ExponentialHistogram
+    1: DataPointT = (
+    1:     NumberDataPoint | HistogramDataPoint | ExponentialHistogramDataPoint
+       )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class Metric:
+    1:     """Represents a metric point in the OpenTelemetry data model to be
+           exported."""
+       
+    1:     name: str
+    1:     description: str | None
+    1:     unit: str | None
+    1:     data: DataT
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "name": self.name,
+                       "description": self.description or "",
+                       "unit": self.unit or "",
+                       "data": loads(self.data.to_json(indent=indent)),
+                   },
+                   indent=indent,
+               )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class ScopeMetrics:
+    1:     """A collection of Metrics produced by a scope"""
+       
+    1:     scope: InstrumentationScope
+    1:     metrics: Sequence[Metric]
+    1:     schema_url: str
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "scope": loads(self.scope.to_json(indent=indent)),
+                       "metrics": [
+                           loads(metric.to_json(indent=indent))
+                           for metric in self.metrics
+                       ],
+                       "schema_url": self.schema_url,
+                   },
+                   indent=indent,
+               )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class ResourceMetrics:
+    1:     """A collection of ScopeMetrics from a Resource"""
+       
+    1:     resource: Resource
+    1:     scope_metrics: Sequence[ScopeMetrics]
+    1:     schema_url: str
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "resource": loads(self.resource.to_json(indent=indent)),
+                       "scope_metrics": [
+                           loads(scope_metrics.to_json(indent=indent))
+                           for scope_metrics in self.scope_metrics
+                       ],
+                       "schema_url": self.schema_url,
+                   },
+                   indent=indent,
+               )
+       
+       
+    3: @dataclass(frozen=True)
+    2: class MetricsData:
+    1:     """An array of ResourceMetrics"""
+       
+    1:     resource_metrics: Sequence[ResourceMetrics]
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "resource_metrics": [
+                           loads(resource_metrics.to_json(indent=indent))
+                           for resource_metrics in self.resource_metrics
+                       ]
+                   },
+                   indent=indent,
+               )

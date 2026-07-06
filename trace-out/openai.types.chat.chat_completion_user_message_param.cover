@@ -1,0 +1,30 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union, Iterable
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: from .chat_completion_content_part_param import ChatCompletionContentPartParam
+       
+    1: __all__ = ["ChatCompletionUserMessageParam"]
+       
+       
+    2: class ChatCompletionUserMessageParam(TypedDict, total=False):
+    1:     """
+           Messages sent by an end user, containing prompts or additional context
+           information.
+           """
+       
+    1:     content: Required[Union[str, Iterable[ChatCompletionContentPartParam]]]
+    1:     """The contents of the user message."""
+       
+    1:     role: Required[Literal["user"]]
+    1:     """The role of the messages author, in this case `user`."""
+       
+    1:     name: str
+    1:     """An optional name for the participant.
+       
+           Provides the model information to differentiate between participants of the same
+           role.
+           """

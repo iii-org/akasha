@@ -1,0 +1,26 @@
+    1: from collections.abc import Awaitable, Callable, Mapping, MutableMapping
+    1: from contextlib import AbstractAsyncContextManager
+    1: from typing import TYPE_CHECKING, Any, TypeVar
+       
+    1: if TYPE_CHECKING:
+           from starlette.requests import Request
+           from starlette.responses import Response
+           from starlette.websockets import WebSocket
+       
+    1: AppType = TypeVar("AppType")
+       
+    1: Scope = MutableMapping[str, Any]
+    1: Message = MutableMapping[str, Any]
+       
+    1: Receive = Callable[[], Awaitable[Message]]
+    1: Send = Callable[[Message], Awaitable[None]]
+       
+    1: ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
+       
+    1: StatelessLifespan = Callable[[AppType], AbstractAsyncContextManager[None]]
+    1: StatefulLifespan = Callable[[AppType], AbstractAsyncContextManager[Mapping[str, Any]]]
+    1: Lifespan = StatelessLifespan[AppType] | StatefulLifespan[AppType]
+       
+    1: HTTPExceptionHandler = Callable[["Request", Exception], "Response | Awaitable[Response]"]
+    1: WebSocketExceptionHandler = Callable[["WebSocket", Exception], Awaitable[None]]
+    1: ExceptionHandler = HTTPExceptionHandler | WebSocketExceptionHandler

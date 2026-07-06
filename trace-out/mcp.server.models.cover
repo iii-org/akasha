@@ -1,0 +1,20 @@
+    1: """
+       This module provides simpler types to use with the server for managing prompts
+       and tools.
+       """
+       
+    1: from pydantic import BaseModel
+       
+    1: from mcp.types import (
+           Icon,
+           ServerCapabilities,
+       )
+       
+       
+    2: class InitializationOptions(BaseModel):
+    1:     server_name: str
+    1:     server_version: str
+    1:     capabilities: ServerCapabilities
+    1:     instructions: str | None = None
+    1:     website_url: str | None = None
+    1:     icons: list[Icon] | None = None

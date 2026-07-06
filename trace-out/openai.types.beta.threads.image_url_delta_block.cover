@@ -1,0 +1,21 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+    1: from .image_url_delta import ImageURLDelta
+       
+    1: __all__ = ["ImageURLDeltaBlock"]
+       
+       
+    2: class ImageURLDeltaBlock(BaseModel):
+    1:     """References an image URL in the content of a message."""
+       
+    1:     index: int
+    1:     """The index of the content part in the message."""
+       
+    1:     type: Literal["image_url"]
+    1:     """Always `image_url`."""
+       
+    1:     image_url: Optional[ImageURLDelta] = None

@@ -1,0 +1,64 @@
+    1: from typing import Callable, List, Optional, Tuple, TypeVar
+       
+    1: from ..config import registry
+    1: from ..model import Model
+    1: from ..types import Floats1d, Floats2d, Floats3d, Floats4d, FloatsXd, Padded, Ragged
+       
+       # fmt: off
+    2: InT = TypeVar(  
+    1:     "InT", List[Floats1d], List[Floats2d], List[Floats3d], List[Floats4d], 
+    1:     Ragged, Padded, FloatsXd, Floats1d, Floats2d, Floats3d, Floats4d)
+       # fmt: on
+       
+       
+    2: @registry.layers("residual.v1")
+    2: def residual(layer: Model[InT, InT]) -> Model[InT, InT]:
+           return Model(
+               f"residual({layer.name})",
+               forward,
+               init=init,
+               layers=[layer],
+               dims={
+                   "nO": layer.get_dim("nO") if layer.has_dim("nO") else None,
+                   "nI": layer.get_dim("nI") if layer.has_dim("nI") else None,
+               },
+           )
+       
+       
+    1: def forward(model: Model[InT, InT], X: InT, is_train: bool) -> Tuple[InT, Callable]:
+           def backprop(d_output: InT) -> InT:
+               dX = backprop_layer(d_output)
+               if isinstance(d_output, list):
+                   return [d_output[i] + dX[i] for i in range(len(d_output))]
+               elif isinstance(d_output, Ragged):
+                   return Ragged(d_output.data + dX.data, dX.lengths)
+               elif isinstance(X, Padded):
+                   dX.data += d_output.data
+                   return dX
+               else:
+                   return d_output + dX
+       
+           Y, backprop_layer = model.layers[0](X, is_train)
+           if isinstance(X, list):
+               return [X[i] + Y[i] for i in range(len(X))], backprop
+           elif isinstance(X, Ragged):
+               return Ragged(X.data + Y.data, X.lengths), backprop
+           elif isinstance(X, Padded):
+               Y.data += X.data
+               return Y, backprop
+           else:
+               return X + Y, backprop
+       
+       
+    5: def init(
+    4:     model: Model[InT, InT], X: Optional[InT] = None, Y: Optional[InT] = None
+    1: ) -> None:
+           first_layer = model.layers[0]
+           if first_layer.has_dim("nO") is None:
+               first_layer.initialize(X=X, Y=Y)
+           else:
+               first_layer.initialize(X=X)
+           if first_layer.has_dim("nO"):
+               model.set_dim("nO", first_layer.get_dim("nO"))
+           if first_layer.has_dim("nI"):
+               model.set_dim("nI", first_layer.get_dim("nI"))

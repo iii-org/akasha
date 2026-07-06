@@ -21,7 +21,7 @@ def api_rag():
 def test_openai_rag_call(api_rag):
     """
     Test a simple RAG call using OpenAI.
-    This should work without torch/transformers once refactored.
+    This should work in light mode with remote embeddings.
     """
     # Create a dummy data source: a small text file
     test_file = "test_doc.txt"

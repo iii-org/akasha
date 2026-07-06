@@ -1,0 +1,59 @@
+    1: from typing import (
+           TYPE_CHECKING,
+           Any,
+           Callable,
+           Dict,
+           Iterable,
+           List,
+           Optional,
+           Sequence,
+       )
+       
+    1: from thinc.api import Model, Optimizer
+       
+    1: from .compat import Protocol, runtime_checkable
+       
+    1: if TYPE_CHECKING:
+           from .language import Language
+           from .training import Example
+       
+       
+    3: @runtime_checkable
+    2: class TrainableComponent(Protocol):
+    1:     model: Any
+    1:     is_trainable: bool
+       
+    6:     def update(
+               self,
+    1:         examples: Iterable["Example"],
+               *,
+    2:         drop: float = 0.0,
+    2:         sgd: Optional[Optimizer] = None,
+    2:         losses: Optional[Dict[str, float]] = None,
+    1:     ) -> Dict[str, float]: ...
+       
+    1:     def finish_update(self, sgd: Optimizer) -> None: ...
+       
+       
+    3: @runtime_checkable
+    2: class InitializableComponent(Protocol):
+    4:     def initialize(
+               self,
+    1:         get_examples: Callable[[], Iterable["Example"]],
+    1:         nlp: "Language",
+    1:         **kwargs: Any,
+           ): ...
+       
+       
+    3: @runtime_checkable
+    2: class ListenedToComponent(Protocol):
+    1:     model: Any
+    1:     listeners: Sequence[Model]
+    1:     listener_map: Dict[str, Sequence[Model]]
+    1:     listening_components: List[str]
+       
+    1:     def add_listener(self, listener: Model, component_name: str) -> None: ...
+       
+    1:     def remove_listener(self, listener: Model, component_name: str) -> bool: ...
+       
+    1:     def find_listeners(self, component) -> None: ...

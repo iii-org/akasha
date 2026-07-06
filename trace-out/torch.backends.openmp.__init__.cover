@@ -1,0 +1,7 @@
+       # mypy: allow-untyped-defs
+    1: import torch
+       
+       
+    1: def is_available():
+           r"""Return whether PyTorch is built with OpenMP support."""
+           return torch._C.has_openmp

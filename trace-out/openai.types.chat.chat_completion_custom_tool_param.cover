@@ -1,0 +1,68 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: __all__ = [
+           "ChatCompletionCustomToolParam",
+           "Custom",
+           "CustomFormat",
+           "CustomFormatText",
+           "CustomFormatGrammar",
+           "CustomFormatGrammarGrammar",
+       ]
+       
+       
+    2: class CustomFormatText(TypedDict, total=False):
+    1:     """Unconstrained free-form text."""
+       
+    1:     type: Required[Literal["text"]]
+    1:     """Unconstrained text format. Always `text`."""
+       
+       
+    2: class CustomFormatGrammarGrammar(TypedDict, total=False):
+    1:     """Your chosen grammar."""
+       
+    1:     definition: Required[str]
+    1:     """The grammar definition."""
+       
+    1:     syntax: Required[Literal["lark", "regex"]]
+    1:     """The syntax of the grammar definition. One of `lark` or `regex`."""
+       
+       
+    2: class CustomFormatGrammar(TypedDict, total=False):
+    1:     """A grammar defined by the user."""
+       
+    1:     grammar: Required[CustomFormatGrammarGrammar]
+    1:     """Your chosen grammar."""
+       
+    1:     type: Required[Literal["grammar"]]
+    1:     """Grammar format. Always `grammar`."""
+       
+       
+    1: CustomFormat: TypeAlias = Union[CustomFormatText, CustomFormatGrammar]
+       
+       
+    2: class Custom(TypedDict, total=False):
+    1:     """Properties of the custom tool."""
+       
+    1:     name: Required[str]
+    1:     """The name of the custom tool, used to identify it in tool calls."""
+       
+    1:     description: str
+    1:     """Optional description of the custom tool, used to provide more context."""
+       
+    1:     format: CustomFormat
+    1:     """The input format for the custom tool. Default is unconstrained text."""
+       
+       
+    2: class ChatCompletionCustomToolParam(TypedDict, total=False):
+    1:     """A custom tool that processes input using a specified format."""
+       
+    1:     custom: Required[Custom]
+    1:     """Properties of the custom tool."""
+       
+    1:     type: Required[Literal["custom"]]
+    1:     """The type of the custom tool. Always `custom`."""

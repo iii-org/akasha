@@ -1,0 +1,31 @@
+    1: import re
+    1: from typing import Callable, Match, Optional
+       
+    1: _ReStringMatch = Match[str]  # regex match object
+    1: _ReSubCallable = Callable[[_ReStringMatch], str]  # Callable invoked by re.sub
+    1: _EmojiSubMethod = Callable[[_ReSubCallable, str], str]  # Sub method of a compiled re
+       
+       
+    5: def _emoji_replace(
+    1:     text: str,
+    2:     default_variant: Optional[str] = None,
+    2:     _emoji_sub: _EmojiSubMethod = re.compile(r"(:(\S*?)(?:(?:\-)(emoji|text))?:)").sub,
+    1: ) -> str:
+           """Replace emoji code in text."""
+           from ._emoji_codes import EMOJI
+       
+           get_emoji = EMOJI.__getitem__
+           variants = {"text": "\ufe0e", "emoji": "\ufe0f"}
+           get_variant = variants.get
+           default_variant_code = variants.get(default_variant, "") if default_variant else ""
+       
+           def do_replace(match: Match[str]) -> str:
+               emoji_code, emoji_name, variant = match.groups()
+               try:
+                   return get_emoji(emoji_name.lower()) + get_variant(
+                       variant, default_variant_code
+                   )
+               except KeyError:
+                   return emoji_code
+       
+           return _emoji_sub(do_replace, text)

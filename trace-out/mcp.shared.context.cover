@@ -1,0 +1,32 @@
+    1: """
+       Request context for MCP handlers.
+       """
+       
+    1: from dataclasses import dataclass, field
+    1: from typing import Any, Generic
+       
+    1: from typing_extensions import TypeVar
+       
+    1: from mcp.shared.message import CloseSSEStreamCallback
+    1: from mcp.shared.session import BaseSession
+    1: from mcp.types import RequestId, RequestParams
+       
+    1: SessionT = TypeVar("SessionT", bound=BaseSession[Any, Any, Any, Any, Any])
+    1: LifespanContextT = TypeVar("LifespanContextT")
+    1: RequestT = TypeVar("RequestT", default=Any)
+       
+       
+    3: @dataclass
+    2: class RequestContext(Generic[SessionT, LifespanContextT, RequestT]):
+    1:     request_id: RequestId
+    1:     meta: RequestParams.Meta | None
+    1:     session: SessionT
+    1:     lifespan_context: LifespanContextT
+           # NOTE: This is typed as Any to avoid circular imports. The actual type is
+           # mcp.server.experimental.request_context.Experimental, but importing it here
+           # triggers mcp.server.__init__ -> fastmcp -> tools -> back to this module.
+           # The Server sets this to an Experimental instance at runtime.
+    1:     experimental: Any = field(default=None)
+    1:     request: RequestT | None = None
+    1:     close_sse_stream: CloseSSEStreamCallback | None = None
+    1:     close_standalone_sse_stream: CloseSSEStreamCallback | None = None

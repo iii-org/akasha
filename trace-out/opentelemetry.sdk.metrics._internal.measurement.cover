@@ -1,0 +1,33 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: from __future__ import annotations
+       
+    1: from dataclasses import dataclass
+    1: from typing import TYPE_CHECKING
+       
+    1: from opentelemetry.context import Context
+    1: from opentelemetry.util.types import Attributes
+       
+    1: if TYPE_CHECKING:
+           from opentelemetry.sdk.metrics._internal.instrument import _Instrument
+       
+       
+    3: @dataclass(frozen=True)
+    2: class Measurement:
+    1:     """
+           Represents a data point reported via the metrics API to the SDK.
+       
+           Attributes:
+               value: Measured value
+               time_unix_nano: The time the API call was made to record the Measurement
+               instrument: The instrument that produced this `Measurement`.
+               context: The active Context of the Measurement at API call time.
+               attributes: Measurement attributes
+           """
+       
+    1:     value: int | float
+    1:     time_unix_nano: int
+    1:     instrument: _Instrument
+    1:     context: Context
+    1:     attributes: Attributes = None

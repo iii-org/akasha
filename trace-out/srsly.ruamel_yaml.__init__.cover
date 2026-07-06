@@ -1,0 +1,6 @@
+    1: __with_libyaml__ = False
+       
+    1: from .main import *  # NOQA
+       
+    1: version_info = (0, 16, 7)
+    1: __version__ = "0.16.7"

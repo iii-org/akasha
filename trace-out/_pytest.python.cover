@@ -1,0 +1,1759 @@
+       # mypy: allow-untyped-defs
+    1: """Python test discovery, setup and run of test functions."""
+       
+    1: from __future__ import annotations
+       
+    1: import abc
+    1: from collections import Counter
+    1: from collections import defaultdict
+    1: from collections.abc import Callable
+    1: from collections.abc import Generator
+    1: from collections.abc import Iterable
+    1: from collections.abc import Iterator
+    1: from collections.abc import Mapping
+    1: from collections.abc import Sequence
+    1: import dataclasses
+    1: import enum
+    1: import fnmatch
+    1: from functools import partial
+    1: import inspect
+    1: import itertools
+    1: import os
+    1: from pathlib import Path
+    1: import re
+    1: import textwrap
+    1: import types
+    1: from typing import Any
+    1: from typing import cast
+    1: from typing import final
+    1: from typing import Literal
+    1: from typing import NoReturn
+    1: from typing import TYPE_CHECKING
+    1: import warnings
+       
+    1: import _pytest
+    1: from _pytest import fixtures
+    1: from _pytest import nodes
+    1: from _pytest._code import filter_traceback
+    1: from _pytest._code import getfslineno
+    1: from _pytest._code.code import ExceptionInfo
+    1: from _pytest._code.code import TerminalRepr
+    1: from _pytest._code.code import Traceback
+    1: from _pytest._io.saferepr import saferepr
+    1: from _pytest.compat import ascii_escaped
+    1: from _pytest.compat import get_default_arg_names
+    1: from _pytest.compat import get_real_func
+    1: from _pytest.compat import getimfunc
+    1: from _pytest.compat import is_async_function
+    1: from _pytest.compat import NOTSET
+    1: from _pytest.compat import safe_getattr
+    1: from _pytest.compat import safe_isclass
+    1: from _pytest.config import Config
+    1: from _pytest.config import hookimpl
+    1: from _pytest.config.argparsing import Parser
+    1: from _pytest.deprecated import check_ispytest
+    1: from _pytest.fixtures import _resolve_args_directness
+    1: from _pytest.fixtures import FixtureDef
+    1: from _pytest.fixtures import FixtureRequest
+    1: from _pytest.fixtures import FixtureValue
+    1: from _pytest.fixtures import FuncFixtureInfo
+    1: from _pytest.fixtures import get_scope_node
+    1: from _pytest.main import Session
+    1: from _pytest.mark import ParameterSet
+    1: from _pytest.mark.structures import _HiddenParam
+    1: from _pytest.mark.structures import get_unpacked_marks
+    1: from _pytest.mark.structures import HIDDEN_PARAM
+    1: from _pytest.mark.structures import Mark
+    1: from _pytest.mark.structures import MarkDecorator
+    1: from _pytest.mark.structures import normalize_mark_list
+    1: from _pytest.outcomes import fail
+    1: from _pytest.outcomes import skip
+    1: from _pytest.pathlib import fnmatch_ex
+    1: from _pytest.pathlib import import_path
+    1: from _pytest.pathlib import ImportPathMismatchError
+    1: from _pytest.pathlib import scandir
+    1: from _pytest.scope import Scope
+    1: from _pytest.scope import ScopeName
+    1: from _pytest.stash import StashKey
+    1: from _pytest.warning_types import PytestCollectionWarning
+    1: from _pytest.warning_types import PytestReturnNotNoneWarning
+       
+       
+    1: if TYPE_CHECKING:
+           from typing_extensions import Self
+       
+       
+    1: def pytest_addoption(parser: Parser) -> None:
+    2:     parser.addini(
+    1:         "python_files",
+    1:         type="args",
+               # NOTE: default is also used in AssertionRewritingHook.
+    1:         default=["test_*.py", "*_test.py"],
+    1:         help="Glob-style file patterns for Python test module discovery",
+           )
+    2:     parser.addini(
+    1:         "python_classes",
+    1:         type="args",
+    1:         default=["Test"],
+    1:         help="Prefixes or glob names for Python test class discovery",
+           )
+    2:     parser.addini(
+    1:         "python_functions",
+    1:         type="args",
+    1:         default=["test"],
+    1:         help="Prefixes or glob names for Python test function and method discovery",
+           )
+    2:     parser.addini(
+    1:         "disable_test_id_escaping_and_forfeit_all_rights_to_community_support",
+    1:         type="bool",
+    1:         default=False,
+    1:         help="Disable string escape non-ASCII characters, might cause unwanted "
+               "side effects(use at your own risk)",
+           )
+    2:     parser.addini(
+    1:         "strict_parametrization_ids",
+    1:         type="bool",
+               # None => fallback to `strict`.
+    1:         default=None,
+    1:         help="Emit an error if non-unique parameter set IDs are detected",
+           )
+       
+       
+    1: def pytest_generate_tests(metafunc: Metafunc) -> None:
+    6:     for marker in metafunc.definition.iter_markers(name="parametrize"):
+               metafunc.parametrize(*marker.args, **marker.kwargs, _param_mark=marker)
+       
+       
+    1: def pytest_configure(config: Config) -> None:
+    2:     config.addinivalue_line(
+    1:         "markers",
+    1:         "parametrize(argnames, argvalues): call a test function multiple "
+               "times passing in different arguments in turn. argvalues generally "
+               "needs to be a list of values if argnames specifies only one name "
+               "or a list of tuples of values if argnames specifies multiple names. "
+               "Example: @parametrize('arg1', [1,2]) would lead to two calls of the "
+               "decorated test function, one with arg1=1 and another with arg1=2."
+               "see https://docs.pytest.org/en/stable/how-to/parametrize.html for more info "
+               "and examples.",
+           )
+    2:     config.addinivalue_line(
+    1:         "markers",
+    1:         "usefixtures(fixturename1, fixturename2, ...): mark tests as needing "
+               "all of the specified fixtures. see "
+               "https://docs.pytest.org/en/stable/explanation/fixtures.html#usefixtures ",
+           )
+       
+       
+    1: def async_fail(nodeid: str) -> None:
+           msg = (
+               "async def functions are not natively supported.\n"
+               "You need to install a suitable plugin for your async framework, for example:\n"
+               "  - anyio\n"
+               "  - pytest-asyncio\n"
+               "  - pytest-tornasync\n"
+               "  - pytest-trio\n"
+               "  - pytest-twisted"
+           )
+           fail(msg, pytrace=False)
+       
+       
+    2: @hookimpl(trylast=True)
+    2: def pytest_pyfunc_call(pyfuncitem: Function) -> object | None:
+    6:     testfunction = pyfuncitem.obj
+    6:     if is_async_function(testfunction):
+               async_fail(pyfuncitem.nodeid)
+    6:     funcargs = pyfuncitem.funcargs
+   12:     testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
+    6:     result = testfunction(**testargs)
+    6:     if hasattr(result, "__await__") or hasattr(result, "__aiter__"):
+               async_fail(pyfuncitem.nodeid)
+    6:     elif result is not None:
+               warnings.warn(
+                   PytestReturnNotNoneWarning(
+                       f"Test functions should return None, but {pyfuncitem.nodeid} returned {type(result)!r}.\n"
+                       "Did you mean to use `assert` instead of `return`?\n"
+                       "See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information."
+                   )
+               )
+    6:     return True
+       
+       
+    1: def pytest_collect_directory(
+           path: Path, parent: nodes.Collector
+       ) -> nodes.Collector | None:
+   14:     pkginit = path / "__init__.py"
+   14:     try:
+   14:         has_pkginit = pkginit.is_file()
+           except PermissionError:
+               # See https://github.com/pytest-dev/pytest/issues/12120#issuecomment-2106349096.
+               return None
+   14:     if has_pkginit:
+    1:         return Package.from_parent(parent, path=path)
+   13:     return None
+       
+       
+    1: def pytest_collect_file(file_path: Path, parent: nodes.Collector) -> Module | None:
+   39:     if file_path.suffix == ".py":
+   20:         if not parent.session.isinitpath(file_path):
+   38:             if not path_matches_patterns(
+   19:                 file_path, parent.config.getini("python_files")
+                   ):
+    2:                 return None
+   18:         ihook = parent.session.gethookproxy(file_path)
+   36:         module: Module = ihook.pytest_pycollect_makemodule(
+   18:             module_path=file_path, parent=parent
+               )
+   18:         return module
+   19:     return None
+       
+       
+    1: def path_matches_patterns(path: Path, patterns: Iterable[str]) -> bool:
+           """Return whether path matches any of the patterns in the list of globs given."""
+   42:     return any(fnmatch_ex(pattern, path) for pattern in patterns)
+       
+       
+    1: def pytest_pycollect_makemodule(module_path: Path, parent) -> Module:
+   18:     return Module.from_parent(parent, path=module_path)
+       
+       
+    2: @hookimpl(trylast=True)
+    2: def pytest_pycollect_makeitem(
+           collector: Module | Class, name: str, obj: object
+       ) -> None | nodes.Item | nodes.Collector | list[nodes.Item | nodes.Collector]:
+   18:     assert isinstance(collector, Class | Module), type(collector)
+           # Nothing was collected elsewhere, let's do it here.
+   18:     if safe_isclass(obj):
+    4:         if collector.istestclass(obj, name):
+                   return Class.from_parent(collector, name=name, obj=obj)
+   14:     elif collector.istestfunction(obj, name):
+               # mock seems to store unbound methods (issue473), normalize it.
+    6:         obj = getattr(obj, "__func__", obj)
+               # We need to try and unwrap the function if it's a functools.partial
+               # or a functools.wrapped.
+               # We mustn't if it's been wrapped with mock.patch (python 2 only).
+    6:         if not (inspect.isfunction(obj) or inspect.isfunction(get_real_func(obj))):
+                   filename, lineno = getfslineno(obj)
+                   warnings.warn_explicit(
+                       message=PytestCollectionWarning(
+                           f"cannot collect {name!r} because it is not a function."
+                       ),
+                       category=None,
+                       filename=str(filename),
+                       lineno=lineno + 1,
+                   )
+    6:         elif getattr(obj, "__test__", True):
+    6:             if inspect.isgeneratorfunction(obj):
+                       fail(
+                           f"'yield' keyword is allowed in fixtures, but not in tests ({name})",
+                           pytrace=False,
+                       )
+    6:             return list(collector._genfunctions(name, obj))
+               return None
+   12:     return None
+       
+       
+    2: class PyobjMixin(nodes.Node):
+    1:     """this mix-in inherits from Node to carry over the typing information
+       
+           as its intended to always mix in before a node
+           its position in the mro is unaffected"""
+       
+    1:     _ALLOW_MARKERS = True
+       
+    2:     @property
+    2:     def module(self):
+               """Python module object this node was collected from (can be None)."""
+               node = self.getparent(Module)
+               return node.obj if node is not None else None
+       
+    2:     @property
+    2:     def cls(self):
+               """Python class object this node was collected from (can be None)."""
+    6:         node = self.getparent(Class)
+    6:         return node.obj if node is not None else None
+       
+    2:     @property
+    2:     def instance(self):
+               """Python instance object the function is bound to.
+       
+               Returns None if not a test method, e.g. for a standalone test function,
+               a class or a module.
+               """
+               # Overridden by Function.
+               return None
+       
+    2:     @property
+    2:     def obj(self):
+               """Underlying Python object."""
+   69:         obj = getattr(self, "_obj", None)
+   69:         if obj is None:
+    7:             self._obj = obj = self._getobj()
+                   # XXX evil hack
+                   # used to avoid Function marker duplication
+    7:             if self._ALLOW_MARKERS:
+    1:                 self.own_markers.extend(get_unpacked_marks(self.obj))
+                       # This assumes that `obj` is called before there is a chance
+                       # to add custom keys to `self.keywords`, so no fear of overriding.
+    3:                 self.keywords.update((mark.name, mark) for mark in self.own_markers)
+   69:         return obj
+       
+    2:     @obj.setter
+    2:     def obj(self, value):
+               self._obj = value
+       
+    1:     def _getobj(self):
+               """Get the underlying Python object. May be overwritten by subclasses."""
+               # TODO: Improve the type of `parent` such that assert/ignore aren't needed.
+               assert self.parent is not None
+               obj = self.parent.obj  # type: ignore[attr-defined]
+               return getattr(obj, self.name)
+       
+    1:     def getmodpath(self, stopatmodule: bool = True, includemodule: bool = False) -> str:
+               """Return Python path relative to the containing module."""
+    6:         parts = []
+   12:         for node in self.iter_parents():
+   12:             name = node.name
+   12:             if isinstance(node, Module):
+    6:                 name = os.path.splitext(name)[0]
+    6:                 if stopatmodule:
+    6:                     if includemodule:
+                               parts.append(name)
+    6:                     break
+    6:             parts.append(name)
+    6:         parts.reverse()
+    6:         return ".".join(parts)
+       
+    1:     def reportinfo(self) -> tuple[os.PathLike[str] | str, int | None, str]:
+               # XXX caching?
+    6:         path, lineno = getfslineno(self.obj)
+    6:         modpath = self.getmodpath()
+    6:         return path, lineno, modpath
+       
+       
+       # As an optimization, these builtin attribute names are pre-ignored when
+       # iterating over an object during collection -- the pytest_pycollect_makeitem
+       # hook is not called for them.
+       # fmt: off
+    2: class _EmptyClass: pass  # noqa: E701
+    2: IGNORED_ATTRIBUTES = frozenset.union(
+    1:     frozenset(),
+           # Module.
+    1:     dir(types.ModuleType("empty_module")),
+           # Some extra module attributes the above doesn't catch.
+    1:     {"__builtins__", "__file__", "__cached__"},
+           # Class.
+    1:     dir(_EmptyClass),
+           # Instance.
+    1:     dir(_EmptyClass()),
+       )
+    1: del _EmptyClass
+       # fmt: on
+       
+       
+    2: class PyCollector(PyobjMixin, nodes.Collector, abc.ABC):
+    1:     def funcnamefilter(self, name: str) -> bool:
+   14:         return self._matches_prefix_or_glob_option("python_functions", name)
+       
+    1:     def isnosetest(self, obj: object) -> bool:
+               """Look for the __test__ attribute, which is applied by the
+               @nose.tools.istest decorator.
+               """
+               # We explicitly check for "is True" here to not mistakenly treat
+               # classes with a custom __getattr__ returning something truthy (like a
+               # function) as test classes.
+   12:         return safe_getattr(obj, "__test__", False) is True
+       
+    1:     def classnamefilter(self, name: str) -> bool:
+    4:         return self._matches_prefix_or_glob_option("python_classes", name)
+       
+    1:     def istestfunction(self, obj: object, name: str) -> bool:
+   14:         if self.funcnamefilter(name) or self.isnosetest(obj):
+    6:             if isinstance(obj, staticmethod | classmethod):
+                       # staticmethods and classmethods need to be unwrapped.
+                       obj = safe_getattr(obj, "__func__", False)
+    6:             return callable(obj) and fixtures.getfixturemarker(obj) is None
+               else:
+    8:             return False
+       
+    1:     def istestclass(self, obj: object, name: str) -> bool:
+    4:         if not (self.classnamefilter(name) or self.isnosetest(obj)):
+    4:             return False
+               if inspect.isabstract(obj):
+                   return False
+               return True
+       
+    1:     def _matches_prefix_or_glob_option(self, option_name: str, name: str) -> bool:
+               """Check if the given name matches the prefix or glob-pattern defined
+               in configuration."""
+   30:         for option in self.config.getini(option_name):
+   18:             if name.startswith(option):
+    6:                 return True
+                   # Check that name looks like a glob-string before calling fnmatch
+                   # because this is called for every name in each collected module,
+                   # and fnmatch is somewhat expensive to call.
+   12:             elif ("*" in option or "?" in option or "[" in option) and fnmatch.fnmatch(
+                       name, option
+                   ):
+                       return True
+   12:         return False
+       
+    1:     def collect(self) -> Iterable[nodes.Item | nodes.Collector]:
+    1:         if not getattr(self.obj, "__test__", True):
+                   return []
+       
+               # Avoid random getattrs and peek in the __dict__ instead.
+    1:         dicts = [getattr(self.obj, "__dict__", {})]
+    1:         if isinstance(self.obj, type):
+                   for basecls in self.obj.__mro__:
+                       dicts.append(basecls.__dict__)
+       
+               # In each class, nodes should be definition ordered.
+               # __dict__ is definition ordered.
+    1:         seen: set[str] = set()
+    1:         dict_values: list[list[nodes.Item | nodes.Collector]] = []
+    1:         collect_imported_tests = self.session.config.getini("collect_imported_tests")
+    1:         ihook = self.ihook
+    2:         for dic in dicts:
+    1:             values: list[nodes.Item | nodes.Collector] = []
+                   # Note: seems like the dict can change during iteration -
+                   # be careful not to remove the list() without consideration.
+   27:             for name, obj in list(dic.items()):
+   26:                 if name in IGNORED_ATTRIBUTES:
+    8:                     continue
+   18:                 if name in seen:
+                           continue
+   18:                 seen.add(name)
+       
+   18:                 if not collect_imported_tests and isinstance(self, Module):
+                           # Do not collect functions and classes from other modules.
+                           if inspect.isfunction(obj) or inspect.isclass(obj):
+                               if obj.__module__ != self._getobj().__name__:
+                                   continue
+       
+   36:                 res = ihook.pytest_pycollect_makeitem(
+   18:                     collector=self, name=name, obj=obj
+                       )
+   18:                 if res is None:
+   12:                     continue
+    6:                 elif isinstance(res, list):
+    6:                     values.extend(res)
+                       else:
+                           values.append(res)
+    1:             dict_values.append(values)
+       
+               # Between classes in the class hierarchy, reverse-MRO order -- nodes
+               # inherited from base classes should come before subclasses.
+    1:         result = []
+    2:         for values in reversed(dict_values):
+    1:             result.extend(values)
+    1:         return result
+       
+    1:     def _genfunctions(self, name: str, funcobj) -> Iterator[Function]:
+    6:         modulecol = self.getparent(Module)
+    6:         assert modulecol is not None
+    6:         module = modulecol.obj
+    6:         clscol = self.getparent(Class)
+    6:         cls = (clscol and clscol.obj) or None
+       
+    6:         definition = FunctionDefinition.from_parent(self, name=name, callobj=funcobj)
+    6:         fixtureinfo = definition._fixtureinfo
+       
+               # pytest_generate_tests impls call metafunc.parametrize() which fills
+               # metafunc._calls, the outcome of the hook.
+   12:         metafunc = Metafunc(
+    6:             definition=definition,
+    6:             fixtureinfo=fixtureinfo,
+    6:             config=self.config,
+    6:             cls=cls,
+    6:             module=module,
+    6:             _ispytest=True,
+               )
+    6:         methods = []
+    6:         if hasattr(module, "pytest_generate_tests"):
+                   methods.append(module.pytest_generate_tests)
+    6:         if cls is not None and hasattr(cls, "pytest_generate_tests"):
+                   methods.append(cls().pytest_generate_tests)
+    6:         self.ihook.pytest_generate_tests.call_extra(methods, dict(metafunc=metafunc))
+       
+    6:         if not metafunc._calls:
+    6:             yield Function.from_parent(self, name=name, fixtureinfo=fixtureinfo)
+               else:
+                   metafunc._recompute_direct_params_indices()
+                   # Direct parametrizations taking place in module/class-specific
+                   # `metafunc.parametrize` calls may have shadowed some fixtures, so make sure
+                   # we update what the function really needs a.k.a its fixture closure. Note that
+                   # direct parametrizations using `@pytest.mark.parametrize` have already been considered
+                   # into making the closure using `ignore_args` arg to `getfixtureclosure`.
+                   fixtureinfo.prune_dependency_tree()
+       
+                   for callspec in metafunc._calls:
+                       subname = f"{name}[{callspec.id}]" if callspec._idlist else name
+                       yield Function.from_parent(
+                           self,
+                           name=subname,
+                           callspec=callspec,
+                           fixtureinfo=fixtureinfo,
+                           keywords={callspec.id: True},
+                           originalname=name,
+                       )
+       
+       
+    1: def importtestmodule(
+           path: Path,
+           config: Config,
+       ):
+           # We assume we are only called once per module.
+    1:     importmode = config.getoption("--import-mode")
+    1:     try:
+    2:         mod = import_path(
+    1:             path,
+    1:             mode=importmode,
+    1:             root=config.rootpath,
+    1:             consider_namespace_packages=config.getini("consider_namespace_packages"),
+               )
+           except SyntaxError as e:
+               raise nodes.Collector.CollectError(
+                   ExceptionInfo.from_current().getrepr(style="short")
+               ) from e
+           except ImportPathMismatchError as e:
+               raise nodes.Collector.CollectError(
+                   "import file mismatch:\n"
+                   "imported module {!r} has this __file__ attribute:\n"
+                   "  {}\n"
+                   "which is not the same as the test file we want to collect:\n"
+                   "  {}\n"
+                   "HINT: remove __pycache__ / .pyc files and/or use a "
+                   "unique basename for your test file modules".format(*e.args)
+               ) from e
+           except ImportError as e:
+               exc_info = ExceptionInfo.from_current()
+               if config.get_verbosity() < 2:
+                   exc_info.traceback = exc_info.traceback.filter(filter_traceback)
+               exc_repr = (
+                   exc_info.getrepr(style="short")
+                   if exc_info.traceback
+                   else exc_info.exconly()
+               )
+               formatted_tb = str(exc_repr)
+               raise nodes.Collector.CollectError(
+                   f"ImportError while importing test module '{path}'.\n"
+                   "Hint: make sure your test modules/packages have valid Python names.\n"
+                   "Traceback:\n"
+                   f"{formatted_tb}"
+               ) from e
+           except skip.Exception as e:
+               if e.allow_module_level:
+                   raise
+               raise nodes.Collector.CollectError(
+                   "Using pytest.skip outside of a test will skip the entire module. "
+                   "If that's your intention, pass `allow_module_level=True`. "
+                   "If you want to skip a specific test or an entire class, "
+                   "use the @pytest.mark.skip or @pytest.mark.skipif decorators."
+               ) from e
+    1:     config.pluginmanager.consider_module(mod)
+    1:     return mod
+       
+       
+    2: class Module(nodes.File, PyCollector):
+    1:     """Collector for test classes and functions in a Python module."""
+       
+    1:     def _getobj(self):
+    1:         return importtestmodule(self.path, self.config)
+       
+    1:     def collect(self) -> Iterable[nodes.Item | nodes.Collector]:
+    1:         self._register_setup_module_fixture()
+    1:         self._register_setup_function_fixture()
+    1:         self.session._fixturemanager.parsefactories(self)
+    1:         return super().collect()
+       
+    1:     def _register_setup_module_fixture(self) -> None:
+               """Register an autouse, module-scoped fixture for the collected module object
+               that invokes setUpModule/tearDownModule if either or both are available.
+       
+               Using a fixture to invoke this methods ensures we play nicely and unsurprisingly with
+               other fixtures (#517).
+               """
+    2:         setup_module = _get_first_non_fixture_func(
+    1:             self.obj, ("setUpModule", "setup_module")
+               )
+    2:         teardown_module = _get_first_non_fixture_func(
+    1:             self.obj, ("tearDownModule", "teardown_module")
+               )
+       
+    1:         if setup_module is None and teardown_module is None:
+    1:             return
+       
+               def xunit_setup_module_fixture(request) -> Generator[None]:
+                   module = request.module
+                   if setup_module is not None:
+                       _call_with_optional_argument(setup_module, module)
+                   yield
+                   if teardown_module is not None:
+                       _call_with_optional_argument(teardown_module, module)
+       
+               fixtures.register_fixture(
+                   # Use a unique name to speed up lookup.
+                   name=f"_xunit_setup_module_fixture_{self.obj.__name__}",
+                   func=xunit_setup_module_fixture,
+                   node=self,
+                   scope="module",
+                   autouse=True,
+               )
+       
+    1:     def _register_setup_function_fixture(self) -> None:
+               """Register an autouse, function-scoped fixture for the collected module object
+               that invokes setup_function/teardown_function if either or both are available.
+       
+               Using a fixture to invoke this methods ensures we play nicely and unsurprisingly with
+               other fixtures (#517).
+               """
+    1:         setup_function = _get_first_non_fixture_func(self.obj, ("setup_function",))
+    2:         teardown_function = _get_first_non_fixture_func(
+    1:             self.obj, ("teardown_function",)
+               )
+    1:         if setup_function is None and teardown_function is None:
+    1:             return
+       
+               def xunit_setup_function_fixture(request) -> Generator[None]:
+                   if request.instance is not None:
+                       # in this case we are bound to an instance, so we need to let
+                       # setup_method handle this
+                       yield
+                       return
+                   function = request.function
+                   if setup_function is not None:
+                       _call_with_optional_argument(setup_function, function)
+                   yield
+                   if teardown_function is not None:
+                       _call_with_optional_argument(teardown_function, function)
+       
+               fixtures.register_fixture(
+                   # Use a unique name to speed up lookup.
+                   name=f"_xunit_setup_function_fixture_{self.obj.__name__}",
+                   func=xunit_setup_function_fixture,
+                   node=self,
+                   scope="function",
+                   autouse=True,
+               )
+       
+       
+    2: class Package(nodes.Directory):
+    1:     """Collector for files and directories in a Python packages -- directories
+           with an `__init__.py` file.
+       
+           .. note::
+       
+               Directories without an `__init__.py` file are instead collected by
+               :class:`~pytest.Dir` by default. Both are :class:`~pytest.Directory`
+               collectors.
+       
+           .. versionchanged:: 8.0
+       
+               Now inherits from :class:`~pytest.Directory`.
+           """
+       
+    1:     def __init__(
+               self,
+               fspath: None,
+               parent: nodes.Collector,
+               # NOTE: following args are unused:
+    1:         config=None,
+    1:         session=None,
+    1:         nodeid=None,
+    1:         path: Path | None = None,
+           ) -> None:
+               # NOTE: Could be just the following, but kept as-is for compat.
+               # super().__init__(self, fspath, parent=parent)
+    1:         session = parent.session
+    2:         super().__init__(
+    1:             fspath=fspath,
+    1:             path=path,
+    1:             parent=parent,
+    1:             config=config,
+    1:             session=session,
+    1:             nodeid=nodeid,
+               )
+       
+    1:     def setup(self) -> None:
+               init_mod = importtestmodule(self.path / "__init__.py", self.config)
+       
+               # Not using fixtures to call setup_module here because autouse fixtures
+               # from packages are not called automatically (#4085).
+               setup_module = _get_first_non_fixture_func(
+                   init_mod, ("setUpModule", "setup_module")
+               )
+               if setup_module is not None:
+                   _call_with_optional_argument(setup_module, init_mod)
+       
+               teardown_module = _get_first_non_fixture_func(
+                   init_mod, ("tearDownModule", "teardown_module")
+               )
+               if teardown_module is not None:
+                   func = partial(_call_with_optional_argument, teardown_module, init_mod)
+                   self.addfinalizer(func)
+       
+    1:     def collect(self) -> Iterable[nodes.Item | nodes.Collector]:
+               # Always collect __init__.py first.
+               def sort_key(entry: os.DirEntry[str]) -> object:
+                   return (entry.name != "__init__.py", entry.name)
+       
+               config = self.config
+               col: nodes.Collector | None
+               cols: Sequence[nodes.Collector]
+               ihook = self.ihook
+               for direntry in scandir(self.path, sort_key):
+                   if direntry.is_dir():
+                       path = Path(direntry.path)
+                       if not self.session.isinitpath(path, with_parents=True):
+                           if ihook.pytest_ignore_collect(collection_path=path, config=config):
+                               continue
+                       col = ihook.pytest_collect_directory(path=path, parent=self)
+                       if col is not None:
+                           yield col
+       
+                   elif direntry.is_file():
+                       path = Path(direntry.path)
+                       if not self.session.isinitpath(path):
+                           if ihook.pytest_ignore_collect(collection_path=path, config=config):
+                               continue
+                       cols = ihook.pytest_collect_file(file_path=path, parent=self)
+                       yield from cols
+       
+       
+    1: def _call_with_optional_argument(func, arg) -> None:
+           """Call the given function with the given argument if func accepts one argument, otherwise
+           calls func without arguments."""
+           arg_count = func.__code__.co_argcount
+           if inspect.ismethod(func):
+               arg_count -= 1
+           if arg_count:
+               func(arg)
+           else:
+               func()
+       
+       
+    1: def _get_first_non_fixture_func(obj: object, names: Iterable[str]) -> object | None:
+           """Return the attribute from the given object to be used as a setup/teardown
+           xunit-style function, but only if not marked as a fixture to avoid calling it twice.
+           """
+   10:     for name in names:
+    6:         meth: object | None = getattr(obj, name, None)
+    6:         if meth is not None and fixtures.getfixturemarker(meth) is None:
+                   return meth
+    4:     return None
+       
+       
+    2: class Class(PyCollector):
+    1:     """Collector for test methods (and nested classes) in a Python class."""
+       
+    2:     @classmethod
+    2:     def from_parent(cls, parent, *, name, obj=None, **kw) -> Self:  # type: ignore[override]
+               """The public constructor."""
+               return super().from_parent(name=name, parent=parent, **kw)
+       
+    1:     def newinstance(self):
+               return self.obj()
+       
+    1:     def collect(self) -> Iterable[nodes.Item | nodes.Collector]:
+               if not safe_getattr(self.obj, "__test__", True):
+                   return []
+               if hasinit(self.obj):
+                   assert self.parent is not None
+                   self.warn(
+                       PytestCollectionWarning(
+                           f"cannot collect test class {self.obj.__name__!r} because it has a "
+                           f"__init__ constructor (from: {self.parent.nodeid})"
+                       )
+                   )
+                   return []
+               elif hasnew(self.obj):
+                   assert self.parent is not None
+                   self.warn(
+                       PytestCollectionWarning(
+                           f"cannot collect test class {self.obj.__name__!r} because it has a "
+                           f"__new__ constructor (from: {self.parent.nodeid})"
+                       )
+                   )
+                   return []
+       
+               self._register_setup_class_fixture()
+               self._register_setup_method_fixture()
+       
+               self.session._fixturemanager.parsefactories(
+                   holder=self.newinstance(), node=self
+               )
+       
+               return super().collect()
+       
+    1:     def _register_setup_class_fixture(self) -> None:
+               """Register an autouse, class scoped fixture into the collected class object
+               that invokes setup_class/teardown_class if either or both are available.
+       
+               Using a fixture to invoke this methods ensures we play nicely and unsurprisingly with
+               other fixtures (#517).
+               """
+               setup_class = _get_first_non_fixture_func(self.obj, ("setup_class",))
+               teardown_class = _get_first_non_fixture_func(self.obj, ("teardown_class",))
+               if setup_class is None and teardown_class is None:
+                   return
+       
+               def xunit_setup_class_fixture(request) -> Generator[None]:
+                   cls = request.cls
+                   if setup_class is not None:
+                       func = getimfunc(setup_class)
+                       _call_with_optional_argument(func, cls)
+                   yield
+                   if teardown_class is not None:
+                       func = getimfunc(teardown_class)
+                       _call_with_optional_argument(func, cls)
+       
+               fixtures.register_fixture(
+                   # Use a unique name to speed up lookup.
+                   name=f"_xunit_setup_class_fixture_{self.obj.__qualname__}",
+                   func=xunit_setup_class_fixture,
+                   node=self,
+                   scope="class",
+                   autouse=True,
+               )
+       
+    1:     def _register_setup_method_fixture(self) -> None:
+               """Register an autouse, function scoped fixture into the collected class object
+               that invokes setup_method/teardown_method if either or both are available.
+       
+               Using a fixture to invoke these methods ensures we play nicely and unsurprisingly with
+               other fixtures (#517).
+               """
+               setup_name = "setup_method"
+               setup_method = _get_first_non_fixture_func(self.obj, (setup_name,))
+               teardown_name = "teardown_method"
+               teardown_method = _get_first_non_fixture_func(self.obj, (teardown_name,))
+               if setup_method is None and teardown_method is None:
+                   return
+       
+               def xunit_setup_method_fixture(request) -> Generator[None]:
+                   instance = request.instance
+                   method = request.function
+                   if setup_method is not None:
+                       func = getattr(instance, setup_name)
+                       _call_with_optional_argument(func, method)
+                   yield
+                   if teardown_method is not None:
+                       func = getattr(instance, teardown_name)
+                       _call_with_optional_argument(func, method)
+       
+               fixtures.register_fixture(
+                   # Use a unique name to speed up lookup.
+                   name=f"_xunit_setup_method_fixture_{self.obj.__qualname__}",
+                   func=xunit_setup_method_fixture,
+                   node=self,
+                   scope="function",
+                   autouse=True,
+               )
+       
+       
+    1: def hasinit(obj: object) -> bool:
+           init: object = getattr(obj, "__init__", None)
+           if init:
+               return init != object.__init__
+           return False
+       
+       
+    1: def hasnew(obj: object) -> bool:
+           new: object = getattr(obj, "__new__", None)
+           if new:
+               return new != object.__new__
+           return False
+       
+       
+    3: @final
+    2: @dataclasses.dataclass(frozen=True)
+    2: class IdMaker:
+    1:     """Make IDs for a parametrization."""
+       
+    1:     __slots__ = (
+               "argnames",
+               "config",
+               "idfn",
+               "ids",
+               "nodeid",
+               "parametersets",
+           )
+       
+           # The argnames of the parametrization.
+    1:     argnames: Sequence[str]
+           # The ParameterSets of the parametrization.
+    1:     parametersets: Sequence[ParameterSet]
+           # Optionally, a user-provided callable to make IDs for parameters in a
+           # ParameterSet.
+    1:     idfn: Callable[[Any], object | None] | None
+           # Optionally, explicit IDs for ParameterSets by index.
+    1:     ids: Sequence[object | None] | None
+           # Optionally, the pytest config.
+           # Used for controlling ASCII escaping, determining parametrization ID
+           # strictness, and for calling the :hook:`pytest_make_parametrize_id` hook.
+    1:     config: Config | None
+           # Optionally, the ID of the node being parametrized.
+           # Used only for clearer error messages.
+    1:     nodeid: str | None
+       
+    1:     def make_unique_parameterset_ids(self) -> list[str | _HiddenParam]:
+               """Make a unique identifier for each ParameterSet, that may be used to
+               identify the parametrization in a node ID.
+       
+               If strict_parametrization_ids is enabled, and duplicates are detected,
+               raises CollectError. Otherwise makes the IDs unique as follows:
+       
+               Format is <prm_1_token>-...-<prm_n_token>[counter], where prm_x_token is
+               - user-provided id, if given
+               - else an id derived from the value, applicable for certain types
+               - else <argname><parameterset index>
+               The counter suffix is appended only in case a string wouldn't be unique
+               otherwise.
+               """
+               resolved_ids = list(self._resolve_ids())
+               # All IDs must be unique!
+               if len(resolved_ids) != len(set(resolved_ids)):
+                   # Record the number of occurrences of each ID.
+                   id_counts = Counter(resolved_ids)
+       
+                   if self._strict_parametrization_ids_enabled():
+                       parameters = ", ".join(self.argnames)
+                       parametersets = ", ".join(
+                           [saferepr(list(param.values)) for param in self.parametersets]
+                       )
+                       ids = ", ".join(
+                           id if id is not HIDDEN_PARAM else "<hidden>" for id in resolved_ids
+                       )
+                       duplicates = ", ".join(
+                           id if id is not HIDDEN_PARAM else "<hidden>"
+                           for id, count in id_counts.items()
+                           if count > 1
+                       )
+                       msg = textwrap.dedent(f"""
+                           Duplicate parametrization IDs detected, but strict_parametrization_ids is set.
+       
+                           Test name:      {self.nodeid}
+                           Parameters:     {parameters}
+                           Parameter sets: {parametersets}
+                           IDs:            {ids}
+                           Duplicates:     {duplicates}
+       
+                           You can fix this problem using `@pytest.mark.parametrize(..., ids=...)` or `pytest.param(..., id=...)`.
+                       """).strip()  # noqa: E501
+                       raise nodes.Collector.CollectError(msg)
+       
+                   # Map the ID to its next suffix.
+                   id_suffixes: dict[str, int] = defaultdict(int)
+                   # Suffix non-unique IDs to make them unique.
+                   for index, id in enumerate(resolved_ids):
+                       if id_counts[id] > 1:
+                           if id is HIDDEN_PARAM:
+                               self._complain_multiple_hidden_parameter_sets()
+                           suffix = ""
+                           if id and id[-1].isdigit():
+                               suffix = "_"
+                           new_id = f"{id}{suffix}{id_suffixes[id]}"
+                           while new_id in set(resolved_ids):
+                               id_suffixes[id] += 1
+                               new_id = f"{id}{suffix}{id_suffixes[id]}"
+                           resolved_ids[index] = new_id
+                           id_suffixes[id] += 1
+               assert len(resolved_ids) == len(set(resolved_ids)), (
+                   f"Internal error: {resolved_ids=}"
+               )
+               return resolved_ids
+       
+    1:     def _strict_parametrization_ids_enabled(self) -> bool:
+               if self.config is None:
+                   return False
+               strict_parametrization_ids = self.config.getini("strict_parametrization_ids")
+               if strict_parametrization_ids is None:
+                   strict_parametrization_ids = self.config.getini("strict")
+               return cast(bool, strict_parametrization_ids)
+       
+    1:     def _resolve_ids(self) -> Iterable[str | _HiddenParam]:
+               """Resolve IDs for all ParameterSets (may contain duplicates)."""
+               for idx, parameterset in enumerate(self.parametersets):
+                   if parameterset.id is not None:
+                       # ID provided directly - pytest.param(..., id="...")
+                       if parameterset.id is HIDDEN_PARAM:
+                           yield HIDDEN_PARAM
+                       else:
+                           yield _ascii_escaped_by_config(parameterset.id, self.config)
+                   elif self.ids and idx < len(self.ids) and self.ids[idx] is not None:
+                       # ID provided in the IDs list - parametrize(..., ids=[...]).
+                       if self.ids[idx] is HIDDEN_PARAM:
+                           yield HIDDEN_PARAM
+                       else:
+                           yield self._idval_from_value_required(self.ids[idx], idx)
+                   else:
+                       # ID not provided - generate it.
+                       yield "-".join(
+                           self._idval(val, argname, idx)
+                           for val, argname in zip(
+                               parameterset.values, self.argnames, strict=True
+                           )
+                       )
+       
+    1:     def _idval(self, val: object, argname: str, idx: int) -> str:
+               """Make an ID for a parameter in a ParameterSet."""
+               idval = self._idval_from_function(val, argname, idx)
+               if idval is not None:
+                   return idval
+               idval = self._idval_from_hook(val, argname)
+               if idval is not None:
+                   return idval
+               idval = self._idval_from_value(val)
+               if idval is not None:
+                   return idval
+               return self._idval_from_argname(argname, idx)
+       
+    1:     def _idval_from_function(self, val: object, argname: str, idx: int) -> str | None:
+               """Try to make an ID for a parameter in a ParameterSet using the
+               user-provided id callable, if given."""
+               if self.idfn is None:
+                   return None
+               try:
+                   id = self.idfn(val)
+               except Exception as e:
+                   prefix = f"{self.nodeid}: " if self.nodeid is not None else ""
+                   msg = "error raised while trying to determine id of parameter '{}' at position {}"
+                   msg = prefix + msg.format(argname, idx)
+                   raise ValueError(msg) from e
+               if id is None:
+                   return None
+               return self._idval_from_value(id)
+       
+    1:     def _idval_from_hook(self, val: object, argname: str) -> str | None:
+               """Try to make an ID for a parameter in a ParameterSet by calling the
+               :hook:`pytest_make_parametrize_id` hook."""
+               if self.config:
+                   id: str | None = self.config.hook.pytest_make_parametrize_id(
+                       config=self.config, val=val, argname=argname
+                   )
+                   return id
+               return None
+       
+    1:     def _idval_from_value(self, val: object) -> str | None:
+               """Try to make an ID for a parameter in a ParameterSet from its value,
+               if the value type is supported."""
+               if isinstance(val, str | bytes):
+                   return _ascii_escaped_by_config(val, self.config)
+               elif val is None or isinstance(val, float | int | bool | complex):
+                   return str(val)
+               elif isinstance(val, re.Pattern):
+                   return ascii_escaped(val.pattern)
+               elif val is NOTSET:
+                   # Fallback to default. Note that NOTSET is an enum.Enum.
+                   pass
+               elif isinstance(val, enum.Enum):
+                   return str(val)
+               elif isinstance(getattr(val, "__name__", None), str):
+                   # Name of a class, function, module, etc.
+                   name: str = getattr(val, "__name__")
+                   return name
+               return None
+       
+    1:     def _idval_from_value_required(self, val: object, idx: int) -> str:
+               """Like _idval_from_value(), but fails if the type is not supported."""
+               id = self._idval_from_value(val)
+               if id is not None:
+                   return id
+       
+               # Fail.
+               prefix = self._make_error_prefix()
+               msg = (
+                   f"{prefix}ids contains unsupported value {saferepr(val)} (type: {type(val)!r}) at index {idx}. "
+                   "Supported types are: str, bytes, int, float, complex, bool, enum, regex or anything with a __name__."
+               )
+               fail(msg, pytrace=False)
+       
+    2:     @staticmethod
+    2:     def _idval_from_argname(argname: str, idx: int) -> str:
+               """Make an ID for a parameter in a ParameterSet from the argument name
+               and the index of the ParameterSet."""
+               return str(argname) + str(idx)
+       
+    1:     def _complain_multiple_hidden_parameter_sets(self) -> NoReturn:
+               fail(
+                   f"{self._make_error_prefix()}multiple instances of HIDDEN_PARAM "
+                   "cannot be used in the same parametrize call, "
+                   "because the tests names need to be unique."
+               )
+       
+    1:     def _make_error_prefix(self) -> str:
+               if self.nodeid is not None:
+                   return f"In {self.nodeid}: "
+               else:
+                   return ""
+       
+       
+    3: @final
+    2: @dataclasses.dataclass(frozen=True)
+    2: class CallSpec2:
+    1:     """A planned parameterized invocation of a test function.
+       
+           Calculated during collection for a given test function's Metafunc.
+           Once collection is over, each callspec is turned into a single Item
+           and stored in item.callspec.
+           """
+       
+           # arg name -> arg value which will be passed to a fixture of the same name.
+    1:     params: dict[str, object] = dataclasses.field(default_factory=dict)
+           # arg name -> arg index.
+    1:     indices: dict[str, int] = dataclasses.field(default_factory=dict)
+           # arg name -> parameter scope.
+           # Used for sorting parametrized resources.
+    1:     _arg2scope: Mapping[str, Scope] = dataclasses.field(default_factory=dict)
+           # Parts which will be added to the item's name in `[..]` separated by "-".
+    1:     _idlist: Sequence[str] = dataclasses.field(default_factory=tuple)
+           # Marks which will be applied to the item.
+    1:     marks: list[Mark] = dataclasses.field(default_factory=list)
+       
+    1:     def setmulti(
+               self,
+               *,
+               argnames: Iterable[str],
+               valset: Iterable[object],
+               id: str | _HiddenParam,
+               marks: Iterable[Mark | MarkDecorator],
+               scope: Scope,
+               param_index: int,
+               nodeid: str,
+           ) -> CallSpec2:
+               params = self.params.copy()
+               indices = self.indices.copy()
+               arg2scope = dict(self._arg2scope)
+               for arg, val in zip(argnames, valset, strict=True):
+                   if arg in params:
+                       raise nodes.Collector.CollectError(
+                           f"{nodeid}: duplicate parametrization of {arg!r}"
+                       )
+                   params[arg] = val
+                   indices[arg] = param_index
+                   arg2scope[arg] = scope
+               return CallSpec2(
+                   params=params,
+                   indices=indices,
+                   _arg2scope=arg2scope,
+                   _idlist=self._idlist if id is HIDDEN_PARAM else [*self._idlist, id],
+                   marks=[*self.marks, *normalize_mark_list(marks)],
+               )
+       
+    1:     def getparam(self, name: str) -> object:
+               try:
+                   return self.params[name]
+               except KeyError as e:
+                   raise ValueError(name) from e
+       
+    2:     @property
+    2:     def id(self) -> str:
+               return "-".join(self._idlist)
+       
+       
+    1: def get_direct_param_fixture_func(request: FixtureRequest) -> Any:
+           return request.param
+       
+       
+    2: class DirectParamFixtureDef(FixtureDef[FixtureValue]):
+    1:     """A custom FixtureDef for direct parametrization fixtures.
+       
+           Each parameter in direct parametrization is desugared to a parametrized
+           fixture which returns the direct parameterization value as its param.
+           We use this custom type as a "marker" for this type of FixtureDef, but
+           usually behaves like any other FixtureDef.
+           """
+       
+    1:     def __init__(self, *, node: nodes.Node, argname: str, scope: Scope) -> None:
+               super().__init__(
+                   config=node.config,
+                   baseid=NOTSET,
+                   argname=argname,
+                   func=get_direct_param_fixture_func,
+                   scope=scope,
+                   params=None,
+                   ids=None,
+                   node=node,
+                   _ispytest=True,
+               )
+       
+       
+       # Used for storing fixturedefs for direct parametrization.
+    1: name2directparamfixturedef_key = StashKey[dict[str, DirectParamFixtureDef[object]]]()
+       
+       
+    3: @final
+    2: class Metafunc:
+    1:     """Objects passed to the :hook:`pytest_generate_tests` hook.
+       
+           They help to inspect a test function and to generate tests according to
+           test configuration or values specified in the class or module where a
+           test function is defined.
+           """
+       
+    2:     def __init__(
+               self,
+               definition: FunctionDefinition,
+               fixtureinfo: fixtures.FuncFixtureInfo,
+               config: Config,
+    1:         cls=None,
+    1:         module=None,
+               *,
+    1:         _ispytest: bool = False,
+           ) -> None:
+    6:         check_ispytest(_ispytest)
+       
+               #: Access to the underlying :class:`_pytest.python.FunctionDefinition`.
+    6:         self.definition = definition
+       
+               #: Access to the :class:`pytest.Config` object for the test session.
+    6:         self.config = config
+       
+               #: The module object where the test function is defined in.
+    6:         self.module = module
+       
+               #: Underlying Python test function.
+    6:         self.function = definition.obj
+       
+               #: Set of fixture names required by the test function.
+    6:         self.fixturenames = fixtureinfo.names_closure
+       
+               #: Class object where the test function is defined in or ``None``.
+    6:         self.cls = cls
+       
+    6:         self._arg2fixturedefs = fixtureinfo.name2fixturedefs
+       
+               # Result of parametrize().
+    6:         self._calls: list[CallSpec2] = []
+       
+    6:         self._params_directness: dict[str, Literal["indirect", "direct"]] = {}
+       
+    2:     def parametrize(
+               self,
+               argnames: str | Sequence[str],
+               argvalues: Iterable[ParameterSet | Sequence[object] | object],
+    1:         indirect: bool | Sequence[str] = False,
+    1:         ids: Iterable[object | None] | Callable[[Any], object | None] | None = None,
+    1:         scope: ScopeName | None = None,
+               *,
+    1:         _param_mark: Mark | None = None,
+           ) -> None:
+               """Add new invocations to the underlying test function using the list
+               of argvalues for the given argnames. Parametrization is performed
+               during the collection phase. If you need to setup expensive resources
+               see about setting ``indirect`` to do it at test setup time instead.
+       
+               Can be called multiple times per test function (but only on different
+               argument names), in which case each call parametrizes all previous
+               parametrizations, e.g.
+       
+               ::
+       
+                   unparametrized:         t
+                   parametrize ["x", "y"]: t[x], t[y]
+                   parametrize [1, 2]:     t[x-1], t[x-2], t[y-1], t[y-2]
+       
+               :param argnames:
+                   A comma-separated string denoting one or more argument names, or
+                   a list/tuple of argument strings.
+       
+               :param argvalues:
+                   The list of argvalues determines how often a test is invoked with
+                   different argument values.
+       
+                   If only one argname was specified argvalues is a list of values.
+                   If N argnames were specified, argvalues must be a list of
+                   N-tuples, where each tuple-element specifies a value for its
+                   respective argname.
+       
+                   .. versionchanged:: 9.1
+       
+                       Passing a non-:class:`~collections.abc.Collection` iterable
+                       (such as a generator or iterator) is deprecated. See
+                       :ref:`parametrize-iterators` for details.
+       
+               :param indirect:
+                   A list of arguments' names (subset of argnames) or a boolean.
+                   If True the list contains all names from the argnames. Each
+                   argvalue corresponding to an argname in this list will
+                   be passed as request.param to its respective argname fixture
+                   function so that it can perform more expensive setups during the
+                   setup phase of a test rather than at collection time.
+       
+               :param ids:
+                   Sequence of (or generator for) ids for ``argvalues``,
+                   or a callable to return part of the id for each argvalue.
+       
+                   With sequences (and generators like ``itertools.count()``) the
+                   returned ids should be of type ``string``, ``int``, ``float``,
+                   ``bool``, or ``None``.
+                   They are mapped to the corresponding index in ``argvalues``.
+                   ``None`` means to use the auto-generated id.
+       
+                   .. versionadded:: 8.4
+                       :ref:`hidden-param` means to hide the parameter set
+                       from the test name. Can only be used at most 1 time, as
+                       test names need to be unique.
+       
+                   If it is a callable it will be called for each entry in
+                   ``argvalues``, and the return value is used as part of the
+                   auto-generated id for the whole set (where parts are joined with
+                   dashes ("-")).
+                   This is useful to provide more specific ids for certain items, e.g.
+                   dates.  Returning ``None`` will use an auto-generated id.
+       
+                   If no ids are provided they will be generated automatically from
+                   the argvalues.
+       
+               :param scope:
+                   If specified it denotes the scope of the parameters.
+                   The scope is used for grouping tests by parameter instances.
+                   It will also override any fixture-function defined scope, allowing
+                   to set a dynamic scope using test context or configuration.
+               """
+               nodeid = self.definition.nodeid
+       
+               argnames, parametersets = ParameterSet._for_parametrize(
+                   argnames,
+                   argvalues,
+                   self.function,
+                   self.config,
+                   nodeid=self.definition.nodeid,
+               )
+               del argvalues
+       
+               if "request" in argnames:
+                   fail(
+                       f"{nodeid}: 'request' is a reserved name and cannot be used in @pytest.mark.parametrize",
+                       pytrace=False,
+                   )
+       
+               if scope is not None:
+                   scope_ = Scope.from_user(
+                       scope, descr=f"parametrize() call in {self.function.__name__}"
+                   )
+               else:
+                   scope_ = _find_parametrized_scope(argnames, self._arg2fixturedefs, indirect)
+       
+               self._validate_if_using_arg_names(argnames, indirect)
+       
+               # Use any already (possibly) generated ids with parametrize Marks.
+               if _param_mark and _param_mark._param_ids_from:
+                   generated_ids = _param_mark._param_ids_from._param_ids_generated
+                   if generated_ids is not None:
+                       ids = generated_ids
+       
+               ids = self._resolve_parameter_set_ids(
+                   argnames, ids, parametersets, nodeid=self.definition.nodeid
+               )
+       
+               # Store used (possibly generated) ids with parametrize Marks.
+               if _param_mark and _param_mark._param_ids_from and generated_ids is None:
+                   object.__setattr__(_param_mark._param_ids_from, "_param_ids_generated", ids)
+       
+               # Calculate directness.
+               arg_directness = _resolve_args_directness(
+                   argnames, indirect, self.definition.nodeid
+               )
+               self._params_directness.update(arg_directness)
+       
+               # Add direct parametrizations as fixturedefs to arg2fixturedefs by
+               # registering artificial DirectParamFixtureDef's such that later at test
+               # setup time we can rely on FixtureDefs to exist for all argnames.
+               node = None
+               # For scopes higher than function, a DirectParamFixtureDef might have
+               # already been created for the scope. We thus store and cache the
+               # DirectParamFixtureDef on the node related to the scope.
+               if scope_ is Scope.Function:
+                   name2directparamfixturedef = None
+               else:
+                   collector = self.definition.parent
+                   assert collector is not None
+                   node = get_scope_node(collector, scope_)
+                   if node is None:
+                       # If used class scope and there is no class, use module-level
+                       # collector (for now).
+                       if scope_ is Scope.Class:
+                           assert isinstance(collector, Module)
+                           node = collector
+                       # If used package scope and there is no package, use session
+                       # (for now).
+                       elif scope_ is Scope.Package:
+                           node = collector.session
+                       else:
+                           assert False, f"Unhandled missing scope: {scope}"
+                   default: dict[str, DirectParamFixtureDef[object]] = {}
+                   name2directparamfixturedef = node.stash.setdefault(
+                       name2directparamfixturedef_key, default
+                   )
+               for argname in argnames:
+                   if arg_directness[argname] == "indirect":
+                       continue
+                   if (
+                       name2directparamfixturedef is not None
+                       and argname in name2directparamfixturedef
+                   ):
+                       fixturedef = name2directparamfixturedef[argname]
+                   else:
+                       fixturedef = DirectParamFixtureDef(
+                           node=self.definition.session,
+                           argname=argname,
+                           scope=scope_,
+                       )
+                       if name2directparamfixturedef is not None:
+                           name2directparamfixturedef[argname] = fixturedef
+                   self._arg2fixturedefs[argname] = [fixturedef]
+       
+               # Create the new calls: if we are parametrize() multiple times (by applying the decorator
+               # more than once) then we accumulate those calls generating the cartesian product
+               # of all calls.
+               newcalls = []
+               for callspec in self._calls or [CallSpec2()]:
+                   for param_index, (param_id, param_set) in enumerate(
+                       zip(ids, parametersets, strict=True)
+                   ):
+                       newcallspec = callspec.setmulti(
+                           argnames=argnames,
+                           valset=param_set.values,
+                           id=param_id,
+                           marks=param_set.marks,
+                           scope=scope_,
+                           param_index=param_index,
+                           nodeid=nodeid,
+                       )
+                       newcalls.append(newcallspec)
+               self._calls = newcalls
+       
+    1:     def _resolve_parameter_set_ids(
+               self,
+               argnames: Sequence[str],
+               ids: Iterable[object | None] | Callable[[Any], object | None] | None,
+               parametersets: Sequence[ParameterSet],
+               nodeid: str,
+           ) -> list[str | _HiddenParam]:
+               """Resolve the actual ids for the given parameter sets.
+       
+               :param argnames:
+                   Argument names passed to ``parametrize()``.
+               :param ids:
+                   The `ids` parameter of the ``parametrize()`` call (see docs).
+               :param parametersets:
+                   The parameter sets, each containing a set of values corresponding
+                   to ``argnames``.
+               :param nodeid str:
+                   The nodeid of the definition item that generated this
+                   parametrization.
+               :returns:
+                   List with ids for each parameter set given.
+               """
+               if ids is None:
+                   idfn = None
+                   ids_ = None
+               elif callable(ids):
+                   idfn = ids
+                   ids_ = None
+               else:
+                   idfn = None
+                   ids_ = self._validate_ids(ids, parametersets)
+               id_maker = IdMaker(
+                   argnames,
+                   parametersets,
+                   idfn,
+                   ids_,
+                   self.config,
+                   nodeid=nodeid,
+               )
+               return id_maker.make_unique_parameterset_ids()
+       
+    1:     def _validate_ids(
+               self,
+               ids: Iterable[object | None],
+               parametersets: Sequence[ParameterSet],
+           ) -> list[object | None]:
+               try:
+                   num_ids = len(ids)  # type: ignore[arg-type]
+               except TypeError:
+                   try:
+                       iter(ids)
+                   except TypeError as e:
+                       raise TypeError("ids must be a callable or an iterable") from e
+                   num_ids = len(parametersets)
+       
+               # num_ids == 0 is a special case: https://github.com/pytest-dev/pytest/issues/1849
+               if num_ids != len(parametersets) and num_ids != 0:
+                   nodeid = self.definition.nodeid
+                   fail(
+                       f"In {nodeid}: {len(parametersets)} parameter sets specified, with different number of ids: {num_ids}",
+                       pytrace=False,
+                   )
+       
+               return list(itertools.islice(ids, num_ids))
+       
+    1:     def _validate_if_using_arg_names(
+               self,
+               argnames: Sequence[str],
+               indirect: bool | Sequence[str],
+           ) -> None:
+               """Check if all argnames are being used, by default values, or directly/indirectly.
+       
+               :param List[str] argnames: List of argument names passed to ``parametrize()``.
+               :param indirect: Same as the ``indirect`` parameter of ``parametrize()``.
+               :raises ValueError: If validation fails.
+               """
+               default_arg_names = set(get_default_arg_names(self.function))
+               nodeid = self.definition.nodeid
+               for arg in argnames:
+                   if arg not in self.fixturenames:
+                       if arg in default_arg_names:
+                           fail(
+                               f"In {nodeid}: function already takes an argument '{arg}' with a default value",
+                               pytrace=False,
+                           )
+                       else:
+                           if isinstance(indirect, Sequence):
+                               name = "fixture" if arg in indirect else "argument"
+                           else:
+                               name = "fixture" if indirect else "argument"
+                           fail(
+                               f"In {nodeid}: function uses no {name} '{arg}'",
+                               pytrace=False,
+                           )
+       
+    1:     def _recompute_direct_params_indices(self) -> None:
+               for argname, param_type in self._params_directness.items():
+                   if param_type == "direct":
+                       for i, callspec in enumerate(self._calls):
+                           callspec.indices[argname] = i
+       
+       
+    1: def _find_parametrized_scope(
+           argnames: Sequence[str],
+           arg2fixturedefs: Mapping[str, Sequence[fixtures.FixtureDef[object]]],
+           indirect: bool | Sequence[str],
+       ) -> Scope:
+           """Find the most appropriate scope for a parametrized call based on its arguments.
+       
+           When there's at least one direct argument, always use "function" scope.
+       
+           When a test function is parametrized and all its arguments are indirect
+           (e.g. fixtures), return the most narrow scope based on the fixtures used.
+       
+           Related to issue #1832, based on code posted by @Kingdread.
+           """
+           if isinstance(indirect, Sequence):
+               all_arguments_are_fixtures = len(indirect) == len(argnames)
+           else:
+               all_arguments_are_fixtures = bool(indirect)
+       
+           if all_arguments_are_fixtures:
+               fixturedefs = arg2fixturedefs or {}
+               used_scopes = [
+                   fixturedef[-1]._scope
+                   for name, fixturedef in fixturedefs.items()
+                   if name in argnames
+               ]
+               # Takes the most narrow scope from used fixtures.
+               return min(used_scopes, default=Scope.Function)
+       
+           return Scope.Function
+       
+       
+    1: def _ascii_escaped_by_config(val: str | bytes, config: Config | None) -> str:
+           if config is None:
+               escape_option = False
+           else:
+               escape_option = config.getini(
+                   "disable_test_id_escaping_and_forfeit_all_rights_to_community_support"
+               )
+           # TODO: If escaping is turned off and the user passes bytes,
+           #       will return a bytes. For now we ignore this but the
+           #       code *probably* doesn't handle this case.
+           return val if escape_option else ascii_escaped(val)  # type: ignore
+       
+       
+    2: class Function(PyobjMixin, nodes.Item):
+    1:     """Item responsible for setting up and executing a Python test function.
+       
+           :param name:
+               The full function name, including any decorations like those
+               added by parametrization (``my_func[my_param]``).
+           :param parent:
+               The parent Node.
+           :param config:
+               The pytest Config object.
+           :param callspec:
+               If given, this function has been parametrized and the callspec contains
+               meta information about the parametrization.
+           :param callobj:
+               If given, the object which will be called when the Function is invoked,
+               otherwise the callobj will be obtained from ``parent`` using ``originalname``.
+           :param keywords:
+               Keywords bound to the function object for "-k" matching.
+           :param session:
+               The pytest Session object.
+           :param fixtureinfo:
+               Fixture information already resolved at this fixture node..
+           :param originalname:
+               The attribute name to use for accessing the underlying function object.
+               Defaults to ``name``. Set this if name is different from the original name,
+               for example when it contains decorations like those added by parametrization
+               (``my_func[my_param]``).
+           """
+       
+           # Disable since functions handle it themselves.
+    1:     _ALLOW_MARKERS = False
+       
+    1:     def __init__(
+               self,
+               name: str,
+               parent,
+    1:         config: Config | None = None,
+    1:         callspec: CallSpec2 | None = None,
+    1:         callobj=NOTSET,
+    1:         keywords: Mapping[str, Any] | None = None,
+    1:         session: Session | None = None,
+    1:         fixtureinfo: FuncFixtureInfo | None = None,
+    1:         originalname: str | None = None,
+           ) -> None:
+   12:         super().__init__(name, parent, config=config, session=session)
+       
+   12:         if callobj is not NOTSET:
+    6:             self._obj = callobj
+    6:             self._instance = getattr(callobj, "__self__", None)
+       
+               #: Original function name, without any decorations (for example
+               #: parametrization adds a ``"[...]"`` suffix to function names), used to access
+               #: the underlying function object from ``parent`` (in case ``callobj`` is not given
+               #: explicitly).
+               #:
+               #: .. versionadded:: 3.0
+   12:         self.originalname = originalname or name
+       
+               # Note: when FunctionDefinition is introduced, we should change ``originalname``
+               # to a readonly property that returns FunctionDefinition.name.
+       
+   12:         self.own_markers.extend(get_unpacked_marks(self.obj))
+   12:         if callspec:
+                   self.callspec = callspec
+                   self.own_markers.extend(callspec.marks)
+       
+               # todo: this is a hell of a hack
+               # https://github.com/pytest-dev/pytest/issues/4569
+               # Note: the order of the updates is important here; indicates what
+               # takes priority (ctor argument over function attributes over markers).
+               # Take own_markers only; NodeKeywords handles parent traversal on its own.
+   24:         self.keywords.update((mark.name, mark) for mark in self.own_markers)
+   12:         self.keywords.update(self.obj.__dict__)
+   12:         if keywords:
+                   self.keywords.update(keywords)
+       
+   12:         if fixtureinfo is None:
+    6:             fm = self.session._fixturemanager
+    6:             fixtureinfo = fm.getfixtureinfo(self, self.obj, self.cls)
+   12:         self._fixtureinfo: FuncFixtureInfo = fixtureinfo
+   12:         self.fixturenames = fixtureinfo.names_closure
+   12:         self._initrequest()
+       
+           # todo: determine sound type limitations
+    2:     @classmethod
+    2:     def from_parent(cls, parent, **kw) -> Self:
+               """The public constructor."""
+   12:         return super().from_parent(parent=parent, **kw)
+       
+    1:     def _initrequest(self) -> None:
+   12:         self.funcargs: dict[str, object] = {}
+   12:         self._request = fixtures.TopRequest(self, _ispytest=True)
+       
+    2:     @property
+    2:     def function(self):
+               """Underlying python 'function' object."""
+               return getimfunc(self.obj)
+       
+    2:     @property
+    2:     def instance(self):
+    6:         try:
+    6:             return self._instance
+    6:         except AttributeError:
+    6:             if isinstance(self.parent, Class):
+                       # Each Function gets a fresh class instance.
+                       self._instance = self._getinstance()
+                   else:
+    6:                 self._instance = None
+    6:         return self._instance
+       
+    1:     def _getinstance(self):
+               if isinstance(self.parent, Class):
+                   # Each Function gets a fresh class instance.
+                   return self.parent.newinstance()
+               else:
+                   return None
+       
+    1:     def _getobj(self):
+    6:         instance = self.instance
+    6:         if instance is not None:
+                   parent_obj = instance
+               else:
+    6:             assert self.parent is not None
+    6:             parent_obj = self.parent.obj  # type: ignore[attr-defined]
+    6:         return getattr(parent_obj, self.originalname)
+       
+    2:     @property
+    2:     def _pyfuncitem(self):
+               """(compatonly) for code expecting pytest-2.2 style request objects."""
+               return self
+       
+    1:     def runtest(self) -> None:
+               """Execute the underlying test function."""
+    6:         self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+       
+    1:     def setup(self) -> None:
+    6:         self._request._fillfixtures()
+       
+    1:     def _traceback_filter(self, excinfo: ExceptionInfo[BaseException]) -> Traceback:
+               if hasattr(self, "_obj") and not self.config.getoption("fulltrace", False):
+                   code = _pytest._code.Code.from_function(get_real_func(self.obj))
+                   path, firstlineno = code.path, code.firstlineno
+                   traceback = excinfo.traceback
+                   ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
+                   if ntraceback == traceback:
+                       ntraceback = ntraceback.cut(path=path)
+                       if ntraceback == traceback:
+                           ntraceback = ntraceback.filter(filter_traceback)
+                           if not ntraceback:
+                               ntraceback = traceback
+                   ntraceback = ntraceback.filter(excinfo)
+       
+                   # issue364: mark all but first and last frames to
+                   # only show a single-line message for each frame.
+                   if self.config.getoption("tbstyle", "auto") == "auto":
+                       if len(ntraceback) > 2:
+                           ntraceback = Traceback(
+                               (
+                                   ntraceback[0],
+                                   *(t.with_repr_style("short") for t in ntraceback[1:-1]),
+                                   ntraceback[-1],
+                               )
+                           )
+       
+                   return ntraceback
+               return excinfo.traceback
+       
+           # TODO: Type ignored -- breaks Liskov Substitution.
+    1:     def repr_failure(  # type: ignore[override]
+               self,
+               excinfo: ExceptionInfo[BaseException],
+           ) -> str | TerminalRepr:
+               style = self.config.getoption("tbstyle", "auto")
+               if style == "auto":
+                   style = "long"
+               return self._repr_failure_py(excinfo, style=style)
+       
+       
+    2: class FunctionDefinition(Function):
+    1:     """This class is a stop gap solution until we evolve to have actual function
+           definition nodes and manage to get rid of ``metafunc``."""
+       
+    1:     def runtest(self) -> None:
+               raise RuntimeError("function definitions are not supposed to be run as tests")
+       
+    1:     setup = runtest

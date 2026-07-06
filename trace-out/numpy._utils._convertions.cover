@@ -1,0 +1,18 @@
+    1: """
+       A set of methods retained from np.compat module that
+       are still used across codebase.
+       """
+       
+    1: __all__ = ["asunicode", "asbytes"]
+       
+       
+    1: def asunicode(s):
+           if isinstance(s, bytes):
+               return s.decode('latin1')
+           return str(s)
+       
+       
+    1: def asbytes(s):
+           if isinstance(s, bytes):
+               return s
+           return str(s).encode('latin1')

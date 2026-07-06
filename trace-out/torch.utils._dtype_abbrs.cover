@@ -1,0 +1,30 @@
+    1: import torch
+       
+       
+       # Used for testing and logging
+   19: dtype_abbrs = {
+    1:     torch.bfloat16: "bf16",
+    1:     torch.float64: "f64",
+    1:     torch.float32: "f32",
+    1:     torch.float16: "f16",
+    1:     torch.float8_e4m3fn: "f8e4m3fn",
+    1:     torch.float8_e5m2: "f8e5m2",
+    1:     torch.float8_e4m3fnuz: "f8e4m3fnuz",
+    1:     torch.float8_e5m2fnuz: "f8e5m2fnuz",
+    1:     torch.float8_e8m0fnu: "f8e8m0fnu",
+    1:     torch.float4_e2m1fn_x2: "f4e2m1fnx2",
+    1:     torch.complex32: "c32",
+    1:     torch.complex64: "c64",
+    1:     torch.complex128: "c128",
+    1:     torch.int8: "i8",
+    1:     torch.int16: "i16",
+    1:     torch.int32: "i32",
+    1:     torch.int64: "i64",
+    1:     torch.bool: "b8",
+    1:     torch.uint8: "u8",
+    1:     torch.uint16: "u16",
+    1:     torch.uint32: "u32",
+    1:     torch.uint64: "u64",
+    1:     torch.bits16: "b16",
+    1:     torch.bits1x8: "b1x8",
+       }

@@ -1,0 +1,44 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Dict, Union, Optional
+    1: from datetime import datetime
+    1: from typing_extensions import Literal, Annotated, TypedDict
+       
+    1: from .._types import SequenceNotStr
+    1: from .._utils import PropertyInfo
+       
+    1: __all__ = ["SessionCreateParams"]
+       
+       
+    2: class SessionCreateParams(TypedDict, total=False):
+    1:     upsert: bool
+       
+    1:     id: Optional[str]
+       
+    1:     default_dataset_id: Optional[str]
+       
+    1:     description: Optional[str]
+       
+    1:     end_time: Annotated[Union[str, datetime, None], PropertyInfo(format="iso8601")]
+       
+    1:     evaluator_keys: Optional[SequenceNotStr[str]]
+       
+    1:     extra: Optional[Dict[str, object]]
+       
+    1:     kicked_off_by: Optional[str]
+       
+    1:     name: str
+       
+    1:     num_examples: Optional[int]
+       
+    1:     num_repetitions: Optional[int]
+       
+    1:     reference_dataset_id: Optional[str]
+       
+    1:     start_time: Annotated[Union[str, datetime], PropertyInfo(format="iso8601")]
+       
+    1:     tag_value_ids: Optional[SequenceNotStr[str]]
+       
+    1:     trace_tier: Optional[Literal["longlived", "shortlived"]]

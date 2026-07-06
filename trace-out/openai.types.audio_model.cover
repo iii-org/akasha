@@ -1,0 +1,13 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: __all__ = ["AudioModel"]
+       
+    2: AudioModel: TypeAlias = Literal[
+    1:     "whisper-1",
+           "gpt-4o-transcribe",
+           "gpt-4o-mini-transcribe",
+           "gpt-4o-mini-transcribe-2025-12-15",
+           "gpt-4o-transcribe-diarize",
+       ]

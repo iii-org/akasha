@@ -1,0 +1,86 @@
+       
+       # Abstract classes.
+       
+    2: class Event(object):
+    1:     def __init__(self, start_mark=None, end_mark=None):
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+    1:     def __repr__(self):
+               attributes = [key for key in ['anchor', 'tag', 'implicit', 'value']
+                       if hasattr(self, key)]
+               arguments = ', '.join(['%s=%r' % (key, getattr(self, key))
+                       for key in attributes])
+               return '%s(%s)' % (self.__class__.__name__, arguments)
+       
+    2: class NodeEvent(Event):
+    1:     def __init__(self, anchor, start_mark=None, end_mark=None):
+               self.anchor = anchor
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+       
+    2: class CollectionStartEvent(NodeEvent):
+    2:     def __init__(self, anchor, tag, implicit, start_mark=None, end_mark=None,
+    1:             flow_style=None):
+               self.anchor = anchor
+               self.tag = tag
+               self.implicit = implicit
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.flow_style = flow_style
+       
+    2: class CollectionEndEvent(Event):
+    1:     pass
+       
+       # Implementations.
+       
+    2: class StreamStartEvent(Event):
+    1:     def __init__(self, start_mark=None, end_mark=None, encoding=None):
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.encoding = encoding
+       
+    2: class StreamEndEvent(Event):
+    1:     pass
+       
+    2: class DocumentStartEvent(Event):
+    2:     def __init__(self, start_mark=None, end_mark=None,
+    1:             explicit=None, version=None, tags=None):
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.explicit = explicit
+               self.version = version
+               self.tags = tags
+       
+    2: class DocumentEndEvent(Event):
+    2:     def __init__(self, start_mark=None, end_mark=None,
+    1:             explicit=None):
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.explicit = explicit
+       
+    2: class AliasEvent(NodeEvent):
+    1:     pass
+       
+    2: class ScalarEvent(NodeEvent):
+    1:     def __init__(self, anchor, tag, implicit, value,
+    1:             start_mark=None, end_mark=None, style=None):
+               self.anchor = anchor
+               self.tag = tag
+               self.implicit = implicit
+               self.value = value
+               self.start_mark = start_mark
+               self.end_mark = end_mark
+               self.style = style
+       
+    2: class SequenceStartEvent(CollectionStartEvent):
+    1:     pass
+       
+    2: class SequenceEndEvent(CollectionEndEvent):
+    1:     pass
+       
+    2: class MappingStartEvent(CollectionStartEvent):
+    1:     pass
+       
+    2: class MappingEndEvent(CollectionEndEvent):
+    1:     pass
+       

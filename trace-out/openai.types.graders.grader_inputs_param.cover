@@ -1,0 +1,53 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import List, Union
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: from ..responses.response_input_text_param import ResponseInputTextParam
+    1: from ..responses.response_input_audio_param import ResponseInputAudioParam
+       
+    1: __all__ = [
+           "GraderInputsParam",
+           "GraderInputsParamItem",
+           "GraderInputsParamItemOutputText",
+           "GraderInputsParamItemInputImage",
+       ]
+       
+       
+    2: class GraderInputsParamItemOutputText(TypedDict, total=False):
+    1:     """A text output from the model."""
+       
+    1:     text: Required[str]
+    1:     """The text output from the model."""
+       
+    1:     type: Required[Literal["output_text"]]
+    1:     """The type of the output text. Always `output_text`."""
+       
+       
+    2: class GraderInputsParamItemInputImage(TypedDict, total=False):
+    1:     """An image input block used within EvalItem content arrays."""
+       
+    1:     image_url: Required[str]
+    1:     """The URL of the image input."""
+       
+    1:     type: Required[Literal["input_image"]]
+    1:     """The type of the image input. Always `input_image`."""
+       
+    1:     detail: str
+    1:     """The detail level of the image to be sent to the model.
+       
+           One of `high`, `low`, or `auto`. Defaults to `auto`.
+           """
+       
+       
+    2: GraderInputsParamItem: TypeAlias = Union[
+    2:     str,
+    1:     ResponseInputTextParam,
+    1:     GraderInputsParamItemOutputText,
+    1:     GraderInputsParamItemInputImage,
+    1:     ResponseInputAudioParam,
+       ]
+       
+    1: GraderInputsParam: TypeAlias = List[GraderInputsParamItem]

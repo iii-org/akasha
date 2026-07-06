@@ -1,0 +1,274 @@
+    1: """
+       Copyright (c) Django Software Foundation and individual contributors.
+       All rights reserved.
+       
+       Redistribution and use in source and binary forms, with or without modification,
+       are permitted provided that the following conditions are met:
+       
+           1. Redistributions of source code must retain the above copyright notice,
+              this list of conditions and the following disclaimer.
+       
+           2. Redistributions in binary form must reproduce the above copyright
+              notice, this list of conditions and the following disclaimer in the
+              documentation and/or other materials provided with the distribution.
+       
+           3. Neither the name of Django nor the names of its contributors may be used
+              to endorse or promote products derived from this software without
+              specific prior written permission.
+       
+       THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+       ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+       WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+       DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+       ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+       (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+       LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+       ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+       (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+       SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: import sys
+    1: import types
+    1: from collections.abc import Awaitable, Callable, Iterable, MutableMapping
+    1: from typing import Any, Literal, Protocol, TypedDict
+       
+    1: if sys.version_info >= (3, 11):  # pragma: py-lt-311
+    1:     from typing import NotRequired
+       else:  # pragma: py-gte-311
+           from typing_extensions import NotRequired
+       
+       # WSGI
+    1: Environ = MutableMapping[str, Any]
+    1: ExcInfo = tuple[type[BaseException], BaseException, types.TracebackType | None]
+    1: StartResponse = Callable[[str, Iterable[tuple[str, str]], ExcInfo | None], None]
+    1: WSGIApp = Callable[[Environ, StartResponse], Iterable[bytes] | BaseException]
+       
+       
+       # ASGI
+    2: class ASGIVersions(TypedDict):
+    1:     spec_version: str
+    1:     version: Literal["2.0"] | Literal["3.0"]
+       
+       
+    2: class HTTPScope(TypedDict):
+    1:     type: Literal["http"]
+    1:     asgi: ASGIVersions
+    1:     http_version: str
+    1:     method: str
+    1:     scheme: str
+    1:     path: str
+    1:     raw_path: bytes
+    1:     query_string: bytes
+    1:     root_path: str
+    1:     headers: Iterable[tuple[bytes, bytes]]
+    1:     client: tuple[str, int] | None
+    1:     server: tuple[str, int | None] | None
+    1:     state: NotRequired[dict[str, Any]]
+    1:     extensions: NotRequired[dict[str, dict[object, object]]]
+       
+       
+    2: class WebSocketScope(TypedDict):
+    1:     type: Literal["websocket"]
+    1:     asgi: ASGIVersions
+    1:     http_version: str
+    1:     scheme: str
+    1:     path: str
+    1:     raw_path: bytes
+    1:     query_string: bytes
+    1:     root_path: str
+    1:     headers: Iterable[tuple[bytes, bytes]]
+    1:     client: tuple[str, int] | None
+    1:     server: tuple[str, int | None] | None
+    1:     subprotocols: Iterable[str]
+    1:     state: NotRequired[dict[str, Any]]
+    1:     extensions: NotRequired[dict[str, dict[object, object]]]
+       
+       
+    2: class LifespanScope(TypedDict):
+    1:     type: Literal["lifespan"]
+    1:     asgi: ASGIVersions
+    1:     state: NotRequired[dict[str, Any]]
+       
+       
+    1: WWWScope = HTTPScope | WebSocketScope
+    1: Scope = HTTPScope | WebSocketScope | LifespanScope
+       
+       
+    2: class HTTPRequestEvent(TypedDict):
+    1:     type: Literal["http.request"]
+    1:     body: bytes
+    1:     more_body: bool
+       
+       
+    2: class HTTPResponseDebugEvent(TypedDict):
+    1:     type: Literal["http.response.debug"]
+    1:     info: dict[str, object]
+       
+       
+    2: class HTTPResponseStartEvent(TypedDict):
+    1:     type: Literal["http.response.start"]
+    1:     status: int
+    1:     headers: NotRequired[Iterable[tuple[bytes, bytes]]]
+    1:     trailers: NotRequired[bool]
+       
+       
+    2: class HTTPResponseBodyEvent(TypedDict):
+    1:     type: Literal["http.response.body"]
+    1:     body: bytes
+    1:     more_body: NotRequired[bool]
+       
+       
+    2: class HTTPResponseTrailersEvent(TypedDict):
+    1:     type: Literal["http.response.trailers"]
+    1:     headers: Iterable[tuple[bytes, bytes]]
+    1:     more_trailers: bool
+       
+       
+    2: class HTTPServerPushEvent(TypedDict):
+    1:     type: Literal["http.response.push"]
+    1:     path: str
+    1:     headers: Iterable[tuple[bytes, bytes]]
+       
+       
+    2: class HTTPDisconnectEvent(TypedDict):
+    1:     type: Literal["http.disconnect"]
+       
+       
+    2: class WebSocketConnectEvent(TypedDict):
+    1:     type: Literal["websocket.connect"]
+       
+       
+    2: class WebSocketAcceptEvent(TypedDict):
+    1:     type: Literal["websocket.accept"]
+    1:     subprotocol: NotRequired[str | None]
+    1:     headers: NotRequired[Iterable[tuple[bytes, bytes]]]
+       
+       
+    2: class _WebSocketReceiveEventBytes(TypedDict):
+    1:     type: Literal["websocket.receive"]
+    1:     bytes: bytes
+    1:     text: NotRequired[None]
+       
+       
+    2: class _WebSocketReceiveEventText(TypedDict):
+    1:     type: Literal["websocket.receive"]
+    1:     bytes: NotRequired[None]
+    1:     text: str
+       
+       
+    1: WebSocketReceiveEvent = _WebSocketReceiveEventBytes | _WebSocketReceiveEventText
+       
+       
+    2: class _WebSocketSendEventBytes(TypedDict):
+    1:     type: Literal["websocket.send"]
+    1:     bytes: bytes
+    1:     text: NotRequired[None]
+       
+       
+    2: class _WebSocketSendEventText(TypedDict):
+    1:     type: Literal["websocket.send"]
+    1:     bytes: NotRequired[None]
+    1:     text: str
+       
+       
+    1: WebSocketSendEvent = _WebSocketSendEventBytes | _WebSocketSendEventText
+       
+       
+    2: class WebSocketResponseStartEvent(TypedDict):
+    1:     type: Literal["websocket.http.response.start"]
+    1:     status: int
+    1:     headers: Iterable[tuple[bytes, bytes]]
+       
+       
+    2: class WebSocketResponseBodyEvent(TypedDict):
+    1:     type: Literal["websocket.http.response.body"]
+    1:     body: bytes
+    1:     more_body: NotRequired[bool]
+       
+       
+    2: class WebSocketDisconnectEvent(TypedDict):
+    1:     type: Literal["websocket.disconnect"]
+    1:     code: int
+    1:     reason: NotRequired[str | None]
+       
+       
+    2: class WebSocketCloseEvent(TypedDict):
+    1:     type: Literal["websocket.close"]
+    1:     code: NotRequired[int]
+    1:     reason: NotRequired[str | None]
+       
+       
+    2: class LifespanStartupEvent(TypedDict):
+    1:     type: Literal["lifespan.startup"]
+       
+       
+    2: class LifespanShutdownEvent(TypedDict):
+    1:     type: Literal["lifespan.shutdown"]
+       
+       
+    2: class LifespanStartupCompleteEvent(TypedDict):
+    1:     type: Literal["lifespan.startup.complete"]
+       
+       
+    2: class LifespanStartupFailedEvent(TypedDict):
+    1:     type: Literal["lifespan.startup.failed"]
+    1:     message: str
+       
+       
+    2: class LifespanShutdownCompleteEvent(TypedDict):
+    1:     type: Literal["lifespan.shutdown.complete"]
+       
+       
+    2: class LifespanShutdownFailedEvent(TypedDict):
+    1:     type: Literal["lifespan.shutdown.failed"]
+    1:     message: str
+       
+       
+    1: WebSocketEvent = WebSocketReceiveEvent | WebSocketDisconnectEvent | WebSocketConnectEvent
+       
+       
+    1: ASGIReceiveEvent = (
+    7:     HTTPRequestEvent
+    1:     | HTTPDisconnectEvent
+    1:     | WebSocketConnectEvent
+    1:     | WebSocketReceiveEvent
+    1:     | WebSocketDisconnectEvent
+    1:     | LifespanStartupEvent
+    1:     | LifespanShutdownEvent
+       )
+       
+       
+    1: ASGISendEvent = (
+   14:     HTTPResponseStartEvent
+    1:     | HTTPResponseBodyEvent
+    1:     | HTTPResponseTrailersEvent
+    1:     | HTTPServerPushEvent
+    1:     | HTTPDisconnectEvent
+    1:     | WebSocketAcceptEvent
+    1:     | WebSocketSendEvent
+    1:     | WebSocketResponseStartEvent
+    1:     | WebSocketResponseBodyEvent
+    1:     | WebSocketCloseEvent
+    1:     | LifespanStartupCompleteEvent
+    1:     | LifespanStartupFailedEvent
+    1:     | LifespanShutdownCompleteEvent
+    1:     | LifespanShutdownFailedEvent
+       )
+       
+       
+    1: ASGIReceiveCallable = Callable[[], Awaitable[ASGIReceiveEvent]]
+    1: ASGISendCallable = Callable[[ASGISendEvent], Awaitable[None]]
+       
+       
+    2: class ASGI2Protocol(Protocol):
+    1:     def __init__(self, scope: Scope) -> None: ...  # pragma: no cover
+       
+    1:     async def __call__(self, receive: ASGIReceiveCallable, send: ASGISendCallable) -> None: ...  # pragma: no cover
+       
+       
+    1: ASGI2Application = type[ASGI2Protocol]
+    1: ASGI3Application = Callable[[Scope, ASGIReceiveCallable, ASGISendCallable], Awaitable[None]]
+    1: ASGIApplication = ASGI2Application | ASGI3Application

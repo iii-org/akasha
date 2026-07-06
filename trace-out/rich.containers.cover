@@ -1,0 +1,167 @@
+    1: from itertools import zip_longest
+    1: from typing import (
+           TYPE_CHECKING,
+           Iterable,
+           Iterator,
+           List,
+           Optional,
+           TypeVar,
+           Union,
+           overload,
+       )
+       
+    1: if TYPE_CHECKING:
+           from .console import (
+               Console,
+               ConsoleOptions,
+               JustifyMethod,
+               OverflowMethod,
+               RenderResult,
+               RenderableType,
+           )
+           from .text import Text
+       
+    1: from .cells import cell_len
+    1: from .measure import Measurement
+       
+    1: T = TypeVar("T")
+       
+       
+    2: class Renderables:
+    1:     """A list subclass which renders its contents to the console."""
+       
+    3:     def __init__(
+    2:         self, renderables: Optional[Iterable["RenderableType"]] = None
+    1:     ) -> None:
+               self._renderables: List["RenderableType"] = (
+                   list(renderables) if renderables is not None else []
+               )
+       
+    4:     def __rich_console__(
+    2:         self, console: "Console", options: "ConsoleOptions"
+    1:     ) -> "RenderResult":
+               """Console render method to insert line-breaks."""
+               yield from self._renderables
+       
+    4:     def __rich_measure__(
+    2:         self, console: "Console", options: "ConsoleOptions"
+    1:     ) -> "Measurement":
+               dimensions = [
+                   Measurement.get(console, options, renderable)
+                   for renderable in self._renderables
+               ]
+               if not dimensions:
+                   return Measurement(1, 1)
+               _min = max(dimension.minimum for dimension in dimensions)
+               _max = max(dimension.maximum for dimension in dimensions)
+               return Measurement(_min, _max)
+       
+    1:     def append(self, renderable: "RenderableType") -> None:
+               self._renderables.append(renderable)
+       
+    1:     def __iter__(self) -> Iterable["RenderableType"]:
+               return iter(self._renderables)
+       
+       
+    2: class Lines:
+    1:     """A list subclass which can render to the console."""
+       
+    1:     def __init__(self, lines: Iterable["Text"] = ()) -> None:
+               self._lines: List["Text"] = list(lines)
+       
+    1:     def __repr__(self) -> str:
+               return f"Lines({self._lines!r})"
+       
+    1:     def __iter__(self) -> Iterator["Text"]:
+               return iter(self._lines)
+       
+    2:     @overload
+    2:     def __getitem__(self, index: int) -> "Text":
+               ...
+       
+    2:     @overload
+    2:     def __getitem__(self, index: slice) -> List["Text"]:
+               ...
+       
+    1:     def __getitem__(self, index: Union[slice, int]) -> Union["Text", List["Text"]]:
+               return self._lines[index]
+       
+    1:     def __setitem__(self, index: int, value: "Text") -> "Lines":
+               self._lines[index] = value
+               return self
+       
+    1:     def __len__(self) -> int:
+               return self._lines.__len__()
+       
+    4:     def __rich_console__(
+    2:         self, console: "Console", options: "ConsoleOptions"
+    1:     ) -> "RenderResult":
+               """Console render method to insert line-breaks."""
+               yield from self._lines
+       
+    1:     def append(self, line: "Text") -> None:
+               self._lines.append(line)
+       
+    1:     def extend(self, lines: Iterable["Text"]) -> None:
+               self._lines.extend(lines)
+       
+    1:     def pop(self, index: int = -1) -> "Text":
+               return self._lines.pop(index)
+       
+    6:     def justify(
+               self,
+    1:         console: "Console",
+    1:         width: int,
+    2:         justify: "JustifyMethod" = "left",
+    2:         overflow: "OverflowMethod" = "fold",
+    1:     ) -> None:
+               """Justify and overflow text to a given width.
+       
+               Args:
+                   console (Console): Console instance.
+                   width (int): Number of cells available per line.
+                   justify (str, optional): Default justify method for text: "left", "center", "full" or "right". Defaults to "left".
+                   overflow (str, optional): Default overflow for text: "crop", "fold", or "ellipsis". Defaults to "fold".
+       
+               """
+               from .text import Text
+       
+               if justify == "left":
+                   for line in self._lines:
+                       line.truncate(width, overflow=overflow, pad=True)
+               elif justify == "center":
+                   for line in self._lines:
+                       line.rstrip()
+                       line.truncate(width, overflow=overflow)
+                       line.pad_left((width - cell_len(line.plain)) // 2)
+                       line.pad_right(width - cell_len(line.plain))
+               elif justify == "right":
+                   for line in self._lines:
+                       line.rstrip()
+                       line.truncate(width, overflow=overflow)
+                       line.pad_left(width - cell_len(line.plain))
+               elif justify == "full":
+                   for line_index, line in enumerate(self._lines):
+                       if line_index == len(self._lines) - 1:
+                           break
+                       words = line.split(" ")
+                       words_size = sum(cell_len(word.plain) for word in words)
+                       num_spaces = len(words) - 1
+                       spaces = [1 for _ in range(num_spaces)]
+                       index = 0
+                       if spaces:
+                           while words_size + num_spaces < width:
+                               spaces[len(spaces) - index - 1] += 1
+                               num_spaces += 1
+                               index = (index + 1) % len(spaces)
+                       tokens: List[Text] = []
+                       for index, (word, next_word) in enumerate(
+                           zip_longest(words, words[1:])
+                       ):
+                           tokens.append(word)
+                           if index < len(spaces):
+                               style = word.get_style_at_offset(console, -1)
+                               next_style = next_word.get_style_at_offset(console, 0)
+                               space_style = style if style == next_style else line.style
+                               tokens.append(Text(" " * spaces[index], style=space_style))
+                       self[line_index] = Text("").join(tokens)

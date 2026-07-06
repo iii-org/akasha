@@ -1,0 +1,177 @@
+    1: from typing import Any, Literal
+       
+    1: from pydantic import AnyHttpUrl, AnyUrl, BaseModel, Field, field_validator
+       
+       
+    2: class OAuthToken(BaseModel):
+    1:     """
+           See https://datatracker.ietf.org/doc/html/rfc6749#section-5.1
+           """
+       
+    1:     access_token: str
+    1:     token_type: Literal["Bearer"] = "Bearer"
+    1:     expires_in: int | None = None
+    1:     scope: str | None = None
+    1:     refresh_token: str | None = None
+       
+    2:     @field_validator("token_type", mode="before")
+    2:     @classmethod
+    2:     def normalize_token_type(cls, v: str | None) -> str | None:
+               if isinstance(v, str):
+                   # Bearer is title-cased in the spec, so we normalize it
+                   # https://datatracker.ietf.org/doc/html/rfc6750#section-4
+                   return v.title()
+               return v  # pragma: no cover
+       
+       
+    2: class InvalidScopeError(Exception):
+    1:     def __init__(self, message: str):
+               self.message = message
+       
+       
+    2: class InvalidRedirectUriError(Exception):
+    1:     def __init__(self, message: str):
+               self.message = message
+       
+       
+    2: class OAuthClientMetadata(BaseModel):
+    1:     """
+           RFC 7591 OAuth 2.0 Dynamic Client Registration metadata.
+           See https://datatracker.ietf.org/doc/html/rfc7591#section-2
+           for the full specification.
+           """
+       
+    1:     redirect_uris: list[AnyUrl] | None = Field(..., min_length=1)
+           # supported auth methods for the token endpoint
+    2:     token_endpoint_auth_method: (
+    1:         Literal["none", "client_secret_post", "client_secret_basic", "private_key_jwt"] | None
+    1:     ) = None
+           # supported grant_types of this implementation
+    2:     grant_types: list[
+    1:         Literal["authorization_code", "refresh_token", "urn:ietf:params:oauth:grant-type:jwt-bearer"] | str
+    1:     ] = [
+    1:         "authorization_code",
+    1:         "refresh_token",
+           ]
+           # The MCP spec requires the "code" response type, but OAuth
+           # servers may also return additional types they support
+    1:     response_types: list[str] = ["code"]
+    1:     scope: str | None = None
+       
+           # these fields are currently unused, but we support & store them for potential
+           # future use
+    1:     client_name: str | None = None
+    1:     client_uri: AnyHttpUrl | None = None
+    1:     logo_uri: AnyHttpUrl | None = None
+    1:     contacts: list[str] | None = None
+    1:     tos_uri: AnyHttpUrl | None = None
+    1:     policy_uri: AnyHttpUrl | None = None
+    1:     jwks_uri: AnyHttpUrl | None = None
+    1:     jwks: Any | None = None
+    1:     software_id: str | None = None
+    1:     software_version: str | None = None
+       
+    3:     @field_validator(
+    1:         "client_uri",
+    1:         "logo_uri",
+    1:         "tos_uri",
+    1:         "policy_uri",
+    1:         "jwks_uri",
+    1:         mode="before",
+           )
+    2:     @classmethod
+    2:     def _empty_string_optional_url_to_none(cls, v: object) -> object:
+               # RFC 7591 §2 marks these URL fields OPTIONAL. Some authorization servers
+               # echo omitted metadata back as "" instead of dropping the keys, which
+               # AnyHttpUrl would otherwise reject — throwing away an otherwise valid
+               # registration response. Treat "" as absent.
+               if v == "":
+                   return None
+               return v
+       
+    1:     def validate_scope(self, requested_scope: str | None) -> list[str] | None:
+               if requested_scope is None:
+                   return None
+               requested_scopes = requested_scope.split(" ")
+               allowed_scopes = [] if self.scope is None else self.scope.split(" ")
+               for scope in requested_scopes:
+                   if scope not in allowed_scopes:  # pragma: no branch
+                       raise InvalidScopeError(f"Client was not registered with scope {scope}")
+               return requested_scopes  # pragma: no cover
+       
+    1:     def validate_redirect_uri(self, redirect_uri: AnyUrl | None) -> AnyUrl:
+               if redirect_uri is not None:
+                   # Validate redirect_uri against client's registered redirect URIs
+                   if self.redirect_uris is None or redirect_uri not in self.redirect_uris:
+                       raise InvalidRedirectUriError(f"Redirect URI '{redirect_uri}' not registered for client")
+                   return redirect_uri
+               elif self.redirect_uris is not None and len(self.redirect_uris) == 1:
+                   return self.redirect_uris[0]
+               else:
+                   raise InvalidRedirectUriError("redirect_uri must be specified when client has multiple registered URIs")
+       
+       
+    2: class OAuthClientInformationFull(OAuthClientMetadata):
+    1:     """
+           RFC 7591 OAuth 2.0 Dynamic Client Registration full response
+           (client information plus metadata).
+           """
+       
+    1:     client_id: str | None = None
+    1:     client_secret: str | None = None
+    1:     client_id_issued_at: int | None = None
+    1:     client_secret_expires_at: int | None = None
+       
+       
+    2: class OAuthMetadata(BaseModel):
+    1:     """
+           RFC 8414 OAuth 2.0 Authorization Server Metadata.
+           See https://datatracker.ietf.org/doc/html/rfc8414#section-2
+           """
+       
+    1:     issuer: AnyHttpUrl
+    1:     authorization_endpoint: AnyHttpUrl
+    1:     token_endpoint: AnyHttpUrl
+    1:     registration_endpoint: AnyHttpUrl | None = None
+    1:     scopes_supported: list[str] | None = None
+    1:     response_types_supported: list[str] = ["code"]
+    1:     response_modes_supported: list[str] | None = None
+    1:     grant_types_supported: list[str] | None = None
+    1:     token_endpoint_auth_methods_supported: list[str] | None = None
+    1:     token_endpoint_auth_signing_alg_values_supported: list[str] | None = None
+    1:     service_documentation: AnyHttpUrl | None = None
+    1:     ui_locales_supported: list[str] | None = None
+    1:     op_policy_uri: AnyHttpUrl | None = None
+    1:     op_tos_uri: AnyHttpUrl | None = None
+    1:     revocation_endpoint: AnyHttpUrl | None = None
+    1:     revocation_endpoint_auth_methods_supported: list[str] | None = None
+    1:     revocation_endpoint_auth_signing_alg_values_supported: list[str] | None = None
+    1:     introspection_endpoint: AnyHttpUrl | None = None
+    1:     introspection_endpoint_auth_methods_supported: list[str] | None = None
+    1:     introspection_endpoint_auth_signing_alg_values_supported: list[str] | None = None
+    1:     code_challenge_methods_supported: list[str] | None = None
+    1:     client_id_metadata_document_supported: bool | None = None
+       
+       
+    2: class ProtectedResourceMetadata(BaseModel):
+    1:     """
+           RFC 9728 OAuth 2.0 Protected Resource Metadata.
+           See https://datatracker.ietf.org/doc/html/rfc9728#section-2
+           """
+       
+    1:     resource: AnyHttpUrl
+    1:     authorization_servers: list[AnyHttpUrl] = Field(..., min_length=1)
+    1:     jwks_uri: AnyHttpUrl | None = None
+    1:     scopes_supported: list[str] | None = None
+    1:     bearer_methods_supported: list[str] | None = Field(default=["header"])  # MCP only supports header method
+    1:     resource_signing_alg_values_supported: list[str] | None = None
+    1:     resource_name: str | None = None
+    1:     resource_documentation: AnyHttpUrl | None = None
+    1:     resource_policy_uri: AnyHttpUrl | None = None
+    1:     resource_tos_uri: AnyHttpUrl | None = None
+           # tls_client_certificate_bound_access_tokens default is False, but ommited here for clarity
+    1:     tls_client_certificate_bound_access_tokens: bool | None = None
+    1:     authorization_details_types_supported: list[str] | None = None
+    1:     dpop_signing_alg_values_supported: list[str] | None = None
+           # dpop_bound_access_tokens_required default is False, but ommited here for clarity
+    1:     dpop_bound_access_tokens_required: bool | None = None

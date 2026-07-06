@@ -1,0 +1,84 @@
+    1: from enum import Enum
+    1: from typing import Optional
+       
+    1: import torch
+       
+       
+    2: class EffectType(Enum):
+    1:     ORDERED = "Ordered"
+       
+       
+    1: from torch._library.utils import RegistrationHandle
+       
+       
+       # These classes do not have side effects as they just store quantization
+       # params, so we dont need to mark them as ordered
+    1: skip_classes = (
+           "__torch__.torch.classes.quantized.Conv2dPackedParamsBase",
+           "__torch__.torch.classes.quantized.Conv3dPackedParamsBase",
+           "__torch__.torch.classes.quantized.EmbeddingPackedParamsBase",
+           "__torch__.torch.classes.quantized.LinearPackedParamsBase",
+           "__torch__.torch.classes.xnnpack.Conv2dOpContext",
+           "__torch__.torch.classes.xnnpack.LinearOpContext",
+           "__torch__.torch.classes.xnnpack.TransposeConv2dOpContext",
+       )
+       
+       
+    2: class EffectHolder:
+    1:     """A holder where one can register an effect impl to."""
+       
+    1:     def __init__(self, qualname: str):
+  118:         self.qualname: str = qualname
+  118:         self._set_default_effect()
+       
+    1:     def _set_default_effect(self) -> None:
+  118:         self._effect: Optional[EffectType] = None
+       
+               # If the op contains a ScriptObject input, we want to mark it as having effects
+  118:         namespace, opname = torch._library.utils.parse_namespace(self.qualname)
+  118:         split = opname.split(".")
+  118:         if len(split) > 1:
+    1:             assert len(split) == 2, (
+                       f"Tried to split {opname} based on '.' but found more than 1 '.'"
+                   )
+    1:             opname, overload = split
+               else:
+  117:             overload = ""
+       
+  118:         if namespace == "higher_order":
+    2:             return
+       
+  116:         opname = f"{namespace}::{opname}"
+  116:         if torch._C._get_operation_overload(opname, overload) is not None:
+                   # Since we call this when destroying the library, sometimes the
+                   # schema will be gone already at that time.
+  116:             schema = torch._C._get_schema(opname, overload)
+  338:             for arg in schema.arguments:
+  223:                 if isinstance(arg.type, torch.ClassType):
+    1:                     type_str = arg.type.str()  # pyrefly: ignore[missing-attribute]
+    1:                     if type_str in skip_classes:
+                               continue
+    1:                     self._effect = EffectType.ORDERED
+    1:                     return
+       
+    2:     @property
+    2:     def effect(self) -> Optional[EffectType]:
+               return self._effect
+       
+    2:     @effect.setter
+    2:     def effect(self, _):
+               raise RuntimeError("Unable to directly set kernel.")
+       
+    1:     def register(self, effect: Optional[EffectType]) -> RegistrationHandle:
+               """Register an effect
+       
+               Returns a RegistrationHandle that one can use to de-register this
+               effect.
+               """
+    4:         self._effect = effect
+       
+    4:         def deregister_effect():
+                   self._set_default_effect()
+       
+    4:         handle = RegistrationHandle(deregister_effect)
+    4:         return handle

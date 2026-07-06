@@ -1,0 +1,115 @@
+    1: from __future__ import annotations
+       
+    1: from ._core._contextmanagers import AsyncContextManagerMixin as AsyncContextManagerMixin
+    1: from ._core._contextmanagers import ContextManagerMixin as ContextManagerMixin
+    1: from ._core._eventloop import current_time as current_time
+    1: from ._core._eventloop import get_all_backends as get_all_backends
+    1: from ._core._eventloop import get_available_backends as get_available_backends
+    1: from ._core._eventloop import get_cancelled_exc_class as get_cancelled_exc_class
+    1: from ._core._eventloop import run as run
+    1: from ._core._eventloop import sleep as sleep
+    1: from ._core._eventloop import sleep_forever as sleep_forever
+    1: from ._core._eventloop import sleep_until as sleep_until
+    1: from ._core._exceptions import BrokenResourceError as BrokenResourceError
+    1: from ._core._exceptions import BrokenWorkerInterpreter as BrokenWorkerInterpreter
+    1: from ._core._exceptions import BrokenWorkerProcess as BrokenWorkerProcess
+    1: from ._core._exceptions import BusyResourceError as BusyResourceError
+    1: from ._core._exceptions import ClosedResourceError as ClosedResourceError
+    1: from ._core._exceptions import ConnectionFailed as ConnectionFailed
+    1: from ._core._exceptions import DelimiterNotFound as DelimiterNotFound
+    1: from ._core._exceptions import EndOfStream as EndOfStream
+    1: from ._core._exceptions import IncompleteRead as IncompleteRead
+    1: from ._core._exceptions import NoEventLoopError as NoEventLoopError
+    1: from ._core._exceptions import RunFinishedError as RunFinishedError
+    1: from ._core._exceptions import TaskCancelled as TaskCancelled
+    1: from ._core._exceptions import TaskFailed as TaskFailed
+    1: from ._core._exceptions import TaskNotFinished as TaskNotFinished
+    1: from ._core._exceptions import TypedAttributeLookupError as TypedAttributeLookupError
+    1: from ._core._exceptions import WouldBlock as WouldBlock
+    1: from ._core._fileio import AsyncFile as AsyncFile
+    1: from ._core._fileio import Path as Path
+    1: from ._core._fileio import open_file as open_file
+    1: from ._core._fileio import wrap_file as wrap_file
+    1: from ._core._resources import aclose_forcefully as aclose_forcefully
+    1: from ._core._signals import open_signal_receiver as open_signal_receiver
+    1: from ._core._sockets import TCPConnectable as TCPConnectable
+    1: from ._core._sockets import UNIXConnectable as UNIXConnectable
+    1: from ._core._sockets import as_connectable as as_connectable
+    1: from ._core._sockets import connect_tcp as connect_tcp
+    1: from ._core._sockets import connect_unix as connect_unix
+    1: from ._core._sockets import create_connected_udp_socket as create_connected_udp_socket
+    1: from ._core._sockets import (
+           create_connected_unix_datagram_socket as create_connected_unix_datagram_socket,
+       )
+    1: from ._core._sockets import create_tcp_listener as create_tcp_listener
+    1: from ._core._sockets import create_udp_socket as create_udp_socket
+    1: from ._core._sockets import create_unix_datagram_socket as create_unix_datagram_socket
+    1: from ._core._sockets import create_unix_listener as create_unix_listener
+    1: from ._core._sockets import getaddrinfo as getaddrinfo
+    1: from ._core._sockets import getnameinfo as getnameinfo
+    1: from ._core._sockets import notify_closing as notify_closing
+    1: from ._core._sockets import wait_readable as wait_readable
+    1: from ._core._sockets import wait_socket_readable as wait_socket_readable
+    1: from ._core._sockets import wait_socket_writable as wait_socket_writable
+    1: from ._core._sockets import wait_writable as wait_writable
+    1: from ._core._streams import create_memory_object_stream as create_memory_object_stream
+    1: from ._core._subprocesses import open_process as open_process
+    1: from ._core._subprocesses import run_process as run_process
+    1: from ._core._synchronization import CapacityLimiter as CapacityLimiter
+    1: from ._core._synchronization import (
+           CapacityLimiterStatistics as CapacityLimiterStatistics,
+       )
+    1: from ._core._synchronization import Condition as Condition
+    1: from ._core._synchronization import ConditionStatistics as ConditionStatistics
+    1: from ._core._synchronization import Event as Event
+    1: from ._core._synchronization import EventStatistics as EventStatistics
+    1: from ._core._synchronization import Lock as Lock
+    1: from ._core._synchronization import LockStatistics as LockStatistics
+    1: from ._core._synchronization import ResourceGuard as ResourceGuard
+    1: from ._core._synchronization import Semaphore as Semaphore
+    1: from ._core._synchronization import SemaphoreStatistics as SemaphoreStatistics
+    1: from ._core._tasks import TASK_STATUS_IGNORED as TASK_STATUS_IGNORED
+    1: from ._core._tasks import CancelScope as CancelScope
+    1: from ._core._tasks import TaskHandle as TaskHandle
+    1: from ._core._tasks import create_task_group as create_task_group
+    1: from ._core._tasks import current_effective_deadline as current_effective_deadline
+    1: from ._core._tasks import fail_after as fail_after
+    1: from ._core._tasks import move_on_after as move_on_after
+    1: from ._core._tempfile import NamedTemporaryFile as NamedTemporaryFile
+    1: from ._core._tempfile import SpooledTemporaryFile as SpooledTemporaryFile
+    1: from ._core._tempfile import TemporaryDirectory as TemporaryDirectory
+    1: from ._core._tempfile import TemporaryFile as TemporaryFile
+    1: from ._core._tempfile import gettempdir as gettempdir
+    1: from ._core._tempfile import gettempdirb as gettempdirb
+    1: from ._core._tempfile import mkdtemp as mkdtemp
+    1: from ._core._tempfile import mkstemp as mkstemp
+    1: from ._core._testing import TaskInfo as TaskInfo
+    1: from ._core._testing import get_current_task as get_current_task
+    1: from ._core._testing import get_running_tasks as get_running_tasks
+    1: from ._core._testing import wait_all_tasks_blocked as wait_all_tasks_blocked
+    1: from ._core._typedattr import TypedAttributeProvider as TypedAttributeProvider
+    1: from ._core._typedattr import TypedAttributeSet as TypedAttributeSet
+    1: from ._core._typedattr import typed_attribute as typed_attribute
+       
+       # Re-export imports so they look like they live directly in this package
+  103: for __value in list(locals().values()):
+  102:     if getattr(__value, "__module__", "").startswith("anyio."):
+   86:         __value.__module__ = __name__
+       
+       
+    1: del __value
+       
+       
+    1: def __getattr__(attr: str) -> type[BrokenWorkerInterpreter]:
+           """Support deprecated aliases."""
+           if attr == "BrokenWorkerIntepreter":
+               import warnings
+       
+               warnings.warn(
+                   "The 'BrokenWorkerIntepreter' alias is deprecated, use 'BrokenWorkerInterpreter' instead.",
+                   DeprecationWarning,
+                   stacklevel=2,
+               )
+               return BrokenWorkerInterpreter
+       
+           raise AttributeError(f"module {__name__!r} has no attribute {attr!r}")

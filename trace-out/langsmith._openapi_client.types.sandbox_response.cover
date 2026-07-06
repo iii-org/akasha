@@ -1,0 +1,416 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Union, Optional
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = [
+           "SandboxResponse",
+           "MountConfig",
+           "MountConfigAuth",
+           "MountConfigAuthAws",
+           "MountConfigAuthAwsAccessKeyID",
+           "MountConfigAuthAwsSecretAccessKey",
+           "MountConfigAuthGcp",
+           "MountConfigAuthGcpServiceAccountJson",
+           "MountConfigMount",
+           "MountConfigMountSandboxapiS3BucketMountSpec",
+           "MountConfigMountSandboxapiS3BucketMountSpecS3",
+           "MountConfigMountSandboxapiS3BucketMountSpecCache",
+           "MountConfigMountSandboxapiS3BucketMountSpecGcs",
+           "MountConfigMountSandboxapiS3BucketMountSpecGit",
+           "MountConfigMountSandboxapiS3BucketMountSpecGitRef",
+           "MountConfigMountSandboxapiGcsBucketMountSpec",
+           "MountConfigMountSandboxapiGcsBucketMountSpecGcs",
+           "MountConfigMountSandboxapiGcsBucketMountSpecCache",
+           "MountConfigMountSandboxapiGcsBucketMountSpecGit",
+           "MountConfigMountSandboxapiGcsBucketMountSpecGitRef",
+           "MountConfigMountSandboxapiGcsBucketMountSpecS3",
+           "MountConfigMountSandboxapiGitRepoMountSpec",
+           "MountConfigMountSandboxapiGitRepoMountSpecGit",
+           "MountConfigMountSandboxapiGitRepoMountSpecGitRef",
+           "MountConfigMountSandboxapiGitRepoMountSpecCache",
+           "MountConfigMountSandboxapiGitRepoMountSpecGcs",
+           "MountConfigMountSandboxapiGitRepoMountSpecS3",
+           "ProxyConfig",
+           "ProxyConfigAccessControl",
+           "ProxyConfigCallback",
+           "ProxyConfigCallbackRequestHeader",
+           "ProxyConfigRule",
+           "ProxyConfigRuleAws",
+           "ProxyConfigRuleAwsAccessKeyID",
+           "ProxyConfigRuleAwsSecretAccessKey",
+           "ProxyConfigRuleGcp",
+           "ProxyConfigRuleGcpServiceAccountJson",
+           "ProxyConfigRuleHeader",
+       ]
+       
+       
+    2: class MountConfigAuthAwsAccessKeyID(BaseModel):
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class MountConfigAuthAwsSecretAccessKey(BaseModel):
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class MountConfigAuthAws(BaseModel):
+    1:     access_key_id: MountConfigAuthAwsAccessKeyID
+       
+    1:     secret_access_key: MountConfigAuthAwsSecretAccessKey
+       
+       
+    2: class MountConfigAuthGcpServiceAccountJson(BaseModel):
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class MountConfigAuthGcp(BaseModel):
+    1:     service_account_json: MountConfigAuthGcpServiceAccountJson
+       
+       
+    2: class MountConfigAuth(BaseModel):
+    1:     aws: Optional[MountConfigAuthAws] = None
+       
+    1:     gcp: Optional[MountConfigAuthGcp] = None
+       
+       
+    2: class MountConfigMountSandboxapiS3BucketMountSpecS3(BaseModel):
+    1:     bucket: str
+       
+    1:     region: str
+       
+    1:     endpoint_url: Optional[str] = None
+       
+    1:     path_style: Optional[bool] = None
+       
+    1:     prefix: Optional[str] = None
+       
+       
+    2: class MountConfigMountSandboxapiS3BucketMountSpecCache(BaseModel):
+    1:     max_size_bytes: Optional[int] = None
+       
+    1:     writeback_seconds: Optional[int] = None
+       
+       
+    2: class MountConfigMountSandboxapiS3BucketMountSpecGcs(BaseModel):
+    1:     bucket: str
+       
+    1:     prefix: Optional[str] = None
+       
+       
+    2: class MountConfigMountSandboxapiS3BucketMountSpecGitRef(BaseModel):
+    1:     name: str
+       
+    1:     type: Literal["branch", "tag"]
+       
+       
+    2: class MountConfigMountSandboxapiS3BucketMountSpecGit(BaseModel):
+    1:     remote_url: str
+       
+    1:     ref: Optional[MountConfigMountSandboxapiS3BucketMountSpecGitRef] = None
+       
+    1:     refresh_interval_seconds: Optional[int] = None
+       
+       
+    2: class MountConfigMountSandboxapiS3BucketMountSpec(BaseModel):
+    1:     id: str
+       
+    1:     mount_path: str
+       
+    1:     s3: MountConfigMountSandboxapiS3BucketMountSpecS3
+       
+    1:     type: Literal["s3", "gcs", "git"]
+       
+    1:     cache: Optional[MountConfigMountSandboxapiS3BucketMountSpecCache] = None
+       
+    1:     gcs: Optional[MountConfigMountSandboxapiS3BucketMountSpecGcs] = None
+       
+    1:     git: Optional[MountConfigMountSandboxapiS3BucketMountSpecGit] = None
+       
+    1:     read_only: Optional[bool] = None
+       
+       
+    2: class MountConfigMountSandboxapiGcsBucketMountSpecGcs(BaseModel):
+    1:     bucket: str
+       
+    1:     prefix: Optional[str] = None
+       
+       
+    2: class MountConfigMountSandboxapiGcsBucketMountSpecCache(BaseModel):
+    1:     max_size_bytes: Optional[int] = None
+       
+    1:     writeback_seconds: Optional[int] = None
+       
+       
+    2: class MountConfigMountSandboxapiGcsBucketMountSpecGitRef(BaseModel):
+    1:     name: str
+       
+    1:     type: Literal["branch", "tag"]
+       
+       
+    2: class MountConfigMountSandboxapiGcsBucketMountSpecGit(BaseModel):
+    1:     remote_url: str
+       
+    1:     ref: Optional[MountConfigMountSandboxapiGcsBucketMountSpecGitRef] = None
+       
+    1:     refresh_interval_seconds: Optional[int] = None
+       
+       
+    2: class MountConfigMountSandboxapiGcsBucketMountSpecS3(BaseModel):
+    1:     bucket: str
+       
+    1:     region: str
+       
+    1:     endpoint_url: Optional[str] = None
+       
+    1:     path_style: Optional[bool] = None
+       
+    1:     prefix: Optional[str] = None
+       
+       
+    2: class MountConfigMountSandboxapiGcsBucketMountSpec(BaseModel):
+    1:     id: str
+       
+    1:     gcs: MountConfigMountSandboxapiGcsBucketMountSpecGcs
+       
+    1:     mount_path: str
+       
+    1:     type: Literal["s3", "gcs", "git"]
+       
+    1:     cache: Optional[MountConfigMountSandboxapiGcsBucketMountSpecCache] = None
+       
+    1:     git: Optional[MountConfigMountSandboxapiGcsBucketMountSpecGit] = None
+       
+    1:     read_only: Optional[bool] = None
+       
+    1:     s3: Optional[MountConfigMountSandboxapiGcsBucketMountSpecS3] = None
+       
+       
+    2: class MountConfigMountSandboxapiGitRepoMountSpecGitRef(BaseModel):
+    1:     name: str
+       
+    1:     type: Literal["branch", "tag"]
+       
+       
+    2: class MountConfigMountSandboxapiGitRepoMountSpecGit(BaseModel):
+    1:     remote_url: str
+       
+    1:     ref: Optional[MountConfigMountSandboxapiGitRepoMountSpecGitRef] = None
+       
+    1:     refresh_interval_seconds: Optional[int] = None
+       
+       
+    2: class MountConfigMountSandboxapiGitRepoMountSpecCache(BaseModel):
+    1:     max_size_bytes: Optional[int] = None
+       
+    1:     writeback_seconds: Optional[int] = None
+       
+       
+    2: class MountConfigMountSandboxapiGitRepoMountSpecGcs(BaseModel):
+    1:     bucket: str
+       
+    1:     prefix: Optional[str] = None
+       
+       
+    2: class MountConfigMountSandboxapiGitRepoMountSpecS3(BaseModel):
+    1:     bucket: str
+       
+    1:     region: str
+       
+    1:     endpoint_url: Optional[str] = None
+       
+    1:     path_style: Optional[bool] = None
+       
+    1:     prefix: Optional[str] = None
+       
+       
+    2: class MountConfigMountSandboxapiGitRepoMountSpec(BaseModel):
+    1:     id: str
+       
+    1:     git: MountConfigMountSandboxapiGitRepoMountSpecGit
+       
+    1:     mount_path: str
+       
+    1:     type: Literal["s3", "gcs", "git"]
+       
+    1:     cache: Optional[MountConfigMountSandboxapiGitRepoMountSpecCache] = None
+       
+    1:     gcs: Optional[MountConfigMountSandboxapiGitRepoMountSpecGcs] = None
+       
+    1:     read_only: Optional[bool] = None
+       
+    1:     s3: Optional[MountConfigMountSandboxapiGitRepoMountSpecS3] = None
+       
+       
+    2: MountConfigMount: TypeAlias = Union[
+    2:     MountConfigMountSandboxapiS3BucketMountSpec,
+    1:     MountConfigMountSandboxapiGcsBucketMountSpec,
+    1:     MountConfigMountSandboxapiGitRepoMountSpec,
+       ]
+       
+       
+    2: class MountConfig(BaseModel):
+    1:     auth: Optional[MountConfigAuth] = None
+       
+    1:     mounts: Optional[List[MountConfigMount]] = None
+       
+       
+    2: class ProxyConfigAccessControl(BaseModel):
+    1:     allow_list: Optional[List[str]] = None
+       
+    1:     deny_list: Optional[List[str]] = None
+       
+       
+    2: class ProxyConfigCallbackRequestHeader(BaseModel):
+    1:     name: str
+       
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class ProxyConfigCallback(BaseModel):
+    1:     match_hosts: List[str]
+       
+    1:     ttl_seconds: int
+       
+    1:     url: str
+       
+    1:     full_request: Optional[bool] = None
+       
+    1:     request_headers: Optional[List[ProxyConfigCallbackRequestHeader]] = None
+       
+       
+    2: class ProxyConfigRuleAwsAccessKeyID(BaseModel):
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class ProxyConfigRuleAwsSecretAccessKey(BaseModel):
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class ProxyConfigRuleAws(BaseModel):
+    1:     access_key_id: ProxyConfigRuleAwsAccessKeyID
+       
+    1:     secret_access_key: ProxyConfigRuleAwsSecretAccessKey
+       
+       
+    2: class ProxyConfigRuleGcpServiceAccountJson(BaseModel):
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class ProxyConfigRuleGcp(BaseModel):
+    1:     scopes: List[str]
+       
+    1:     service_account_json: ProxyConfigRuleGcpServiceAccountJson
+       
+       
+    2: class ProxyConfigRuleHeader(BaseModel):
+    1:     name: str
+       
+    1:     type: Literal["plaintext", "opaque", "workspace_secret"]
+       
+    1:     is_set: Optional[bool] = None
+       
+    1:     value: Optional[str] = None
+       
+       
+    2: class ProxyConfigRule(BaseModel):
+    1:     name: str
+       
+    1:     aws: Optional[ProxyConfigRuleAws] = None
+       
+    1:     enabled: Optional[bool] = None
+       
+    1:     gcp: Optional[ProxyConfigRuleGcp] = None
+       
+    1:     headers: Optional[List[ProxyConfigRuleHeader]] = None
+       
+    1:     match_hosts: Optional[List[str]] = None
+    1:     """MatchHosts is only accepted for header injection rules.
+       
+           Provider auth rules use built-in host matching.
+           """
+       
+    1:     match_paths: Optional[List[str]] = None
+       
+    1:     type: Optional[str] = None
+       
+       
+    2: class ProxyConfig(BaseModel):
+    1:     access_control: Optional[ProxyConfigAccessControl] = None
+       
+    1:     callbacks: Optional[List[ProxyConfigCallback]] = None
+       
+    1:     no_proxy: Optional[List[str]] = None
+       
+    1:     rules: Optional[List[ProxyConfigRule]] = None
+       
+       
+    2: class SandboxResponse(BaseModel):
+    1:     id: Optional[str] = None
+       
+    1:     cpu_millicores: Optional[int] = None
+       
+    1:     created_at: Optional[str] = None
+       
+    1:     created_by: Optional[str] = None
+       
+    1:     dataplane_url: Optional[str] = None
+       
+    1:     delete_after_stop_seconds: Optional[int] = None
+       
+    1:     fs_capacity_bytes: Optional[int] = None
+       
+    1:     idle_ttl_seconds: Optional[int] = None
+       
+    1:     mem_bytes: Optional[int] = None
+       
+    1:     mount_config: Optional[MountConfig] = None
+       
+    1:     name: Optional[str] = None
+       
+    1:     proxy_config: Optional[ProxyConfig] = None
+       
+    1:     size_class: Optional[str] = None
+       
+    1:     snapshot_id: Optional[str] = None
+       
+    1:     status: Optional[str] = None
+       
+    1:     status_message: Optional[str] = None
+       
+    1:     stopped_at: Optional[str] = None
+       
+    1:     updated_at: Optional[str] = None
+       
+    1:     updated_by: Optional[str] = None
+       
+    1:     vcpus: Optional[int] = None

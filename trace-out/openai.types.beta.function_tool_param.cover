@@ -1,0 +1,16 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: from ..shared_params.function_definition import FunctionDefinition
+       
+    1: __all__ = ["FunctionToolParam"]
+       
+       
+    2: class FunctionToolParam(TypedDict, total=False):
+    1:     function: Required[FunctionDefinition]
+       
+    1:     type: Required[Literal["function"]]
+    1:     """The type of tool being defined: `function`"""

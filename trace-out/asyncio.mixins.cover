@@ -1,0 +1,21 @@
+    1: """Event loop mixins."""
+       
+    1: import threading
+    1: from . import events
+       
+    1: _global_lock = threading.Lock()
+       
+       
+    2: class _LoopBoundMixin:
+    1:     _loop = None
+       
+    1:     def _get_loop(self):
+               loop = events._get_running_loop()
+       
+               if self._loop is None:
+                   with _global_lock:
+                       if self._loop is None:
+                           self._loop = loop
+               if loop is not self._loop:
+                   raise RuntimeError(f'{self!r} is bound to a different event loop')
+               return loop

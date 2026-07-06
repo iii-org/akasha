@@ -1,0 +1,130 @@
+    1: """Tracers that call listeners."""
+       
+    1: from collections.abc import Awaitable, Callable
+    1: from typing import TYPE_CHECKING
+       
+    1: from langchain_core.runnables.config import (
+           RunnableConfig,
+           acall_func_with_variable_args,
+           call_func_with_variable_args,
+       )
+    1: from langchain_core.tracers.base import AsyncBaseTracer, BaseTracer
+    1: from langchain_core.tracers.schemas import Run
+       
+    1: if TYPE_CHECKING:
+           from uuid import UUID
+       
+    1: Listener = Callable[[Run], None] | Callable[[Run, RunnableConfig], None]
+    1: AsyncListener = (
+    1:     Callable[[Run], Awaitable[None]] | Callable[[Run, RunnableConfig], Awaitable[None]]
+       )
+       
+       
+    2: class RootListenersTracer(BaseTracer):
+    1:     """Tracer that calls listeners on run start, end, and error."""
+       
+    1:     log_missing_parent = False
+    1:     """Whether to log a warning if the parent is missing."""
+       
+    6:     def __init__(
+               self,
+               *,
+    1:         config: RunnableConfig,
+    1:         on_start: Listener | None,
+    1:         on_end: Listener | None,
+    1:         on_error: Listener | None,
+    1:     ) -> None:
+               """Initialize the tracer.
+       
+               Args:
+                   config: The runnable config.
+                   on_start: The listener to call on run start.
+                   on_end: The listener to call on run end.
+                   on_error: The listener to call on run error
+               """
+               super().__init__(_schema_format="original+chat")
+       
+               self.config = config
+               self._arg_on_start = on_start
+               self._arg_on_end = on_end
+               self._arg_on_error = on_error
+               self.root_id: UUID | None = None
+       
+    1:     def _persist_run(self, run: Run) -> None:
+               # This is a legacy method only called once for an entire run tree
+               # therefore not useful here
+               pass
+       
+    1:     def _on_run_create(self, run: Run) -> None:
+               if self.root_id is not None:
+                   return
+       
+               self.root_id = run.id
+       
+               if self._arg_on_start is not None:
+                   call_func_with_variable_args(self._arg_on_start, run, self.config)
+       
+    1:     def _on_run_update(self, run: Run) -> None:
+               if run.id != self.root_id:
+                   return
+       
+               if run.error is None:
+                   if self._arg_on_end is not None:
+                       call_func_with_variable_args(self._arg_on_end, run, self.config)
+               elif self._arg_on_error is not None:
+                   call_func_with_variable_args(self._arg_on_error, run, self.config)
+       
+       
+    2: class AsyncRootListenersTracer(AsyncBaseTracer):
+    1:     """Async tracer that calls listeners on run start, end, and error."""
+       
+    1:     log_missing_parent = False
+    1:     """Whether to log a warning if the parent is missing."""
+       
+    6:     def __init__(
+               self,
+               *,
+    1:         config: RunnableConfig,
+    1:         on_start: AsyncListener | None,
+    1:         on_end: AsyncListener | None,
+    1:         on_error: AsyncListener | None,
+    1:     ) -> None:
+               """Initialize the tracer.
+       
+               Args:
+                   config: The runnable config.
+                   on_start: The listener to call on run start.
+                   on_end: The listener to call on run end.
+                   on_error: The listener to call on run error
+               """
+               super().__init__(_schema_format="original+chat")
+       
+               self.config = config
+               self._arg_on_start = on_start
+               self._arg_on_end = on_end
+               self._arg_on_error = on_error
+               self.root_id: UUID | None = None
+       
+    1:     async def _persist_run(self, run: Run) -> None:
+               # This is a legacy method only called once for an entire run tree
+               # therefore not useful here
+               pass
+       
+    1:     async def _on_run_create(self, run: Run) -> None:
+               if self.root_id is not None:
+                   return
+       
+               self.root_id = run.id
+       
+               if self._arg_on_start is not None:
+                   await acall_func_with_variable_args(self._arg_on_start, run, self.config)
+       
+    1:     async def _on_run_update(self, run: Run) -> None:
+               if run.id != self.root_id:
+                   return
+       
+               if run.error is None:
+                   if self._arg_on_end is not None:
+                       await acall_func_with_variable_args(self._arg_on_end, run, self.config)
+               elif self._arg_on_error is not None:
+                   await acall_func_with_variable_args(self._arg_on_error, run, self.config)

@@ -1,0 +1,117 @@
+       # Copyright (C) 2001-2006 Python Software Foundation
+       # Author: Barry Warsaw
+       # Contact: email-sig@python.org
+       
+    1: """email package exception classes."""
+       
+       
+    2: class MessageError(Exception):
+    1:     """Base class for errors in the email package."""
+       
+       
+    2: class MessageParseError(MessageError):
+    1:     """Base class for message parsing errors."""
+       
+       
+    2: class HeaderParseError(MessageParseError):
+    1:     """Error while parsing headers."""
+       
+       
+    2: class BoundaryError(MessageParseError):
+    1:     """Couldn't find terminating boundary."""
+       
+       
+    2: class MultipartConversionError(MessageError, TypeError):
+    1:     """Conversion to a multipart is prohibited."""
+       
+       
+    2: class CharsetError(MessageError):
+    1:     """An illegal charset was given."""
+       
+       
+    2: class HeaderWriteError(MessageError):
+    1:     """Error while writing headers."""
+       
+       
+       # These are parsing defects which the parser was able to work around.
+    2: class MessageDefect(ValueError):
+    1:     """Base class for a message defect."""
+       
+    1:     def __init__(self, line=None):
+               if line is not None:
+                   super().__init__(line)
+               self.line = line
+       
+    2: class NoBoundaryInMultipartDefect(MessageDefect):
+    1:     """A message claimed to be a multipart but had no boundary parameter."""
+       
+    2: class StartBoundaryNotFoundDefect(MessageDefect):
+    1:     """The claimed start boundary was never found."""
+       
+    2: class CloseBoundaryNotFoundDefect(MessageDefect):
+    1:     """A start boundary was found, but not the corresponding close boundary."""
+       
+    2: class FirstHeaderLineIsContinuationDefect(MessageDefect):
+    1:     """A message had a continuation line as its first header line."""
+       
+    2: class MisplacedEnvelopeHeaderDefect(MessageDefect):
+    1:     """A 'Unix-from' header was found in the middle of a header block."""
+       
+    2: class MissingHeaderBodySeparatorDefect(MessageDefect):
+    1:     """Found line with no leading whitespace and no colon before blank line."""
+       # XXX: backward compatibility, just in case (it was never emitted).
+    1: MalformedHeaderDefect = MissingHeaderBodySeparatorDefect
+       
+    2: class MultipartInvariantViolationDefect(MessageDefect):
+    1:     """A message claimed to be a multipart but no subparts were found."""
+       
+    2: class InvalidMultipartContentTransferEncodingDefect(MessageDefect):
+    1:     """An invalid content transfer encoding was set on the multipart itself."""
+       
+    2: class UndecodableBytesDefect(MessageDefect):
+    1:     """Header contained bytes that could not be decoded"""
+       
+    2: class InvalidBase64PaddingDefect(MessageDefect):
+    1:     """base64 encoded sequence had an incorrect length"""
+       
+    2: class InvalidBase64CharactersDefect(MessageDefect):
+    1:     """base64 encoded sequence had characters not in base64 alphabet"""
+       
+    2: class InvalidBase64LengthDefect(MessageDefect):
+    1:     """base64 encoded sequence had invalid length (1 mod 4)"""
+       
+       # These errors are specific to header parsing.
+       
+    2: class HeaderDefect(MessageDefect):
+    1:     """Base class for a header defect."""
+       
+    1:     def __init__(self, *args, **kw):
+               super().__init__(*args, **kw)
+       
+    2: class InvalidHeaderDefect(HeaderDefect):
+    1:     """Header is not valid, message gives details."""
+       
+    2: class HeaderMissingRequiredValue(HeaderDefect):
+    1:     """A header that must have a value had none"""
+       
+    2: class NonPrintableDefect(HeaderDefect):
+    1:     """ASCII characters outside the ascii-printable range found"""
+       
+    1:     def __init__(self, non_printables):
+               super().__init__(non_printables)
+               self.non_printables = non_printables
+       
+    1:     def __str__(self):
+               return ("the following ASCII non-printables found in header: "
+                   "{}".format(self.non_printables))
+       
+    2: class ObsoleteHeaderDefect(HeaderDefect):
+    1:     """Header uses syntax declared obsolete by RFC 5322"""
+       
+    2: class NonASCIILocalPartDefect(HeaderDefect):
+    1:     """local_part contains non-ASCII characters"""
+           # This defect only occurs during unicode parsing, not when
+           # parsing messages decoded from binary.
+       
+    2: class InvalidDateDefect(HeaderDefect):
+    1:     """Header has unparsable or invalid date"""

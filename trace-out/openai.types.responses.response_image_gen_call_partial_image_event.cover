@@ -1,0 +1,32 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseImageGenCallPartialImageEvent"]
+       
+       
+    2: class ResponseImageGenCallPartialImageEvent(BaseModel):
+    1:     """Emitted when a partial image is available during image generation streaming."""
+       
+    1:     item_id: str
+    1:     """The unique identifier of the image generation item being processed."""
+       
+    1:     output_index: int
+    1:     """The index of the output item in the response's output array."""
+       
+    1:     partial_image_b64: str
+    1:     """Base64-encoded partial image data, suitable for rendering as an image."""
+       
+    1:     partial_image_index: int
+    1:     """
+           0-based index for the partial image (backend is 1-based, but this is 0-based for
+           the user).
+           """
+       
+    1:     sequence_number: int
+    1:     """The sequence number of the image generation item being processed."""
+       
+    1:     type: Literal["response.image_generation_call.partial_image"]
+    1:     """The type of the event. Always 'response.image_generation_call.partial_image'."""

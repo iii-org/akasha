@@ -1,0 +1,74 @@
+    1: import contextlib
+    1: import copy
+    1: import threading
+    1: from pathlib import Path
+    1: from typing import Any, Callable, Dict, Optional, Tuple, Union
+       
+       
+    2: class Shim:  # pragma: no cover
+    1:     """Define a basic interface for external models. Users can create subclasses
+           of 'shim' to wrap external libraries. We provide shims for PyTorch.
+       
+           The Thinc Model class treats Shim objects as a sort of special type of
+           sublayer: it knows they're not actual Thinc Model instances, but it also
+           knows to talk to the shim instances when doing things like using transferring
+           between devices, loading in parameters, optimization. It also knows Shim
+           objects need to be serialized and deserialized with to/from bytes/disk,
+           rather than expecting that they'll be msgpack-serializable.
+           """
+       
+    1:     global_id: int = 0
+    1:     global_id_lock: threading.Lock = threading.Lock()
+    1:     cfg: Dict
+    1:     _model: Any
+    1:     _optimizer: Optional[Any]
+       
+    1:     def __init__(self, model: Any, config=None, optimizer: Any = None):
+               with Shim.global_id_lock:
+                   Shim.global_id += 1
+                   self.id = Shim.global_id
+       
+               self.cfg = dict(config) if config is not None else {}
+               self._model = model
+               self._optimizer = optimizer
+       
+    1:     def __call__(self, inputs, is_train: bool) -> Tuple[Any, Callable[..., Any]]:
+               raise NotImplementedError
+       
+    1:     def predict(self, fwd_args: Any) -> Any:
+               Y, backprop = self(fwd_args, is_train=False)
+               return Y
+       
+    1:     def begin_update(self, fwd_args: Any) -> Tuple[Any, Callable[..., Any]]:
+               return self(fwd_args, is_train=True)
+       
+    1:     def finish_update(self, optimizer):
+               raise NotImplementedError
+       
+    2:     @contextlib.contextmanager
+    2:     def use_params(self, params):
+               yield
+       
+    1:     def copy(self):
+               return copy.deepcopy(self)
+       
+    1:     def to_device(self, device_type: str, device_id: int):
+               raise NotImplementedError
+       
+    1:     def to_disk(self, path: Union[str, Path]):
+               bytes_data = self.to_bytes()
+               path = Path(path) if isinstance(path, str) else path
+               with path.open("wb") as file_:
+                   file_.write(bytes_data)
+       
+    1:     def from_disk(self, path: Union[str, Path]) -> "Shim":
+               path = Path(path) if isinstance(path, str) else path
+               with path.open("rb") as file_:
+                   bytes_data = file_.read()
+               return self.from_bytes(bytes_data)
+       
+    1:     def to_bytes(self):
+               raise NotImplementedError
+       
+    1:     def from_bytes(self, data) -> "Shim":
+               raise NotImplementedError

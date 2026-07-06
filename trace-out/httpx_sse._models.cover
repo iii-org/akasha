@@ -1,0 +1,54 @@
+    1: import json
+    1: from typing import Any, Optional
+       
+       
+    2: class ServerSentEvent:
+    6:     def __init__(
+               self,
+    2:         event: Optional[str] = None,
+    2:         data: Optional[str] = None,
+    2:         id: Optional[str] = None,
+    2:         retry: Optional[int] = None,
+    1:     ) -> None:
+               if not event:
+                   event = "message"
+       
+               if data is None:
+                   data = ""
+       
+               if id is None:
+                   id = ""
+       
+               self._event = event
+               self._data = data
+               self._id = id
+               self._retry = retry
+       
+    2:     @property
+    2:     def event(self) -> str:
+               return self._event
+       
+    2:     @property
+    2:     def data(self) -> str:
+               return self._data
+       
+    2:     @property
+    2:     def id(self) -> str:
+               return self._id
+       
+    2:     @property
+    2:     def retry(self) -> Optional[int]:
+               return self._retry
+       
+    1:     def json(self) -> Any:
+               return json.loads(self.data)
+       
+    1:     def __repr__(self) -> str:
+               pieces = [f"event={self.event!r}"]
+               if self.data != "":
+                   pieces.append(f"data={self.data!r}")
+               if self.id != "":
+                   pieces.append(f"id={self.id!r}")
+               if self.retry is not None:
+                   pieces.append(f"retry={self.retry!r}")
+               return f"ServerSentEvent({', '.join(pieces)})"

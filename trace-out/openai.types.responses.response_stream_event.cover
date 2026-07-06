@@ -1,0 +1,120 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union
+    1: from typing_extensions import Annotated, TypeAlias
+       
+    1: from ..._utils import PropertyInfo
+    1: from .response_error_event import ResponseErrorEvent
+    1: from .response_failed_event import ResponseFailedEvent
+    1: from .response_queued_event import ResponseQueuedEvent
+    1: from .response_created_event import ResponseCreatedEvent
+    1: from .response_completed_event import ResponseCompletedEvent
+    1: from .response_text_done_event import ResponseTextDoneEvent
+    1: from .response_audio_done_event import ResponseAudioDoneEvent
+    1: from .response_incomplete_event import ResponseIncompleteEvent
+    1: from .response_text_delta_event import ResponseTextDeltaEvent
+    1: from .response_audio_delta_event import ResponseAudioDeltaEvent
+    1: from .response_in_progress_event import ResponseInProgressEvent
+    1: from .response_refusal_done_event import ResponseRefusalDoneEvent
+    1: from .response_refusal_delta_event import ResponseRefusalDeltaEvent
+    1: from .response_mcp_call_failed_event import ResponseMcpCallFailedEvent
+    1: from .response_output_item_done_event import ResponseOutputItemDoneEvent
+    1: from .response_content_part_done_event import ResponseContentPartDoneEvent
+    1: from .response_output_item_added_event import ResponseOutputItemAddedEvent
+    1: from .response_content_part_added_event import ResponseContentPartAddedEvent
+    1: from .response_mcp_call_completed_event import ResponseMcpCallCompletedEvent
+    1: from .response_reasoning_text_done_event import ResponseReasoningTextDoneEvent
+    1: from .response_mcp_call_in_progress_event import ResponseMcpCallInProgressEvent
+    1: from .response_reasoning_text_delta_event import ResponseReasoningTextDeltaEvent
+    1: from .response_audio_transcript_done_event import ResponseAudioTranscriptDoneEvent
+    1: from .response_mcp_list_tools_failed_event import ResponseMcpListToolsFailedEvent
+    1: from .response_audio_transcript_delta_event import ResponseAudioTranscriptDeltaEvent
+    1: from .response_mcp_call_arguments_done_event import ResponseMcpCallArgumentsDoneEvent
+    1: from .response_image_gen_call_completed_event import ResponseImageGenCallCompletedEvent
+    1: from .response_mcp_call_arguments_delta_event import ResponseMcpCallArgumentsDeltaEvent
+    1: from .response_mcp_list_tools_completed_event import ResponseMcpListToolsCompletedEvent
+    1: from .response_image_gen_call_generating_event import ResponseImageGenCallGeneratingEvent
+    1: from .response_web_search_call_completed_event import ResponseWebSearchCallCompletedEvent
+    1: from .response_web_search_call_searching_event import ResponseWebSearchCallSearchingEvent
+    1: from .response_file_search_call_completed_event import ResponseFileSearchCallCompletedEvent
+    1: from .response_file_search_call_searching_event import ResponseFileSearchCallSearchingEvent
+    1: from .response_image_gen_call_in_progress_event import ResponseImageGenCallInProgressEvent
+    1: from .response_mcp_list_tools_in_progress_event import ResponseMcpListToolsInProgressEvent
+    1: from .response_custom_tool_call_input_done_event import ResponseCustomToolCallInputDoneEvent
+    1: from .response_reasoning_summary_part_done_event import ResponseReasoningSummaryPartDoneEvent
+    1: from .response_reasoning_summary_text_done_event import ResponseReasoningSummaryTextDoneEvent
+    1: from .response_web_search_call_in_progress_event import ResponseWebSearchCallInProgressEvent
+    1: from .response_custom_tool_call_input_delta_event import ResponseCustomToolCallInputDeltaEvent
+    1: from .response_file_search_call_in_progress_event import ResponseFileSearchCallInProgressEvent
+    1: from .response_function_call_arguments_done_event import ResponseFunctionCallArgumentsDoneEvent
+    1: from .response_image_gen_call_partial_image_event import ResponseImageGenCallPartialImageEvent
+    1: from .response_output_text_annotation_added_event import ResponseOutputTextAnnotationAddedEvent
+    1: from .response_reasoning_summary_part_added_event import ResponseReasoningSummaryPartAddedEvent
+    1: from .response_reasoning_summary_text_delta_event import ResponseReasoningSummaryTextDeltaEvent
+    1: from .response_function_call_arguments_delta_event import ResponseFunctionCallArgumentsDeltaEvent
+    1: from .response_code_interpreter_call_code_done_event import ResponseCodeInterpreterCallCodeDoneEvent
+    1: from .response_code_interpreter_call_completed_event import ResponseCodeInterpreterCallCompletedEvent
+    1: from .response_code_interpreter_call_code_delta_event import ResponseCodeInterpreterCallCodeDeltaEvent
+    1: from .response_code_interpreter_call_in_progress_event import ResponseCodeInterpreterCallInProgressEvent
+    1: from .response_code_interpreter_call_interpreting_event import ResponseCodeInterpreterCallInterpretingEvent
+       
+    1: __all__ = ["ResponseStreamEvent"]
+       
+    2: ResponseStreamEvent: TypeAlias = Annotated[
+    3:     Union[
+   53:         ResponseAudioDeltaEvent,
+    1:         ResponseAudioDoneEvent,
+    1:         ResponseAudioTranscriptDeltaEvent,
+    1:         ResponseAudioTranscriptDoneEvent,
+    1:         ResponseCodeInterpreterCallCodeDeltaEvent,
+    1:         ResponseCodeInterpreterCallCodeDoneEvent,
+    1:         ResponseCodeInterpreterCallCompletedEvent,
+    1:         ResponseCodeInterpreterCallInProgressEvent,
+    1:         ResponseCodeInterpreterCallInterpretingEvent,
+    1:         ResponseCompletedEvent,
+    1:         ResponseContentPartAddedEvent,
+    1:         ResponseContentPartDoneEvent,
+    1:         ResponseCreatedEvent,
+    1:         ResponseErrorEvent,
+    1:         ResponseFileSearchCallCompletedEvent,
+    1:         ResponseFileSearchCallInProgressEvent,
+    1:         ResponseFileSearchCallSearchingEvent,
+    1:         ResponseFunctionCallArgumentsDeltaEvent,
+    1:         ResponseFunctionCallArgumentsDoneEvent,
+    1:         ResponseInProgressEvent,
+    1:         ResponseFailedEvent,
+    1:         ResponseIncompleteEvent,
+    1:         ResponseOutputItemAddedEvent,
+    1:         ResponseOutputItemDoneEvent,
+    1:         ResponseReasoningSummaryPartAddedEvent,
+    1:         ResponseReasoningSummaryPartDoneEvent,
+    1:         ResponseReasoningSummaryTextDeltaEvent,
+    1:         ResponseReasoningSummaryTextDoneEvent,
+    1:         ResponseReasoningTextDeltaEvent,
+    1:         ResponseReasoningTextDoneEvent,
+    1:         ResponseRefusalDeltaEvent,
+    1:         ResponseRefusalDoneEvent,
+    1:         ResponseTextDeltaEvent,
+    1:         ResponseTextDoneEvent,
+    1:         ResponseWebSearchCallCompletedEvent,
+    1:         ResponseWebSearchCallInProgressEvent,
+    1:         ResponseWebSearchCallSearchingEvent,
+    1:         ResponseImageGenCallCompletedEvent,
+    1:         ResponseImageGenCallGeneratingEvent,
+    1:         ResponseImageGenCallInProgressEvent,
+    1:         ResponseImageGenCallPartialImageEvent,
+    1:         ResponseMcpCallArgumentsDeltaEvent,
+    1:         ResponseMcpCallArgumentsDoneEvent,
+    1:         ResponseMcpCallCompletedEvent,
+    1:         ResponseMcpCallFailedEvent,
+    1:         ResponseMcpCallInProgressEvent,
+    1:         ResponseMcpListToolsCompletedEvent,
+    1:         ResponseMcpListToolsFailedEvent,
+    1:         ResponseMcpListToolsInProgressEvent,
+    1:         ResponseOutputTextAnnotationAddedEvent,
+    1:         ResponseQueuedEvent,
+    1:         ResponseCustomToolCallInputDeltaEvent,
+    1:         ResponseCustomToolCallInputDoneEvent,
+           ],
+    1:     PropertyInfo(discriminator="type"),
+       ]

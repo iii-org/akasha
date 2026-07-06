@@ -1,0 +1,79 @@
+    1: from __future__ import annotations
+       
+    1: from abc import abstractmethod
+    1: from signal import Signals
+       
+    1: from ._resources import AsyncResource
+    1: from ._streams import ByteReceiveStream, ByteSendStream
+       
+       
+    2: class Process(AsyncResource):
+    1:     """An asynchronous version of :class:`subprocess.Popen`."""
+       
+    2:     @abstractmethod
+    2:     async def wait(self) -> int:
+               """
+               Wait until the process exits.
+       
+               :return: the exit code of the process
+               """
+       
+    2:     @abstractmethod
+    2:     def terminate(self) -> None:
+               """
+               Terminates the process, gracefully if possible.
+       
+               On Windows, this calls ``TerminateProcess()``.
+               On POSIX systems, this sends ``SIGTERM`` to the process.
+       
+               .. seealso:: :meth:`subprocess.Popen.terminate`
+               """
+       
+    2:     @abstractmethod
+    2:     def kill(self) -> None:
+               """
+               Kills the process.
+       
+               On Windows, this calls ``TerminateProcess()``.
+               On POSIX systems, this sends ``SIGKILL`` to the process.
+       
+               .. seealso:: :meth:`subprocess.Popen.kill`
+               """
+       
+    2:     @abstractmethod
+    2:     def send_signal(self, signal: Signals) -> None:
+               """
+               Send a signal to the subprocess.
+       
+               .. seealso:: :meth:`subprocess.Popen.send_signal`
+       
+               :param signal: the signal number (e.g. :data:`signal.SIGHUP`)
+               """
+       
+    2:     @property
+    2:     @abstractmethod
+    2:     def pid(self) -> int:
+               """The process ID of the process."""
+       
+    2:     @property
+    2:     @abstractmethod
+    2:     def returncode(self) -> int | None:
+               """
+               The return code of the process. If the process has not yet terminated, this will
+               be ``None``.
+               """
+       
+    2:     @property
+    2:     @abstractmethod
+    2:     def stdin(self) -> ByteSendStream | None:
+               """The stream for the standard input of the process."""
+       
+    2:     @property
+    2:     @abstractmethod
+    2:     def stdout(self) -> ByteReceiveStream | None:
+               """The stream for the standard output of the process."""
+       
+    2:     @property
+    2:     @abstractmethod
+    2:     def stderr(self) -> ByteReceiveStream | None:
+               """The stream for the standard error output of the process."""

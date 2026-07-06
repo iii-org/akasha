@@ -1,0 +1,335 @@
+    1: from __future__ import annotations
+       
+    1: import socket
+    1: import typing
+    1: import warnings
+    1: from email.errors import MessageDefect
+    1: from http.client import IncompleteRead as httplib_IncompleteRead
+       
+    1: if typing.TYPE_CHECKING:
+           from .connection import HTTPConnection
+           from .connectionpool import ConnectionPool
+           from .response import HTTPResponse
+           from .util.retry import Retry
+       
+       # Base Exceptions
+       
+       
+    2: class HTTPError(Exception):
+    1:     """Base exception used by this module."""
+       
+       
+    2: class HTTPWarning(Warning):
+    1:     """Base warning used by this module."""
+       
+       
+    1: _TYPE_REDUCE_RESULT = tuple[typing.Callable[..., object], tuple[object, ...]]
+       
+       
+    2: class PoolError(HTTPError):
+    1:     """Base exception for errors caused within a pool."""
+       
+    1:     def __init__(self, pool: ConnectionPool, message: str) -> None:
+               self.pool = pool
+               self._message = message
+               super().__init__(f"{pool}: {message}")
+       
+    1:     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+               # For pickling purposes.
+               return self.__class__, (None, self._message)
+       
+       
+    2: class RequestError(PoolError):
+    1:     """Base exception for PoolErrors that have associated URLs."""
+       
+    1:     def __init__(self, pool: ConnectionPool, url: str | None, message: str) -> None:
+               self.url = url
+               super().__init__(pool, message)
+       
+    1:     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+               # For pickling purposes.
+               return self.__class__, (None, self.url, self._message)
+       
+       
+    2: class SSLError(HTTPError):
+    1:     """Raised when SSL certificate fails in an HTTPS connection."""
+       
+       
+    2: class ProxyError(HTTPError):
+    1:     """Raised when the connection to a proxy fails."""
+       
+           # The original error is also available as __cause__.
+    1:     original_error: Exception
+       
+    1:     def __init__(self, message: str, error: Exception) -> None:
+               super().__init__(message, error)
+               self.original_error = error
+       
+       
+    2: class DecodeError(HTTPError):
+    1:     """Raised when automatic decoding based on Content-Type fails."""
+       
+       
+    2: class ProtocolError(HTTPError):
+    1:     """Raised when something unexpected happens mid-request/response."""
+       
+       
+       #: Renamed to ProtocolError but aliased for backwards compatibility.
+    1: ConnectionError = ProtocolError
+       
+       
+       # Leaf Exceptions
+       
+       
+    2: class MaxRetryError(RequestError):
+    1:     """Raised when the maximum number of retries is exceeded.
+       
+           :param pool: The connection pool
+           :type pool: :class:`~urllib3.connectionpool.HTTPConnectionPool`
+           :param str url: The requested Url
+           :param reason: The underlying error
+           :type reason: :class:`Exception`
+       
+           """
+       
+    1:     def __init__(
+    1:         self, pool: ConnectionPool, url: str | None, reason: Exception | None = None
+           ) -> None:
+               self.reason = reason
+       
+               message = f"Max retries exceeded with url: {url} (Caused by {reason!r})"
+       
+               super().__init__(pool, url, message)
+       
+    1:     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+               # For pickling purposes.
+               return self.__class__, (None, self.url, self.reason)
+       
+       
+    2: class HostChangedError(RequestError):
+    1:     """Raised when an existing pool gets a request for a foreign host."""
+       
+    1:     def __init__(
+    1:         self, pool: ConnectionPool, url: str, retries: Retry | int = 3
+           ) -> None:
+               message = f"Tried to open a foreign host with url: {url}"
+               super().__init__(pool, url, message)
+               self.retries = retries
+       
+       
+    2: class TimeoutStateError(HTTPError):
+    1:     """Raised when passing an invalid state to a timeout"""
+       
+       
+    2: class TimeoutError(HTTPError):
+    1:     """Raised when a socket timeout error occurs.
+       
+           Catching this error will catch both :exc:`ReadTimeoutErrors
+           <ReadTimeoutError>` and :exc:`ConnectTimeoutErrors <ConnectTimeoutError>`.
+           """
+       
+       
+    2: class ReadTimeoutError(TimeoutError, RequestError):
+    1:     """Raised when a socket timeout occurs while receiving data from a server"""
+       
+       
+       # This timeout error does not have a URL attached and needs to inherit from the
+       # base HTTPError
+    2: class ConnectTimeoutError(TimeoutError):
+    1:     """Raised when a socket timeout occurs while connecting to a server"""
+       
+       
+    2: class NewConnectionError(ConnectTimeoutError, HTTPError):
+    1:     """Raised when we fail to establish a new connection. Usually ECONNREFUSED."""
+       
+    1:     def __init__(self, conn: HTTPConnection, message: str) -> None:
+               self.conn = conn
+               self._message = message
+               super().__init__(f"{conn}: {message}")
+       
+    1:     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+               # For pickling purposes.
+               return self.__class__, (None, self._message)
+       
+    2:     @property
+    2:     def pool(self) -> HTTPConnection:
+               warnings.warn(
+                   "The 'pool' property is deprecated and will be removed "
+                   "in urllib3 v3.0. Use 'conn' instead.",
+                   FutureWarning,
+                   stacklevel=2,
+               )
+       
+               return self.conn
+       
+       
+    2: class NameResolutionError(NewConnectionError):
+    1:     """Raised when host name resolution fails."""
+       
+    1:     def __init__(self, host: str, conn: HTTPConnection, reason: socket.gaierror):
+               message = f"Failed to resolve '{host}' ({reason})"
+               self._host = host
+               self._reason = reason
+               super().__init__(conn, message)
+       
+    1:     def __reduce__(self) -> _TYPE_REDUCE_RESULT:
+               # For pickling purposes.
+               return self.__class__, (self._host, None, self._reason)
+       
+       
+    2: class EmptyPoolError(PoolError):
+    1:     """Raised when a pool runs out of connections and no more are allowed."""
+       
+       
+    2: class FullPoolError(PoolError):
+    1:     """Raised when we try to add a connection to a full pool in blocking mode."""
+       
+       
+    2: class ClosedPoolError(PoolError):
+    1:     """Raised when a request enters a pool after the pool has been closed."""
+       
+       
+    2: class LocationValueError(ValueError, HTTPError):
+    1:     """Raised when there is something wrong with a given URL input."""
+       
+       
+    2: class LocationParseError(LocationValueError):
+    1:     """Raised when get_host or similar fails to parse the URL input."""
+       
+    1:     def __init__(self, location: str) -> None:
+               message = f"Failed to parse: {location}"
+               super().__init__(message)
+       
+               self.location = location
+       
+       
+    2: class URLSchemeUnknown(LocationValueError):
+    1:     """Raised when a URL input has an unsupported scheme."""
+       
+    1:     def __init__(self, scheme: str):
+               message = f"Not supported URL scheme {scheme}"
+               super().__init__(message)
+       
+               self.scheme = scheme
+       
+       
+    2: class ResponseError(HTTPError):
+    1:     """Used as a container for an error reason supplied in a MaxRetryError."""
+       
+    1:     GENERIC_ERROR = "too many error responses"
+    1:     SPECIFIC_ERROR = "too many {status_code} error responses"
+       
+       
+    2: class SecurityWarning(HTTPWarning):
+    1:     """Warned when performing security reducing actions"""
+       
+       
+    2: class InsecureRequestWarning(SecurityWarning):
+    1:     """Warned when making an unverified HTTPS request."""
+       
+       
+    2: class NotOpenSSLWarning(SecurityWarning):
+    1:     """Warned when using unsupported SSL library"""
+       
+       
+    2: class SystemTimeWarning(SecurityWarning):
+    1:     """Warned when system time is suspected to be wrong"""
+       
+       
+    2: class InsecurePlatformWarning(SecurityWarning):
+    1:     """Warned when certain TLS/SSL configuration is not available on a platform."""
+       
+       
+    2: class DependencyWarning(HTTPWarning):
+    1:     """
+           Warned when an attempt is made to import a module with missing optional
+           dependencies.
+           """
+       
+       
+    2: class ResponseNotChunked(ProtocolError, ValueError):
+    1:     """Response needs to be chunked in order to read it as chunks."""
+       
+       
+    2: class BodyNotHttplibCompatible(HTTPError):
+    1:     """
+           Body should be :class:`http.client.HTTPResponse` like
+           (have an fp attribute which returns raw chunks) for read_chunked().
+           """
+       
+       
+    2: class IncompleteRead(HTTPError, httplib_IncompleteRead):
+    1:     """
+           Response length doesn't match expected Content-Length
+       
+           Subclass of :class:`http.client.IncompleteRead` to allow int value
+           for ``partial`` to avoid creating large objects on streamed reads.
+           """
+       
+    1:     partial: int  # type: ignore[assignment]
+    1:     expected: int
+       
+    1:     def __init__(self, partial: int, expected: int) -> None:
+               self.partial = partial
+               self.expected = expected
+       
+    1:     def __repr__(self) -> str:
+               return "IncompleteRead(%i bytes read, %i more expected)" % (
+                   self.partial,
+                   self.expected,
+               )
+       
+       
+    2: class InvalidChunkLength(HTTPError, httplib_IncompleteRead):
+    1:     """Invalid chunk length in a chunked response."""
+       
+    1:     def __init__(self, response: HTTPResponse, length: bytes) -> None:
+               self.partial: int = response.tell()  # type: ignore[assignment]
+               self.expected: int | None = response.length_remaining
+               self.response = response
+               self.length = length
+       
+    1:     def __repr__(self) -> str:
+               return "InvalidChunkLength(got length %r, %i bytes read)" % (
+                   self.length,
+                   self.partial,
+               )
+       
+       
+    2: class InvalidHeader(HTTPError):
+    1:     """The header provided was somehow invalid."""
+       
+       
+    2: class ProxySchemeUnknown(AssertionError, URLSchemeUnknown):
+    1:     """ProxyManager does not support the supplied scheme"""
+       
+           # TODO(t-8ch): Stop inheriting from AssertionError in v2.0.
+       
+    1:     def __init__(self, scheme: str | None) -> None:
+               # 'localhost' is here because our URL parser parses
+               # localhost:8080 -> scheme=localhost, remove if we fix this.
+               if scheme == "localhost":
+                   scheme = None
+               if scheme is None:
+                   message = "Proxy URL had no scheme, should start with http:// or https://"
+               else:
+                   message = f"Proxy URL had unsupported scheme {scheme}, should use http:// or https://"
+               super().__init__(message)
+       
+       
+    2: class ProxySchemeUnsupported(ValueError):
+    1:     """Fetching HTTPS resources through HTTPS proxies is unsupported"""
+       
+       
+    2: class HeaderParsingError(HTTPError):
+    1:     """Raised by assert_header_parsing, but we convert it to a log.warning statement."""
+       
+    1:     def __init__(
+               self, defects: list[MessageDefect], unparsed_data: bytes | str | None
+           ) -> None:
+               message = f"{defects or 'Unknown'}, unparsed data: {unparsed_data!r}"
+               super().__init__(message)
+       
+       
+    2: class UnrewindableBodyError(HTTPError):
+    1:     """urllib3 encountered an error when trying to rewind a body"""

@@ -1,0 +1,118 @@
+       # -*- coding: utf-8 -*-
+       
+    1: from __future__ import absolute_import
+       
+    1: from . import archive
+    1: from . import audio
+    1: from . import application
+    1: from . import document
+    1: from . import font
+    1: from . import image
+    1: from . import video
+    1: from .base import Type  # noqa
+       
+       # Supported image types
+    1: IMAGE = (
+    1:     image.Dwg(),
+    1:     image.Xcf(),
+    1:     image.Jpeg(),
+    1:     image.Jpx(),
+    1:     image.Apng(),
+    1:     image.Png(),
+    1:     image.Gif(),
+    1:     image.Webp(),
+    1:     image.Tiff(),
+    1:     image.Cr2(),
+    1:     image.Bmp(),
+    1:     image.Jxr(),
+    1:     image.Psd(),
+    1:     image.Ico(),
+    1:     image.Heic(),
+    1:     image.Dcm(),
+    1:     image.Avif(),
+       )
+       
+       # Supported video types
+    1: VIDEO = (
+    1:     video.M3gp(),
+    1:     video.Mp4(),
+    1:     video.M4v(),
+    1:     video.Mkv(),
+    1:     video.Mov(),
+    1:     video.Avi(),
+    1:     video.Wmv(),
+    1:     video.Mpeg(),
+    1:     video.Webm(),
+    1:     video.Flv(),
+       )
+       
+       # Supported audio types
+    1: AUDIO = (
+    1:     audio.Aac(),
+    1:     audio.Midi(),
+    1:     audio.Mp3(),
+    1:     audio.M4a(),
+    1:     audio.Ogg(),
+    1:     audio.Flac(),
+    1:     audio.Wav(),
+    1:     audio.Amr(),
+    1:     audio.Aiff(),
+       )
+       
+       # Supported font types
+    1: FONT = (font.Woff(), font.Woff2(), font.Ttf(), font.Otf())
+       
+       # Supported archive container types
+    1: ARCHIVE = (
+    1:     archive.Br(),
+    1:     archive.Rpm(),
+    1:     archive.Dcm(),
+    1:     archive.Epub(),
+    1:     archive.Zip(),
+    1:     archive.Tar(),
+    1:     archive.Rar(),
+    1:     archive.Gz(),
+    1:     archive.Bz2(),
+    1:     archive.SevenZ(),
+    1:     archive.Pdf(),
+    1:     archive.Exe(),
+    1:     archive.Swf(),
+    1:     archive.Rtf(),
+    1:     archive.Nes(),
+    1:     archive.Crx(),
+    1:     archive.Cab(),
+    1:     archive.Eot(),
+    1:     archive.Ps(),
+    1:     archive.Xz(),
+    1:     archive.Sqlite(),
+    1:     archive.Deb(),
+    1:     archive.Ar(),
+    1:     archive.Z(),
+    1:     archive.Lzop(),
+    1:     archive.Lz(),
+    1:     archive.Elf(),
+    1:     archive.Lz4(),
+    1:     archive.Zstd(),
+       )
+       
+       # Supported archive container types
+    1: APPLICATION = (
+    1:     application.Wasm(),
+       )
+       
+       # Supported document types
+    1: DOCUMENT = (
+    1:     document.Doc(),
+    1:     document.Docx(),
+    1:     document.Odt(),
+    1:     document.Xls(),
+    1:     document.Xlsx(),
+    1:     document.Ods(),
+    1:     document.Ppt(),
+    1:     document.Pptx(),
+    1:     document.Odp(),
+       )
+       
+       
+       # Expose supported type matchers
+    1: TYPES = list(IMAGE + AUDIO + VIDEO + FONT + DOCUMENT + ARCHIVE + APPLICATION)

@@ -1,0 +1,31 @@
+    1: __all__ = [
+           "ZoneInfo",
+           "reset_tzpath",
+           "available_timezones",
+           "TZPATH",
+           "ZoneInfoNotFoundError",
+           "InvalidTZPathWarning",
+       ]
+       
+    1: from . import _tzpath
+    1: from ._common import ZoneInfoNotFoundError
+       
+    1: try:
+    1:     from _zoneinfo import ZoneInfo
+       except ImportError:  # pragma: nocover
+           from ._zoneinfo import ZoneInfo
+       
+    1: reset_tzpath = _tzpath.reset_tzpath
+    1: available_timezones = _tzpath.available_timezones
+    1: InvalidTZPathWarning = _tzpath.InvalidTZPathWarning
+       
+       
+    1: def __getattr__(name):
+           if name == "TZPATH":
+               return _tzpath.TZPATH
+           else:
+               raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+       
+       
+    1: def __dir__():
+           return sorted(list(globals()) + ["TZPATH"])

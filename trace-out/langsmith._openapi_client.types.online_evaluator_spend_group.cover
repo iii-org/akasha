@@ -1,0 +1,39 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+       
+    1: from .._models import BaseModel
+    1: from .online_spend_limit import OnlineSpendLimit
+    1: from .online_evaluator_spend_day import OnlineEvaluatorSpendDay
+       
+    1: __all__ = ["OnlineEvaluatorSpendGroup"]
+       
+       
+    2: class OnlineEvaluatorSpendGroup(BaseModel):
+    1:     dataset_id: Optional[str] = None
+       
+    1:     dataset_name: Optional[str] = None
+       
+    1:     days: Optional[List[OnlineEvaluatorSpendDay]] = None
+       
+    1:     evaluator_id: Optional[str] = None
+       
+    1:     evaluator_name: Optional[str] = None
+       
+    1:     prev_total_spend_usd: Optional[float] = None
+       
+    1:     prev_total_trace_count: Optional[int] = None
+       
+    1:     run_rule_id: Optional[str] = None
+       
+    1:     run_rule_name: Optional[str] = None
+       
+    1:     session_id: Optional[str] = None
+       
+    1:     session_name: Optional[str] = None
+       
+    1:     spend_limit: Optional[OnlineSpendLimit] = None
+       
+    1:     total_spend_usd: Optional[float] = None
+       
+    1:     total_trace_count: Optional[int] = None

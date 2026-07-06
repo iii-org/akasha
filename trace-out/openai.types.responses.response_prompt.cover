@@ -1,0 +1,33 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Dict, Union, Optional
+    1: from typing_extensions import TypeAlias
+       
+    1: from ..._models import BaseModel
+    1: from .response_input_file import ResponseInputFile
+    1: from .response_input_text import ResponseInputText
+    1: from .response_input_image import ResponseInputImage
+       
+    1: __all__ = ["ResponsePrompt", "Variables"]
+       
+    1: Variables: TypeAlias = Union[str, ResponseInputText, ResponseInputImage, ResponseInputFile]
+       
+       
+    2: class ResponsePrompt(BaseModel):
+    1:     """
+           Reference to a prompt template and its variables.
+           [Learn more](https://platform.openai.com/docs/guides/text?api-mode=responses#reusable-prompts).
+           """
+       
+    1:     id: str
+    1:     """The unique identifier of the prompt template to use."""
+       
+    1:     variables: Optional[Dict[str, Variables]] = None
+    1:     """Optional map of values to substitute in for variables in your prompt.
+       
+           The substitution values can either be strings, or other Response input types
+           like images or files.
+           """
+       
+    1:     version: Optional[str] = None
+    1:     """Optional version of the prompt template."""

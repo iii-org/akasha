@@ -1,0 +1,48 @@
+    1: import typing as t
+       
+    1: from .filters import FILTERS as DEFAULT_FILTERS  # noqa: F401
+    1: from .tests import TESTS as DEFAULT_TESTS  # noqa: F401
+    1: from .utils import Cycler
+    1: from .utils import generate_lorem_ipsum
+    1: from .utils import Joiner
+    1: from .utils import Namespace
+       
+    1: if t.TYPE_CHECKING:
+           import typing_extensions as te
+       
+       # defaults for the parser / lexer
+    1: BLOCK_START_STRING = "{%"
+    1: BLOCK_END_STRING = "%}"
+    1: VARIABLE_START_STRING = "{{"
+    1: VARIABLE_END_STRING = "}}"
+    1: COMMENT_START_STRING = "{#"
+    1: COMMENT_END_STRING = "#}"
+    1: LINE_STATEMENT_PREFIX: t.Optional[str] = None
+    1: LINE_COMMENT_PREFIX: t.Optional[str] = None
+    1: TRIM_BLOCKS = False
+    1: LSTRIP_BLOCKS = False
+    1: NEWLINE_SEQUENCE: "te.Literal['\\n', '\\r\\n', '\\r']" = "\n"
+    1: KEEP_TRAILING_NEWLINE = False
+       
+       # default filters, tests and namespace
+       
+    1: DEFAULT_NAMESPACE = {
+    1:     "range": range,
+    1:     "dict": dict,
+    1:     "lipsum": generate_lorem_ipsum,
+    1:     "cycler": Cycler,
+    1:     "joiner": Joiner,
+    1:     "namespace": Namespace,
+       }
+       
+       # default policies
+    1: DEFAULT_POLICIES: t.Dict[str, t.Any] = {
+    1:     "compiler.ascii_str": True,
+    1:     "urlize.rel": "noopener",
+    1:     "urlize.target": None,
+    1:     "urlize.extra_schemes": None,
+    1:     "truncate.leeway": 5,
+    1:     "json.dumps_function": None,
+    1:     "json.dumps_kwargs": {"sort_keys": True},
+    1:     "ext.i18n.trimmed": False,
+       }

@@ -1,0 +1,65 @@
+    1: from __future__ import annotations
+       
+    1: from abc import ABC, abstractmethod
+    1: from typing import Generic, TypeVar, Iterable, cast
+    1: from typing_extensions import override
+       
+    1: T = TypeVar("T")
+       
+       
+    2: class LazyProxy(Generic[T], ABC):
+    1:     """Implements data methods to pretend that an instance is another instance.
+       
+           This includes forwarding attribute access and other methods.
+           """
+       
+           # Note: we have to special case proxies that themselves return proxies
+           # to support using a proxy as a catch-all for any random access, e.g. `proxy.foo.bar.baz`
+       
+    1:     def __getattr__(self, attr: str) -> object:
+               proxied = self.__get_proxied__()
+               if isinstance(proxied, LazyProxy):
+                   return proxied  # pyright: ignore
+               return getattr(proxied, attr)
+       
+    2:     @override
+    2:     def __repr__(self) -> str:
+               proxied = self.__get_proxied__()
+               if isinstance(proxied, LazyProxy):
+                   return proxied.__class__.__name__
+               return repr(self.__get_proxied__())
+       
+    2:     @override
+    2:     def __str__(self) -> str:
+               proxied = self.__get_proxied__()
+               if isinstance(proxied, LazyProxy):
+                   return proxied.__class__.__name__
+               return str(proxied)
+       
+    2:     @override
+    2:     def __dir__(self) -> Iterable[str]:
+               proxied = self.__get_proxied__()
+               if isinstance(proxied, LazyProxy):
+                   return []
+               return proxied.__dir__()
+       
+    2:     @property  # type: ignore
+    2:     @override
+    2:     def __class__(self) -> type:  # pyright: ignore
+               try:
+                   proxied = self.__get_proxied__()
+               except Exception:
+                   return type(self)
+               if issubclass(type(proxied), LazyProxy):
+                   return type(proxied)
+               return proxied.__class__
+       
+    1:     def __get_proxied__(self) -> T:
+               return self.__load__()
+       
+    1:     def __as_proxied__(self) -> T:
+               """Helper method that returns the current proxy, typed as the loaded object"""
+   23:         return cast(T, self)
+       
+    2:     @abstractmethod
+    2:     def __load__(self) -> T: ...

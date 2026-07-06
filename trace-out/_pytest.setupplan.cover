@@ -1,0 +1,39 @@
+    1: from __future__ import annotations
+       
+    1: from _pytest.config import Config
+    1: from _pytest.config import ExitCode
+    1: from _pytest.config.argparsing import Parser
+    1: from _pytest.fixtures import FixtureDef
+    1: from _pytest.fixtures import SubRequest
+    1: import pytest
+       
+       
+    1: def pytest_addoption(parser: Parser) -> None:
+    1:     group = parser.getgroup("debugconfig")
+    2:     group.addoption(
+    1:         "--setupplan",
+    1:         "--setup-plan",
+    1:         action="store_true",
+    1:         help="Show what fixtures and tests would be executed but "
+               "don't execute anything",
+           )
+       
+       
+    2: @pytest.hookimpl(tryfirst=True)
+    2: def pytest_fixture_setup(
+           fixturedef: FixtureDef[object], request: SubRequest
+       ) -> object | None:
+           # Will return a dummy fixture if the setuponly option is provided.
+           if request.config.option.setupplan:
+               my_cache_key = fixturedef.cache_key(request)
+               fixturedef.cached_result = (None, my_cache_key, None)
+               return fixturedef.cached_result
+           return None
+       
+       
+    2: @pytest.hookimpl(tryfirst=True)
+    2: def pytest_cmdline_main(config: Config) -> int | ExitCode | None:
+    1:     if config.option.setupplan:
+               config.option.setuponly = True
+               config.option.setupshow = True
+    1:     return None

@@ -1,0 +1,204 @@
+    1: from __future__ import annotations
+       
+    1: from typing import TYPE_CHECKING
+    1: import numbers
+       
+    1: from attrs import evolve, field, frozen
+    1: from rpds import HashTrieMap
+       
+    1: from jsonschema.exceptions import UndefinedTypeCheck
+       
+    1: if TYPE_CHECKING:
+           from collections.abc import Callable, Mapping
+           from typing import Any
+       
+       
+       # unfortunately, the type of HashTrieMap is generic, and if used as an attrs
+       # converter, the generic type is presented to mypy, which then fails to match
+       # the concrete type of a type checker mapping
+       # this "do nothing" wrapper presents the correct information to mypy
+    1: def _typed_map_converter(
+           init_val: Mapping[str, Callable[[TypeChecker, Any], bool]],
+       ) -> HashTrieMap[str, Callable[[TypeChecker, Any], bool]]:
+    3:     return HashTrieMap.convert(init_val)
+       
+       
+    1: def is_array(checker, instance):
+           return isinstance(instance, list)
+       
+       
+    1: def is_bool(checker, instance):
+           return isinstance(instance, bool)
+       
+       
+    1: def is_integer(checker, instance):
+           # bool inherits from int, so ensure bools aren't reported as ints
+           if isinstance(instance, bool):
+               return False
+           return isinstance(instance, int)
+       
+       
+    1: def is_null(checker, instance):
+           return instance is None
+       
+       
+    1: def is_number(checker, instance):
+           # bool inherits from int, so ensure bools aren't reported as ints
+           if isinstance(instance, bool):
+               return False
+           return isinstance(instance, numbers.Number)
+       
+       
+    1: def is_object(checker, instance):
+           return isinstance(instance, dict)
+       
+       
+    1: def is_string(checker, instance):
+           return isinstance(instance, str)
+       
+       
+    1: def is_any(checker, instance):
+           return True
+       
+       
+    3: @frozen(repr=False)
+    2: class TypeChecker:
+    1:     """
+           A :kw:`type` property checker.
+       
+           A `TypeChecker` performs type checking for a `Validator`, converting
+           between the defined JSON Schema types and some associated Python types or
+           objects.
+       
+           Modifying the behavior just mentioned by redefining which Python objects
+           are considered to be of which JSON Schema types can be done using
+           `TypeChecker.redefine` or `TypeChecker.redefine_many`, and types can be
+           removed via `TypeChecker.remove`. Each of these return a new `TypeChecker`.
+       
+           Arguments:
+       
+               type_checkers:
+       
+                   The initial mapping of types to their checking functions.
+       
+           """
+       
+    1:     _type_checkers: HashTrieMap[
+               str, Callable[[TypeChecker, Any], bool],
+    1:     ] = field(default=HashTrieMap(), converter=_typed_map_converter)
+       
+    1:     def __repr__(self):
+               types = ", ".join(repr(k) for k in sorted(self._type_checkers))
+               return f"<{self.__class__.__name__} types={{{types}}}>"
+       
+    1:     def is_type(self, instance, type: str) -> bool:
+               """
+               Check if the instance is of the appropriate type.
+       
+               Arguments:
+       
+                   instance:
+       
+                       The instance to check
+       
+                   type:
+       
+                       The name of the type that is expected.
+       
+               Raises:
+       
+                   `jsonschema.exceptions.UndefinedTypeCheck`:
+       
+                       if ``type`` is unknown to this object.
+       
+               """
+               try:
+                   fn = self._type_checkers[type]
+               except KeyError:
+                   raise UndefinedTypeCheck(type) from None
+       
+               return fn(self, instance)
+       
+    1:     def redefine(self, type: str, fn) -> TypeChecker:
+               """
+               Produce a new checker with the given type redefined.
+       
+               Arguments:
+       
+                   type:
+       
+                       The name of the type to check.
+       
+                   fn (collections.abc.Callable):
+       
+                       A callable taking exactly two parameters - the type
+                       checker calling the function and the instance to check.
+                       The function should return true if instance is of this
+                       type and false otherwise.
+       
+               """
+    1:         return self.redefine_many({type: fn})
+       
+    1:     def redefine_many(self, definitions=()) -> TypeChecker:
+               """
+               Produce a new checker with the given types redefined.
+       
+               Arguments:
+       
+                   definitions (dict):
+       
+                       A dictionary mapping types to their checking functions.
+       
+               """
+    1:         type_checkers = self._type_checkers.update(definitions)
+    1:         return evolve(self, type_checkers=type_checkers)
+       
+    1:     def remove(self, *types) -> TypeChecker:
+               """
+               Produce a new checker with the given types forgotten.
+       
+               Arguments:
+       
+                   types:
+       
+                       the names of the types to remove.
+       
+               Raises:
+       
+                   `jsonschema.exceptions.UndefinedTypeCheck`:
+       
+                       if any given type is unknown to this object
+       
+               """
+    1:         type_checkers = self._type_checkers
+    2:         for each in types:
+    1:             try:
+    1:                 type_checkers = type_checkers.remove(each)
+                   except KeyError:
+                       raise UndefinedTypeCheck(each) from None
+    1:         return evolve(self, type_checkers=type_checkers)
+       
+       
+    2: draft3_type_checker = TypeChecker(
+    1:     {
+    1:         "any": is_any,
+    1:         "array": is_array,
+    1:         "boolean": is_bool,
+    1:         "integer": is_integer,
+    1:         "object": is_object,
+    1:         "null": is_null,
+    1:         "number": is_number,
+    1:         "string": is_string,
+           },
+       )
+    1: draft4_type_checker = draft3_type_checker.remove("any")
+    2: draft6_type_checker = draft4_type_checker.redefine(
+    1:     "integer",
+    1:     lambda checker, instance: (
+               is_integer(checker, instance)
+               or (isinstance(instance, float) and instance.is_integer())
+           ),
+       )
+    1: draft7_type_checker = draft6_type_checker
+    1: draft201909_type_checker = draft7_type_checker
+    1: draft202012_type_checker = draft201909_type_checker

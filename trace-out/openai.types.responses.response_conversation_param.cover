@@ -1,0 +1,12 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseConversationParam"]
+       
+       
+    2: class ResponseConversationParam(BaseModel):
+    1:     """The conversation that this response belongs to."""
+       
+    1:     id: str
+    1:     """The unique ID of the conversation."""

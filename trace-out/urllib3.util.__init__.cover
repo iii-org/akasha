@@ -1,0 +1,42 @@
+       # For backwards compatibility, provide imports that used to be here.
+    1: from __future__ import annotations
+       
+    1: from .connection import is_connection_dropped
+    1: from .request import SKIP_HEADER, SKIPPABLE_HEADERS, make_headers
+    1: from .response import is_fp_closed
+    1: from .retry import Retry
+    1: from .ssl_ import (
+           ALPN_PROTOCOLS,
+           IS_PYOPENSSL,
+           SSLContext,
+           assert_fingerprint,
+           create_urllib3_context,
+           resolve_cert_reqs,
+           resolve_ssl_version,
+           ssl_wrap_socket,
+       )
+    1: from .timeout import Timeout
+    1: from .url import Url, parse_url
+    1: from .wait import wait_for_read, wait_for_write
+       
+    1: __all__ = (
+           "IS_PYOPENSSL",
+           "SSLContext",
+           "ALPN_PROTOCOLS",
+           "Retry",
+           "Timeout",
+           "Url",
+           "assert_fingerprint",
+           "create_urllib3_context",
+           "is_connection_dropped",
+           "is_fp_closed",
+           "parse_url",
+           "make_headers",
+           "resolve_cert_reqs",
+           "resolve_ssl_version",
+           "ssl_wrap_socket",
+           "wait_for_read",
+           "wait_for_write",
+           "SKIP_HEADER",
+           "SKIPPABLE_HEADERS",
+       )

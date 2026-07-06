@@ -1,0 +1,18 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+       # pylint: disable=unused-import
+       
+    1: from collections.abc import Sequence
+    1: from dataclasses import dataclass
+       
+       # This kind of import is needed to avoid Sphinx errors.
+    1: import opentelemetry.sdk.metrics
+    1: import opentelemetry.sdk.resources
+       
+       
+    3: @dataclass
+    2: class SdkConfiguration:
+    1:     exemplar_filter: "opentelemetry.sdk.metrics.ExemplarFilter"
+    1:     resource: "opentelemetry.sdk.resources.Resource"
+    1:     views: Sequence["opentelemetry.sdk.metrics.view.View"]

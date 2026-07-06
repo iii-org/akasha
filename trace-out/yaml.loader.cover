@@ -1,0 +1,63 @@
+       
+    1: __all__ = ['BaseLoader', 'FullLoader', 'SafeLoader', 'Loader', 'UnsafeLoader']
+       
+    1: from .reader import *
+    1: from .scanner import *
+    1: from .parser import *
+    1: from .composer import *
+    1: from .constructor import *
+    1: from .resolver import *
+       
+    2: class BaseLoader(Reader, Scanner, Parser, Composer, BaseConstructor, BaseResolver):
+       
+    1:     def __init__(self, stream):
+               Reader.__init__(self, stream)
+               Scanner.__init__(self)
+               Parser.__init__(self)
+               Composer.__init__(self)
+               BaseConstructor.__init__(self)
+               BaseResolver.__init__(self)
+       
+    2: class FullLoader(Reader, Scanner, Parser, Composer, FullConstructor, Resolver):
+       
+    1:     def __init__(self, stream):
+               Reader.__init__(self, stream)
+               Scanner.__init__(self)
+               Parser.__init__(self)
+               Composer.__init__(self)
+               FullConstructor.__init__(self)
+               Resolver.__init__(self)
+       
+    2: class SafeLoader(Reader, Scanner, Parser, Composer, SafeConstructor, Resolver):
+       
+    1:     def __init__(self, stream):
+               Reader.__init__(self, stream)
+               Scanner.__init__(self)
+               Parser.__init__(self)
+               Composer.__init__(self)
+               SafeConstructor.__init__(self)
+               Resolver.__init__(self)
+       
+    2: class Loader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
+       
+    1:     def __init__(self, stream):
+               Reader.__init__(self, stream)
+               Scanner.__init__(self)
+               Parser.__init__(self)
+               Composer.__init__(self)
+               Constructor.__init__(self)
+               Resolver.__init__(self)
+       
+       # UnsafeLoader is the same as Loader (which is and was always unsafe on
+       # untrusted input). Use of either Loader or UnsafeLoader should be rare, since
+       # FullLoad should be able to load almost all YAML safely. Loader is left intact
+       # to ensure backwards compatibility.
+    2: class UnsafeLoader(Reader, Scanner, Parser, Composer, Constructor, Resolver):
+       
+    1:     def __init__(self, stream):
+               Reader.__init__(self, stream)
+               Scanner.__init__(self)
+               Parser.__init__(self)
+               Composer.__init__(self)
+               Constructor.__init__(self)
+               Resolver.__init__(self)

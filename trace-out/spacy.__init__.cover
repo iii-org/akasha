@@ -1,0 +1,102 @@
+    1: import sys
+    1: from pathlib import Path
+    1: from typing import Any, Dict, Iterable, Union
+       
+       # set library-specific custom warning handling before doing anything else
+    1: from .errors import setup_default_warnings
+       
+    1: setup_default_warnings()  # noqa: E402
+       
+       # These are imported as part of the API
+    1: from thinc.api import Config, prefer_gpu, require_cpu, require_gpu  # noqa: F401
+       
+    1: from . import (
+           pipeline,  # noqa: F401
+           util,
+       )
+    1: from .about import __version__  # noqa: F401
+    1: from .cli.info import info  # noqa: F401
+    1: from .errors import Errors
+    1: from .glossary import explain  # noqa: F401
+    1: from .language import Language
+    1: from .registrations import REGISTRY_POPULATED, populate_registry
+       
+       # Rebuild pydantic v2 schemas that use forward references to Language/Vocab
+    1: from .schemas import (  # noqa: F401
+           ConfigSchema,
+           ConfigSchemaInit,
+           ConfigSchemaNlp,
+           ConfigSchemaPretrain,
+           ConfigSchemaTraining,
+       )
+    1: from .training import Example  # noqa: F401
+    1: from .util import logger, registry  # noqa: F401
+    1: from .vocab import Vocab
+       
+    1: _rebuild_ns = {"Language": Language, "Vocab": Vocab, "Example": Example}
+    6: for _schema in (
+    1:     ConfigSchemaTraining,
+    1:     ConfigSchemaNlp,
+    1:     ConfigSchemaPretrain,
+    1:     ConfigSchemaInit,
+    1:     ConfigSchema,
+       ):
+    5:     _schema.model_rebuild(_types_namespace=_rebuild_ns)  # type: ignore[attr-defined]
+       
+    1: if sys.maxunicode == 65535:
+           raise SystemError(Errors.E130)
+       
+       
+    8: def load(
+    1:     name: Union[str, Path],
+           *,
+    2:     vocab: Union[Vocab, bool] = True,
+    2:     disable: Union[str, Iterable[str]] = util._DEFAULT_EMPTY_PIPES,
+    2:     enable: Union[str, Iterable[str]] = util._DEFAULT_EMPTY_PIPES,
+    2:     exclude: Union[str, Iterable[str]] = util._DEFAULT_EMPTY_PIPES,
+    2:     config: Union[Dict[str, Any], Config] = util.SimpleFrozenDict(),
+    1: ) -> Language:
+           """Load a spaCy model from an installed package or a local path.
+       
+           name (str): Package name or model path.
+           vocab (Vocab): A Vocab object. If True, a vocab is created.
+           disable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to disable. Disabled
+               pipes will be loaded but they won't be run unless you explicitly
+               enable them by calling nlp.enable_pipe.
+           enable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to enable. All other
+               pipes will be disabled (but can be enabled later using nlp.enable_pipe).
+           exclude (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to exclude. Excluded
+               components won't be loaded.
+           config (Dict[str, Any] / Config): Config overrides as nested dict or dict
+               keyed by section values in dot notation.
+           RETURNS (Language): The loaded nlp object.
+           """
+           return util.load_model(
+               name,
+               vocab=vocab,
+               disable=disable,
+               enable=enable,
+               exclude=exclude,
+               config=config,
+           )
+       
+       
+    6: def blank(
+    1:     name: str,
+           *,
+    2:     vocab: Union[Vocab, bool] = True,
+    2:     config: Union[Dict[str, Any], Config] = util.SimpleFrozenDict(),
+    2:     meta: Dict[str, Any] = util.SimpleFrozenDict(),
+    1: ) -> Language:
+           """Create a blank nlp object for a given language code.
+       
+           name (str): The language code, e.g. "en".
+           vocab (Vocab): A Vocab object. If True, a vocab is created.
+           config (Dict[str, Any] / Config): Optional config overrides.
+           meta (Dict[str, Any]): Overrides for nlp.meta.
+           RETURNS (Language): The nlp object.
+           """
+           LangClass = util.get_lang_class(name)
+           # We should accept both dot notation and nested dict here for consistency
+           config = util.dot_to_dict(config)
+           return LangClass.from_config(config, vocab=vocab, meta=meta)

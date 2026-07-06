@@ -1,0 +1,14 @@
+    1: from __future__ import unicode_literals
+       
+    1: try:
+    1:     unicode
+    1: except NameError:
+    1:     unicode = str
+       
+       
+    1: def ensure_bytes(string):
+           """Ensure a string is returned as a bytes object, encoded as utf8."""
+    1:     if isinstance(string, unicode):
+               return string.encode("utf8")
+           else:
+    1:         return string

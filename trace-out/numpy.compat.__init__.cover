@@ -1,0 +1,19 @@
+    1: """
+       Compatibility module.
+       
+       This module contains duplicated code from Python itself or 3rd party
+       extensions, which may be included for the following reasons:
+       
+         * compatibility
+         * we may only need a small subset of the copied library/module
+       
+       """
+       
+    1: from .._utils import _inspect
+    1: from .._utils._inspect import getargspec, formatargspec
+    1: from . import py3k
+    1: from .py3k import *
+       
+    1: __all__ = []
+    1: __all__.extend(_inspect.__all__)
+    1: __all__.extend(py3k.__all__)

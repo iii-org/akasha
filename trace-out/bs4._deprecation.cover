@@ -1,0 +1,80 @@
+    1: """Helper functions for deprecation.
+       
+       This interface is itself unstable and may change without warning. Do
+       not use these functions yourself, even as a joke. The underscores are
+       there for a reason. No support will be given.
+       
+       In particular, most of this will go away without warning once
+       Beautiful Soup drops support for Python 3.11, since Python 3.12
+       defines a `@typing.deprecated()
+       decorator. <https://peps.python.org/pep-0702/>`_
+       """
+       
+    1: import functools
+    1: import warnings
+       
+    1: from typing import (
+           Any,
+           Callable,
+       )
+       
+       
+    1: def _deprecated_alias(old_name: str, new_name: str, version: str):
+           """Alias one attribute name to another for backward compatibility
+       
+           :meta private:
+           """
+       
+    8:     @property # type:ignore
+    8:     def alias(self) -> Any:
+               ":meta private:"
+               warnings.warn(
+                   f"Access to deprecated property {old_name}. (Replaced by {new_name}) -- Deprecated since version {version}.",
+                   DeprecationWarning,
+                   stacklevel=2,
+               )
+               return getattr(self, new_name)
+       
+    8:     @alias.setter
+    8:     def alias(self, value: str) -> None:
+               ":meta private:"
+               warnings.warn(
+                   f"Write to deprecated property {old_name}. (Replaced by {new_name}) -- Deprecated since version {version}.",
+                   DeprecationWarning,
+                   stacklevel=2,
+               )
+               return setattr(self, new_name, value)
+       
+    4:     return alias
+       
+       
+    5: def _deprecated_function_alias(
+    3:     old_name: str, new_name: str, version: str
+    1: ) -> Callable[[Any], Any]:
+   18:     def alias(self, *args: Any, **kwargs: Any) -> Any:
+               ":meta private:"
+               warnings.warn(
+                   f"Call to deprecated method {old_name}. (Replaced by {new_name}) -- Deprecated since version {version}.",
+                   DeprecationWarning,
+                   stacklevel=2,
+               )
+               return getattr(self, new_name)(*args, **kwargs)
+       
+   18:     return alias
+       
+       
+    1: def _deprecated(replaced_by: str, version: str) -> Callable:
+   14:     def deprecate(func: Callable) -> Callable:
+   28:         @functools.wraps(func)
+   28:         def with_warning(*args: Any, **kwargs: Any) -> Any:
+                   ":meta private:"
+                   warnings.warn(
+                       f"Call to deprecated method {func.__name__}. (Replaced by {replaced_by}) -- Deprecated since version {version}.",
+                       DeprecationWarning,
+                       stacklevel=2,
+                   )
+                   return func(*args, **kwargs)
+       
+   14:         return with_warning
+       
+   14:     return deprecate

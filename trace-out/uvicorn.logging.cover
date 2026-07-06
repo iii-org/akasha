@@ -1,0 +1,117 @@
+    1: from __future__ import annotations
+       
+    1: import http
+    1: import logging
+    1: import sys
+    1: from copy import copy
+    1: from typing import Literal
+       
+    1: import click
+       
+    1: TRACE_LOG_LEVEL = 5
+       
+       
+    2: class ColourizedFormatter(logging.Formatter):
+    1:     """
+           A custom log formatter class that:
+       
+           * Outputs the LOG_LEVEL with an appropriate color.
+           * If a log call includes an `extra={"color_message": ...}` it will be used
+             for formatting the output, instead of the plain text message.
+           """
+       
+    1:     level_name_colors = {
+    1:         TRACE_LOG_LEVEL: lambda level_name: click.style(str(level_name), fg="blue"),
+    1:         logging.DEBUG: lambda level_name: click.style(str(level_name), fg="cyan"),
+    1:         logging.INFO: lambda level_name: click.style(str(level_name), fg="green"),
+    1:         logging.WARNING: lambda level_name: click.style(str(level_name), fg="yellow"),
+    1:         logging.ERROR: lambda level_name: click.style(str(level_name), fg="red"),
+    1:         logging.CRITICAL: lambda level_name: click.style(str(level_name), fg="bright_red"),
+           }
+       
+    1:     def __init__(
+               self,
+    1:         fmt: str | None = None,
+    1:         datefmt: str | None = None,
+    1:         style: Literal["%", "{", "$"] = "%",
+    1:         use_colors: bool | None = None,
+           ):
+               if use_colors in (True, False):
+                   self.use_colors = use_colors
+               else:
+                   self.use_colors = sys.stdout.isatty()
+               super().__init__(fmt=fmt, datefmt=datefmt, style=style)
+       
+    1:     def color_level_name(self, level_name: str, level_no: int) -> str:
+               def default(level_name: str) -> str:
+                   return str(level_name)  # pragma: no cover
+       
+               func = self.level_name_colors.get(level_no, default)
+               return func(level_name)
+       
+    1:     def should_use_colors(self) -> bool:
+               return True  # pragma: no cover
+       
+    1:     def formatMessage(self, record: logging.LogRecord) -> str:
+               recordcopy = copy(record)
+               levelname = recordcopy.levelname
+               separator = " " * (8 - len(recordcopy.levelname))
+               if self.use_colors:
+                   levelname = self.color_level_name(levelname, recordcopy.levelno)
+                   if "color_message" in recordcopy.__dict__:
+                       recordcopy.msg = recordcopy.__dict__["color_message"]
+                       recordcopy.__dict__["message"] = recordcopy.getMessage()
+               recordcopy.__dict__["levelprefix"] = levelname + ":" + separator
+               return super().formatMessage(recordcopy)
+       
+       
+    2: class DefaultFormatter(ColourizedFormatter):
+    1:     def should_use_colors(self) -> bool:
+               return sys.stderr.isatty()  # pragma: no cover
+       
+       
+    2: class AccessFormatter(ColourizedFormatter):
+    1:     status_code_colours = {
+    1:         1: lambda code: click.style(str(code), fg="bright_white"),
+    1:         2: lambda code: click.style(str(code), fg="green"),
+    1:         3: lambda code: click.style(str(code), fg="yellow"),
+    1:         4: lambda code: click.style(str(code), fg="red"),
+    1:         5: lambda code: click.style(str(code), fg="bright_red"),
+           }
+       
+    1:     def get_status_code(self, status_code: int) -> str:
+               try:
+                   status_phrase = http.HTTPStatus(status_code).phrase
+               except ValueError:
+                   status_phrase = ""
+               status_and_phrase = f"{status_code} {status_phrase}"
+               if self.use_colors:
+       
+                   def default(code: int) -> str:
+                       return status_and_phrase  # pragma: no cover
+       
+                   func = self.status_code_colours.get(status_code // 100, default)
+                   return func(status_and_phrase)
+               return status_and_phrase
+       
+    1:     def formatMessage(self, record: logging.LogRecord) -> str:
+               recordcopy = copy(record)
+               (
+                   client_addr,
+                   method,
+                   full_path,
+                   http_version,
+                   status_code,
+               ) = recordcopy.args  # type: ignore[misc]
+               status_code = self.get_status_code(int(status_code))  # type: ignore[arg-type]
+               request_line = f"{method} {full_path} HTTP/{http_version}"
+               if self.use_colors:
+                   request_line = click.style(request_line, bold=True)
+               recordcopy.__dict__.update(
+                   {
+                       "client_addr": client_addr,
+                       "request_line": request_line,
+                       "status_code": status_code,
+                   }
+               )
+               return super().formatMessage(recordcopy)

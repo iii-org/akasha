@@ -1,0 +1,181 @@
+    1: from langchain_core.documents import Document
+    1: from typing import Union, List
+       
+       
+    8: def handle_params(
+    1:     model: str,
+    1:     language: str,
+    1:     search_type: str,
+    2:     threshold: float = -1.0,
+    2:     embeddings: str = "",
+    2:     chunk_size: int = -1,
+    1: ) -> dict:
+           """save running parameters into dictionary in order to parse to aiido
+       
+           Args:
+               **model (str)**: model name\n
+               **embeddings (str)**: embedding name\n
+               **chunk_size (int)**: chunk size of texts from documents\n
+               **search_type (str)**: search type of finding relevant documents\n
+               **threshold (float)**: only return documents that has similarity score larger than threshold\n
+               **language (str)**: 'ch' for chinese and 'en' for other.\n
+       
+           Returns:
+               dict: parameter dictionary
+           """
+           params = {}
+           if model != "":
+               params["model"] = model
+           if embeddings != "":
+               params["embeddings"] = embeddings
+           if search_type != "":
+               params["search_type"] = search_type
+           if threshold != -1.0:
+               params["threshold"] = threshold
+           if language != "":
+               params["language"] = language_dict[language]
+       
+           if chunk_size != -1:
+               params["chunk_size"] = chunk_size
+           return params
+       
+       
+    1: def handle_metrics(doc_length: int, time: float, tokens: int) -> dict:
+           """save running metrics into dictionary in order to parse to aiido
+       
+           Args:
+               **doc_length (int)**: length of texts from relevant documents  \n
+               **time (float)**: total spent time\n
+               **tokens (int)**: total tokens of texts from relevant documents\n
+       
+           Returns:
+               dict: metric dictionary
+           """
+           metrics = {}
+       
+           metrics["doc_length"] = doc_length
+           metrics["time"] = time
+           metrics["tokens"] = tokens
+           return metrics
+       
+       
+    1: def handle_table(prompt: str, docs: List[Union[Document, str]], response: str) -> dict:
+           """save running results into dictionary in order to parse to aiido
+       
+           Args:
+               **prompt (str)**: input query/question\n
+               **docs (list)**: Document list and metadata\n
+               **response (str)**: results from llm response\n
+       
+           Returns:
+               dict: table dictionary
+           """
+           table = {}
+           table["prompt"] = prompt
+           table["response"] = response
+           if len(docs) != 0:
+               try:
+                   inputs = [doc.page_content for doc in docs]
+       
+                   if "source" in docs[0].metadata and "page" in docs[0].metadata:
+                       # if the metadata has source and page, we can use it to show the source of the document
+                       metadata = [
+                           doc.metadata["source"] + "    page: " + str(doc.metadata["page"])
+                           for doc in docs
+                       ]
+                   elif "title" in docs[0].metadata and "url" in docs[0].metadata:
+                       # if the metadata has title and url, we can use it to show the source of the document
+                       metadata = [
+                           doc.metadata["title"] + "    url: " + doc.metadata["url"]
+                           for doc in docs
+                       ]
+                   else:
+                       raise Exception(
+                           "metadata does not have source or page, or title and url"
+                       )
+               except Exception:
+                   metadata = ["none" for _ in docs]
+                   inputs = [doc for doc in docs]
+               table["inputs"] = inputs
+               table["metadata"] = metadata
+       
+           else:
+               table["inputs"] = ["none"]
+               table["metadata"] = ["none"]
+       
+           return table
+       
+       
+    6: def handle_score_table(
+    4:     table: dict, bert: float, rouge: float, llm_score: float
+    1: ) -> dict:
+           """add each response's bert and rouge score into table dictionary
+       
+           Args:
+               **table (dict)**: table dictionary that store texts data for a run of experiment.\n
+               **bert (float)**: bert score\n
+               **rouge (float)**: rouge score\n
+       
+           Returns:
+               dict: table dictionary
+           """
+       
+           table["bert"] = bert
+           table["rouge"] = rouge
+           table["llm_score"] = llm_score
+       
+           return table
+       
+       
+    1: def handle_language(language: str):
+           if language not in language_dict:
+               print("language not supported, use chinese as default\n\n")
+               return "ch"
+           else:
+               return language
+       
+       
+   19: language_dict = {
+    1:     "en": "english",
+    1:     "ch": "traditional chinese",
+    1:     "jp": "japanese",
+    1:     "ja": "japanese",
+    1:     "zh": "traditional chinese",
+    1:     "cn": "simplified chinese",
+    1:     "de": "german",
+    1:     "el": "greek",
+    1:     "es": "spanish",
+    1:     "fr": "french",
+    1:     "it": "italian",
+    1:     "ko": "korean",
+    1:     "nl": "dutch",
+    1:     "pl": "polish",
+    1:     "pt": "portuguese",
+    1:     "ru": "russian",
+    1:     "tr": "turkish",
+    1:     "vi": "vietnamese",
+    1:     "hi": "hindi",
+    1:     "ar": "arabic",
+    1:     "th": "thai",
+    1:     "id": "indonesian",
+    1:     "no": "norwegian",
+    1:     "sv": "swedish",
+    1:     "fi": "finnish",
+    1:     "da": "danish",
+    1:     "cs": "czech",
+    1:     "hu": "hungarian",
+       }
+       
+    1: websearch_language_dict = {
+    1:     "en": {"brave": "en", "serper": "en", "wiki": "en"},
+    1:     "ch": {"brave": "zh-hant", "serper": "zh-TW", "wiki": "zh-TW"},
+    1:     "jp": {"brave": "ja", "serper": "ja", "wiki": "jp"},
+    1:     "ja": {"brave": "ja", "serper": "ja", "wiki": "jp"},
+       }
+       
+    1: websearch_country_dict = {
+    1:     "en": {"brave": "us", "serper": "us", "wiki": "us"},
+    1:     "ch": {"brave": "tw", "serper": "tw", "wiki": "tw"},
+    1:     "jp": {"brave": "jp", "serper": "jp", "wiki": "jp"},
+    1:     "ja": {"brave": "jp", "serper": "jp", "wiki": "jp"},
+       }

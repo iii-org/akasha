@@ -1,0 +1,128 @@
+       # mypy: allow-untyped-defs
+    1: from typing import Any
+       
+       
+    1: _pandas: Any = None
+    1: _WITH_PANDAS: bool | None = None
+       
+       
+    1: def _try_import_pandas() -> bool:
+           try:
+               import pandas  # type: ignore[import]
+       
+               global _pandas
+               _pandas = pandas
+               return True
+           except ImportError:
+               return False
+       
+       
+       # pandas used only for prototyping, will be shortly replaced with TorchArrow
+    1: def _with_pandas() -> bool:
+           global _WITH_PANDAS
+           if _WITH_PANDAS is None:
+               _WITH_PANDAS = _try_import_pandas()
+           return _WITH_PANDAS
+       
+       
+    2: class PandasWrapper:
+    2:     @classmethod
+    2:     def create_dataframe(cls, data, columns):
+               if not _with_pandas():
+                   raise RuntimeError("DataFrames prototype requires pandas to function")
+               return _pandas.DataFrame(data, columns=columns)  # type: ignore[union-attr]
+       
+    2:     @classmethod
+    2:     def is_dataframe(cls, data):
+               if not _with_pandas():
+                   return False
+               return isinstance(data, _pandas.core.frame.DataFrame)  # type: ignore[union-attr]
+       
+    2:     @classmethod
+    2:     def is_column(cls, data):
+               if not _with_pandas():
+                   return False
+               return isinstance(data, _pandas.core.series.Series)  # type: ignore[union-attr]
+       
+    2:     @classmethod
+    2:     def iterate(cls, data):
+               if not _with_pandas():
+                   raise RuntimeError("DataFrames prototype requires pandas to function")
+               yield from data.itertuples(index=False)
+       
+    2:     @classmethod
+    2:     def concat(cls, buffer):
+               if not _with_pandas():
+                   raise RuntimeError("DataFrames prototype requires pandas to function")
+               return _pandas.concat(buffer)  # type: ignore[union-attr]
+       
+    2:     @classmethod
+    2:     def get_item(cls, data, idx):
+               if not _with_pandas():
+                   raise RuntimeError("DataFrames prototype requires pandas to function")
+               return data[idx : idx + 1]
+       
+    2:     @classmethod
+    2:     def get_len(cls, df):
+               if not _with_pandas():
+                   raise RuntimeError("DataFrames prototype requires pandas to function")
+               return len(df.index)
+       
+    2:     @classmethod
+    2:     def get_columns(cls, df):
+               if not _with_pandas():
+                   raise RuntimeError("DataFrames prototype requires pandas to function")
+               return list(df.columns.values.tolist())
+       
+       
+       # When you build own implementation just override it with dataframe_wrapper.set_df_wrapper(new_wrapper_class)
+    1: default_wrapper = PandasWrapper
+       
+       
+    1: def get_df_wrapper():
+           return default_wrapper
+       
+       
+    1: def set_df_wrapper(wrapper) -> None:
+           global default_wrapper
+           default_wrapper = wrapper
+       
+       
+    1: def create_dataframe(data, columns=None):
+           wrapper = get_df_wrapper()
+           return wrapper.create_dataframe(data, columns)
+       
+       
+    1: def is_dataframe(data):
+           wrapper = get_df_wrapper()
+           return wrapper.is_dataframe(data)
+       
+       
+    1: def get_columns(data):
+           wrapper = get_df_wrapper()
+           return wrapper.get_columns(data)
+       
+       
+    1: def is_column(data):
+           wrapper = get_df_wrapper()
+           return wrapper.is_column(data)
+       
+       
+    1: def concat(buffer):
+           wrapper = get_df_wrapper()
+           return wrapper.concat(buffer)
+       
+       
+    1: def iterate(data):
+           wrapper = get_df_wrapper()
+           return wrapper.iterate(data)
+       
+       
+    1: def get_item(data, idx):
+           wrapper = get_df_wrapper()
+           return wrapper.get_item(data, idx)
+       
+       
+    1: def get_len(df):
+           wrapper = get_df_wrapper()
+           return wrapper.get_len(df)

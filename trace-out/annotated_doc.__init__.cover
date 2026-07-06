@@ -1,0 +1,3 @@
+    1: from .main import Doc as Doc
+       
+    1: __version__ = "0.0.4"

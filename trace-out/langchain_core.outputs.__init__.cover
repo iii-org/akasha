@@ -1,0 +1,66 @@
+    1: """Output classes.
+       
+       Used to represent the output of a language model call and the output of a chat.
+       
+       The top container for information is the `LLMResult` object. `LLMResult` is used by both
+       chat models and LLMs. This object contains the output of the language model and any
+       additional information that the model provider wants to return.
+       
+       When invoking models via the standard runnable methods (e.g. invoke, batch, etc.):
+       
+       - Chat models will return `AIMessage` objects.
+       - LLMs will return regular text strings.
+       
+       In addition, users can access the raw output of either LLMs or chat models via
+       callbacks. The `on_chat_model_end` and `on_llm_end` callbacks will return an `LLMResult`
+       object containing the generated outputs and any additional information returned by the
+       model provider.
+       
+       In general, if information is already available in the AIMessage object, it is
+       recommended to access it from there rather than from the `LLMResult` object.
+       """
+       
+    1: from typing import TYPE_CHECKING
+       
+    1: from langchain_core._import_utils import import_attr
+       
+    1: if TYPE_CHECKING:
+           from langchain_core.outputs.chat_generation import (
+               ChatGeneration,
+               ChatGenerationChunk,
+           )
+           from langchain_core.outputs.chat_result import ChatResult
+           from langchain_core.outputs.generation import Generation, GenerationChunk
+           from langchain_core.outputs.llm_result import LLMResult
+           from langchain_core.outputs.run_info import RunInfo
+       
+    1: __all__ = (
+           "ChatGeneration",
+           "ChatGenerationChunk",
+           "ChatResult",
+           "Generation",
+           "GenerationChunk",
+           "LLMResult",
+           "RunInfo",
+       )
+       
+    1: _dynamic_imports = {
+    1:     "ChatGeneration": "chat_generation",
+    1:     "ChatGenerationChunk": "chat_generation",
+    1:     "ChatResult": "chat_result",
+    1:     "Generation": "generation",
+    1:     "GenerationChunk": "generation",
+    1:     "LLMResult": "llm_result",
+    1:     "RunInfo": "run_info",
+       }
+       
+       
+    1: def __getattr__(attr_name: str) -> object:
+    7:     module_name = _dynamic_imports.get(attr_name)
+    7:     result = import_attr(attr_name, module_name, __spec__.parent)
+    7:     globals()[attr_name] = result
+    7:     return result
+       
+       
+    1: def __dir__() -> list[str]:
+           return list(__all__)

@@ -1,0 +1,33 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from .response_usage import ResponseUsage
+    1: from .response_output_item import ResponseOutputItem
+       
+    1: __all__ = ["CompactedResponse"]
+       
+       
+    2: class CompactedResponse(BaseModel):
+    1:     id: str
+    1:     """The unique identifier for the compacted response."""
+       
+    1:     created_at: int
+    1:     """Unix timestamp (in seconds) when the compacted conversation was created."""
+       
+    1:     object: Literal["response.compaction"]
+    1:     """The object type. Always `response.compaction`."""
+       
+    1:     output: List[ResponseOutputItem]
+    1:     """The compacted list of output items.
+       
+           This is a list of all user messages, followed by a single compaction item.
+           """
+       
+    1:     usage: ResponseUsage
+    1:     """
+           Token accounting for the compaction pass, including cached, reasoning, and total
+           tokens.
+           """

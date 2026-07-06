@@ -1,0 +1,16 @@
+       # -*- coding: utf-8 -*-
+       # *****************************************************************************
+       #       Copyright (C) 2006-2020  Jorgen Stenarson. <jorgen.stenarson@bostream.nu>
+       #       Copyright (C) 2020 Bassem Girgis. <brgirgis@gmail.com>
+       #
+       #  Distributed under the terms of the BSD License.  The full license is in
+       #  the file COPYING, distributed as part of this software.
+       # *****************************************************************************
+       
+       
+    2: class ReadlineError(Exception):
+    1:     pass
+       
+       
+    2: class GetSetError(ReadlineError):
+    1:     pass

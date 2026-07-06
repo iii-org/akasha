@@ -1,0 +1,198 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import List, Union, Iterable, Optional
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: from ..._types import SequenceNotStr
+       
+    1: __all__ = [
+           "ComputerActionListParam",
+           "ComputerActionParam",
+           "Click",
+           "DoubleClick",
+           "Drag",
+           "DragPath",
+           "Keypress",
+           "Move",
+           "Screenshot",
+           "Scroll",
+           "Type",
+           "Wait",
+       ]
+       
+       
+    2: class Click(TypedDict, total=False):
+    1:     """A click action."""
+       
+    1:     button: Required[Literal["left", "right", "wheel", "back", "forward"]]
+    1:     """Indicates which mouse button was pressed during the click.
+       
+           One of `left`, `right`, `wheel`, `back`, or `forward`.
+           """
+       
+    1:     type: Required[Literal["click"]]
+    1:     """Specifies the event type. For a click action, this property is always `click`."""
+       
+    1:     x: Required[int]
+    1:     """The x-coordinate where the click occurred."""
+       
+    1:     y: Required[int]
+    1:     """The y-coordinate where the click occurred."""
+       
+    1:     keys: Optional[SequenceNotStr[str]]
+    1:     """The keys being held while clicking."""
+       
+       
+    2: class DoubleClick(TypedDict, total=False):
+    1:     """A double click action."""
+       
+    1:     keys: Required[Optional[SequenceNotStr[str]]]
+    1:     """The keys being held while double-clicking."""
+       
+    1:     type: Required[Literal["double_click"]]
+    1:     """Specifies the event type.
+       
+           For a double click action, this property is always set to `double_click`.
+           """
+       
+    1:     x: Required[int]
+    1:     """The x-coordinate where the double click occurred."""
+       
+    1:     y: Required[int]
+    1:     """The y-coordinate where the double click occurred."""
+       
+       
+    2: class DragPath(TypedDict, total=False):
+    1:     """An x/y coordinate pair, e.g. `{ x: 100, y: 200 }`."""
+       
+    1:     x: Required[int]
+    1:     """The x-coordinate."""
+       
+    1:     y: Required[int]
+    1:     """The y-coordinate."""
+       
+       
+    2: class Drag(TypedDict, total=False):
+    1:     """A drag action."""
+       
+    1:     path: Required[Iterable[DragPath]]
+    1:     """An array of coordinates representing the path of the drag action.
+       
+           Coordinates will appear as an array of objects, eg
+       
+           ```
+           [
+             { x: 100, y: 200 },
+             { x: 200, y: 300 }
+           ]
+           ```
+           """
+       
+    1:     type: Required[Literal["drag"]]
+    1:     """Specifies the event type.
+       
+           For a drag action, this property is always set to `drag`.
+           """
+       
+    1:     keys: Optional[SequenceNotStr[str]]
+    1:     """The keys being held while dragging the mouse."""
+       
+       
+    2: class Keypress(TypedDict, total=False):
+    1:     """A collection of keypresses the model would like to perform."""
+       
+    1:     keys: Required[SequenceNotStr[str]]
+    1:     """The combination of keys the model is requesting to be pressed.
+       
+           This is an array of strings, each representing a key.
+           """
+       
+    1:     type: Required[Literal["keypress"]]
+    1:     """Specifies the event type.
+       
+           For a keypress action, this property is always set to `keypress`.
+           """
+       
+       
+    2: class Move(TypedDict, total=False):
+    1:     """A mouse move action."""
+       
+    1:     type: Required[Literal["move"]]
+    1:     """Specifies the event type.
+       
+           For a move action, this property is always set to `move`.
+           """
+       
+    1:     x: Required[int]
+    1:     """The x-coordinate to move to."""
+       
+    1:     y: Required[int]
+    1:     """The y-coordinate to move to."""
+       
+    1:     keys: Optional[SequenceNotStr[str]]
+    1:     """The keys being held while moving the mouse."""
+       
+       
+    2: class Screenshot(TypedDict, total=False):
+    1:     """A screenshot action."""
+       
+    1:     type: Required[Literal["screenshot"]]
+    1:     """Specifies the event type.
+       
+           For a screenshot action, this property is always set to `screenshot`.
+           """
+       
+       
+    2: class Scroll(TypedDict, total=False):
+    1:     """A scroll action."""
+       
+    1:     scroll_x: Required[int]
+    1:     """The horizontal scroll distance."""
+       
+    1:     scroll_y: Required[int]
+    1:     """The vertical scroll distance."""
+       
+    1:     type: Required[Literal["scroll"]]
+    1:     """Specifies the event type.
+       
+           For a scroll action, this property is always set to `scroll`.
+           """
+       
+    1:     x: Required[int]
+    1:     """The x-coordinate where the scroll occurred."""
+       
+    1:     y: Required[int]
+    1:     """The y-coordinate where the scroll occurred."""
+       
+    1:     keys: Optional[SequenceNotStr[str]]
+    1:     """The keys being held while scrolling."""
+       
+       
+    2: class Type(TypedDict, total=False):
+    1:     """An action to type in text."""
+       
+    1:     text: Required[str]
+    1:     """The text to type."""
+       
+    1:     type: Required[Literal["type"]]
+    1:     """Specifies the event type.
+       
+           For a type action, this property is always set to `type`.
+           """
+       
+       
+    2: class Wait(TypedDict, total=False):
+    1:     """A wait action."""
+       
+    1:     type: Required[Literal["wait"]]
+    1:     """Specifies the event type.
+       
+           For a wait action, this property is always set to `wait`.
+           """
+       
+       
+    1: ComputerActionParam: TypeAlias = Union[Click, DoubleClick, Drag, Keypress, Move, Screenshot, Scroll, Type, Wait]
+       
+    1: ComputerActionListParam: TypeAlias = List[ComputerActionParam]

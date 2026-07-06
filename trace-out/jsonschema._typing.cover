@@ -1,0 +1,29 @@
+    1: """
+       Some (initially private) typing helpers for jsonschema's types.
+       """
+    1: from collections.abc import Callable, Iterable
+    1: from typing import Any, Protocol
+       
+    1: import referencing.jsonschema
+       
+    1: from jsonschema.protocols import Validator
+       
+       
+    2: class SchemaKeywordValidator(Protocol):
+    6:     def __call__(
+               self,
+    1:         validator: Validator,
+    1:         value: Any,
+    1:         instance: Any,
+    1:         schema: referencing.jsonschema.Schema,
+    1:     ) -> None:
+               ...
+       
+       
+    1: id_of = Callable[[referencing.jsonschema.Schema], str | None]
+       
+       
+    2: ApplicableValidators = Callable[
+    2:     [referencing.jsonschema.Schema],
+    1:     Iterable[tuple[str, Any]],
+       ]

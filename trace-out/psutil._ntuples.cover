@@ -1,0 +1,429 @@
+       # Copyright (c) 2009, Giampaolo Rodola". All rights reserved.
+       # Use of this source code is governed by a BSD-style license that can be
+       # found in the LICENSE file.
+       
+    1: from collections import namedtuple as nt
+       
+    1: from ._common import AIX
+    1: from ._common import BSD
+    1: from ._common import FREEBSD
+    1: from ._common import LINUX
+    1: from ._common import MACOS
+    1: from ._common import SUNOS
+    1: from ._common import WINDOWS
+       
+       # ===================================================================
+       # --- system functions
+       # ===================================================================
+       
+       # psutil.swap_memory()
+    1: sswap = nt("sswap", ("total", "used", "free", "percent", "sin", "sout"))
+       
+       # psutil.disk_usage()
+    1: sdiskusage = nt("sdiskusage", ("total", "used", "free", "percent"))
+       
+       # psutil.disk_io_counters()
+    2: sdiskio = nt(
+    1:     "sdiskio",
+    1:     (
+               "read_count",
+               "write_count",
+               "read_bytes",
+               "write_bytes",
+               "read_time",
+               "write_time",
+           ),
+       )
+       
+       # psutil.disk_partitions()
+    1: sdiskpart = nt("sdiskpart", ("device", "mountpoint", "fstype", "opts"))
+       
+       # psutil.net_io_counters()
+    2: snetio = nt(
+    1:     "snetio",
+    1:     (
+               "bytes_sent",
+               "bytes_recv",
+               "packets_sent",
+               "packets_recv",
+               "errin",
+               "errout",
+               "dropin",
+               "dropout",
+           ),
+       )
+       
+       # psutil.users()
+    1: suser = nt("suser", ("name", "terminal", "host", "started", "pid"))
+       
+       # psutil.net_connections()
+    2: sconn = nt(
+    1:     "sconn", ("fd", "family", "type", "laddr", "raddr", "status", "pid")
+       )
+       
+       # psutil.net_if_addrs()
+    1: snicaddr = nt("snicaddr", ("family", "address", "netmask", "broadcast", "ptp"))
+       
+       # psutil.net_if_stats()
+    1: snicstats = nt("snicstats", ("isup", "duplex", "speed", "mtu", "flags"))
+       
+       # psutil.cpu_stats()
+    2: scpustats = nt(
+    1:     "scpustats", ("ctx_switches", "interrupts", "soft_interrupts", "syscalls")
+       )
+       
+       # psutil.cpu_freq()
+    1: scpufreq = nt("scpufreq", ("current", "min", "max"))
+       
+       # psutil.sensors_temperatures()
+    1: shwtemp = nt("shwtemp", ("label", "current", "high", "critical"))
+       
+       # psutil.sensors_battery()
+    1: sbattery = nt("sbattery", ("percent", "secsleft", "power_plugged"))
+       
+       # psutil.sensors_fans()
+    1: sfan = nt("sfan", ("label", "current"))
+       
+       # psutil.heap_info() (mallinfo2 Linux struct)
+    1: if LINUX or WINDOWS or MACOS or BSD:
+    2:     pheap = nt(
+    1:         "pheap",
+    1:         [
+    1:             "heap_used",  # uordblks, memory allocated via malloc()
+    1:             "mmap_used",  # hblkhd, memory allocated via mmap() (large blocks)
+               ],
+           )
+    1:     if WINDOWS:
+    1:         pheap = nt("pheap", pheap._fields + ("heap_count",))
+       
+       # ===================================================================
+       # --- Process class
+       # ===================================================================
+       
+       # psutil.Process.cpu_times()
+    2: pcputimes = nt(
+    1:     "pcputimes", ("user", "system", "children_user", "children_system")
+       )
+       
+       # psutil.Process.open_files()
+    1: popenfile = nt("popenfile", ("path", "fd"))
+       
+       # psutil.Process.threads()
+    1: pthread = nt("pthread", ("id", "user_time", "system_time"))
+       
+       # psutil.Process.uids()
+    1: puids = nt("puids", ("real", "effective", "saved"))
+       
+       # psutil.Process.gids()
+    1: pgids = nt("pgids", ("real", "effective", "saved"))
+       
+       # psutil.Process.io_counters()
+    1: pio = nt("pio", ("read_count", "write_count", "read_bytes", "write_bytes"))
+       
+       # psutil.Process.ionice()
+    1: pionice = nt("pionice", ("ioclass", "value"))
+       
+       # psutil.Process.ctx_switches()
+    1: pctxsw = nt("pctxsw", ("voluntary", "involuntary"))
+       
+       # psutil.Process.net_connections()
+    1: pconn = nt("pconn", ("fd", "family", "type", "laddr", "raddr", "status"))
+       
+       # psutil.net_connections() and psutil.Process.net_connections()
+    1: addr = nt("addr", ("ip", "port"))
+       
+       # ===================================================================
+       # --- Linux
+       # ===================================================================
+       
+    1: if LINUX:
+       
+           # This gets set from _pslinux.py
+           scputimes = None
+       
+           # psutil.virtual_memory()
+           svmem = nt(
+               "svmem",
+               (
+                   "total",
+                   "available",
+                   "percent",
+                   "used",
+                   "free",
+                   "active",
+                   "inactive",
+                   "buffers",
+                   "cached",
+                   "shared",
+                   "slab",
+               ),
+           )
+       
+           # psutil.disk_io_counters()
+           sdiskio = nt(
+               "sdiskio",
+               (
+                   "read_count",
+                   "write_count",
+                   "read_bytes",
+                   "write_bytes",
+                   "read_time",
+                   "write_time",
+                   "read_merged_count",
+                   "write_merged_count",
+                   "busy_time",
+               ),
+           )
+       
+           # psutil.Process().open_files()
+           popenfile = nt("popenfile", ("path", "fd", "position", "mode", "flags"))
+       
+           # psutil.Process().memory_info()
+           pmem = nt("pmem", ("rss", "vms", "shared", "text", "lib", "data", "dirty"))
+       
+           # psutil.Process().memory_full_info()
+           pfullmem = nt("pfullmem", pmem._fields + ("uss", "pss", "swap"))
+       
+           # psutil.Process().memory_maps(grouped=True)
+           pmmap_grouped = nt(
+               "pmmap_grouped",
+               (
+                   "path",
+                   "rss",
+                   "size",
+                   "pss",
+                   "shared_clean",
+                   "shared_dirty",
+                   "private_clean",
+                   "private_dirty",
+                   "referenced",
+                   "anonymous",
+                   "swap",
+               ),
+           )
+       
+           # psutil.Process().memory_maps(grouped=False)
+           pmmap_ext = nt(
+               "pmmap_ext", "addr perms " + " ".join(pmmap_grouped._fields)
+           )
+       
+           # psutil.Process.io_counters()
+           pio = nt(
+               "pio",
+               (
+                   "read_count",
+                   "write_count",
+                   "read_bytes",
+                   "write_bytes",
+                   "read_chars",
+                   "write_chars",
+               ),
+           )
+       
+           # psutil.Process.cpu_times()
+           pcputimes = nt(
+               "pcputimes",
+               ("user", "system", "children_user", "children_system", "iowait"),
+           )
+       
+       # ===================================================================
+       # --- Windows
+       # ===================================================================
+       
+    1: elif WINDOWS:
+       
+           # psutil.cpu_times()
+    1:     scputimes = nt("scputimes", ("user", "system", "idle", "interrupt", "dpc"))
+       
+           # psutil.virtual_memory()
+    1:     svmem = nt("svmem", ("total", "available", "percent", "used", "free"))
+       
+           # psutil.Process.memory_info()
+    2:     pmem = nt(
+    1:         "pmem",
+    1:         (
+                   "rss",
+                   "vms",
+                   "num_page_faults",
+                   "peak_wset",
+                   "wset",
+                   "peak_paged_pool",
+                   "paged_pool",
+                   "peak_nonpaged_pool",
+                   "nonpaged_pool",
+                   "pagefile",
+                   "peak_pagefile",
+                   "private",
+               ),
+           )
+       
+           # psutil.Process.memory_full_info()
+    1:     pfullmem = nt("pfullmem", pmem._fields + ("uss",))
+       
+           # psutil.Process.memory_maps(grouped=True)
+    1:     pmmap_grouped = nt("pmmap_grouped", ("path", "rss"))
+       
+           # psutil.Process.memory_maps(grouped=False)
+    2:     pmmap_ext = nt(
+    1:         "pmmap_ext", "addr perms " + " ".join(pmmap_grouped._fields)
+           )
+       
+           # psutil.Process.io_counters()
+    2:     pio = nt(
+    1:         "pio",
+    1:         (
+                   "read_count",
+                   "write_count",
+                   "read_bytes",
+                   "write_bytes",
+                   "other_count",
+                   "other_bytes",
+               ),
+           )
+       
+       # ===================================================================
+       # --- macOS
+       # ===================================================================
+       
+       elif MACOS:
+       
+           # psutil.cpu_times()
+           scputimes = nt("scputimes", ("user", "nice", "system", "idle"))
+       
+           # psutil.virtual_memory()
+           svmem = nt(
+               "svmem",
+               (
+                   "total",
+                   "available",
+                   "percent",
+                   "used",
+                   "free",
+                   "active",
+                   "inactive",
+                   "wired",
+               ),
+           )
+       
+           # psutil.Process.memory_info()
+           pmem = nt("pmem", ("rss", "vms", "pfaults", "pageins"))
+       
+           # psutil.Process.memory_full_info()
+           pfullmem = nt("pfullmem", pmem._fields + ("uss",))
+       
+       # ===================================================================
+       # --- BSD
+       # ===================================================================
+       
+       elif BSD:
+       
+           # psutil.virtual_memory()
+           svmem = nt(
+               "svmem",
+               (
+                   "total",
+                   "available",
+                   "percent",
+                   "used",
+                   "free",
+                   "active",
+                   "inactive",
+                   "buffers",
+                   "cached",
+                   "shared",
+                   "wired",
+               ),
+           )
+       
+           # psutil.cpu_times()
+           scputimes = nt("scputimes", ("user", "nice", "system", "idle", "irq"))
+       
+           # psutil.Process.memory_info()
+           pmem = nt("pmem", ("rss", "vms", "text", "data", "stack"))
+       
+           # psutil.Process.memory_full_info()
+           pfullmem = pmem
+       
+           # psutil.Process.cpu_times()
+           pcputimes = nt(
+               "pcputimes", ("user", "system", "children_user", "children_system")
+           )
+       
+           # psutil.Process.memory_maps(grouped=True)
+           pmmap_grouped = nt(
+               "pmmap_grouped", "path rss, private, ref_count, shadow_count"
+           )
+       
+           # psutil.Process.memory_maps(grouped=False)
+           pmmap_ext = nt(
+               "pmmap_ext", "addr, perms path rss, private, ref_count, shadow_count"
+           )
+       
+           # psutil.disk_io_counters()
+           if FREEBSD:
+               sdiskio = nt(
+                   "sdiskio",
+                   (
+                       "read_count",
+                       "write_count",
+                       "read_bytes",
+                       "write_bytes",
+                       "read_time",
+                       "write_time",
+                       "busy_time",
+                   ),
+               )
+           else:
+               sdiskio = nt(
+                   "sdiskio",
+                   ("read_count", "write_count", "read_bytes", "write_bytes"),
+               )
+       
+       # ===================================================================
+       # --- SunOS
+       # ===================================================================
+       
+       elif SUNOS:
+       
+           # psutil.cpu_times()
+           scputimes = nt("scputimes", ("user", "system", "idle", "iowait"))
+       
+           # psutil.cpu_times(percpu=True)
+           pcputimes = nt(
+               "pcputimes", ("user", "system", "children_user", "children_system")
+           )
+       
+           # psutil.virtual_memory()
+           svmem = nt("svmem", ("total", "available", "percent", "used", "free"))
+       
+           # psutil.Process.memory_info()
+           pmem = nt("pmem", ("rss", "vms"))
+       
+           # psutil.Process.memory_full_info()
+           pfullmem = pmem
+       
+           # psutil.Process.memory_maps(grouped=True)
+           pmmap_grouped = nt("pmmap_grouped", ("path", "rss", "anonymous", "locked"))
+       
+           # psutil.Process.memory_maps(grouped=False)
+           pmmap_ext = nt(
+               "pmmap_ext", "addr perms " + " ".join(pmmap_grouped._fields)
+           )
+       
+       # ===================================================================
+       # --- AIX
+       # ===================================================================
+       
+       elif AIX:
+       
+           # psutil.Process.memory_info()
+           pmem = nt("pmem", ("rss", "vms"))
+       
+           # psutil.Process.memory_full_info()
+           pfullmem = pmem
+       
+           # psutil.Process.cpu_times()
+           scputimes = nt("scputimes", ("user", "system", "idle", "iowait"))
+       
+           # psutil.virtual_memory()
+           svmem = nt("svmem", ("total", "available", "percent", "used", "free"))

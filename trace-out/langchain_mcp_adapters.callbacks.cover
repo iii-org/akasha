@@ -1,0 +1,141 @@
+    1: """Types for callbacks."""
+       
+    1: from dataclasses import dataclass
+    1: from typing import Protocol, runtime_checkable
+       
+    1: from mcp.client.session import ElicitationFnT as MCPElicitationFnT
+    1: from mcp.client.session import LoggingFnT as MCPLoggingFnT
+    1: from mcp.shared.context import RequestContext as MCPRequestContext
+    1: from mcp.shared.session import ProgressFnT as MCPProgressFnT
+    1: from mcp.types import (
+           ElicitRequestParams as MCPElicitRequestParams,
+       )
+    1: from mcp.types import (
+           ElicitResult as MCPElicitResult,
+       )
+    1: from mcp.types import (
+           LoggingMessageNotificationParams as MCPLoggingMessageNotificationParams,
+       )
+       
+       # Type aliases to avoid direct MCP type dependencies
+    1: LoggingFnT = MCPLoggingFnT
+    1: ProgressFnT = MCPProgressFnT
+    1: ElicitationFnT = MCPElicitationFnT
+    1: LoggingMessageNotificationParams = MCPLoggingMessageNotificationParams
+    1: ElicitRequestParams = MCPElicitRequestParams
+       
+       
+    3: @dataclass
+    2: class CallbackContext:
+    1:     """LangChain MCP client callback context."""
+       
+    1:     server_name: str
+    1:     tool_name: str | None = None
+       
+       
+    3: @runtime_checkable
+    2: class LoggingMessageCallback(Protocol):
+    1:     """Light wrapper around the mcp.client.session.LoggingFnT.
+       
+           Injects callback context as the last argument.
+           """
+       
+    4:     async def __call__(
+               self,
+    1:         params: LoggingMessageNotificationParams,
+    1:         context: CallbackContext,
+    1:     ) -> None:
+               """Execute callback on logging message notification."""
+               ...
+       
+       
+    3: @runtime_checkable
+    2: class ProgressCallback(Protocol):
+    1:     """Light wrapper around the mcp.shared.session.ProgressFnT.
+       
+           Injects callback context as the last argument.
+           """
+       
+    6:     async def __call__(
+               self,
+    1:         progress: float,
+    1:         total: float | None,
+    1:         message: str | None,
+    1:         context: CallbackContext,
+    1:     ) -> None:
+               """Execute callback on progress notification."""
+               ...
+       
+       
+    3: @runtime_checkable
+    2: class ElicitationCallback(Protocol):
+    1:     """Light wrapper around the mcp.client.session.ElicitationFnT.
+       
+           Injects callback context as the last argument.
+           """
+       
+    5:     async def __call__(
+               self,
+    1:         mcp_context: MCPRequestContext,
+    1:         params: ElicitRequestParams,
+    1:         context: CallbackContext,
+    1:     ) -> MCPElicitResult:
+               """Handle an elicitation request and return the user's response."""
+               ...
+       
+       
+    3: @dataclass
+    2: class _MCPCallbacks:
+    1:     """Callbacks compatible with the MCP SDK. For internal use only."""
+       
+    1:     logging_callback: LoggingFnT | None = None
+    1:     progress_callback: ProgressFnT | None = None
+    1:     elicitation_callback: ElicitationFnT | None = None
+       
+       
+    3: @dataclass
+    2: class Callbacks:
+    1:     """Callbacks for the LangChain MCP client."""
+       
+    1:     on_logging_message: LoggingMessageCallback | None = None
+    1:     on_progress: ProgressCallback | None = None
+    1:     on_elicitation: ElicitationCallback | None = None
+       
+    1:     def to_mcp_format(self, *, context: CallbackContext) -> _MCPCallbacks:
+               """Convert the LangChain MCP client callbacks to MCP SDK callbacks.
+       
+               Injects the LangChain CallbackContext as the last argument.
+               """
+               if (on_logging_message := self.on_logging_message) is not None:
+       
+                   async def mcp_logging_callback(
+                       params: LoggingMessageNotificationParams,
+                   ) -> None:
+                       await on_logging_message(params, context)
+               else:
+                   mcp_logging_callback = None
+       
+               if (on_progress := self.on_progress) is not None:
+       
+                   async def mcp_progress_callback(
+                       progress: float, total: float | None, message: str | None
+                   ) -> None:
+                       await on_progress(progress, total, message, context)
+               else:
+                   mcp_progress_callback = None
+       
+               if (on_elicitation := self.on_elicitation) is not None:
+       
+                   async def mcp_elicitation_callback(
+                       mcp_context: MCPRequestContext,
+                       params: ElicitRequestParams,
+                   ) -> MCPElicitResult:
+                       return await on_elicitation(mcp_context, params, context)
+               else:
+                   mcp_elicitation_callback = None
+       
+               return _MCPCallbacks(
+                   logging_callback=mcp_logging_callback,
+                   progress_callback=mcp_progress_callback,
+                   elicitation_callback=mcp_elicitation_callback,
+               )

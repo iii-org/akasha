@@ -1,0 +1,12 @@
+    1: from __future__ import annotations
+       
+    1: from typing import Literal
+    1: from typing import Protocol
+       
+       
+    1: _AssertionTextDiffStyle = Literal["ndiff", "block"]
+       
+       
+    2: class _HighlightFunc(Protocol):  # noqa: PYI046
+    1:     def __call__(self, source: str, lexer: Literal["diff", "python"] = "python") -> str:
+               """Apply highlighting to the given source."""

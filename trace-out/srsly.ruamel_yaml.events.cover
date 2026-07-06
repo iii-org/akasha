@@ -1,0 +1,157 @@
+       # coding: utf-8
+       
+       # Abstract classes.
+       
+    1: if False:  # MYPY
+           from typing import Any, Dict, Optional, List  # NOQA
+       
+       
+    1: def CommentCheck():
+           # type: () -> None
+           pass
+       
+       
+    2: class Event(object):
+    1:     __slots__ = 'start_mark', 'end_mark', 'comment'
+       
+    1:     def __init__(self, start_mark=None, end_mark=None, comment=CommentCheck):
+               # type: (Any, Any, Any) -> None
+  687:         self.start_mark = start_mark
+  687:         self.end_mark = end_mark
+               # assert comment is not CommentCheck
+  687:         if comment is CommentCheck:
+                   comment = None
+  687:         self.comment = comment
+       
+    1:     def __repr__(self):
+               # type: () -> Any
+               attributes = [
+                   key
+                   for key in ['anchor', 'tag', 'implicit', 'value', 'flow_style', 'style']
+                   if hasattr(self, key)
+               ]
+               arguments = ', '.join(['%s=%r' % (key, getattr(self, key)) for key in attributes])
+               if self.comment not in [None, CommentCheck]:
+                   arguments += ', comment={!r}'.format(self.comment)
+               return '%s(%s)' % (self.__class__.__name__, arguments)
+       
+       
+    2: class NodeEvent(Event):
+    1:     __slots__ = ('anchor',)
+       
+    1:     def __init__(self, anchor, start_mark=None, end_mark=None, comment=None):
+               # type: (Any, Any, Any, Any) -> None
+  559:         Event.__init__(self, start_mark, end_mark, comment)
+  559:         self.anchor = anchor
+       
+       
+    2: class CollectionStartEvent(NodeEvent):
+    1:     __slots__ = 'tag', 'implicit', 'flow_style', 'nr_items'
+       
+    1:     def __init__(
+               self,
+               anchor,
+               tag,
+               implicit,
+    1:         start_mark=None,
+    1:         end_mark=None,
+    1:         flow_style=None,
+    1:         comment=None,
+    1:         nr_items=None,
+           ):
+               # type: (Any, Any, Any, Any, Any, Any, Any, Optional[int]) -> None
+  124:         NodeEvent.__init__(self, anchor, start_mark, end_mark, comment)
+  124:         self.tag = tag
+  124:         self.implicit = implicit
+  124:         self.flow_style = flow_style
+  124:         self.nr_items = nr_items
+       
+       
+    2: class CollectionEndEvent(Event):
+    1:     __slots__ = ()
+       
+       
+       # Implementations.
+       
+       
+    2: class StreamStartEvent(Event):
+    1:     __slots__ = ('encoding',)
+       
+    1:     def __init__(self, start_mark=None, end_mark=None, encoding=None, comment=None):
+               # type: (Any, Any, Any, Any) -> None
+    1:         Event.__init__(self, start_mark, end_mark, comment)
+    1:         self.encoding = encoding
+       
+       
+    2: class StreamEndEvent(Event):
+    1:     __slots__ = ()
+       
+       
+    2: class DocumentStartEvent(Event):
+    1:     __slots__ = 'explicit', 'version', 'tags'
+       
+    1:     def __init__(
+               self,
+    1:         start_mark=None,
+    1:         end_mark=None,
+    1:         explicit=None,
+    1:         version=None,
+    1:         tags=None,
+    1:         comment=None,
+           ):
+               # type: (Any, Any, Any, Any, Any, Any) -> None
+    1:         Event.__init__(self, start_mark, end_mark, comment)
+    1:         self.explicit = explicit
+    1:         self.version = version
+    1:         self.tags = tags
+       
+       
+    2: class DocumentEndEvent(Event):
+    1:     __slots__ = ('explicit',)
+       
+    1:     def __init__(self, start_mark=None, end_mark=None, explicit=None, comment=None):
+               # type: (Any, Any, Any, Any) -> None
+    1:         Event.__init__(self, start_mark, end_mark, comment)
+    1:         self.explicit = explicit
+       
+       
+    2: class AliasEvent(NodeEvent):
+    1:     __slots__ = ()
+       
+       
+    2: class ScalarEvent(NodeEvent):
+    1:     __slots__ = 'tag', 'implicit', 'value', 'style'
+       
+    1:     def __init__(
+               self,
+               anchor,
+               tag,
+               implicit,
+               value,
+    1:         start_mark=None,
+    1:         end_mark=None,
+    1:         style=None,
+    1:         comment=None,
+           ):
+               # type: (Any, Any, Any, Any, Any, Any, Any, Any) -> None
+  435:         NodeEvent.__init__(self, anchor, start_mark, end_mark, comment)
+  435:         self.tag = tag
+  435:         self.implicit = implicit
+  435:         self.value = value
+  435:         self.style = style
+       
+       
+    2: class SequenceStartEvent(CollectionStartEvent):
+    1:     __slots__ = ()
+       
+       
+    2: class SequenceEndEvent(CollectionEndEvent):
+    1:     __slots__ = ()
+       
+       
+    2: class MappingStartEvent(CollectionStartEvent):
+    1:     __slots__ = ()
+       
+       
+    2: class MappingEndEvent(CollectionEndEvent):
+    1:     __slots__ = ()

@@ -1,0 +1,42 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["TextSimilarityGrader"]
+       
+       
+    2: class TextSimilarityGrader(BaseModel):
+    1:     """A TextSimilarityGrader object which grades text based on similarity metrics."""
+       
+    2:     evaluation_metric: Literal[
+    1:         "cosine",
+               "fuzzy_match",
+               "bleu",
+               "gleu",
+               "meteor",
+               "rouge_1",
+               "rouge_2",
+               "rouge_3",
+               "rouge_4",
+               "rouge_5",
+               "rouge_l",
+           ]
+    1:     """The evaluation metric to use.
+       
+           One of `cosine`, `fuzzy_match`, `bleu`, `gleu`, `meteor`, `rouge_1`, `rouge_2`,
+           `rouge_3`, `rouge_4`, `rouge_5`, or `rouge_l`.
+           """
+       
+    1:     input: str
+    1:     """The text being graded."""
+       
+    1:     name: str
+    1:     """The name of the grader."""
+       
+    1:     reference: str
+    1:     """The text being graded against."""
+       
+    1:     type: Literal["text_similarity"]
+    1:     """The type of grader."""

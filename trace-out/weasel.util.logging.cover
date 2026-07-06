@@ -1,0 +1,8 @@
+    1: import logging
+       
+    1: logger = logging.getLogger("weasel")
+    1: logger_stream_handler = logging.StreamHandler()
+    2: logger_stream_handler.setFormatter(
+    1:     logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+       )
+    1: logger.addHandler(logger_stream_handler)

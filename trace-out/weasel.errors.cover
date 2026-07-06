@@ -1,0 +1,34 @@
+    2: class ErrorsWithCodes(type):
+    1:     def __getattribute__(self, code):
+    2:         msg = super().__getattribute__(code)
+    2:         if code.startswith("__"):  # python system attributes like __class__
+                   return msg
+               else:
+    2:             return "[{code}] {msg}".format(code=code, msg=msg)
+       
+       
+    2: class Warnings(metaclass=ErrorsWithCodes):
+           # File system
+    1:     W801 = "Could not clean/remove the temp directory at {dir}: {msg}."
+    1:     W802 = (
+    1:         "Remote storage is not yet supported for Python 3.12 with "
+               "cloudpathlib. Please use Python 3.11 or earlier for remote storage."
+           )
+       
+       
+    2: class Errors(metaclass=ErrorsWithCodes):
+           # API - Datastructure
+    1:     E001 = (
+    1:         "Can't write to frozen dictionary. This is likely an internal "
+               "error. Are you writing to a default function argument?"
+           )
+    1:     E002 = (
+    1:         "Can't write to frozen list. Maybe you're trying to modify a computed "
+               "property or default function argument?"
+           )
+       
+           # Workflow
+    1:     E501 = "Can not execute command '{str_command}'. Do you have '{tool}' installed?"
+       
+           # File system
+    1:     E801 = "The tar file pulled from the remote attempted an unsafe path " "traversal."

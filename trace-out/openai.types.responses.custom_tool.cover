@@ -1,0 +1,31 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from ..shared.custom_tool_input_format import CustomToolInputFormat
+       
+    1: __all__ = ["CustomTool"]
+       
+       
+    2: class CustomTool(BaseModel):
+    1:     """A custom tool that processes input using a specified format.
+       
+           Learn more about   [custom tools](https://platform.openai.com/docs/guides/function-calling#custom-tools)
+           """
+       
+    1:     name: str
+    1:     """The name of the custom tool, used to identify it in tool calls."""
+       
+    1:     type: Literal["custom"]
+    1:     """The type of the custom tool. Always `custom`."""
+       
+    1:     defer_loading: Optional[bool] = None
+    1:     """Whether this tool should be deferred and discovered via tool search."""
+       
+    1:     description: Optional[str] = None
+    1:     """Optional description of the custom tool, used to provide more context."""
+       
+    1:     format: Optional[CustomToolInputFormat] = None
+    1:     """The input format for the custom tool. Default is unconstrained text."""

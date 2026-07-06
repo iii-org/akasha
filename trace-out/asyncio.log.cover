@@ -1,0 +1,7 @@
+    1: """Logging configuration."""
+       
+    1: import logging
+       
+       
+       # Name the logger after the package.
+    1: logger = logging.getLogger(__package__)

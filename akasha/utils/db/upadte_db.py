@@ -1,7 +1,5 @@
 from typing import Callable, List, Union
 from langchain_core.embeddings import Embeddings
-from langchain_chroma import Chroma
-from chromadb.config import Settings
 from pathlib import Path
 from akasha.utils.db.db_structure import dbs, get_storage_directory
 from akasha.helper.handle_objects import handle_embeddings_and_name
@@ -9,6 +7,7 @@ from akasha.helper import separate_name, get_mac_address
 import logging
 from tqdm import tqdm
 import datetime
+from akasha.utils.db.chroma_compat import get_chroma_components
 
 
 def update_db(
@@ -31,6 +30,7 @@ def update_db(
         db_dict[db.ids[i]] = db.metadatas[i]
 
     progress = tqdm(total=len(data_source), desc="upadte db")
+    Chroma, Settings = get_chroma_components()
 
     for data_path in data_source:
         db_path = get_storage_directory(data_path, chunk_size, embed_type, embed_name)
@@ -92,6 +92,7 @@ def add_chunks(
     )
     embed_type, embed_name = separate_name(embeddings_name)
     db_path = get_storage_directory(file_name, chunk_size, embed_type, embed_name)
+    Chroma, Settings = get_chroma_components()
     client_settings = Settings(
         is_persistent=True,
         persist_directory=db_path,

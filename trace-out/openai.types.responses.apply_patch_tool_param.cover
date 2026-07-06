@@ -1,0 +1,14 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ApplyPatchToolParam"]
+       
+       
+    2: class ApplyPatchToolParam(TypedDict, total=False):
+    1:     """Allows the assistant to create, delete, or update files using unified diffs."""
+       
+    1:     type: Required[Literal["apply_patch"]]
+    1:     """The type of the tool. Always `apply_patch`."""

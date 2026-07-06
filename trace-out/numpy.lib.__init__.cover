@@ -1,0 +1,92 @@
+    1: """
+       **Note:** almost all functions in the ``numpy.lib`` namespace
+       are also present in the main ``numpy`` namespace.  Please use the
+       functions as ``np.<funcname>`` where possible.
+       
+       ``numpy.lib`` is mostly a space for implementing functions that don't
+       belong in core or in another NumPy submodule with a clear purpose
+       (e.g. ``random``, ``fft``, ``linalg``, ``ma``).
+       
+       Most contains basic functions that are used by several submodules and are
+       useful to have in the main name-space.
+       
+       """
+       
+       # Public submodules
+       # Note: recfunctions and (maybe) format are public too, but not imported
+    1: from . import mixins
+    1: from . import scimath as emath
+       
+       # Private submodules
+       # load module names. See https://github.com/networkx/networkx/issues/5838
+    1: from . import type_check
+    1: from . import index_tricks
+    1: from . import function_base
+    1: from . import nanfunctions
+    1: from . import shape_base
+    1: from . import stride_tricks
+    1: from . import twodim_base
+    1: from . import ufunclike
+    1: from . import histograms
+    1: from . import polynomial
+    1: from . import utils
+    1: from . import arraysetops
+    1: from . import npyio
+    1: from . import arrayterator
+    1: from . import arraypad
+    1: from . import _version
+       
+    1: from .type_check import *
+    1: from .index_tricks import *
+    1: from .function_base import *
+    1: from .nanfunctions import *
+    1: from .shape_base import *
+    1: from .stride_tricks import *
+    1: from .twodim_base import *
+    1: from .ufunclike import *
+    1: from .histograms import *
+       
+    1: from .polynomial import *
+    1: from .utils import *
+    1: from .arraysetops import *
+    1: from .npyio import *
+    1: from .arrayterator import Arrayterator
+    1: from .arraypad import *
+    1: from ._version import *
+    1: from numpy.core._multiarray_umath import tracemalloc_domain
+       
+    1: __all__ = ['emath', 'tracemalloc_domain', 'Arrayterator']
+    1: __all__ += type_check.__all__
+    1: __all__ += index_tricks.__all__
+    1: __all__ += function_base.__all__
+    1: __all__ += shape_base.__all__
+    1: __all__ += stride_tricks.__all__
+    1: __all__ += twodim_base.__all__
+    1: __all__ += ufunclike.__all__
+    1: __all__ += arraypad.__all__
+    1: __all__ += polynomial.__all__
+    1: __all__ += utils.__all__
+    1: __all__ += arraysetops.__all__
+    1: __all__ += npyio.__all__
+    1: __all__ += nanfunctions.__all__
+    1: __all__ += histograms.__all__
+       
+    1: from numpy._pytesttester import PytestTester
+    1: test = PytestTester(__name__)
+    1: del PytestTester
+       
+    1: def __getattr__(attr):
+           # Warn for reprecated attributes
+           import math
+           import warnings
+       
+           if attr == 'math':
+               warnings.warn(
+                   "`np.lib.math` is a deprecated alias for the standard library "
+                   "`math` module (Deprecated Numpy 1.25). Replace usages of "
+                   "`numpy.lib.math` with `math`", DeprecationWarning, stacklevel=2)
+               return math
+           else:
+               raise AttributeError("module {!r} has no attribute "
+                                    "{!r}".format(__name__, attr))
+               

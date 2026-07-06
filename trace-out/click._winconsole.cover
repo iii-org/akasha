@@ -1,0 +1,297 @@
+       # This module is based on the excellent work by Adam Bartoš who
+       # provided a lot of what went into the implementation here in
+       # the discussion to issue1602 in the Python bug tracker.
+       #
+       # There are some general differences in regards to how this works
+       # compared to the original patches as we do not need to patch
+       # the entire interpreter but just work in our little world of
+       # echo and prompt.
+    1: from __future__ import annotations
+       
+    1: import collections.abc as cabc
+    1: import io
+    1: import sys
+    1: import time
+    1: import typing as t
+    1: from ctypes import Array
+    1: from ctypes import byref
+    1: from ctypes import c_char
+    1: from ctypes import c_char_p
+    1: from ctypes import c_int
+    1: from ctypes import c_ssize_t
+    1: from ctypes import c_ulong
+    1: from ctypes import c_void_p
+    1: from ctypes import POINTER
+    1: from ctypes import py_object
+    1: from ctypes import Structure
+    1: from ctypes.wintypes import DWORD
+    1: from ctypes.wintypes import HANDLE
+    1: from ctypes.wintypes import LPCWSTR
+    1: from ctypes.wintypes import LPWSTR
+    1: from gettext import gettext as _
+       
+    1: from ._compat import _NonClosingTextIOWrapper
+       
+    1: assert sys.platform == "win32"
+    1: import msvcrt  # noqa: E402
+    1: from ctypes import windll  # noqa: E402
+    1: from ctypes import WINFUNCTYPE  # noqa: E402
+       
+    1: c_ssize_p = POINTER(c_ssize_t)
+       
+    1: kernel32 = windll.kernel32
+    1: GetStdHandle = kernel32.GetStdHandle
+    1: ReadConsoleW = kernel32.ReadConsoleW
+    1: WriteConsoleW = kernel32.WriteConsoleW
+    1: GetConsoleMode = kernel32.GetConsoleMode
+    1: GetLastError = kernel32.GetLastError
+    1: GetCommandLineW = WINFUNCTYPE(LPWSTR)(("GetCommandLineW", windll.kernel32))
+    2: CommandLineToArgvW = WINFUNCTYPE(POINTER(LPWSTR), LPCWSTR, POINTER(c_int))(
+    1:     ("CommandLineToArgvW", windll.shell32)
+       )
+    1: LocalFree = WINFUNCTYPE(c_void_p, c_void_p)(("LocalFree", windll.kernel32))
+       
+    1: STDIN_HANDLE = GetStdHandle(-10)
+    1: STDOUT_HANDLE = GetStdHandle(-11)
+    1: STDERR_HANDLE = GetStdHandle(-12)
+       
+    1: PyBUF_SIMPLE = 0
+    1: PyBUF_WRITABLE = 1
+       
+    1: ERROR_SUCCESS = 0
+    1: ERROR_NOT_ENOUGH_MEMORY = 8
+    1: ERROR_OPERATION_ABORTED = 995
+       
+    1: STDIN_FILENO = 0
+    1: STDOUT_FILENO = 1
+    1: STDERR_FILENO = 2
+       
+    1: EOF = b"\x1a"
+    1: MAX_BYTES_WRITTEN = 32767
+       
+    1: if t.TYPE_CHECKING:
+           try:
+               # Using `typing_extensions.Buffer` instead of `collections.abc`
+               # on Windows for some reason does not have `Sized` implemented.
+               from collections.abc import Buffer  # type: ignore
+           except ImportError:
+               from typing_extensions import Buffer
+       
+    1: try:
+    1:     from ctypes import pythonapi
+       except ImportError:
+           # On PyPy we cannot get buffers so our ability to operate here is
+           # severely limited.
+           get_buffer = None
+       else:
+       
+    2:     class Py_buffer(Structure):
+    1:         _fields_ = [  # noqa: RUF012
+    1:             ("buf", c_void_p),
+    1:             ("obj", py_object),
+    1:             ("len", c_ssize_t),
+    1:             ("itemsize", c_ssize_t),
+    1:             ("readonly", c_int),
+    1:             ("ndim", c_int),
+    1:             ("format", c_char_p),
+    1:             ("shape", c_ssize_p),
+    1:             ("strides", c_ssize_p),
+    1:             ("suboffsets", c_ssize_p),
+    1:             ("internal", c_void_p),
+               ]
+       
+    1:     PyObject_GetBuffer = pythonapi.PyObject_GetBuffer
+    1:     PyBuffer_Release = pythonapi.PyBuffer_Release
+       
+    1:     def get_buffer(obj: Buffer, writable: bool = False) -> Array[c_char]:
+               buf = Py_buffer()
+               flags: int = PyBUF_WRITABLE if writable else PyBUF_SIMPLE
+               PyObject_GetBuffer(py_object(obj), byref(buf), flags)
+       
+               try:
+                   buffer_type = c_char * buf.len
+                   out: Array[c_char] = buffer_type.from_address(buf.buf)
+                   return out
+               finally:
+                   PyBuffer_Release(byref(buf))
+       
+       
+    2: class _WindowsConsoleRawIOBase(io.RawIOBase):
+    1:     def __init__(self, handle: int | None) -> None:
+               self.handle = handle
+       
+    1:     def isatty(self) -> t.Literal[True]:
+               super().isatty()
+               return True
+       
+       
+    2: class _WindowsConsoleReader(_WindowsConsoleRawIOBase):
+    1:     def readable(self) -> t.Literal[True]:
+               return True
+       
+    1:     def readinto(self, b: Buffer) -> int:
+               bytes_to_be_read = len(b)
+               if not bytes_to_be_read:
+                   return 0
+               elif bytes_to_be_read % 2:
+                   raise ValueError(
+                       "cannot read odd number of bytes from UTF-16-LE encoded console"
+                   )
+       
+               buffer = get_buffer(b, writable=True)
+               code_units_to_be_read = bytes_to_be_read // 2
+               code_units_read = c_ulong()
+       
+               rv = ReadConsoleW(
+                   HANDLE(self.handle),
+                   buffer,
+                   code_units_to_be_read,
+                   byref(code_units_read),
+                   None,
+               )
+               if GetLastError() == ERROR_OPERATION_ABORTED:
+                   # wait for KeyboardInterrupt
+                   time.sleep(0.1)
+               if not rv:
+                   raise OSError(_("Windows error: {error}").format(error=GetLastError()))
+       
+               if buffer[0] == EOF:
+                   return 0
+               return 2 * code_units_read.value
+       
+       
+    2: class _WindowsConsoleWriter(_WindowsConsoleRawIOBase):
+    1:     def writable(self) -> t.Literal[True]:
+               return True
+       
+    2:     @staticmethod
+    2:     def _get_error_message(errno: int) -> str:
+               if errno == ERROR_SUCCESS:
+                   return "ERROR_SUCCESS"
+               elif errno == ERROR_NOT_ENOUGH_MEMORY:
+                   return "ERROR_NOT_ENOUGH_MEMORY"
+               return _("Windows error: {error}").format(error=errno)
+       
+    1:     def write(self, b: Buffer) -> int:
+               bytes_to_be_written = len(b)
+               buf = get_buffer(b)
+               code_units_to_be_written = min(bytes_to_be_written, MAX_BYTES_WRITTEN) // 2
+               code_units_written = c_ulong()
+       
+               WriteConsoleW(
+                   HANDLE(self.handle),
+                   buf,
+                   code_units_to_be_written,
+                   byref(code_units_written),
+                   None,
+               )
+               bytes_written = 2 * code_units_written.value
+       
+               if bytes_written == 0 and bytes_to_be_written > 0:
+                   raise OSError(self._get_error_message(GetLastError()))
+               return bytes_written
+       
+       
+    2: class ConsoleStream:
+    1:     def __init__(self, text_stream: t.TextIO, byte_stream: t.BinaryIO) -> None:
+               self._text_stream = text_stream
+               self.buffer = byte_stream
+       
+    2:     @property
+    2:     def name(self) -> str:
+               return self.buffer.name
+       
+    1:     def write(self, x: t.AnyStr) -> int:
+               if isinstance(x, str):
+                   return self._text_stream.write(x)
+               try:
+                   self.flush()
+               except Exception:
+                   pass
+               return self.buffer.write(x)
+       
+    1:     def writelines(self, lines: cabc.Iterable[t.AnyStr]) -> None:
+               for line in lines:
+                   self.write(line)
+       
+    1:     def __getattr__(self, name: str) -> t.Any:
+               return getattr(self._text_stream, name)
+       
+    1:     def isatty(self) -> bool:
+               return self.buffer.isatty()
+       
+    1:     def __repr__(self) -> str:
+               return f"<ConsoleStream name={self.name!r} encoding={self.encoding!r}>"
+       
+       
+    1: def _get_text_stdin(buffer_stream: t.BinaryIO) -> t.TextIO:
+           text_stream = _NonClosingTextIOWrapper(
+               io.BufferedReader(_WindowsConsoleReader(STDIN_HANDLE)),
+               "utf-16-le",
+               "strict",
+               line_buffering=True,
+           )
+           return t.cast(t.TextIO, ConsoleStream(text_stream, buffer_stream))
+       
+       
+    1: def _get_text_stdout(buffer_stream: t.BinaryIO) -> t.TextIO:
+           text_stream = _NonClosingTextIOWrapper(
+               io.BufferedWriter(_WindowsConsoleWriter(STDOUT_HANDLE)),
+               "utf-16-le",
+               "strict",
+               line_buffering=True,
+           )
+           return t.cast(t.TextIO, ConsoleStream(text_stream, buffer_stream))
+       
+       
+    1: def _get_text_stderr(buffer_stream: t.BinaryIO) -> t.TextIO:
+           text_stream = _NonClosingTextIOWrapper(
+               io.BufferedWriter(_WindowsConsoleWriter(STDERR_HANDLE)),
+               "utf-16-le",
+               "strict",
+               line_buffering=True,
+           )
+           return t.cast(t.TextIO, ConsoleStream(text_stream, buffer_stream))
+       
+       
+    1: _stream_factories: cabc.Mapping[int, t.Callable[[t.BinaryIO], t.TextIO]] = {
+    1:     0: _get_text_stdin,
+    1:     1: _get_text_stdout,
+    1:     2: _get_text_stderr,
+       }
+       
+       
+    1: def _is_console(f: t.TextIO) -> bool:
+           if not hasattr(f, "fileno"):
+               return False
+       
+           try:
+               fileno = f.fileno()
+           except (OSError, io.UnsupportedOperation):
+               return False
+       
+           handle = msvcrt.get_osfhandle(fileno)
+           return bool(GetConsoleMode(handle, byref(DWORD())))
+       
+       
+    1: def _get_windows_console_stream(
+           f: t.TextIO, encoding: str | None, errors: str | None
+       ) -> t.TextIO | None:
+           if (
+               get_buffer is None
+               or encoding not in {"utf-16-le", None}
+               or errors not in {"strict", None}
+               or not _is_console(f)
+           ):
+               return None
+       
+           func = _stream_factories.get(f.fileno())
+           if func is None:
+               return None
+       
+           b = getattr(f, "buffer", None)
+       
+           if b is None:
+               return None
+       
+           return func(b)

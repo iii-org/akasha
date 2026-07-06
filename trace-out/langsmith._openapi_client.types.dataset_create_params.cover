@@ -1,0 +1,39 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Dict, Union, Iterable, Optional
+    1: from datetime import datetime
+    1: from typing_extensions import Required, Annotated, TypedDict
+       
+    1: from .._types import SequenceNotStr
+    1: from .._utils import PropertyInfo
+    1: from .data_type import DataType
+    1: from .dataset_transformation_param import DatasetTransformationParam
+       
+    1: __all__ = ["DatasetCreateParams"]
+       
+       
+    2: class DatasetCreateParams(TypedDict, total=False):
+    1:     name: Required[str]
+       
+    1:     id: Optional[str]
+       
+    1:     created_at: Annotated[Union[str, datetime], PropertyInfo(format="iso8601")]
+       
+    1:     data_type: DataType
+    1:     """Enum for dataset data types."""
+       
+    1:     description: Optional[str]
+       
+    1:     externally_managed: Optional[bool]
+       
+    1:     extra: Optional[Dict[str, object]]
+       
+    1:     inputs_schema_definition: Optional[Dict[str, object]]
+       
+    1:     outputs_schema_definition: Optional[Dict[str, object]]
+       
+    1:     tag_value_ids: Optional[SequenceNotStr[str]]
+       
+    1:     transformations: Optional[Iterable[DatasetTransformationParam]]

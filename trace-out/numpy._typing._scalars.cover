@@ -1,0 +1,30 @@
+    1: from typing import Union, Any
+       
+    1: import numpy as np
+       
+       # NOTE: `_StrLike_co` and `_BytesLike_co` are pointless, as `np.str_` and
+       # `np.bytes_` are already subclasses of their builtin counterpart
+       
+    1: _CharLike_co = Union[str, bytes]
+       
+       # The 6 `<X>Like_co` type-aliases below represent all scalars that can be
+       # coerced into `<X>` (with the casting rule `same_kind`)
+    1: _BoolLike_co = Union[bool, np.bool_]
+    1: _UIntLike_co = Union[_BoolLike_co, np.unsignedinteger[Any]]
+    1: _IntLike_co = Union[_BoolLike_co, int, np.integer[Any]]
+    1: _FloatLike_co = Union[_IntLike_co, float, np.floating[Any]]
+    1: _ComplexLike_co = Union[_FloatLike_co, complex, np.complexfloating[Any, Any]]
+    1: _TD64Like_co = Union[_IntLike_co, np.timedelta64]
+       
+    1: _NumberLike_co = Union[int, float, complex, np.number[Any], np.bool_]
+    2: _ScalarLike_co = Union[
+    2:     int,
+    1:     float,
+    1:     complex,
+    1:     str,
+    1:     bytes,
+    1:     np.generic,
+       ]
+       
+       # `_VoidLike_co` is technically not a scalar, but it's close enough
+    1: _VoidLike_co = Union[tuple[Any, ...], np.void]

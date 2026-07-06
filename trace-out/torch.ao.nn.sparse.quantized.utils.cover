@@ -1,0 +1,62 @@
+    1: import threading
+       
+       
+    1: __all__ = ["LinearBlockSparsePattern"]
+       
+       
+    4: def _is_valid_linear_block_sparse_pattern(
+    2:     row_block_size: int, col_block_size: int
+    1: ) -> bool:
+           return (row_block_size == 1 and col_block_size == 4) or (
+               row_block_size == 8 and col_block_size == 1
+           )
+       
+       
+       # This is a stop-gap measure as current flow does not allow module
+       # specific block sparse pattern.
+       # In fact there is no way to convey sparse pattern via module config
+       # of quantization flow. Thus using the global context to convey
+       # sparsity pattern.
+       # Once the flow supports it, this should be removed.
+    2: class LinearBlockSparsePattern:
+    1:     rlock = threading.RLock()
+    1:     row_block_size: int = 1
+    1:     col_block_size: int = 4
+    1:     prev_row_block_size: int = 1
+    1:     prev_col_block_size: int = 4
+       
+    1:     def __init__(self, row_block_size: int = 1, col_block_size: int = 4):
+               assert _is_valid_linear_block_sparse_pattern(row_block_size, col_block_size)
+               LinearBlockSparsePattern.rlock.acquire()
+               LinearBlockSparsePattern.prev_row_block_size = (
+                   LinearBlockSparsePattern.row_block_size
+               )
+               LinearBlockSparsePattern.prev_col_block_size = (
+                   LinearBlockSparsePattern.col_block_size
+               )
+               LinearBlockSparsePattern.row_block_size = row_block_size
+               LinearBlockSparsePattern.col_block_size = col_block_size
+       
+    1:     def __enter__(self) -> None:
+               pass
+       
+    5:     def __exit__(
+               self,
+    1:         exc_type: type[BaseException] | None,
+    1:         exc_value: BaseException | None,
+    1:         backtrace: object | None,
+    1:     ) -> None:
+               LinearBlockSparsePattern.row_block_size = (
+                   LinearBlockSparsePattern.prev_row_block_size
+               )
+               LinearBlockSparsePattern.col_block_size = (
+                   LinearBlockSparsePattern.prev_col_block_size
+               )
+               LinearBlockSparsePattern.rlock.release()
+       
+    2:     @staticmethod
+    2:     def block_size() -> tuple[int, int]:
+               return (
+                   LinearBlockSparsePattern.row_block_size,
+                   LinearBlockSparsePattern.col_block_size,
+               )

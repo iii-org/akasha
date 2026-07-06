@@ -1,0 +1,182 @@
+    1: from typing import Any, List, Optional, Tuple
+    1: from pydantic import Field
+    1: from langchain_core.retrievers import BaseRetriever
+    1: from langchain_core.documents import Document
+       
+       
+    2: class myRerankRetriever(BaseRetriever):
+    1:     model_name: str = "BAAI/bge-reranker-base"
+    1:     """rerank model to use."""
+    1:     texts: List[str] = Field(default=None)
+    1:     """List of texts to index."""
+    1:     metadata: List[dict] = Field(default=None)
+    1:     docs: List[Document] = Field(default=None)
+    1:     k: int = 20
+    1:     """Number of results to return."""
+    1:     relevancy_threshold: Optional[float] = None
+       
+    2:     @classmethod
+    8:     def from_documents(
+               cls,
+    1:         docs: List[Document],
+    2:         k: int = 20,
+    2:         relevancy_threshold: float = 0.0,
+    2:         model_name: str = "BAAI/bge-reranker-base",
+    1:         **kwargs: Any,
+    1:     ) -> BaseRetriever:
+               return cls(
+                   model_name=model_name,
+                   texts=[doc.page_content for doc in docs],
+                   metadata=[doc.metadata for doc in docs],
+                   k=k,
+                   docs=docs,
+                   relevancy_threshold=relevancy_threshold,
+                   **kwargs,
+               )
+       
+    1:     def _gs(self, query: str) -> Tuple[List[Document], List[float]]:
+               """implement rerank to find relevant documents
+       
+               Args:
+                   **query (str)**: query string that used to find relevant documents\n
+       
+               Returns:
+                   List[Document]: relevant documents
+               """
+       
+               top_k_results, top_k_scores = rerank(
+                   query, self.docs, self.relevancy_threshold, self.model_name
+               )
+       
+               return top_k_results, top_k_scores
+       
+    3:     def get_relevant_documents_and_scores(
+               self,
+    1:         query: str,
+    1:     ) -> Tuple[List[Document], List[float]]:
+               return self._gs(query)
+       
+    1:     async def _aget_relevant_documents(self, query: str) -> List[Document]:
+               return self._gs(query)[0]
+       
+    1:     def _get_relevant_documents(self, query: str) -> List[Document]:
+               return self._gs(query)[0]
+       
+       
+    1: def rerank(query: str, docs: list, threshold: float, model_name: str):
+           try:
+               import torch
+               from transformers import AutoModelForSequenceClassification, AutoTokenizer
+           except ImportError:
+               raise ImportError(
+                   "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+               )
+           import gc
+       
+           device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+           tokenizer = AutoTokenizer.from_pretrained(model_name)
+           model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
+           model.eval()
+       
+           k, score_list = 0, []
+           while k < len(docs):
+               pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
+               with torch.no_grad():
+                   inputs = tokenizer(
+                       pairs,
+                       padding=True,
+                       truncation=True,
+                       return_tensors="pt",
+                       max_length=512,
+                   ).to(device)
+                   scores = (
+                       model(**inputs, return_dict=True)
+                       .logits.view(
+                           -1,
+                       )
+                       .float()
+                   )
+               if k == 0:
+                   score_list = scores
+               else:
+                   score_list = torch.cat([score_list, scores], dim=0)
+               k += 10
+       
+           # Get the sorted indices in descending order
+           sorted_indices = torch.argsort(score_list, descending=True)
+       
+           # Convert the indices to a Python list
+           sorted_indices_list = sorted_indices.tolist()
+       
+           # Get the documents in the order of their scores, if lower than threshold, break
+           documents = []
+           for i in sorted_indices_list:
+               if score_list[i] < threshold:
+                   break
+               documents.append(docs[i])
+       
+           del model, inputs, tokenizer
+           gc.collect()
+           torch.cuda.empty_cache()
+       
+           return documents, score_list[: len(documents)]
+       
+       
+    1: def rerank_reduce(query, docs, topK):
+           try:
+               import torch
+               from transformers import AutoModelForSequenceClassification, AutoTokenizer
+           except ImportError:
+               raise ImportError(
+                   "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
+               )
+           import gc
+       
+           model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base
+           device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+           tokenizer = AutoTokenizer.from_pretrained(model_name)
+           model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
+           model.eval()
+           # topK //= 2
+           k, score_list = 0, []
+           while k < len(docs):
+               pairs = [[query, doc.page_content] for doc in docs[k : k + 10]]
+               with torch.no_grad():
+                   inputs = tokenizer(
+                       pairs,
+                       padding=True,
+                       truncation=True,
+                       return_tensors="pt",
+                       max_length=512,
+                   ).to(device)
+                   scores = (
+                       model(**inputs, return_dict=True)
+                       .logits.view(
+                           -1,
+                       )
+                       .float()
+                   )
+               if k == 0:
+                   score_list = scores
+               else:
+                   score_list = torch.cat([score_list, scores], dim=0)
+               k += 10
+       
+           # Get the sorted indices in descending order
+           sorted_indices = torch.argsort(score_list, descending=True)
+       
+           # Convert the indices to a Python list
+           sorted_indices_list = sorted_indices.tolist()
+       
+           # Get the documents in the order of their scores, if lower than threshold, break
+           documents = []
+           for i in sorted_indices_list:
+               if i > topK:
+                   break
+               documents.append(docs[i])
+       
+           del model, inputs, tokenizer
+           gc.collect()
+           torch.cuda.empty_cache()
+       
+           return documents

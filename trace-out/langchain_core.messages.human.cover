@@ -1,0 +1,70 @@
+    1: """Human message."""
+       
+    1: from typing import Any, Literal, cast, overload
+       
+    1: from langchain_core.messages import content as types
+    1: from langchain_core.messages.base import BaseMessage, BaseMessageChunk
+       
+       
+    2: class HumanMessage(BaseMessage):
+    1:     """Message from the user.
+       
+           A `HumanMessage` is a message that is passed in from a user to the model.
+       
+           Example:
+               ```python
+               from langchain_core.messages import HumanMessage, SystemMessage
+       
+               messages = [
+                   SystemMessage(content="You are a helpful assistant! Your name is Bob."),
+                   HumanMessage(content="What is your name?"),
+               ]
+       
+               # Instantiate a chat model and invoke it with the messages
+               model = ...
+               print(model.invoke(messages))
+               ```
+           """
+       
+    1:     type: Literal["human"] = "human"
+    1:     """The type of the message (used for serialization)."""
+       
+    2:     @overload
+    5:     def __init__(
+               self,
+    1:         content: str | list[str | dict[Any, Any]],
+    1:         **kwargs: Any,
+    1:     ) -> None: ...
+       
+    2:     @overload
+    6:     def __init__(
+               self,
+    2:         content: str | list[str | dict[Any, Any]] | None = None,
+    2:         content_blocks: list[types.ContentBlock] | None = None,
+    1:         **kwargs: Any,
+    1:     ) -> None: ...
+       
+    5:     def __init__(
+               self,
+    2:         content: str | list[str | dict[Any, Any]] | None = None,
+    2:         content_blocks: list[types.ContentBlock] | None = None,
+    1:         **kwargs: Any,
+    1:     ) -> None:
+               """Specify `content` as positional arg or `content_blocks` for typing."""
+               if content_blocks is not None:
+                   super().__init__(
+                       content=cast("list[str | dict[Any, Any]]", content_blocks),
+                       **kwargs,
+                   )
+               else:
+                   super().__init__(content=content, **kwargs)
+       
+       
+    2: class HumanMessageChunk(HumanMessage, BaseMessageChunk):
+    1:     """Human Message chunk."""
+       
+           # Ignoring mypy re-assignment here since we're overriding the value
+           # to make sure that the chunk variant can be discriminated from the
+           # non-chunk variant.
+    1:     type: Literal["HumanMessageChunk"] = "HumanMessageChunk"  # type: ignore[assignment]
+    1:     """The type of the message (used for serialization)."""

@@ -1,0 +1,328 @@
+       # coding: utf-8
+       
+    1: from __future__ import print_function
+       
+       # partially from package six by Benjamin Peterson
+       
+    1: import sys
+    1: import os
+    1: import types
+    1: import traceback
+    1: from abc import abstractmethod
+    1: from collections import OrderedDict  # type: ignore
+       
+       
+       # fmt: off
+    1: if False:  # MYPY
+           from typing import Any, Dict, Optional, List, Union, BinaryIO, IO, Text, Tuple  # NOQA
+           from typing import Optional  # NOQA
+       # fmt: on
+       
+    1: _DEFAULT_YAML_VERSION = (1, 2)
+       
+       
+    2: class ordereddict(OrderedDict):  # type: ignore
+    1:     if not hasattr(OrderedDict, "insert"):
+       
+    1:         def insert(self, pos, key, value):
+                   # type: (int, Any, Any) -> None
+                   if pos >= len(self):
+                       self[key] = value
+                       return
+                   od = ordereddict()
+                   od.update(self)
+                   for k in od:
+                       del self[k]
+                   for index, old_key in enumerate(od):
+                       if pos == index:
+                           self[key] = value
+                       self[old_key] = od[old_key]
+       
+       
+    1: PY2 = sys.version_info[0] == 2
+    1: PY3 = sys.version_info[0] == 3
+       
+       
+    1: if PY3:
+       
+    1:     def utf8(s):
+               # type: (str) -> str
+               return s
+       
+    1:     def to_str(s):
+               # type: (str) -> str
+   60:         return s
+       
+    1:     def to_unicode(s):
+               # type: (str) -> str
+               return s
+       
+       
+       else:
+           if False:
+               unicode = str
+       
+           def utf8(s):
+               # type: (unicode) -> str
+               return s.encode("utf-8")
+       
+           def to_str(s):
+               # type: (str) -> str
+               return str(s)
+       
+           def to_unicode(s):
+               # type: (str) -> unicode
+               return unicode(s)  # NOQA
+       
+       
+    1: if PY3:
+    1:     string_types = str
+    1:     integer_types = int
+    1:     class_types = type
+    1:     text_type = str
+    1:     binary_type = bytes
+       
+    1:     MAXSIZE = sys.maxsize
+    1:     unichr = chr
+    1:     import io
+       
+    1:     StringIO = io.StringIO
+    1:     BytesIO = io.BytesIO
+           # have unlimited precision
+    1:     no_limit_int = int
+    1:     from collections.abc import (
+               Hashable,
+               MutableSequence,
+               MutableMapping,
+               Mapping,
+           )  # NOQA
+       
+       else:
+           string_types = basestring  # NOQA
+           integer_types = (int, long)  # NOQA
+           class_types = (type, types.ClassType)
+           text_type = unicode  # NOQA
+           binary_type = str
+       
+           # to allow importing
+           unichr = unichr
+           from StringIO import StringIO as _StringIO
+       
+           StringIO = _StringIO
+           import cStringIO
+       
+           BytesIO = cStringIO.StringIO
+           # have unlimited precision
+           no_limit_int = long  # NOQA not available on Python 3
+           from collections import Hashable, MutableSequence, MutableMapping, Mapping  # NOQA
+       
+    1: if False:  # MYPY
+           # StreamType = Union[BinaryIO, IO[str], IO[unicode],  StringIO]
+           # StreamType = Union[BinaryIO, IO[str], StringIO]  # type: ignore
+           StreamType = Any
+       
+           StreamTextType = StreamType  # Union[Text, StreamType]
+           VersionType = Union[List[int], str, Tuple[int, int]]
+       
+    1: if PY3:
+    1:     builtins_module = "builtins"
+       else:
+           builtins_module = "__builtin__"
+       
+    1: UNICODE_SIZE = 4 if sys.maxunicode > 65535 else 2
+       
+       
+    1: def with_metaclass(meta, *bases):
+           # type: (Any, Any) -> Any
+           """Create a base class with a metaclass."""
+    1:     return meta("NewBase", bases, {})
+       
+       
+    1: DBG_TOKEN = 1
+    1: DBG_EVENT = 2
+    1: DBG_NODE = 4
+       
+       
+    1: _debug = None  # type: Optional[int]
+    1: if "RUAMELDEBUG" in os.environ:
+           _debugx = os.environ.get("RUAMELDEBUG")
+           if _debugx is None:
+               _debug = 0
+           else:
+               _debug = int(_debugx)
+       
+       
+    1: if bool(_debug):
+       
+           class ObjectCounter(object):
+               def __init__(self):
+                   # type: () -> None
+                   self.map = {}  # type: Dict[Any, Any]
+       
+               def __call__(self, k):
+                   # type: (Any) -> None
+                   self.map[k] = self.map.get(k, 0) + 1
+       
+               def dump(self):
+                   # type: () -> None
+                   for k in sorted(self.map):
+                       sys.stdout.write("{} -> {}".format(k, self.map[k]))
+       
+           object_counter = ObjectCounter()
+       
+       
+       # used from yaml util when testing
+    1: def dbg(val=None):
+           # type: (Any) -> Any
+           global _debug
+           if _debug is None:
+               # set to true or false
+               _debugx = os.environ.get("YAMLDEBUG")
+               if _debugx is None:
+                   _debug = 0
+               else:
+                   _debug = int(_debugx)
+           if val is None:
+               return _debug
+           return _debug & val
+       
+       
+    2: class Nprint(object):
+    1:     def __init__(self, file_name=None):
+               # type: (Any) -> None
+    2:         self._max_print = None  # type: Any
+    2:         self._count = None  # type: Any
+    2:         self._file_name = file_name
+       
+    1:     def __call__(self, *args, **kw):
+               # type: (Any, Any) -> None
+               if not bool(_debug):
+                   return
+               out = sys.stdout if self._file_name is None else open(self._file_name, "a")
+               dbgprint = print  # to fool checking for print statements by dv utility
+               kw1 = kw.copy()
+               kw1["file"] = out
+               dbgprint(*args, **kw1)
+               out.flush()
+               if self._max_print is not None:
+                   if self._count is None:
+                       self._count = self._max_print
+                   self._count -= 1
+                   if self._count == 0:
+                       dbgprint("forced exit\n")
+                       traceback.print_stack()
+                       out.flush()
+                       sys.exit(0)
+               if self._file_name:
+                   out.close()
+       
+    1:     def set_max_print(self, i):
+               # type: (int) -> None
+               self._max_print = i
+               self._count = None
+       
+       
+    1: nprint = Nprint()
+    1: nprintf = Nprint("/var/tmp/srsly.ruamel_yaml.log")
+       
+       # char checkers following production rules
+       
+       
+    1: def check_namespace_char(ch):
+           # type: (Any) -> bool
+           if u"\x21" <= ch <= u"\x7E":  # ! to ~
+               return True
+           if u"\xA0" <= ch <= u"\uD7FF":
+               return True
+           if (u"\uE000" <= ch <= u"\uFFFD") and ch != u"\uFEFF":  # excl. byte order mark
+               return True
+           if u"\U00010000" <= ch <= u"\U0010FFFF":
+               return True
+           return False
+       
+       
+    1: def check_anchorname_char(ch):
+           # type: (Any) -> bool
+           if ch in u",[]{}":
+               return False
+           return check_namespace_char(ch)
+       
+       
+    1: def version_tnf(t1, t2=None):
+           # type: (Any, Any) -> Any
+           """
+           return True if srsly.ruamel_yaml version_info < t1, None if t2 is specified and bigger else False
+           """
+    1:     from srsly.ruamel_yaml import version_info  # NOQA
+       
+    1:     if version_info < t1:
+               return True
+    1:     if t2 is not None and version_info < t2:
+               return None
+    1:     return False
+       
+       
+    2: class MutableSliceableSequence(MutableSequence):  # type: ignore
+    1:     __slots__ = ()
+       
+    1:     def __getitem__(self, index):
+               # type: (Any) -> Any
+               if not isinstance(index, slice):
+                   return self.__getsingleitem__(index)
+               return type(self)(
+                   [self[i] for i in range(*index.indices(len(self)))]
+               )  # type: ignore
+       
+    1:     def __setitem__(self, index, value):
+               # type: (Any, Any) -> None
+               if not isinstance(index, slice):
+                   return self.__setsingleitem__(index, value)
+               assert iter(value)
+               # nprint(index.start, index.stop, index.step, index.indices(len(self)))
+               if index.step is None:
+                   del self[index.start : index.stop]
+                   for elem in reversed(value):
+                       self.insert(0 if index.start is None else index.start, elem)
+               else:
+                   range_parms = index.indices(len(self))
+                   nr_assigned_items = (range_parms[1] - range_parms[0] - 1) // range_parms[
+                       2
+                   ] + 1
+                   # need to test before changing, in case TypeError is caught
+                   if nr_assigned_items < len(value):
+                       raise TypeError(
+                           "too many elements in value {} < {}".format(
+                               nr_assigned_items, len(value)
+                           )
+                       )
+                   elif nr_assigned_items > len(value):
+                       raise TypeError(
+                           "not enough elements in value {} > {}".format(
+                               nr_assigned_items, len(value)
+                           )
+                       )
+                   for idx, i in enumerate(range(*range_parms)):
+                       self[i] = value[idx]
+       
+    1:     def __delitem__(self, index):
+               # type: (Any) -> None
+               if not isinstance(index, slice):
+                   return self.__delsingleitem__(index)
+               # nprint(index.start, index.stop, index.step, index.indices(len(self)))
+               for i in reversed(range(*index.indices(len(self)))):
+                   del self[i]
+       
+    2:     @abstractmethod
+    2:     def __getsingleitem__(self, index):
+               # type: (Any) -> Any
+               raise IndexError
+       
+    2:     @abstractmethod
+    2:     def __setsingleitem__(self, index, value):
+               # type: (Any, Any) -> None
+               raise IndexError
+       
+    2:     @abstractmethod
+    2:     def __delsingleitem__(self, index):
+               # type: (Any) -> None
+               raise IndexError

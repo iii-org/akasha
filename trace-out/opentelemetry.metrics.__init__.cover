@@ -1,0 +1,121 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: """
+       The OpenTelemetry metrics API  describes the classes used to generate
+       metrics.
+       
+       The :class:`.MeterProvider` provides users access to the :class:`.Meter` which in
+       turn is used to create :class:`.Instrument` objects. The :class:`.Instrument` objects are
+       used to record measurements.
+       
+       This module provides abstract (i.e. unimplemented) classes required for
+       metrics, and a concrete no-op implementation :class:`.NoOpMeter` that allows applications
+       to use the API package alone without a supporting implementation.
+       
+       To get a meter, you need to provide the package name from which you are
+       calling the meter APIs to OpenTelemetry by calling `MeterProvider.get_meter`
+       with the calling instrumentation name and the version of your package.
+       
+       The following code shows how to obtain a meter using the global :class:`.MeterProvider`::
+       
+           from opentelemetry.metrics import get_meter
+       
+           meter = get_meter("example-meter")
+           counter = meter.create_counter("example-counter")
+       
+       .. versionadded:: 1.10.0
+       .. versionchanged:: 1.12.0rc
+       """
+       
+    1: from opentelemetry.metrics._internal import (
+           Meter,
+           MeterProvider,
+           NoOpMeter,
+           NoOpMeterProvider,
+           get_meter,
+           get_meter_provider,
+           set_meter_provider,
+       )
+    1: from opentelemetry.metrics._internal.instrument import (
+           Asynchronous,
+           CallbackOptions,
+           CallbackT,
+           Counter,
+           Histogram,
+           Instrument,
+           NoOpCounter,
+           NoOpHistogram,
+           NoOpObservableCounter,
+           NoOpObservableGauge,
+           NoOpObservableUpDownCounter,
+           NoOpUpDownCounter,
+           ObservableCounter,
+           ObservableGauge,
+           ObservableUpDownCounter,
+           Synchronous,
+           UpDownCounter,
+       )
+    1: from opentelemetry.metrics._internal.instrument import Gauge as _Gauge
+    1: from opentelemetry.metrics._internal.instrument import NoOpGauge as _NoOpGauge
+    1: from opentelemetry.metrics._internal.observation import Observation
+       
+   27: for obj in [
+    1:     Counter,
+    1:     Synchronous,
+    1:     Asynchronous,
+    1:     CallbackOptions,
+    1:     _Gauge,
+    1:     _NoOpGauge,
+    1:     get_meter_provider,
+    1:     get_meter,
+    1:     Histogram,
+    1:     Meter,
+    1:     MeterProvider,
+    1:     Instrument,
+    1:     NoOpCounter,
+    1:     NoOpHistogram,
+    1:     NoOpMeter,
+    1:     NoOpMeterProvider,
+    1:     NoOpObservableCounter,
+    1:     NoOpObservableGauge,
+    1:     NoOpObservableUpDownCounter,
+    1:     NoOpUpDownCounter,
+    1:     ObservableCounter,
+    1:     ObservableGauge,
+    1:     ObservableUpDownCounter,
+    1:     Observation,
+    1:     set_meter_provider,
+    1:     UpDownCounter,
+       ]:
+   26:     obj.__module__ = __name__
+       
+    1: __all__ = [
+           "CallbackOptions",
+           "MeterProvider",
+           "NoOpMeterProvider",
+           "Meter",
+           "Counter",
+           "_Gauge",
+           "_NoOpGauge",
+           "NoOpCounter",
+           "UpDownCounter",
+           "NoOpUpDownCounter",
+           "Histogram",
+           "NoOpHistogram",
+           "ObservableCounter",
+           "NoOpObservableCounter",
+           "ObservableUpDownCounter",
+           "Instrument",
+           "Synchronous",
+           "Asynchronous",
+           "NoOpObservableGauge",
+           "ObservableGauge",
+           "NoOpObservableUpDownCounter",
+           "get_meter",
+           "get_meter_provider",
+           "set_meter_provider",
+           "Observation",
+           "CallbackT",
+           "NoOpMeter",
+       ]

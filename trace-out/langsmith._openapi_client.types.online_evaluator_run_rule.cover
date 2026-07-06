@@ -1,0 +1,43 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+       
+    1: from .._models import BaseModel
+    1: from .online_spend_limit import OnlineSpendLimit
+       
+    1: __all__ = ["OnlineEvaluatorRunRule"]
+       
+       
+    2: class OnlineEvaluatorRunRule(BaseModel):
+    1:     id: Optional[str] = None
+       
+    1:     corrections_dataset_id: Optional[str] = None
+       
+    1:     dataset_id: Optional[str] = None
+       
+    1:     dataset_name: Optional[str] = None
+       
+    1:     group_by: Optional[str] = None
+       
+    1:     num_few_shot_examples: Optional[int] = None
+       
+    1:     session_id: Optional[str] = None
+       
+    1:     session_name: Optional[str] = None
+       
+    1:     spend_limit: Optional[OnlineSpendLimit] = None
+    1:     """
+           SpendLimit is the effective spend-cap limit for this rule (nil when
+           unconfigured).
+           """
+       
+    1:     spend_usd: Optional[float] = None
+    1:     """
+           Per-rule usage for the current ISO week (omitted when feature is disabled).
+           LLM-evaluator rules are initialized to 0; code-evaluator rules include trace
+           counts only.
+           """
+       
+    1:     trace_count: Optional[int] = None
+       
+    1:     use_corrections_dataset: Optional[bool] = None

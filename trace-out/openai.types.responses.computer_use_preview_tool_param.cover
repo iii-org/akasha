@@ -1,0 +1,26 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ComputerUsePreviewToolParam"]
+       
+       
+    2: class ComputerUsePreviewToolParam(TypedDict, total=False):
+    1:     """A tool that controls a virtual computer.
+       
+           Learn more about the [computer tool](https://platform.openai.com/docs/guides/tools-computer-use).
+           """
+       
+    1:     display_height: Required[int]
+    1:     """The height of the computer display."""
+       
+    1:     display_width: Required[int]
+    1:     """The width of the computer display."""
+       
+    1:     environment: Required[Literal["windows", "mac", "linux", "ubuntu", "browser"]]
+    1:     """The type of computer environment to control."""
+       
+    1:     type: Required[Literal["computer_use_preview"]]
+    1:     """The type of the computer use tool. Always `computer_use_preview`."""

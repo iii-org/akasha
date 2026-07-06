@@ -1,0 +1,78 @@
+    1: from .char_classes import (
+           ALPHA,
+           ALPHA_LOWER,
+           ALPHA_UPPER,
+           COMBINING_DIACRITICS,
+           CONCAT_QUOTES,
+           CURRENCY,
+           HYPHENS,
+           LIST_CURRENCY,
+           LIST_ELLIPSES,
+           LIST_ICONS,
+           LIST_PUNCT,
+           LIST_QUOTES,
+           PUNCT,
+           UNITS,
+       )
+       
+    1: TOKENIZER_PREFIXES = (
+    6:     ["§", "%", "=", "—", "–", r"\+(?![0-9])"]
+    1:     + LIST_PUNCT
+    1:     + LIST_ELLIPSES
+    1:     + LIST_QUOTES
+    1:     + LIST_CURRENCY
+    1:     + LIST_ICONS
+       )
+       
+       
+    1: TOKENIZER_SUFFIXES = (
+    6:     LIST_PUNCT
+    1:     + LIST_ELLIPSES
+    1:     + LIST_QUOTES
+    1:     + LIST_ICONS
+    1:     + ["'s", "'S", "’s", "’S", "—", "–"]
+    1:     + [
+    1:         r"(?<=[0-9])\+",
+    1:         r"(?<=°[FfCcKk])\.",
+    1:         r"(?<=[0-9])(?:{c})".format(c=CURRENCY),
+    1:         r"(?<=[0-9])(?:{u})".format(u=UNITS),
+    2:         r"(?<=[0-9{al}{e}{p}(?:{q})])\.".format(
+    1:             al=ALPHA_LOWER, e=r"%²\-\+", q=CONCAT_QUOTES, p=PUNCT
+               ),
+    1:         r"(?<=[{au}][{au}])\.".format(au=ALPHA_UPPER),
+           ]
+       )
+       
+    1: TOKENIZER_INFIXES = (
+    3:     LIST_ELLIPSES
+    1:     + LIST_ICONS
+    1:     + [
+    1:         r"(?<=[0-9])[+\-\*^](?=[0-9-])",
+    2:         r"(?<=[{al}{q}])\.(?=[{au}{q}])".format(
+    1:             al=ALPHA_LOWER, au=ALPHA_UPPER, q=CONCAT_QUOTES
+               ),
+    1:         r"(?<=[{a}]),(?=[{a}])".format(a=ALPHA),
+    1:         r"(?<=[{a}])(?:{h})(?=[{a}])".format(a=ALPHA, h=HYPHENS),
+    1:         r"(?<=[{a}0-9])[:<>=/](?=[{a}])".format(a=ALPHA),
+           ]
+       )
+       
+       
+       # Some languages e.g. written with the Cyrillic alphabet permit the use of diacritics
+       # to mark stressed syllables in words where stress is distinctive. Such languages
+       # should use the COMBINING_DIACRITICS... suffix and infix regex lists in
+       # place of the standard ones.
+    2: COMBINING_DIACRITICS_TOKENIZER_SUFFIXES = list(TOKENIZER_SUFFIXES) + [
+    1:     r"(?<=[{a}][{d}])\.".format(a=ALPHA, d=COMBINING_DIACRITICS),
+       ]
+       
+    2: COMBINING_DIACRITICS_TOKENIZER_INFIXES = list(TOKENIZER_INFIXES) + [
+    2:     r"(?<=[{al}][{d}])\.(?=[{au}{q}])".format(
+    1:         al=ALPHA_LOWER, au=ALPHA_UPPER, q=CONCAT_QUOTES, d=COMBINING_DIACRITICS
+           ),
+    1:     r"(?<=[{a}][{d}]),(?=[{a}])".format(a=ALPHA, d=COMBINING_DIACRITICS),
+    2:     r"(?<=[{a}][{d}])(?:{h})(?=[{a}])".format(
+    1:         a=ALPHA, d=COMBINING_DIACRITICS, h=HYPHENS
+           ),
+    1:     r"(?<=[{a}][{d}])[:<>=/](?=[{a}])".format(a=ALPHA, d=COMBINING_DIACRITICS),
+       ]

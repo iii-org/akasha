@@ -1,0 +1,54 @@
+    1: """Private typing utilities for LangGraph."""
+       
+    1: from __future__ import annotations
+       
+    1: from dataclasses import Field
+    1: from typing import Any, ClassVar, Protocol, TypeAlias
+       
+    1: from pydantic import BaseModel
+    1: from typing_extensions import TypedDict
+       
+       
+    2: class TypedDictLikeV1(Protocol):
+    1:     """Protocol to represent types that behave like TypedDicts
+       
+           Version 1: using `ClassVar` for keys."""
+       
+    1:     __required_keys__: ClassVar[frozenset[str]]
+    1:     __optional_keys__: ClassVar[frozenset[str]]
+       
+       
+    2: class TypedDictLikeV2(Protocol):
+    1:     """Protocol to represent types that behave like TypedDicts
+       
+           Version 2: not using `ClassVar` for keys."""
+       
+    1:     __required_keys__: frozenset[str]
+    1:     __optional_keys__: frozenset[str]
+       
+       
+    2: class DataclassLike(Protocol):
+    1:     """Protocol to represent types that behave like dataclasses.
+       
+           Inspired by the private _DataclassT from dataclasses that uses a similar protocol as a bound."""
+       
+    1:     __dataclass_fields__: ClassVar[dict[str, Field[Any]]]
+       
+       
+    1: StateLike: TypeAlias = TypedDictLikeV1 | TypedDictLikeV2 | DataclassLike | BaseModel
+    1: """Type alias for state-like types.
+       
+       It can either be a `TypedDict`, `dataclass`, or Pydantic `BaseModel`.
+       Note: we cannot use either `TypedDict` or `dataclass` directly due to limitations in type checking.
+       """
+       
+    1: MISSING = object()
+    1: """Unset sentinel value."""
+       
+       
+    2: class DeprecatedKwargs(TypedDict):
+    1:     """TypedDict to use for extra keyword arguments, enabling type checking warnings for deprecated arguments."""
+       
+       
+    1: EMPTY_SEQ: tuple[str, ...] = tuple()
+    1: """An empty sequence of strings."""

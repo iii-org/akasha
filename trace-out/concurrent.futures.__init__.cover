@@ -1,0 +1,53 @@
+       # Copyright 2009 Brian Quinlan. All Rights Reserved.
+       # Licensed to PSF under a Contributor Agreement.
+       
+    1: """Execute computations asynchronously using threads or processes."""
+       
+    1: __author__ = 'Brian Quinlan (brian@sweetapp.com)'
+       
+    1: from concurrent.futures._base import (FIRST_COMPLETED,
+                                             FIRST_EXCEPTION,
+                                             ALL_COMPLETED,
+                                             CancelledError,
+                                             TimeoutError,
+                                             InvalidStateError,
+                                             BrokenExecutor,
+                                             Future,
+                                             Executor,
+                                             wait,
+                                             as_completed)
+       
+    1: __all__ = (
+           'FIRST_COMPLETED',
+           'FIRST_EXCEPTION',
+           'ALL_COMPLETED',
+           'CancelledError',
+           'TimeoutError',
+           'BrokenExecutor',
+           'Future',
+           'Executor',
+           'wait',
+           'as_completed',
+           'ProcessPoolExecutor',
+           'ThreadPoolExecutor',
+       )
+       
+       
+    1: def __dir__():
+           return __all__ + ('__author__', '__doc__')
+       
+       
+    1: def __getattr__(name):
+           global ProcessPoolExecutor, ThreadPoolExecutor
+       
+    1:     if name == 'ProcessPoolExecutor':
+               from .process import ProcessPoolExecutor as pe
+               ProcessPoolExecutor = pe
+               return pe
+       
+    1:     if name == 'ThreadPoolExecutor':
+    1:         from .thread import ThreadPoolExecutor as te
+    1:         ThreadPoolExecutor = te
+    1:         return te
+       
+           raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

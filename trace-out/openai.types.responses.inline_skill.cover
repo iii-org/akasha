@@ -1,0 +1,22 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from .inline_skill_source import InlineSkillSource
+       
+    1: __all__ = ["InlineSkill"]
+       
+       
+    2: class InlineSkill(BaseModel):
+    1:     description: str
+    1:     """The description of the skill."""
+       
+    1:     name: str
+    1:     """The name of the skill."""
+       
+    1:     source: InlineSkillSource
+    1:     """Inline skill payload"""
+       
+    1:     type: Literal["inline"]
+    1:     """Defines an inline skill for this request."""

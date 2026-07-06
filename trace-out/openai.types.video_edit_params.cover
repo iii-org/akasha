@@ -1,0 +1,28 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Required, TypeAlias, TypedDict
+       
+    1: from .._types import FileTypes
+       
+    1: __all__ = ["VideoEditParams", "Video", "VideoVideoReferenceInputParam"]
+       
+       
+    2: class VideoEditParams(TypedDict, total=False):
+    1:     prompt: Required[str]
+    1:     """Text prompt that describes how to edit the source video."""
+       
+    1:     video: Required[Video]
+    1:     """Reference to the completed video to edit."""
+       
+       
+    2: class VideoVideoReferenceInputParam(TypedDict, total=False):
+    1:     """Reference to the completed video to edit."""
+       
+    1:     id: Required[str]
+    1:     """The identifier of the completed video."""
+       
+       
+    1: Video: TypeAlias = Union[FileTypes, VideoVideoReferenceInputParam]

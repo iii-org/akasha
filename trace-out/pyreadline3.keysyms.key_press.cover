@@ -1,0 +1,91 @@
+       # -*- coding: utf-8 -*-
+       # *****************************************************************************
+       #     Copyright (C) 2006-2020 Jorgen Stenarson. <jorgen.stenarson@bostream.nu>
+       #     Copyright (C) 2020 Bassem Girgis. <brgirgis@gmail.com>
+       #
+       #  Distributed under the terms of the BSD License.  The full license is in
+       #  the file COPYING, distributed as part of this software.
+       # *****************************************************************************
+       
+    1: from typing import Any, Tuple
+       
+    1: from ..unicode_helper import ensure_unicode
+       
+       
+    2: class KeyPress:
+    7:     def __init__(
+               self,
+    2:         char: str = "",
+    2:         shift: bool = False,
+    2:         control: bool = False,
+    2:         meta: bool = False,
+    2:         key_name: str = "",
+    1:     ) -> None:
+  207:         if control or meta or shift:
+   66:             char = char.upper()
+       
+  207:         self.__char = char
+  207:         self.__shift = shift
+  207:         self.__control = control
+  207:         self.__meta = meta
+  207:         self.__key_name = key_name
+       
+    2:     @property
+    2:     def char(self) -> str:
+  147:         return self.__char
+       
+    2:     @property
+    2:     def shift(self) -> bool:
+  302:         return self.__shift
+       
+    2:     @property
+    2:     def control(self) -> bool:
+  354:         return self.__control
+       
+    2:     @property
+    2:     def meta(self) -> bool:
+  321:         return self.__meta
+       
+    2:     @property
+    2:     def key_name(self) -> str:
+  267:         return self.__key_name
+       
+    1:     def __repr__(self) -> str:
+               return "(%s,%s,%s,%s)" % tuple(map(ensure_unicode, self.tuple()))
+       
+    2:     def tuple(self) -> Tuple[
+    2:         bool,
+    1:         bool,
+    1:         bool,
+    1:         str,
+           ]:
+  207:         if self.key_name:
+   60:             return (
+   60:                 self.control,
+   60:                 self.meta,
+   60:                 self.shift,
+   60:                 self.key_name,
+                   )
+       
+  147:         if self.control or self.meta or self.shift:
+   52:             return (
+   52:                 self.control,
+   52:                 self.meta,
+   52:                 self.shift,
+   52:                 self.char.upper(),
+                   )
+       
+   95:         return (
+   95:             self.control,
+   95:             self.meta,
+   95:             self.shift,
+   95:             self.char,
+               )
+       
+    1:     def __eq__(self, other: Any) -> bool:
+               if isinstance(other, KeyPress):
+                   s = self.tuple()
+                   o = other.tuple()
+                   return s == o
+       
+               return False

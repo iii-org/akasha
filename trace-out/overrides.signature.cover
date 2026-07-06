@@ -1,0 +1,305 @@
+    1: import inspect
+    1: from inspect import Parameter
+    1: from types import FunctionType
+    1: from typing import Callable, Dict, Optional, Tuple, Type, TypeVar, Union, get_type_hints
+       
+    1: from .typing_utils import get_args, issubtype
+       
+    1: _WrappedMethod = TypeVar("_WrappedMethod", bound=Union[FunctionType, Callable])
+    1: _WrappedMethod2 = TypeVar("_WrappedMethod2", bound=Union[FunctionType, Callable])
+       
+       
+    1: def _contains_unbound_typevar(t: Type) -> bool:
+           """Recursively check if `t` or any types contained by `t` is a `TypeVar`.
+       
+           Examples where we return `True`: `T`, `Optional[T]`, `Tuple[Optional[T], ...]`, ...
+           Examples where we return `False`: `int`, `Optional[str]`, ...
+       
+           :param t: Type to evaluate.
+           :return: `True` if the input type contains an unbound `TypeVar`, `False` otherwise.
+           """
+       
+           # Check self
+10678:     if isinstance(t, TypeVar):
+    1:         return True
+       
+           # Check children
+20133:     for arg in get_args(t):
+ 9456:         if _contains_unbound_typevar(arg):
+                   return True
+       
+10677:     return False
+       
+       
+    1: def _issubtype(left, right):
+  611:     if _contains_unbound_typevar(left):
+               return True
+  611:     if right is None:
+               return True
+  611:     if _contains_unbound_typevar(right):
+    1:         return True
+  610:     try:
+  610:         return issubtype(left, right)
+           except TypeError:
+               # Ignore all broken cases
+               return True
+       
+       
+    1: def _get_type_hints(callable) -> Optional[Dict]:
+  248:     try:
+  248:         return get_type_hints(callable)
+    3:     except (NameError, TypeError):
+    3:         return None
+       
+       
+    1: def _is_same_module(callable1: _WrappedMethod, callable2: _WrappedMethod2) -> bool:
+  124:     mod1 = callable1.__module__.split(".")[0]
+           # "__module__" attribute may be missing in CPython or it can be None
+           # in PyPy: https://github.com/mkorpela/overrides/issues/118
+  124:     mod2 = getattr(callable2, "__module__", None)
+  124:     if mod2 is None:
+               return False
+  124:     mod2 = mod2.split(".")[0]
+  124:     return mod1 == mod2
+       
+       
+    5: def ensure_signature_is_compatible(
+    1:     super_callable: _WrappedMethod,
+    1:     sub_callable: _WrappedMethod2,
+    2:     is_static: bool = False,
+    1: ) -> None:
+           """Ensure that the signature of `sub_callable` is compatible with the signature of `super_callable`.
+       
+           Guarantees that any call to `super_callable` will work on `sub_callable` by checking the following criteria:
+       
+           1. The return type of `sub_callable` is a subtype of the return type of `super_callable`.
+           2. All parameters of `super_callable` are present in `sub_callable`, unless `sub_callable`
+              declares `*args` or `**kwargs`.
+           3. All positional parameters of `super_callable` appear in the same order in `sub_callable`.
+           4. All parameters of `super_callable` are a subtype of the corresponding parameters of `sub_callable`.
+           5. All required parameters of `sub_callable` are present in `super_callable`, unless `super_callable`
+              declares `*args` or `**kwargs`.
+       
+           :param super_callable: Function to check compatibility with.
+           :param sub_callable: Function to check compatibility of.
+           :param is_static: True if staticmethod and should check first argument.
+           """
+  124:     super_callable = _unbound_func(super_callable)
+  124:     sub_callable = _unbound_func(sub_callable)
+       
+  124:     try:
+  124:         super_sig = inspect.signature(super_callable)
+           except ValueError:
+               return
+       
+  124:     super_type_hints = _get_type_hints(super_callable)
+  124:     sub_sig = inspect.signature(sub_callable)
+  124:     sub_type_hints = _get_type_hints(sub_callable)
+       
+  124:     method_name = sub_callable.__qualname__
+  124:     same_main_module = _is_same_module(sub_callable, super_callable)
+       
+  124:     if super_type_hints is not None and sub_type_hints is not None:
+  121:         ensure_return_type_compatibility(super_type_hints, sub_type_hints, method_name)
+  242:         ensure_all_kwargs_defined_in_sub(
+  121:             super_sig, sub_sig, super_type_hints, sub_type_hints, is_static, method_name
+               )
+  242:         ensure_all_positional_args_defined_in_sub(
+  121:             super_sig,
+  121:             sub_sig,
+  121:             super_type_hints,
+  121:             sub_type_hints,
+  121:             is_static,
+  121:             same_main_module,
+  121:             method_name,
+               )
+  124:     ensure_no_extra_args_in_sub(super_sig, sub_sig, is_static, method_name)
+       
+       
+    1: def _unbound_func(callable: _WrappedMethod) -> _WrappedMethod:
+  248:     if hasattr(callable, "__self__") and hasattr(callable, "__func__"):
+   22:         return callable.__func__  # type: ignore
+  226:     return callable
+       
+       
+    7: def ensure_all_kwargs_defined_in_sub(
+    1:     super_sig: inspect.Signature,
+    1:     sub_sig: inspect.Signature,
+    1:     super_type_hints: Dict,
+    1:     sub_type_hints: Dict,
+    1:     check_first_parameter: bool,
+    1:     method_name: str,
+       ):
+ 1187:     sub_has_var_kwargs = any(
+  533:         p.kind == Parameter.VAR_KEYWORD for p in sub_sig.parameters.values()
+           )
+  487:     for super_index, (name, super_param) in enumerate(super_sig.parameters.items()):
+  366:         if super_index == 0 and not check_first_parameter:
+  121:             continue
+  245:         if super_param.kind == Parameter.VAR_POSITIONAL:
+                   continue
+  245:         if super_param.kind == Parameter.POSITIONAL_ONLY:
+                   continue
+  490:         if not is_param_defined_in_sub(
+  245:             name, True, sub_has_var_kwargs, sub_sig, super_param
+               ):
+                   raise TypeError(f"{method_name}: `{name}` is not present.")
+  245:         elif name in sub_sig.parameters and super_param.kind != Parameter.VAR_KEYWORD:
+  245:             sub_index = list(sub_sig.parameters.keys()).index(name)
+  245:             sub_param = sub_sig.parameters[name]
+       
+  245:             if super_param.kind != sub_param.kind and not (
+                       super_param.kind == Parameter.KEYWORD_ONLY
+                       and sub_param.kind == Parameter.POSITIONAL_OR_KEYWORD
+                   ):
+                       raise TypeError(f"{method_name}: `{name}` is not `{super_param.kind}`")
+  245:             elif super_index > sub_index and super_param.kind != Parameter.KEYWORD_ONLY:
+                       raise TypeError(
+                           f"{method_name}: `{name}` is not parameter at index `{super_index}`"
+                       )
+                   elif (
+  245:                 name in super_type_hints
+  490:                 and name in sub_type_hints
+  245:                 and not _issubtype(super_type_hints[name], sub_type_hints[name])
+                   ):
+                       raise TypeError(
+                           f"`{method_name}: {name} must be a supertype of `{super_param.annotation}` but is `{sub_param.annotation}`"
+                       )
+       
+       
+    8: def ensure_all_positional_args_defined_in_sub(
+    1:     super_sig: inspect.Signature,
+    1:     sub_sig: inspect.Signature,
+    1:     super_type_hints: Dict,
+    1:     sub_type_hints: Dict,
+    1:     check_first_parameter: bool,
+    1:     is_same_main_module: bool,
+    1:     method_name: str,
+       ):
+  775:     sub_parameter_values = [
+  412:         v
+  533:         for v in sub_sig.parameters.values()
+  945:         if v.kind not in (Parameter.KEYWORD_ONLY, Parameter.VAR_KEYWORD)
+           ]
+  729:     super_parameter_values = [
+  366:         v
+  487:         for v in super_sig.parameters.values()
+  853:         if v.kind not in (Parameter.KEYWORD_ONLY, Parameter.VAR_KEYWORD)
+           ]
+ 1187:     sub_has_var_args = any(
+  533:         p.kind == Parameter.VAR_POSITIONAL for p in sub_parameter_values
+           )
+ 1095:     super_has_var_args = any(
+  487:         p.kind == Parameter.VAR_POSITIONAL for p in super_parameter_values
+           )
+  121:     if not sub_has_var_args and len(sub_parameter_values) < len(super_parameter_values):
+               raise TypeError(f"{method_name}: parameter list too short")
+  121:     super_shift = 0
+  533:     for index, sub_param in enumerate(sub_parameter_values):
+  412:         if index == 0 and not check_first_parameter:
+  121:             continue
+  291:         if index + super_shift >= len(super_parameter_values):
+   46:             if sub_param.kind == Parameter.VAR_POSITIONAL:
+                       continue
+                   if (
+   46:                 sub_param.kind == Parameter.POSITIONAL_ONLY
+                       and sub_param.default != Parameter.empty
+                   ):
+                       continue
+   46:             if sub_param.kind == Parameter.POSITIONAL_OR_KEYWORD:
+   46:                 continue  # Assume use as keyword
+                   raise TypeError(
+                       f"{method_name}: `{sub_param.name}` positionally required in subclass but not in supertype"
+                   )
+  245:         if sub_param.kind == Parameter.VAR_POSITIONAL:
+                   return
+  245:         super_param = super_parameter_values[index + super_shift]
+  245:         if super_param.kind == Parameter.VAR_POSITIONAL:
+                   super_shift -= 1
+  245:         if super_param.kind == Parameter.VAR_POSITIONAL:
+                   if not sub_has_var_args:
+                       raise TypeError(f"{method_name}: `{super_param.name}` must be present")
+                   continue
+               if (
+  245:             super_param.kind != sub_param.kind
+                   and not (
+                       super_param.kind == Parameter.POSITIONAL_ONLY
+                       and sub_param.kind == Parameter.POSITIONAL_OR_KEYWORD
+                   )
+                   and not (sub_param.kind == Parameter.POSITIONAL_ONLY and super_has_var_args)
+               ):
+                   raise TypeError(
+                       f"{method_name}: `{sub_param.name}` is not `{super_param.kind}` and is `{sub_param.kind}`"
+                   )
+               elif (
+  490:             super_param.name in super_type_hints or is_same_main_module
+  490:         ) and not _issubtype(
+  245:             super_type_hints.get(super_param.name, None),
+  245:             sub_type_hints.get(sub_param.name, None),
+               ):
+                   raise TypeError(
+                       f"`{method_name}: {sub_param.name} overriding must be a supertype of `{super_param.annotation}` but is `{sub_param.annotation}`"
+                   )
+       
+       
+    7: def is_param_defined_in_sub(
+    1:     name: str,
+    1:     sub_has_var_args: bool,
+    1:     sub_has_var_kwargs: bool,
+    1:     sub_sig: inspect.Signature,
+    1:     super_param: inspect.Parameter,
+    1: ) -> bool:
+  245:     return (
+  245:         name in sub_sig.parameters
+               or (super_param.kind == Parameter.VAR_POSITIONAL and sub_has_var_args)
+               or (super_param.kind == Parameter.VAR_KEYWORD and sub_has_var_kwargs)
+               or (super_param.kind == Parameter.POSITIONAL_ONLY and sub_has_var_args)
+               or (
+                   super_param.kind == Parameter.POSITIONAL_OR_KEYWORD
+                   and sub_has_var_args
+                   and sub_has_var_kwargs
+               )
+               or (super_param.kind == Parameter.KEYWORD_ONLY and sub_has_var_kwargs)
+           )
+       
+       
+    6: def ensure_no_extra_args_in_sub(
+    1:     super_sig: inspect.Signature,
+    1:     sub_sig: inspect.Signature,
+    1:     check_first_parameter: bool,
+    1:     method_name: str,
+    1: ) -> None:
+  124:     super_params = super_sig.parameters.values()
+  620:     super_var_args = any(p.kind == Parameter.VAR_POSITIONAL for p in super_params)
+  620:     super_var_kwargs = any(p.kind == Parameter.VAR_KEYWORD for p in super_params)
+  544:     for sub_index, (name, sub_param) in enumerate(sub_sig.parameters.items()):
+               if (
+  420:             sub_param.kind == Parameter.POSITIONAL_ONLY
+                   and len(super_params) > sub_index
+                   and list(super_params)[sub_index].kind == Parameter.POSITIONAL_ONLY
+               ):
+                   continue
+               if (
+  420:             name not in super_sig.parameters
+   48:             and sub_param.default == Parameter.empty
+                   and sub_param.kind != Parameter.VAR_POSITIONAL
+                   and sub_param.kind != Parameter.VAR_KEYWORD
+                   and not (sub_param.kind == Parameter.KEYWORD_ONLY and super_var_kwargs)
+                   and not (sub_param.kind == Parameter.POSITIONAL_ONLY and super_var_args)
+                   and not (
+                       sub_param.kind == Parameter.POSITIONAL_OR_KEYWORD and super_var_args
+                   )
+                   and (sub_index > 0 or check_first_parameter)
+               ):
+                   raise TypeError(f"{method_name}: `{name}` is not a valid parameter.")
+       
+       
+    4: def ensure_return_type_compatibility(
+    3:     super_type_hints: Dict, sub_type_hints: Dict, method_name: str
+       ):
+  121:     super_return = super_type_hints.get("return", None)
+  121:     sub_return = sub_type_hints.get("return", None)
+  121:     if not _issubtype(sub_return, super_return) and super_return is not None:
+               raise TypeError(
+                   f"{method_name}: return type `{sub_return}` is not a `{super_return}`."
+               )

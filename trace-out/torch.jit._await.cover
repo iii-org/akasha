@@ -1,0 +1,27 @@
+       # mypy: allow-untyped-defs
+    1: import torch
+    1: from torch._jit_internal import _Await
+    1: from torch.jit._builtins import _register_builtin
+    1: from torch.utils import set_module
+       
+       
+    1: set_module(_Await, "torch.jit")
+       
+       
+    1: def _awaitable(func, *args, **kwargs):
+           r"""Create Await object that will call specified functioni with specified args, when it is requested for the result."""
+           return torch._C._awaitable(func, *args, **kwargs)
+       
+       
+    1: def _awaitable_wait(aw):
+           r"""Request await the result of execution, if Await is not completed yet, the func will be called immediately."""
+           return torch._C._awaitable_wait(aw)
+       
+       
+    1: def _awaitable_nowait(o):
+           r"""Create completed Await with specified result."""
+           return torch._C._awaitable_nowait(o)
+       
+       
+    1: _register_builtin(_awaitable_wait, "prim::awaitable_wait")
+    1: _register_builtin(_awaitable_nowait, "prim::awaitable_nowait")

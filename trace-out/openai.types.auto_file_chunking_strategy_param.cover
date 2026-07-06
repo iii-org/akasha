@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["AutoFileChunkingStrategyParam"]
+       
+       
+    2: class AutoFileChunkingStrategyParam(TypedDict, total=False):
+    1:     """The default strategy.
+       
+           This strategy currently uses a `max_chunk_size_tokens` of `800` and `chunk_overlap_tokens` of `400`.
+           """
+       
+    1:     type: Required[Literal["auto"]]
+    1:     """Always `auto`."""

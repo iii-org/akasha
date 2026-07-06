@@ -1,0 +1,12 @@
+       # Necessary for some side-effects in Cython. Not sure I understand.
+    1: import numpy
+       
+    1: from .about import __version__
+    1: from .config import registry
+       
+       # fmt: off
+    1: __all__ = [
+    1:     "registry",
+    1:     "__version__",
+       ]
+       # fmt: on

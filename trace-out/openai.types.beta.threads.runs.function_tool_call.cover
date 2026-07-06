@@ -1,0 +1,40 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ....._models import BaseModel
+       
+    1: __all__ = ["FunctionToolCall", "Function"]
+       
+       
+    2: class Function(BaseModel):
+    1:     """The definition of the function that was called."""
+       
+    1:     arguments: str
+    1:     """The arguments passed to the function."""
+       
+    1:     name: str
+    1:     """The name of the function."""
+       
+    1:     output: Optional[str] = None
+    1:     """The output of the function.
+       
+           This will be `null` if the outputs have not been
+           [submitted](https://platform.openai.com/docs/api-reference/runs/submitToolOutputs)
+           yet.
+           """
+       
+       
+    2: class FunctionToolCall(BaseModel):
+    1:     id: str
+    1:     """The ID of the tool call object."""
+       
+    1:     function: Function
+    1:     """The definition of the function that was called."""
+       
+    1:     type: Literal["function"]
+    1:     """The type of tool call.
+       
+           This is always going to be `function` for this type of tool call.
+           """

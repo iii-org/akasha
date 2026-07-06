@@ -1,0 +1,71 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from ..shared.metadata import Metadata
+       
+    1: __all__ = ["Thread", "ToolResources", "ToolResourcesCodeInterpreter", "ToolResourcesFileSearch"]
+       
+       
+    2: class ToolResourcesCodeInterpreter(BaseModel):
+    1:     file_ids: Optional[List[str]] = None
+    1:     """
+           A list of [file](https://platform.openai.com/docs/api-reference/files) IDs made
+           available to the `code_interpreter` tool. There can be a maximum of 20 files
+           associated with the tool.
+           """
+       
+       
+    2: class ToolResourcesFileSearch(BaseModel):
+    1:     vector_store_ids: Optional[List[str]] = None
+    1:     """
+           The
+           [vector store](https://platform.openai.com/docs/api-reference/vector-stores/object)
+           attached to this thread. There can be a maximum of 1 vector store attached to
+           the thread.
+           """
+       
+       
+    2: class ToolResources(BaseModel):
+    1:     """
+           A set of resources that are made available to the assistant's tools in this thread. The resources are specific to the type of tool. For example, the `code_interpreter` tool requires a list of file IDs, while the `file_search` tool requires a list of vector store IDs.
+           """
+       
+    1:     code_interpreter: Optional[ToolResourcesCodeInterpreter] = None
+       
+    1:     file_search: Optional[ToolResourcesFileSearch] = None
+       
+       
+    2: class Thread(BaseModel):
+    1:     """
+           Represents a thread that contains [messages](https://platform.openai.com/docs/api-reference/messages).
+           """
+       
+    1:     id: str
+    1:     """The identifier, which can be referenced in API endpoints."""
+       
+    1:     created_at: int
+    1:     """The Unix timestamp (in seconds) for when the thread was created."""
+       
+    1:     metadata: Optional[Metadata] = None
+    1:     """Set of 16 key-value pairs that can be attached to an object.
+       
+           This can be useful for storing additional information about the object in a
+           structured format, and querying for objects via API or the dashboard.
+       
+           Keys are strings with a maximum length of 64 characters. Values are strings with
+           a maximum length of 512 characters.
+           """
+       
+    1:     object: Literal["thread"]
+    1:     """The object type, which is always `thread`."""
+       
+    1:     tool_resources: Optional[ToolResources] = None
+    1:     """
+           A set of resources that are made available to the assistant's tools in this
+           thread. The resources are specific to the type of tool. For example, the
+           `code_interpreter` tool requires a list of file IDs, while the `file_search`
+           tool requires a list of vector store IDs.
+           """

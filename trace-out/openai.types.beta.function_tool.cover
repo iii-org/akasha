@@ -1,0 +1,15 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from ..shared.function_definition import FunctionDefinition
+       
+    1: __all__ = ["FunctionTool"]
+       
+       
+    2: class FunctionTool(BaseModel):
+    1:     function: FunctionDefinition
+       
+    1:     type: Literal["function"]
+    1:     """The type of tool being defined: `function`"""

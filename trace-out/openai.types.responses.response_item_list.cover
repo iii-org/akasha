@@ -1,0 +1,28 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from .response_item import ResponseItem
+       
+    1: __all__ = ["ResponseItemList"]
+       
+       
+    2: class ResponseItemList(BaseModel):
+    1:     """A list of Response items."""
+       
+    1:     data: List[ResponseItem]
+    1:     """A list of items used to generate this response."""
+       
+    1:     first_id: str
+    1:     """The ID of the first item in the list."""
+       
+    1:     has_more: bool
+    1:     """Whether there are more items available."""
+       
+    1:     last_id: str
+    1:     """The ID of the last item in the list."""
+       
+    1:     object: Literal["list"]
+    1:     """The type of object returned, must be `list`."""

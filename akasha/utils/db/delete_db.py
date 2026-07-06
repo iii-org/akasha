@@ -1,13 +1,12 @@
-from langchain_chroma import Chroma
-from chromadb.config import Settings
 import logging
 from pathlib import Path
-from typing import Union, Callable
+from typing import Any, Union, Callable
 from langchain_core.embeddings import Embeddings
 from akasha.utils.db.db_structure import (
     get_storage_directory,
     FILE_LAST_CHANGE_FILE_NAME,
 )
+from akasha.utils.db.chroma_compat import get_chroma_components
 from akasha.helper.base import get_embedding_type_and_name
 import shutil
 import gc
@@ -73,6 +72,7 @@ def delete_documents_by_file(
     )
 
     # Retrieve all documents in the collection
+    Chroma, Settings = get_chroma_components()
     client_settings = Settings(
         is_persistent=True,
         persist_directory=storage_directory,
@@ -118,7 +118,7 @@ def delete_documents_by_file(
     return len(ids_to_delete)
 
 
-def delete_documents_from_chroma_by_file_name(chroma: Chroma, file_name: str) -> int:
+def delete_documents_from_chroma_by_file_name(chroma: Any, file_name: str) -> int:
     """delete the documents in the chroma db by file name
 
     Args:

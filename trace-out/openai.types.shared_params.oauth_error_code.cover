@@ -1,0 +1,10 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: __all__ = ["OAuthErrorCode"]
+       
+    1: OAuthErrorCode: TypeAlias = Union[Literal["invalid_grant", "invalid_subject_token"], str]

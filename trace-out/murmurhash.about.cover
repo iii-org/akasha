@@ -1,0 +1,7 @@
+    1: __title__ = "murmurhash"
+    1: __version__ = "1.0.15"
+    1: __summary__ = "Cython bindings for MurmurHash"
+    1: __uri__ = "https://github.com/explosion/murmurhash"
+    1: __author__ = "Explosion"
+    1: __email__ = "contact@explosion.ai"
+    1: __license__ = "MIT"

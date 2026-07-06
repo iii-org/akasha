@@ -1,0 +1,16 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseContainerReference"]
+       
+       
+    2: class ResponseContainerReference(BaseModel):
+    1:     """Represents a container created with /v1/containers."""
+       
+    1:     container_id: str
+       
+    1:     type: Literal["container_reference"]
+    1:     """The environment type. Always `container_reference`."""

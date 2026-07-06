@@ -1,0 +1,51 @@
+       # coding: utf-8
+       
+    1: from __future__ import print_function, absolute_import, division, unicode_literals
+       
+    1: """
+       You cannot subclass bool, and this is necessary for round-tripping anchored
+       bool values (and also if you want to preserve the original way of writing)
+       
+       bool.__bases__ is type 'int', so that is what is used as the basis for ScalarBoolean as well.
+       
+       You can use these in an if statement, but not when testing equivalence
+       """
+       
+    1: from .anchor import Anchor
+       
+    1: if False:  # MYPY
+           from typing import Text, Any, Dict, List  # NOQA
+       
+    1: __all__ = ["ScalarBoolean"]
+       
+       # no need for no_limit_int -> int
+       
+       
+    2: class ScalarBoolean(int):
+    1:     def __new__(cls, *args, **kw):
+               # type: (Any, Any, Any) -> Any
+               anchor = kw.pop("anchor", None)  # type: ignore
+               b = int.__new__(cls, *args, **kw)  # type: ignore
+               if anchor is not None:
+                   b.yaml_set_anchor(anchor, always_dump=True)
+               return b
+       
+    2:     @property
+    2:     def anchor(self):
+               # type: () -> Any
+               if not hasattr(self, Anchor.attrib):
+                   setattr(self, Anchor.attrib, Anchor())
+               return getattr(self, Anchor.attrib)
+       
+    1:     def yaml_anchor(self, any=False):
+               # type: (bool) -> Any
+               if not hasattr(self, Anchor.attrib):
+                   return None
+               if any or self.anchor.always_dump:
+                   return self.anchor
+               return None
+       
+    1:     def yaml_set_anchor(self, value, always_dump=False):
+               # type: (Any, bool) -> None
+               self.anchor.value = value
+               self.anchor.always_dump = always_dump

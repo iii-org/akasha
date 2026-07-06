@@ -1,0 +1,20 @@
+    1: from functools import cache
+    1: from typing import TYPE_CHECKING
+       
+    1: if TYPE_CHECKING:
+           from pydantic import BaseModel
+           from pydantic.fields import FieldInfo
+       
+       
+    2: @cache
+    2: def import_cached_base_model() -> type['BaseModel']:
+    1:     from pydantic import BaseModel
+       
+    1:     return BaseModel
+       
+       
+    2: @cache
+    2: def import_cached_field_info() -> type['FieldInfo']:
+    1:     from pydantic.fields import FieldInfo
+       
+    1:     return FieldInfo

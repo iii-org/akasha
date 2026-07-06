@@ -1,0 +1,240 @@
+    1: from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
+    1: from akasha.utils.prompts.format import language_dict
+    1: from langchain_core.embeddings import Embeddings
+    1: from typing import Union, Callable, Tuple, List, Dict, Any
+    1: from langchain_core.documents import Document
+    1: import jieba3
+    1: import json
+    1: import re
+    1: import opencc
+       
+    1: cc = opencc.OpenCC("s2twp")
+    1: jieba_tokenizer = jieba3.jieba3()
+       
+       
+    1: def separate_name(name: str):
+           """separate type:name by ':'
+       
+           Args:
+               **name (str)**: string with format "type:name" \n
+       
+           Returns:
+               (str, str): res_type , res_name
+           """
+           sep = name.split(":")
+       
+           if len(sep) > 2:
+               res_type = sep[0].lower()
+               res_name = ":".join(sep[1:])
+           elif len(sep) < 2:
+               ### if the format type not equal to type:name ###
+               res_type = sep[0].lower()
+               res_name = ""
+           else:
+               res_type = sep[0].lower()
+               res_name = sep[1]
+       
+           return res_type, res_name
+       
+       
+    1: def decide_embedding_type(embeddings: Embeddings) -> str:
+           """check the embedding type and return the type:name
+       
+           Args:
+               embeddings (Embeddings): embedding class
+       
+           Raises:
+               Exception: _description_
+       
+           Returns:
+               str: type:name
+           """
+           if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
+                   embeddings, AzureOpenAIEmbeddings):
+               return "openai:" + embeddings.model
+           else:
+               from akasha.utils.models.gemi import gemini_embed
+       
+               if isinstance(embeddings, gemini_embed):
+                   return "gemini:" + embeddings.model_name
+       
+               from akasha.utils.models.custom import custom_embed
+       
+               if isinstance(embeddings, custom_embed):
+                   return embeddings.model_name
+       
+               else:
+                   from langchain_huggingface import HuggingFaceEmbeddings
+       
+                   if isinstance(embeddings, HuggingFaceEmbeddings):
+                       return "hf:" + embeddings.model_name
+       
+                   from langchain_community.embeddings import TensorflowHubEmbeddings
+       
+                   if isinstance(embeddings, TensorflowHubEmbeddings):
+                       return "tf:" + embeddings.model_url
+       
+                   else:
+                       raise Exception("can not find the embeddings type.")
+       
+       
+    3: def get_embedding_type_and_name(
+    2:     embeddings: Union[Embeddings, str, Callable], ) -> Tuple[str, str]:
+           """get the type and name of the embeddings"""
+       
+           if callable(embeddings):
+               embeddings_name = embeddings.__name__
+           elif isinstance(embeddings, str):
+               embeddings_name = embeddings
+           else:
+               embeddings_name = decide_embedding_type(embeddings)
+       
+           embed_type, embed_name = separate_name(embeddings_name)
+       
+           return embed_type, embed_name
+       
+       
+    1: def sim_to_trad(text: str) -> str:
+           """convert simplified chinese to traditional chinese
+       
+           Args:
+               **text (str)**: simplified chinese\n
+       
+           Returns:
+               str: traditional chinese
+           """
+           global cc
+           return cc.convert(text)
+       
+       
+    1: def get_doc_length(language: str, text: str) -> int:
+           """calculate the length of terms in a giving Document
+       
+           Args:
+               **language (str)**: 'ch' for chinese and 'en' for others, default 'ch'\n
+               **doc (Document)**: Document object\n
+       
+           Returns:
+               doc_length: int Docuemtn length
+           """
+       
+           if "chinese" in language_dict[language]:
+               doc_length = len(jieba_tokenizer.cut_text(text))
+           else:
+               doc_length = len(text.split())
+           return doc_length
+       
+       
+    1: def get_docs_length(language: str, docs: List[Document]) -> int:
+           """calculate the total length of terms in giving documents
+       
+           Args:
+               language (str): 'ch' for chinese and 'en' for others, default 'ch'\n
+               docs (list): list of Documents\n
+       
+           Returns:
+               docs_length: int total Document length
+           """
+           docs_length = 0
+           for doc in docs:
+               docs_length += get_doc_length(language, doc.page_content)
+           return docs_length
+       
+       
+    3: def extract_json(
+    2:         text: str) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
+           """
+           Extract JSON data from text generated by LLMs.
+           Handles both individual dictionaries and lists of dictionaries.
+       
+           Args:
+               text (str): The text containing JSON-like data
+       
+           Returns:
+               Union[Dict[str, Any], List[Dict[str, Any]], None]: Parsed JSON data or None if parsing fails
+           """
+           # Clean up the text by removing markdown formatting if present
+           try:
+               import json_repair
+               
+               #TODO: replace \n with \\n to avoid json_repair error.
+               #At the same time, avoid double \\n to be replaced.
+               text = re.sub(r'(?<!\\)\\n', r'\\\\n', text)    
+               
+               json_object = json_repair.loads(text)
+               return json_object
+           except (json.JSONDecodeError, TypeError):
+               try:
+                   # Use regex to find the first occurrence of a JSON object or list
+                   # It handles nested structures by looking for balanced brackets or braces.
+                   json_match = re.search(r"(\{.*\}|\[.*\])", text.strip(), re.DOTALL)
+                   if json_match:
+                       json_str = json_match.group(0)
+       
+                       # Fix common LLM errors before parsing
+                       json_str = json_str.replace("`", "")  # Clean up markdown
+                       json_str = re.sub(r"(\w+)\s*:", r'"\1":',
+                                         json_str)  # Add quotes to unquoted keys
+                       json_str = json_str.replace(
+                           "'", '"')  # Replace single quotes with double quotes
+                       json_str = re.sub(r",\s*([}\]])", r"\1",
+                                         json_str)  # Remove trailing commas
+       
+                       return json.loads(json_str)
+               except json.JSONDecodeError:
+                   # If parsing fails, it's not a valid JSON string
+                   return None
+       
+           return None
+       
+       
+    1: def extract_multiple_json(text: str) -> List[Dict[str, Any]]:
+           """
+           Extract multiple JSON objects from text generated by LLMs.
+       
+           Args:
+               text (str): The text containing multiple JSON objects
+       
+           Returns:
+               List[Dict[str, Any]]: List of parsed JSON objects
+           """
+           # Clean up the text
+           cleaned_text = re.sub(r"```(?:json)?\n", "", text)
+           cleaned_text = re.sub(r"```", "", cleaned_text)
+       
+           results = []
+           matches = []
+           stack = []
+           start = -1
+       
+           # Find all potential JSON objects with balanced braces
+           for i, char in enumerate(cleaned_text):
+               if char == "{":
+                   if not stack:
+                       start = i
+                   stack.append("{")
+               elif char == "}":
+                   if stack and stack[-1] == "{":
+                       stack.pop()
+                       if not stack:  # Complete balanced object found
+                           matches.append(cleaned_text[start:i + 1])
+       
+           # Try to parse each potential JSON object
+           for match in matches:
+               try:
+                   # Apply the same fixes as in the single object function
+                   json_str = match
+                   json_str = re.sub(r"'([^']*)':", r'"\1":', json_str)
+                   json_str = re.sub(r":\s*\'([^\']*)\'", r': "\1"', json_str)
+                   json_str = re.sub(r",\s*}", "}", json_str)
+                   json_str = re.sub(r",\s*]", "]", json_str)
+                   json_str = re.sub(r":\s*True", r": true", json_str)
+                   json_str = re.sub(r":\s*False", r": false", json_str)
+                   json_str = re.sub(r":\s*None", r": null", json_str)
+       
+                   parsed = json.loads(json_str)
+                   results.append(parsed)
+               except json.JSONDecodeError:
+                   continue
+       
+           return results

@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["PythonGrader"]
+       
+       
+    2: class PythonGrader(BaseModel):
+    1:     """A PythonGrader object that runs a python script on the input."""
+       
+    1:     name: str
+    1:     """The name of the grader."""
+       
+    1:     source: str
+    1:     """The source code of the python script."""
+       
+    1:     type: Literal["python"]
+    1:     """The object type, which is always `python`."""
+       
+    1:     image_tag: Optional[str] = None
+    1:     """The image tag to use for the python script."""

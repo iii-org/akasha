@@ -1,0 +1,21 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List
+       
+    1: from .._models import BaseModel
+    1: from .moderation import Moderation
+       
+    1: __all__ = ["ModerationCreateResponse"]
+       
+       
+    2: class ModerationCreateResponse(BaseModel):
+    1:     """Represents if a given text input is potentially harmful."""
+       
+    1:     id: str
+    1:     """The unique identifier for the moderation request."""
+       
+    1:     model: str
+    1:     """The model used to generate the moderation results."""
+       
+    1:     results: List[Moderation]
+    1:     """A list of moderation objects."""

@@ -1,0 +1,19 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from datetime import datetime
+    1: from typing_extensions import Annotated, TypedDict
+       
+    1: from .._utils import PropertyInfo
+       
+    1: __all__ = ["SessionRetrieveParams"]
+       
+       
+    2: class SessionRetrieveParams(TypedDict, total=False):
+    1:     include_stats: bool
+       
+    1:     stats_start_time: Annotated[Union[str, datetime, None], PropertyInfo(format="iso8601")]
+       
+    1:     accept: str

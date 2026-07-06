@@ -1,0 +1,58 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: from collections import Counter
+    1: from typing import Protocol
+       
+    1: from opentelemetry.metrics import MeterProvider
+    1: from opentelemetry.semconv._incubating.attributes.otel_attributes import (
+           OTEL_COMPONENT_NAME,
+           OTEL_COMPONENT_TYPE,
+       )
+    1: from opentelemetry.semconv._incubating.metrics.otel_metrics import (
+           create_otel_sdk_metric_reader_collection_duration,
+       )
+       
+    1: _component_counter = Counter()
+       
+       
+    2: class MetricReaderMetricsT(Protocol):
+    1:     def record_collection(self, duration: float) -> None: ...
+       
+       
+    2: class NoOpMetricReaderMetrics:
+    1:     def record_collection(self, duration: float) -> None:
+               pass
+       
+       
+    2: class MetricReaderMetrics:
+    4:     def __init__(
+    2:         self, component_type: str, meter_provider: MeterProvider
+    1:     ) -> None:
+               meter = meter_provider.get_meter("opentelemetry-sdk")
+       
+               count = _component_counter[component_type]
+               _component_counter[component_type] = count + 1
+       
+               self._standard_attrs = {
+                   OTEL_COMPONENT_TYPE: component_type,
+                   OTEL_COMPONENT_NAME: f"{component_type}/{count}",
+               }
+       
+               self._collection_duration = (
+                   create_otel_sdk_metric_reader_collection_duration(meter)
+               )
+       
+    1:     def record_collection(self, duration: float) -> None:
+               self._collection_duration.record(duration, self._standard_attrs)
+       
+       
+    5: def create_metric_reader_metrics(
+    1:     component_type: str,
+    1:     meter_provider: MeterProvider,
+    1:     enabled: bool,
+    1: ) -> MetricReaderMetricsT:
+           if not enabled:
+               return NoOpMetricReaderMetrics()
+       
+           return MetricReaderMetrics(component_type, meter_provider)

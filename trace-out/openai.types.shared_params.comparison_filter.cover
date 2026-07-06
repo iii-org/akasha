@@ -1,0 +1,40 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: from ..._types import SequenceNotStr
+       
+    1: __all__ = ["ComparisonFilter"]
+       
+       
+    2: class ComparisonFilter(TypedDict, total=False):
+    1:     """
+           A filter used to compare a specified attribute key to a given value using a defined comparison operation.
+           """
+       
+    1:     key: Required[str]
+    1:     """The key to compare against the value."""
+       
+    1:     type: Required[Literal["eq", "ne", "gt", "gte", "lt", "lte", "in", "nin"]]
+    1:     """
+           Specifies the comparison operator: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `in`,
+           `nin`.
+       
+           - `eq`: equals
+           - `ne`: not equal
+           - `gt`: greater than
+           - `gte`: greater than or equal
+           - `lt`: less than
+           - `lte`: less than or equal
+           - `in`: in
+           - `nin`: not in
+           """
+       
+    1:     value: Required[Union[str, float, bool, SequenceNotStr[Union[str, float]]]]
+    1:     """
+           The value to compare against the attribute key; supports string, number, or
+           boolean types.
+           """

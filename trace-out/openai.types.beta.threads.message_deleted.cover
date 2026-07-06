@@ -1,0 +1,15 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+       
+    1: __all__ = ["MessageDeleted"]
+       
+       
+    2: class MessageDeleted(BaseModel):
+    1:     id: str
+       
+    1:     deleted: bool
+       
+    1:     object: Literal["thread.message.deleted"]

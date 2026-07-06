@@ -1,0 +1,58 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union, Optional
+    1: from typing_extensions import Literal
+       
+    1: from .._models import BaseModel
+    1: from .video_size import VideoSize
+    1: from .video_model import VideoModel
+    1: from .video_seconds import VideoSeconds
+    1: from .video_create_error import VideoCreateError
+       
+    1: __all__ = ["Video"]
+       
+       
+    2: class Video(BaseModel):
+    1:     """Structured information describing a generated video job."""
+       
+    1:     id: str
+    1:     """Unique identifier for the video job."""
+       
+    1:     completed_at: Optional[int] = None
+    1:     """Unix timestamp (seconds) for when the job completed, if finished."""
+       
+    1:     created_at: int
+    1:     """Unix timestamp (seconds) for when the job was created."""
+       
+    1:     error: Optional[VideoCreateError] = None
+    1:     """Error payload that explains why generation failed, if applicable."""
+       
+    1:     expires_at: Optional[int] = None
+    1:     """Unix timestamp (seconds) for when the downloadable assets expire, if set."""
+       
+    1:     model: VideoModel
+    1:     """The video generation model that produced the job."""
+       
+    1:     object: Literal["video"]
+    1:     """The object type, which is always `video`."""
+       
+    1:     progress: int
+    1:     """Approximate completion percentage for the generation task."""
+       
+    1:     prompt: Optional[str] = None
+    1:     """The prompt that was used to generate the video."""
+       
+    1:     remixed_from_video_id: Optional[str] = None
+    1:     """Identifier of the source video if this video is a remix."""
+       
+    1:     seconds: Union[str, VideoSeconds]
+    1:     """Duration of the generated clip in seconds.
+       
+           For extensions, this is the stitched total duration.
+           """
+       
+    1:     size: VideoSize
+    1:     """The resolution of the generated video."""
+       
+    1:     status: Literal["queued", "in_progress", "completed", "failed"]
+    1:     """Current lifecycle status of the video job."""

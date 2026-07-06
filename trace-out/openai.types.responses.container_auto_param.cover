@@ -1,0 +1,35 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union, Iterable, Optional
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: from ..._types import SequenceNotStr
+    1: from .inline_skill_param import InlineSkillParam
+    1: from .skill_reference_param import SkillReferenceParam
+    1: from .container_network_policy_disabled_param import ContainerNetworkPolicyDisabledParam
+    1: from .container_network_policy_allowlist_param import ContainerNetworkPolicyAllowlistParam
+       
+    1: __all__ = ["ContainerAutoParam", "NetworkPolicy", "Skill"]
+       
+    1: NetworkPolicy: TypeAlias = Union[ContainerNetworkPolicyDisabledParam, ContainerNetworkPolicyAllowlistParam]
+       
+    1: Skill: TypeAlias = Union[SkillReferenceParam, InlineSkillParam]
+       
+       
+    2: class ContainerAutoParam(TypedDict, total=False):
+    1:     type: Required[Literal["container_auto"]]
+    1:     """Automatically creates a container for this request"""
+       
+    1:     file_ids: SequenceNotStr[str]
+    1:     """An optional list of uploaded files to make available to your code."""
+       
+    1:     memory_limit: Optional[Literal["1g", "4g", "16g", "64g"]]
+    1:     """The memory limit for the container."""
+       
+    1:     network_policy: NetworkPolicy
+    1:     """Network access policy for the container."""
+       
+    1:     skills: Iterable[Skill]
+    1:     """An optional list of skills referenced by id or inline data."""

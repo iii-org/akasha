@@ -1,0 +1,687 @@
+       # -*- coding: utf-8 -*-
+       
+    1: from __future__ import absolute_import
+       
+    1: import struct
+       
+    1: from .base import Type
+       
+       
+    2: class Epub(Type):
+    1:     """
+           Implements the EPUB archive type matcher.
+           """
+    1:     MIME = 'application/epub+zip'
+    1:     EXTENSION = 'epub'
+       
+    1:     def __init__(self):
+    2:         super(Epub, self).__init__(
+    1:             mime=Epub.MIME,
+    1:             extension=Epub.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 57 and
+                       buf[0] == 0x50 and buf[1] == 0x4B and
+                       buf[2] == 0x3 and buf[3] == 0x4 and
+                       buf[30] == 0x6D and buf[31] == 0x69 and
+                       buf[32] == 0x6D and buf[33] == 0x65 and
+                       buf[34] == 0x74 and buf[35] == 0x79 and
+                       buf[36] == 0x70 and buf[37] == 0x65 and
+                       buf[38] == 0x61 and buf[39] == 0x70 and
+                       buf[40] == 0x70 and buf[41] == 0x6C and
+                       buf[42] == 0x69 and buf[43] == 0x63 and
+                       buf[44] == 0x61 and buf[45] == 0x74 and
+                       buf[46] == 0x69 and buf[47] == 0x6F and
+                       buf[48] == 0x6E and buf[49] == 0x2F and
+                       buf[50] == 0x65 and buf[51] == 0x70 and
+                       buf[52] == 0x75 and buf[53] == 0x62 and
+                       buf[54] == 0x2B and buf[55] == 0x7A and
+                       buf[56] == 0x69 and buf[57] == 0x70)
+       
+       
+    2: class Zip(Type):
+    1:     """
+           Implements the Zip archive type matcher.
+           """
+    1:     MIME = 'application/zip'
+    1:     EXTENSION = 'zip'
+       
+    1:     def __init__(self):
+    2:         super(Zip, self).__init__(
+    1:             mime=Zip.MIME,
+    1:             extension=Zip.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       buf[0] == 0x50 and buf[1] == 0x4B and
+                       (buf[2] == 0x3 or buf[2] == 0x5 or
+                           buf[2] == 0x7) and
+                       (buf[3] == 0x4 or buf[3] == 0x6 or
+                           buf[3] == 0x8))
+       
+       
+    2: class Tar(Type):
+    1:     """
+           Implements the Tar archive type matcher.
+           """
+    1:     MIME = 'application/x-tar'
+    1:     EXTENSION = 'tar'
+       
+    1:     def __init__(self):
+    2:         super(Tar, self).__init__(
+    1:             mime=Tar.MIME,
+    1:             extension=Tar.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 261 and
+                       buf[257] == 0x75 and
+                       buf[258] == 0x73 and
+                       buf[259] == 0x74 and
+                       buf[260] == 0x61 and
+                       buf[261] == 0x72)
+       
+       
+    2: class Rar(Type):
+    1:     """
+           Implements the RAR archive type matcher.
+           """
+    1:     MIME = 'application/x-rar-compressed'
+    1:     EXTENSION = 'rar'
+       
+    1:     def __init__(self):
+    2:         super(Rar, self).__init__(
+    1:             mime=Rar.MIME,
+    1:             extension=Rar.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 6 and
+                       buf[0] == 0x52 and
+                       buf[1] == 0x61 and
+                       buf[2] == 0x72 and
+                       buf[3] == 0x21 and
+                       buf[4] == 0x1A and
+                       buf[5] == 0x7 and
+                       (buf[6] == 0x0 or
+                           buf[6] == 0x1))
+       
+       
+    2: class Gz(Type):
+    1:     """
+           Implements the GZ archive type matcher.
+           """
+    1:     MIME = 'application/gzip'
+    1:     EXTENSION = 'gz'
+       
+    1:     def __init__(self):
+    2:         super(Gz, self).__init__(
+    1:             mime=Gz.MIME,
+    1:             extension=Gz.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 2 and
+                       buf[0] == 0x1F and
+                       buf[1] == 0x8B and
+                       buf[2] == 0x8)
+       
+       
+    2: class Bz2(Type):
+    1:     """
+           Implements the BZ2 archive type matcher.
+           """
+    1:     MIME = 'application/x-bzip2'
+    1:     EXTENSION = 'bz2'
+       
+    1:     def __init__(self):
+    2:         super(Bz2, self).__init__(
+    1:             mime=Bz2.MIME,
+    1:             extension=Bz2.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 2 and
+                       buf[0] == 0x42 and
+                       buf[1] == 0x5A and
+                       buf[2] == 0x68)
+       
+       
+    2: class SevenZ(Type):
+    1:     """
+           Implements the SevenZ (7z) archive type matcher.
+           """
+    1:     MIME = 'application/x-7z-compressed'
+    1:     EXTENSION = '7z'
+       
+    1:     def __init__(self):
+    2:         super(SevenZ, self).__init__(
+    1:             mime=SevenZ.MIME,
+    1:             extension=SevenZ.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 5 and
+                       buf[0] == 0x37 and
+                       buf[1] == 0x7A and
+                       buf[2] == 0xBC and
+                       buf[3] == 0xAF and
+                       buf[4] == 0x27 and
+                       buf[5] == 0x1C)
+       
+       
+    2: class Pdf(Type):
+    1:     """
+           Implements the PDF archive type matcher.
+           """
+    1:     MIME = 'application/pdf'
+    1:     EXTENSION = 'pdf'
+       
+    1:     def __init__(self):
+    2:         super(Pdf, self).__init__(
+    1:             mime=Pdf.MIME,
+    1:             extension=Pdf.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               # Detect BOM and skip first 3 bytes
+               if (len(buf) > 3 and
+                   buf[0] == 0xEF and
+                   buf[1] == 0xBB and
+                   buf[2] == 0xBF):  # noqa E129
+                   buf = buf[3:]
+       
+               return (len(buf) > 3 and
+                       buf[0] == 0x25 and
+                       buf[1] == 0x50 and
+                       buf[2] == 0x44 and
+                       buf[3] == 0x46)
+       
+       
+    2: class Exe(Type):
+    1:     """
+           Implements the EXE archive type matcher.
+           """
+    1:     MIME = 'application/x-msdownload'
+    1:     EXTENSION = 'exe'
+       
+    1:     def __init__(self):
+    2:         super(Exe, self).__init__(
+    1:             mime=Exe.MIME,
+    1:             extension=Exe.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 1 and
+                       buf[0] == 0x4D and
+                       buf[1] == 0x5A)
+       
+       
+    2: class Swf(Type):
+    1:     """
+           Implements the SWF archive type matcher.
+           """
+    1:     MIME = 'application/x-shockwave-flash'
+    1:     EXTENSION = 'swf'
+       
+    1:     def __init__(self):
+    2:         super(Swf, self).__init__(
+    1:             mime=Swf.MIME,
+    1:             extension=Swf.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 2 and
+                       (buf[0] == 0x43 or
+                           buf[0] == 0x46) and
+                       buf[1] == 0x57 and
+                       buf[2] == 0x53)
+       
+       
+    2: class Rtf(Type):
+    1:     """
+           Implements the RTF archive type matcher.
+           """
+    1:     MIME = 'application/rtf'
+    1:     EXTENSION = 'rtf'
+       
+    1:     def __init__(self):
+    2:         super(Rtf, self).__init__(
+    1:             mime=Rtf.MIME,
+    1:             extension=Rtf.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 4 and
+                       buf[0] == 0x7B and
+                       buf[1] == 0x5C and
+                       buf[2] == 0x72 and
+                       buf[3] == 0x74 and
+                       buf[4] == 0x66)
+       
+       
+    2: class Nes(Type):
+    1:     """
+           Implements the NES archive type matcher.
+           """
+    1:     MIME = 'application/x-nintendo-nes-rom'
+    1:     EXTENSION = 'nes'
+       
+    1:     def __init__(self):
+    2:         super(Nes, self).__init__(
+    1:             mime=Nes.MIME,
+    1:             extension=Nes.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       buf[0] == 0x4E and
+                       buf[1] == 0x45 and
+                       buf[2] == 0x53 and
+                       buf[3] == 0x1A)
+       
+       
+    2: class Crx(Type):
+    1:     """
+           Implements the CRX archive type matcher.
+           """
+    1:     MIME = 'application/x-google-chrome-extension'
+    1:     EXTENSION = 'crx'
+       
+    1:     def __init__(self):
+    2:         super(Crx, self).__init__(
+    1:             mime=Crx.MIME,
+    1:             extension=Crx.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       buf[0] == 0x43 and
+                       buf[1] == 0x72 and
+                       buf[2] == 0x32 and
+                       buf[3] == 0x34)
+       
+       
+    2: class Cab(Type):
+    1:     """
+           Implements the CAB archive type matcher.
+           """
+    1:     MIME = 'application/vnd.ms-cab-compressed'
+    1:     EXTENSION = 'cab'
+       
+    1:     def __init__(self):
+    2:         super(Cab, self).__init__(
+    1:             mime=Cab.MIME,
+    1:             extension=Cab.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       ((buf[0] == 0x4D and
+                           buf[1] == 0x53 and
+                           buf[2] == 0x43 and
+                           buf[3] == 0x46) or
+                           (buf[0] == 0x49 and
+                               buf[1] == 0x53 and
+                               buf[2] == 0x63 and
+                               buf[3] == 0x28)))
+       
+       
+    2: class Eot(Type):
+    1:     """
+           Implements the EOT archive type matcher.
+           """
+    1:     MIME = 'application/octet-stream'
+    1:     EXTENSION = 'eot'
+       
+    1:     def __init__(self):
+    2:         super(Eot, self).__init__(
+    1:             mime=Eot.MIME,
+    1:             extension=Eot.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 35 and
+                       buf[34] == 0x4C and
+                       buf[35] == 0x50 and
+                       ((buf[8] == 0x02 and
+                           buf[9] == 0x00 and
+                           buf[10] == 0x01) or
+                       (buf[8] == 0x01 and
+                           buf[9] == 0x00 and
+                           buf[10] == 0x00) or
+                           (buf[8] == 0x02 and
+                               buf[9] == 0x00 and
+                               buf[10] == 0x02)))
+       
+       
+    2: class Ps(Type):
+    1:     """
+           Implements the PS archive type matcher.
+           """
+    1:     MIME = 'application/postscript'
+    1:     EXTENSION = 'ps'
+       
+    1:     def __init__(self):
+    2:         super(Ps, self).__init__(
+    1:             mime=Ps.MIME,
+    1:             extension=Ps.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 1 and
+                       buf[0] == 0x25 and
+                       buf[1] == 0x21)
+       
+       
+    2: class Xz(Type):
+    1:     """
+           Implements the XS archive type matcher.
+           """
+    1:     MIME = 'application/x-xz'
+    1:     EXTENSION = 'xz'
+       
+    1:     def __init__(self):
+    2:         super(Xz, self).__init__(
+    1:             mime=Xz.MIME,
+    1:             extension=Xz.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 5 and
+                       buf[0] == 0xFD and
+                       buf[1] == 0x37 and
+                       buf[2] == 0x7A and
+                       buf[3] == 0x58 and
+                       buf[4] == 0x5A and
+                       buf[5] == 0x00)
+       
+       
+    2: class Sqlite(Type):
+    1:     """
+           Implements the Sqlite DB archive type matcher.
+           """
+    1:     MIME = 'application/x-sqlite3'
+    1:     EXTENSION = 'sqlite'
+       
+    1:     def __init__(self):
+    2:         super(Sqlite, self).__init__(
+    1:             mime=Sqlite.MIME,
+    1:             extension=Sqlite.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       buf[0] == 0x53 and
+                       buf[1] == 0x51 and
+                       buf[2] == 0x4C and
+                       buf[3] == 0x69)
+       
+       
+    2: class Deb(Type):
+    1:     """
+           Implements the DEB archive type matcher.
+           """
+    1:     MIME = 'application/x-deb'
+    1:     EXTENSION = 'deb'
+       
+    1:     def __init__(self):
+    2:         super(Deb, self).__init__(
+    1:             mime=Deb.MIME,
+    1:             extension=Deb.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 20 and
+                       buf[0] == 0x21 and
+                       buf[1] == 0x3C and
+                       buf[2] == 0x61 and
+                       buf[3] == 0x72 and
+                       buf[4] == 0x63 and
+                       buf[5] == 0x68 and
+                       buf[6] == 0x3E and
+                       buf[7] == 0x0A and
+                       buf[8] == 0x64 and
+                       buf[9] == 0x65 and
+                       buf[10] == 0x62 and
+                       buf[11] == 0x69 and
+                       buf[12] == 0x61 and
+                       buf[13] == 0x6E and
+                       buf[14] == 0x2D and
+                       buf[15] == 0x62 and
+                       buf[16] == 0x69 and
+                       buf[17] == 0x6E and
+                       buf[18] == 0x61 and
+                       buf[19] == 0x72 and
+                       buf[20] == 0x79)
+       
+       
+    2: class Ar(Type):
+    1:     """
+           Implements the AR archive type matcher.
+           """
+    1:     MIME = 'application/x-unix-archive'
+    1:     EXTENSION = 'ar'
+       
+    1:     def __init__(self):
+    2:         super(Ar, self).__init__(
+    1:             mime=Ar.MIME,
+    1:             extension=Ar.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 6 and
+                       buf[0] == 0x21 and
+                       buf[1] == 0x3C and
+                       buf[2] == 0x61 and
+                       buf[3] == 0x72 and
+                       buf[4] == 0x63 and
+                       buf[5] == 0x68 and
+                       buf[6] == 0x3E)
+       
+       
+    2: class Z(Type):
+    1:     """
+           Implements the Z archive type matcher.
+           """
+    1:     MIME = 'application/x-compress'
+    1:     EXTENSION = 'Z'
+       
+    1:     def __init__(self):
+    2:         super(Z, self).__init__(
+    1:             mime=Z.MIME,
+    1:             extension=Z.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 1 and
+                       ((buf[0] == 0x1F and
+                           buf[1] == 0xA0) or
+                       (buf[0] == 0x1F and
+                           buf[1] == 0x9D)))
+       
+       
+    2: class Lzop(Type):
+    1:     """
+           Implements the Lzop archive type matcher.
+           """
+    1:     MIME = 'application/x-lzop'
+    1:     EXTENSION = 'lzo'
+       
+    1:     def __init__(self):
+    2:         super(Lzop, self).__init__(
+    1:             mime=Lzop.MIME,
+    1:             extension=Lzop.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 7 and
+                       buf[0] == 0x89 and
+                       buf[1] == 0x4C and
+                       buf[2] == 0x5A and
+                       buf[3] == 0x4F and
+                       buf[4] == 0x00 and
+                       buf[5] == 0x0D and
+                       buf[6] == 0x0A and
+                       buf[7] == 0x1A)
+       
+       
+    2: class Lz(Type):
+    1:     """
+           Implements the Lz archive type matcher.
+           """
+    1:     MIME = 'application/x-lzip'
+    1:     EXTENSION = 'lz'
+       
+    1:     def __init__(self):
+    2:         super(Lz, self).__init__(
+    1:             mime=Lz.MIME,
+    1:             extension=Lz.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       buf[0] == 0x4C and
+                       buf[1] == 0x5A and
+                       buf[2] == 0x49 and
+                       buf[3] == 0x50)
+       
+       
+    2: class Elf(Type):
+    1:     """
+           Implements the Elf archive type matcher
+           """
+    1:     MIME = 'application/x-executable'
+    1:     EXTENSION = 'elf'
+       
+    1:     def __init__(self):
+    2:         super(Elf, self).__init__(
+    1:             mime=Elf.MIME,
+    1:             extension=Elf.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 52 and
+                       buf[0] == 0x7F and
+                       buf[1] == 0x45 and
+                       buf[2] == 0x4C and
+                       buf[3] == 0x46)
+       
+       
+    2: class Lz4(Type):
+    1:     """
+           Implements the Lz4 archive type matcher.
+           """
+    1:     MIME = 'application/x-lz4'
+    1:     EXTENSION = 'lz4'
+       
+    1:     def __init__(self):
+    2:         super(Lz4, self).__init__(
+    1:             mime=Lz4.MIME,
+    1:             extension=Lz4.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return (len(buf) > 3 and
+                       buf[0] == 0x04 and
+                       buf[1] == 0x22 and
+                       buf[2] == 0x4D and
+                       buf[3] == 0x18)
+       
+       
+    2: class Br(Type):
+    1:     """Implements the Br image type matcher."""
+       
+    1:     MIME = 'application/x-brotli'
+    1:     EXTENSION = 'br'
+       
+    1:     def __init__(self):
+    2:         super(Br, self).__init__(
+    1:             mime=Br.MIME,
+    1:             extension=Br.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return buf[:4] == bytearray([0xce, 0xb2, 0xcf, 0x81])
+       
+       
+    2: class Dcm(Type):
+    1:     """Implements the Dcm image type matcher."""
+       
+    1:     MIME = 'application/dicom'
+    1:     EXTENSION = 'dcm'
+       
+    1:     def __init__(self):
+    2:         super(Dcm, self).__init__(
+    1:             mime=Dcm.MIME,
+    1:             extension=Dcm.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return buf[128:131] == bytearray([0x44, 0x49, 0x43, 0x4d])
+       
+       
+    2: class Rpm(Type):
+    1:     """Implements the Rpm image type matcher."""
+       
+    1:     MIME = 'application/x-rpm'
+    1:     EXTENSION = 'rpm'
+       
+    1:     def __init__(self):
+    2:         super(Rpm, self).__init__(
+    1:             mime=Rpm.MIME,
+    1:             extension=Rpm.EXTENSION
+               )
+       
+    1:     def match(self, buf):
+               return buf[:4] == bytearray([0xed, 0xab, 0xee, 0xdb])
+       
+       
+    2: class Zstd(Type):
+    1:     """
+           Implements the Zstd archive type matcher.
+           https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md
+           """
+    1:     MIME = 'application/zstd'
+    1:     EXTENSION = 'zst'
+    1:     MAGIC_SKIPPABLE_START = 0x184D2A50
+    1:     MAGIC_SKIPPABLE_MASK = 0xFFFFFFF0
+       
+    1:     def __init__(self):
+    2:         super(Zstd, self).__init__(
+    1:             mime=Zstd.MIME,
+    1:             extension=Zstd.EXTENSION
+               )
+       
+    2:     @staticmethod
+    2:     def _to_little_endian_int(buf):
+               # return int.from_bytes(buf, byteorder='little')
+               return struct.unpack('<L', buf)[0]
+       
+    1:     def match(self, buf):
+               # Zstandard compressed data is made of one or more frames.
+               # There are two frame formats defined by Zstandard:
+               # Zstandard frames and Skippable frames.
+               # See more details from
+               # https://tools.ietf.org/id/draft-kucherawy-dispatch-zstd-00.html#rfc.section.2
+               is_zstd = (
+                   len(buf) > 3 and
+                   buf[0] in (0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28) and
+                   buf[1] == 0xb5 and
+                   buf[2] == 0x2f and
+                   buf[3] == 0xfd)
+               if is_zstd:
+                   return True
+               # skippable frames
+               if len(buf) < 8:
+                   return False
+               magic = self._to_little_endian_int(buf[:4]) & Zstd.MAGIC_SKIPPABLE_MASK
+               if magic == Zstd.MAGIC_SKIPPABLE_START:
+                   user_data_len = self._to_little_endian_int(buf[4:8])
+                   if len(buf) < 8 + user_data_len:
+                       return False
+                   next_frame = buf[8 + user_data_len:]
+                   return self.match(next_frame)
+               return False

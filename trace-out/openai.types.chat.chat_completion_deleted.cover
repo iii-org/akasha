@@ -1,0 +1,18 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ChatCompletionDeleted"]
+       
+       
+    2: class ChatCompletionDeleted(BaseModel):
+    1:     id: str
+    1:     """The ID of the chat completion that was deleted."""
+       
+    1:     deleted: bool
+    1:     """Whether the chat completion was deleted."""
+       
+    1:     object: Literal["chat.completion.deleted"]
+    1:     """The type of object being deleted."""

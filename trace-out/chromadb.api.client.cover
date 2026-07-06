@@ -1,0 +1,731 @@
+    1: from typing import Optional, Sequence
+    1: from types import TracebackType
+    1: from uuid import UUID
+       
+    1: from overrides import override
+    1: import httpx
+    1: from chromadb.api import AdminAPI, ClientAPI, ServerAPI
+    1: from chromadb.api.collection_configuration import (
+           CreateCollectionConfiguration,
+           UpdateCollectionConfiguration,
+           validate_embedding_function_conflict_on_create,
+           validate_embedding_function_conflict_on_get,
+       )
+    1: from chromadb.api.shared_system_client import SharedSystemClient
+    1: from chromadb.api.types import (
+           CollectionMetadata,
+           DataLoader,
+           Documents,
+           Embeddable,
+           EmbeddingFunction,
+           Embeddings,
+           GetResult,
+           IDs,
+           Include,
+           Loadable,
+           Metadatas,
+           QueryResult,
+           Schema,
+           URIs,
+           IncludeMetadataDocuments,
+           IncludeMetadataDocumentsDistances,
+           DefaultEmbeddingFunction,
+           DeleteResult,
+       )
+    1: from chromadb.auth import UserIdentity
+    1: from chromadb.auth.utils import maybe_set_tenant_and_database
+    1: from chromadb.config import Settings, System
+    1: from chromadb.config import DEFAULT_TENANT, DEFAULT_DATABASE
+    1: from chromadb.api.models.Collection import Collection
+    1: from chromadb.errors import ChromaAuthError, ChromaError
+    1: from chromadb.types import Database, Tenant, Where, WhereDocument
+       
+       
+    2: class Client(SharedSystemClient, ClientAPI):
+    1:     """A client for Chroma. This is the main entrypoint for interacting with Chroma.
+           A client internally stores its tenant and database and proxies calls to a
+           Server API instance of Chroma. It treats the Server API and corresponding System
+           as a singleton, so multiple clients connecting to the same resource will share the
+           same API instance.
+       
+           Client implementations should be implement their own API-caching strategies.
+           """
+       
+    1:     tenant: str = DEFAULT_TENANT
+    1:     database: str = DEFAULT_DATABASE
+       
+    1:     _server: ServerAPI
+           # An internal admin client for verifying that databases and tenants exist
+    1:     _admin_client: AdminAPI
+    1:     _closed: bool = False
+       
+           # region Initialization
+    5:     def __init__(
+               self,
+    2:         tenant: Optional[str] = DEFAULT_TENANT,
+    2:         database: Optional[str] = DEFAULT_DATABASE,
+    2:         settings: Settings = Settings(),
+    1:     ) -> None:
+               super().__init__(settings=settings)
+               try:
+                   if tenant is not None:
+                       self.tenant = tenant
+                   if database is not None:
+                       self.database = database
+       
+                   # Get the root system component we want to interact with
+                   self._server = self._system.instance(ServerAPI)
+       
+                   user_identity = self.get_user_identity()
+       
+                   maybe_tenant, maybe_database = maybe_set_tenant_and_database(
+                       user_identity,
+                       overwrite_singleton_tenant_database_access_from_auth=settings.chroma_overwrite_singleton_tenant_database_access_from_auth,
+                       user_provided_tenant=tenant,
+                       user_provided_database=database,
+                   )
+       
+                   # this should not happen unless types are invalidated
+                   if maybe_tenant is None and tenant is None:
+                       raise ChromaAuthError(
+                           "Could not determine a tenant from the current authentication method. Please provide a tenant."
+                       )
+                   if maybe_database is None and database is None:
+                       raise ChromaAuthError(
+                           "Could not determine a database name from the current authentication method. Please provide a database name."
+                       )
+       
+                   if maybe_tenant:
+                       self.tenant = maybe_tenant
+                   if maybe_database:
+                       self.database = maybe_database
+       
+                   # Create an admin client for verifying that databases and tenants exist
+                   self._admin_client = AdminClient.from_system(self._system)
+                   self._validate_tenant_database(tenant=self.tenant, database=self.database)
+       
+                   self._submit_client_start_event()
+               except Exception:
+                   # If init fails after refcount was incremented, release references
+                   # to avoid a resource leak (the caller never receives the object to
+                   # call close() on it).
+                   if hasattr(self, "_admin_client"):
+                       SharedSystemClient._release_system(self._admin_client._identifier)
+                   SharedSystemClient._release_system(self._identifier)
+                   raise
+       
+    2:     @classmethod
+    2:     @override
+    6:     def from_system(
+               cls,
+    1:         system: System,
+    2:         tenant: str = DEFAULT_TENANT,
+    2:         database: str = DEFAULT_DATABASE,
+    1:     ) -> "Client":
+               SharedSystemClient._populate_data_from_system(system)
+               instance = cls(tenant=tenant, database=database, settings=system.settings)
+               return instance
+       
+           # endregion
+       
+    2:     @override
+    2:     def get_user_identity(self) -> UserIdentity:
+               try:
+                   return self._server.get_user_identity()
+               except httpx.ConnectError:
+                   raise ValueError(
+                       "Could not connect to a Chroma server. Are you sure it is running?"
+                   )
+               # Propagate ChromaErrors
+               except ChromaError as e:
+                   raise e
+               except Exception as e:
+                   raise ValueError(str(e))
+       
+           # region BaseAPI Methods
+           # Note - we could do this in less verbose ways, but they break type checking
+    2:     @override
+    2:     def heartbeat(self) -> int:
+               """Return the server time in nanoseconds since epoch."""
+               return self._server.heartbeat()
+       
+    2:     @override
+    5:     def list_collections(
+    3:         self, limit: Optional[int] = None, offset: Optional[int] = None
+    1:     ) -> Sequence[Collection]:
+               """List collections for the current tenant and database, with pagination.
+       
+               Returns:
+                   Sequence[Collection]: Collection objects for the current tenant.
+               """
+               return [
+                   Collection(client=self._server, model=model)
+                   for model in self._server.list_collections(
+                       limit, offset, tenant=self.tenant, database=self.database
+                   )
+               ]
+       
+    2:     @override
+    2:     def count_collections(self) -> int:
+               """Return the number of collections in the current database."""
+               return self._server.count_collections(
+                   tenant=self.tenant, database=self.database
+               )
+       
+    2:     @override
+   10:     def create_collection(
+               self,
+    1:         name: str,
+    2:         schema: Optional[Schema] = None,
+    2:         configuration: Optional[CreateCollectionConfiguration] = None,
+    2:         metadata: Optional[CollectionMetadata] = None,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    2:         get_or_create: bool = False,
+    1:     ) -> Collection:
+               """Create a collection with optional configuration and metadata.
+       
+               If using a schema, do not provide `embedding_function`. Instead,
+               provide the `embedding_function` as part of the schema.
+       
+               Args:
+                   name: Collection name.
+                   schema: Optional collection schema for indexes and encryption.
+                   configuration: Optional collection configuration.
+                   metadata: Optional collection metadata.
+                   embedding_function: Optional embedding function for the collection.
+                   data_loader: Optional data loader for documents with URIs.
+                   get_or_create: Whether to return an existing collection if present.
+       
+               Returns:
+                   Collection: The created collection.
+       
+               Raises:
+                   ValueError: If the embedding function conflicts with configuration.
+               """
+               if configuration is None:
+                   configuration = {}
+       
+               configuration_ef = configuration.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_create(
+                   embedding_function, configuration_ef
+               )
+       
+               # If ef provided in function params and collection config ef is None,
+               # set the collection config ef to the function params
+               if embedding_function is not None and configuration_ef is None:
+                   configuration["embedding_function"] = embedding_function
+       
+               model = self._server.create_collection(
+                   name=name,
+                   schema=schema,
+                   metadata=metadata,
+                   tenant=self.tenant,
+                   database=self.database,
+                   get_or_create=get_or_create,
+                   configuration=configuration,
+               )
+               return Collection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    6:     def get_collection(
+               self,
+    1:         name: str,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    1:     ) -> Collection:
+               """Get a collection by name.
+       
+               Args:
+                   name: Collection name.
+                   embedding_function: Optional embedding function for the collection.
+                   data_loader: Optional data loader for documents with URIs.
+       
+               Returns:
+                   Collection: The requested collection.
+       
+               Raises:
+                   ValueError: If the embedding function conflicts with configuration.
+               """
+               model = self._server.get_collection(
+                   name=name,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+               persisted_ef_config = model.configuration_json.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_get(
+                   embedding_function, persisted_ef_config
+               )
+       
+               return Collection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    6:     def get_collection_by_id(
+               self,
+    1:         id: UUID,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    1:     ) -> Collection:
+               """Get a collection by its ID.
+       
+               Args:
+                   id: The UUID of the collection.
+                   embedding_function: Optional embedding function for the collection.
+                   data_loader: Optional data loader for documents with URIs.
+       
+               Returns:
+                   Collection: The requested collection.
+       
+               Raises:
+                   ValueError: If the embedding function conflicts with configuration.
+               """
+               model = self._server.get_collection_by_id(
+                   collection_id=id,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+               persisted_ef_config = model.configuration_json.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_get(
+                   embedding_function, persisted_ef_config
+               )
+       
+               return Collection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    9:     def get_or_create_collection(
+               self,
+    1:         name: str,
+    2:         schema: Optional[Schema] = None,
+    2:         configuration: Optional[CreateCollectionConfiguration] = None,
+    2:         metadata: Optional[CollectionMetadata] = None,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    1:     ) -> Collection:
+               """Get an existing collection or create a new one.
+       
+               If the collection does not exist, it will be created. If the collection
+               already exists, the schema, configuration, and metadata arguments
+               will be ignored.
+       
+               Args:
+                   name: Collection name.
+                   schema: Optional collection schema for indexes and encryption.
+                   configuration: Optional collection configuration.
+                   metadata: Optional collection metadata.
+                   embedding_function: Optional embedding function for the collection.
+                   data_loader: Optional data loader for URI-backed data.
+       
+               Returns:
+                   Collection: The existing or newly created collection.
+       
+               Raises:
+                   ValueError: If the embedding function does not match the collection's embedding function.
+               """
+               if configuration is None:
+                   configuration = {}
+       
+               configuration_ef = configuration.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_create(
+                   embedding_function, configuration_ef
+               )
+       
+               if embedding_function is not None and configuration_ef is None:
+                   configuration["embedding_function"] = embedding_function
+               model = self._server.get_or_create_collection(
+                   name=name,
+                   schema=schema,
+                   metadata=metadata,
+                   tenant=self.tenant,
+                   database=self.database,
+                   configuration=configuration,
+               )
+       
+               persisted_ef_config = model.configuration_json.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_get(
+                   embedding_function, persisted_ef_config
+               )
+       
+               return Collection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    7:     def _modify(
+               self,
+    1:         id: UUID,
+    2:         new_name: Optional[str] = None,
+    2:         new_metadata: Optional[CollectionMetadata] = None,
+    2:         new_configuration: Optional[UpdateCollectionConfiguration] = None,
+    1:     ) -> None:
+               return self._server._modify(
+                   id=id,
+                   tenant=self.tenant,
+                   database=self.database,
+                   new_name=new_name,
+                   new_metadata=new_metadata,
+                   new_configuration=new_configuration,
+               )
+       
+    2:     @override
+    4:     def delete_collection(
+               self,
+    1:         name: str,
+    1:     ) -> None:
+               return self._server.delete_collection(
+                   name=name,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+           #
+           # ITEM METHODS
+           #
+       
+    2:     @override
+    9:     def _add(
+               self,
+    1:         ids: IDs,
+    1:         collection_id: UUID,
+    1:         embeddings: Embeddings,
+    2:         metadatas: Optional[Metadatas] = None,
+    2:         documents: Optional[Documents] = None,
+    2:         uris: Optional[URIs] = None,
+    1:     ) -> bool:
+               return self._server._add(
+                   ids=ids,
+                   tenant=self.tenant,
+                   database=self.database,
+                   collection_id=collection_id,
+                   embeddings=embeddings,
+                   metadatas=metadatas,
+                   documents=documents,
+                   uris=uris,
+               )
+       
+    2:     @override
+    9:     def _update(
+               self,
+    1:         collection_id: UUID,
+    1:         ids: IDs,
+    2:         embeddings: Optional[Embeddings] = None,
+    2:         metadatas: Optional[Metadatas] = None,
+    2:         documents: Optional[Documents] = None,
+    2:         uris: Optional[URIs] = None,
+    1:     ) -> bool:
+               return self._server._update(
+                   collection_id=collection_id,
+                   tenant=self.tenant,
+                   database=self.database,
+                   ids=ids,
+                   embeddings=embeddings,
+                   metadatas=metadatas,
+                   documents=documents,
+                   uris=uris,
+               )
+       
+    2:     @override
+    9:     def _upsert(
+               self,
+    1:         collection_id: UUID,
+    1:         ids: IDs,
+    1:         embeddings: Embeddings,
+    2:         metadatas: Optional[Metadatas] = None,
+    2:         documents: Optional[Documents] = None,
+    2:         uris: Optional[URIs] = None,
+    1:     ) -> bool:
+               return self._server._upsert(
+                   collection_id=collection_id,
+                   tenant=self.tenant,
+                   database=self.database,
+                   ids=ids,
+                   embeddings=embeddings,
+                   metadatas=metadatas,
+                   documents=documents,
+                   uris=uris,
+               )
+       
+    2:     @override
+    2:     def _count(self, collection_id: UUID) -> int:
+               return self._server._count(
+                   collection_id=collection_id,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+    2:     def _peek(self, collection_id: UUID, n: int = 10) -> GetResult:
+               return self._server._peek(
+                   collection_id=collection_id,
+                   n=n,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+   10:     def _get(
+               self,
+    1:         collection_id: UUID,
+    2:         ids: Optional[IDs] = None,
+    2:         where: Optional[Where] = None,
+    2:         limit: Optional[int] = None,
+    2:         offset: Optional[int] = None,
+    2:         where_document: Optional[WhereDocument] = None,
+    2:         include: Include = IncludeMetadataDocuments,
+    1:     ) -> GetResult:
+               return self._server._get(
+                   collection_id=collection_id,
+                   tenant=self.tenant,
+                   database=self.database,
+                   ids=ids,
+                   where=where,
+                   limit=limit,
+                   offset=offset,
+                   where_document=where_document,
+                   include=include,
+               )
+       
+    7:     def _delete(
+               self,
+    1:         collection_id: UUID,
+    1:         ids: Optional[IDs],
+    2:         where: Optional[Where] = None,
+    2:         where_document: Optional[WhereDocument] = None,
+    2:         limit: Optional[int] = None,
+    1:     ) -> DeleteResult:
+               return self._server._delete(
+                   collection_id=collection_id,
+                   tenant=self.tenant,
+                   database=self.database,
+                   ids=ids,
+                   where=where,
+                   where_document=where_document,
+                   limit=limit,
+               )
+       
+    2:     @override
+   10:     def _query(
+               self,
+    1:         collection_id: UUID,
+    1:         query_embeddings: Embeddings,
+    2:         ids: Optional[IDs] = None,
+    2:         n_results: int = 10,
+    2:         where: Optional[Where] = None,
+    2:         where_document: Optional[WhereDocument] = None,
+    2:         include: Include = IncludeMetadataDocumentsDistances,
+    1:     ) -> QueryResult:
+               return self._server._query(
+                   collection_id=collection_id,
+                   ids=ids,
+                   tenant=self.tenant,
+                   database=self.database,
+                   query_embeddings=query_embeddings,
+                   n_results=n_results,
+                   where=where,
+                   where_document=where_document,
+                   include=include,
+               )
+       
+    2:     @override
+    2:     def reset(self) -> bool:
+               return self._server.reset()
+       
+    2:     @override
+    2:     def get_version(self) -> str:
+               return self._server.get_version()
+       
+    2:     @override
+    2:     def get_settings(self) -> Settings:
+               return self._server.get_settings()
+       
+    2:     @override
+    2:     def get_max_batch_size(self) -> int:
+               return self._server.get_max_batch_size()
+       
+           # endregion
+       
+           # region ClientAPI Methods
+       
+    2:     @override
+    2:     def set_tenant(self, tenant: str, database: str = DEFAULT_DATABASE) -> None:
+               self._validate_tenant_database(tenant=tenant, database=database)
+               self.tenant = tenant
+               self.database = database
+       
+    2:     @override
+    2:     def set_database(self, database: str) -> None:
+               self._validate_tenant_database(tenant=self.tenant, database=database)
+               self.database = database
+       
+    1:     def close(self) -> None:
+               """Close the client and release all resources.
+       
+               This method decrements the reference count for the underlying System.
+               When the last client using a shared System calls close(), the System
+               is stopped and all resources (database connections, etc.) are released.
+       
+               This is particularly important for PersistentClient to avoid SQLite
+               file locking issues.
+       
+               Note: If multiple clients share the same System (e.g., multiple PersistentClient
+               instances with the same path), the System will only be stopped when the last
+               client is closed. This allows safe use of context managers with multiple clients.
+       
+               Example:
+                   >>> client = chromadb.PersistentClient(path="./chroma_db")
+                   >>> # ... use client ...
+                   >>> client.close()
+       
+                   Or using context manager:
+                   >>> with chromadb.PersistentClient(path="./chroma_db") as client:
+                   ...     # ... use client ...
+               """
+               # Make close() idempotent - a second call is a safe no-op
+               if self._closed:
+                   return
+               self._closed = True
+       
+               # Release the internal admin client's reference first, since it also
+               # incremented the refcount for the shared system on creation.
+               if hasattr(self, "_admin_client"):
+                   SharedSystemClient._release_system(self._admin_client._identifier)
+       
+               # Release our own reference; stops system if this was the last client
+               SharedSystemClient._release_system(self._identifier)
+       
+    1:     def __enter__(self) -> "Client":
+               """Context manager entry."""
+               return self
+       
+    5:     def __exit__(
+               self,
+    1:         exc_type: Optional[type[BaseException]],
+    1:         exc_val: Optional[BaseException],
+    1:         exc_tb: Optional[TracebackType],
+    1:     ) -> None:
+               """Context manager exit."""
+               self.close()
+       
+    1:     def _validate_tenant_database(self, tenant: str, database: str) -> None:
+               try:
+                   self._admin_client.get_tenant(name=tenant)
+               except httpx.ConnectError:
+                   raise ValueError(
+                       "Could not connect to a Chroma server. Are you sure it is running?"
+                   )
+               # Propagate ChromaErrors
+               except ChromaError as e:
+                   raise e
+               except Exception:
+                   raise ValueError(
+                       f"Could not connect to tenant {tenant}. Are you sure it exists?"
+                   )
+       
+               try:
+                   self._admin_client.get_database(name=database, tenant=tenant)
+               except httpx.ConnectError:
+                   raise ValueError(
+                       "Could not connect to a Chroma server. Are you sure it is running?"
+                   )
+       
+           # endregion
+       
+       
+    2: class AdminClient(SharedSystemClient, AdminAPI):
+    1:     """Admin client for managing tenants and databases."""
+       
+    1:     _server: ServerAPI
+       
+    1:     def __init__(self, settings: Settings = Settings()) -> None:
+               super().__init__(settings)
+               self._server = self._system.instance(ServerAPI)
+       
+    2:     @override
+    2:     def create_database(self, name: str, tenant: str = DEFAULT_TENANT) -> None:
+               """Create a database in a tenant.
+       
+               Args:
+                   name: Database name.
+                   tenant: Tenant that owns the database.
+               """
+               return self._server.create_database(name=name, tenant=tenant)
+       
+    2:     @override
+    2:     def get_database(self, name: str, tenant: str = DEFAULT_TENANT) -> Database:
+               """Get a database by name.
+       
+               Args:
+                   name: Database name.
+                   tenant: Tenant that owns the database.
+       
+               Returns:
+                   Database: The database record.
+               """
+               return self._server.get_database(name=name, tenant=tenant)
+       
+    2:     @override
+    2:     def delete_database(self, name: str, tenant: str = DEFAULT_TENANT) -> None:
+               """Delete a database by name.
+       
+               Args:
+                   name: Database name.
+                   tenant: Tenant that owns the database.
+               """
+               return self._server.delete_database(name=name, tenant=tenant)
+       
+    2:     @override
+    6:     def list_databases(
+               self,
+    2:         limit: Optional[int] = None,
+    2:         offset: Optional[int] = None,
+    2:         tenant: str = DEFAULT_TENANT,
+    1:     ) -> Sequence[Database]:
+               return self._server.list_databases(limit, offset, tenant=tenant)
+       
+    2:     @override
+    2:     def create_tenant(self, name: str) -> None:
+               return self._server.create_tenant(name=name)
+       
+    2:     @override
+    2:     def get_tenant(self, name: str) -> Tenant:
+               return self._server.get_tenant(name=name)
+       
+    2:     @classmethod
+    2:     @override
+    4:     def from_system(
+               cls,
+    1:         system: System,
+    1:     ) -> "AdminClient":
+               SharedSystemClient._populate_data_from_system(system)
+               instance = cls(settings=system.settings)
+               return instance

@@ -1,0 +1,81 @@
+    1: from __future__ import annotations
+       
+    1: from collections.abc import Callable, Mapping
+    1: from typing import Any, TypeVar, final, overload
+       
+    1: from ._exceptions import TypedAttributeLookupError
+       
+    1: T_Attr = TypeVar("T_Attr")
+    1: T_Default = TypeVar("T_Default")
+    1: undefined = object()
+       
+       
+    1: def typed_attribute() -> Any:
+           """Return a unique object, used to mark typed attributes."""
+   19:     return object()
+       
+       
+    2: class TypedAttributeSet:
+    1:     """
+           Superclass for typed attribute collections.
+       
+           Checks that every public attribute of every subclass has a type annotation.
+           """
+       
+    1:     def __init_subclass__(cls) -> None:
+    3:         annotations: dict[str, Any] = getattr(cls, "__annotations__", {})
+  106:         for attrname in dir(cls):
+  103:             if not attrname.startswith("_") and attrname not in annotations:
+                       raise TypeError(
+                           f"Attribute {attrname!r} is missing its type annotation"
+                       )
+       
+    3:         super().__init_subclass__()
+       
+       
+    2: class TypedAttributeProvider:
+    1:     """Base class for classes that wish to provide typed extra attributes."""
+       
+    2:     @property
+    2:     def extra_attributes(self) -> Mapping[T_Attr, Callable[[], T_Attr]]:
+               """
+               A mapping of the extra attributes to callables that return the corresponding
+               values.
+       
+               If the provider wraps another provider, the attributes from that wrapper should
+               also be included in the returned mapping (but the wrapper may override the
+               callables from the wrapped instance).
+       
+               """
+               return {}
+       
+    2:     @overload
+    2:     def extra(self, attribute: T_Attr) -> T_Attr: ...
+       
+    2:     @overload
+    2:     def extra(self, attribute: T_Attr, default: T_Default) -> T_Attr | T_Default: ...
+       
+    2:     @final
+    2:     def extra(self, attribute: Any, default: object = undefined) -> object:
+               """
+               extra(attribute, default=undefined)
+       
+               Return the value of the given typed extra attribute.
+       
+               :param attribute: the attribute (member of a :class:`~TypedAttributeSet`) to
+                   look for
+               :param default: the value that should be returned if no value is found for the
+                   attribute
+               :raises ~anyio.TypedAttributeLookupError: if the search failed and no default
+                   value was given
+       
+               """
+               try:
+                   getter = self.extra_attributes[attribute]
+               except KeyError:
+                   if default is undefined:
+                       raise TypedAttributeLookupError("Attribute not found") from None
+                   else:
+                       return default
+       
+               return getter()

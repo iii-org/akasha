@@ -1,0 +1,11 @@
+    1: import uuid
+       
+    1: _MIN_BACKEND_VERSION = "0.16.9rc1"
+       
+    1: _SIZE_LIMIT_BYTES = 20_971_520  # 20MB by default
+    1: _AUTO_SCALE_UP_QSIZE_TRIGGER = 200
+    1: _AUTO_SCALE_UP_NTHREADS_LIMIT = 32
+    1: _AUTO_SCALE_DOWN_NEMPTY_TRIGGER = 4
+    1: _BLOCKSIZE_BYTES = 1024 * 1024  # 1MB
+    1: _BOUNDARY = uuid.uuid4().hex
+    1: _TRACING_QUEUE_MAX_SIZE = 10_000

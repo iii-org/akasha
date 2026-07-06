@@ -1,0 +1,1204 @@
+    1: """
+           pygments.lexers.python
+           ~~~~~~~~~~~~~~~~~~~~~~
+       
+           Lexers for Python and related languages.
+       
+           :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+           :license: BSD, see LICENSE for details.
+       """
+       
+    1: import keyword
+       
+    1: from pygments.lexer import DelegatingLexer, RegexLexer, include, \
+           bygroups, using, default, words, combined, this
+    1: from pygments.util import get_bool_opt, shebang_matches
+    1: from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+           Number, Punctuation, Generic, Other, Error, Whitespace
+    1: from pygments import unistring as uni
+       
+    1: __all__ = ['PythonLexer', 'PythonConsoleLexer', 'PythonTracebackLexer',
+                  'Python2Lexer', 'Python2TracebackLexer',
+                  'CythonLexer', 'DgLexer', 'NumPyLexer']
+       
+       
+    2: class PythonLexer(RegexLexer):
+    1:     """
+           For Python source code (version 3.x).
+       
+           .. versionchanged:: 2.5
+              This is now the default ``PythonLexer``.  It is still available as the
+              alias ``Python3Lexer``.
+           """
+       
+    1:     name = 'Python'
+    1:     url = 'https://www.python.org'
+    1:     aliases = ['python', 'py', 'sage', 'python3', 'py3', 'bazel', 'starlark', 'pyi']
+    1:     filenames = [
+               '*.py',
+               '*.pyw',
+               # Type stubs
+               '*.pyi',
+               # Jython
+               '*.jy',
+               # Sage
+               '*.sage',
+               # SCons
+               '*.sc',
+               'SConstruct',
+               'SConscript',
+               # Skylark/Starlark (used by Bazel, Buck, and Pants)
+               '*.bzl',
+               'BUCK',
+               'BUILD',
+               'BUILD.bazel',
+               'WORKSPACE',
+               # Twisted Application infrastructure
+               '*.tac',
+               # Execubot level format
+               '*.pye',
+           ]
+    1:     mimetypes = ['text/x-python', 'application/x-python',
+                        'text/x-python3', 'application/x-python3']
+    1:     version_added = '0.10'
+       
+    1:     uni_name = f"[{uni.xid_start}][{uni.xid_continue}]*"
+       
+    1:     def innerstring_rules(ttype):
+    2:         return [
+                   # the old style '%s' % (...) string formatting (still valid in Py3)
+    4:             (r'%(\(\w+\))?[-#0 +]*([0-9]+|[*])?(\.([0-9]+|[*]))?'
+    2:              '[hlL]?[E-GXc-giorsaux%]', String.Interpol),
+                   # the new style '{}'.format(...) string formatting
+    4:             (r'\{'
+                    r'((\w+)((\.\w+)|(\[[^\]]+\]))*)?'  # field name
+                    r'(\![sra])?'                       # conversion
+                    r'(\:(.?[<>=\^])?[-+ ]?#?0?(\d+)?,?(\.\d+)?[E-GXb-gnosx%]?)?'
+    2:              r'\}', String.Interpol),
+       
+                   # backslashes, quotes and formatting signs must be parsed one at a time
+    2:             (r'[^\\\'"%{\n]+', ttype),
+    2:             (r'[\'"\\]', ttype),
+                   # unhandled string formatting sign
+    2:             (r'%|(\{{1,2})', ttype)
+                   # newlines are an error (use "nl" state)
+               ]
+       
+    1:     def fstring_rules(ttype):
+    2:         return [
+                   # Assuming that a '}' is the closing brace after format specifier.
+                   # Sadly, this means that we won't detect syntax error. But it's
+                   # more important to parse correct syntax correctly, than to
+                   # highlight invalid syntax.
+    2:             (r'\}', String.Interpol),
+    2:             (r'\{', String.Interpol, 'expr-inside-fstring'),
+                   # backslashes, quotes and formatting signs must be parsed one at a time
+    2:             (r'[^\\\'"{}\n]+', ttype),
+    2:             (r'[\'"\\]', ttype),
+                   # newlines are an error (use "nl" state)
+               ]
+       
+   34:     tokens = {
+    2:         'root': [
+    1:             (r'\n', Whitespace),
+    2:             (r'^(\s*)([rRuUbB]{,2})("""(?:.|\n)*?""")',
+    1:              bygroups(Whitespace, String.Affix, String.Doc)),
+    2:             (r"^(\s*)([rRuUbB]{,2})('''(?:.|\n)*?''')",
+    1:              bygroups(Whitespace, String.Affix, String.Doc)),
+    1:             (r'\A#!.+$', Comment.Hashbang),
+    1:             (r'#.*$', Comment.Single),
+    1:             (r'\\\n', Text),
+    1:             (r'\\', Text),
+    1:             include('keywords'),
+    1:             include('soft-keywords'),
+    1:             (r'(def)((?:\s|\\\s)+)', bygroups(Keyword, Whitespace), 'funcname'),
+    1:             (r'(class)((?:\s|\\\s)+)', bygroups(Keyword, Whitespace), 'classname'),
+    2:             (r'(from)((?:\s|\\\s)+)', bygroups(Keyword.Namespace, Whitespace),
+    1:              'fromimport'),
+    2:             (r'(import)((?:\s|\\\s)+)', bygroups(Keyword.Namespace, Whitespace),
+    1:              'import'),
+    1:             include('expr'),
+               ],
+    2:         'expr': [
+                   # raw f-strings and t-strings
+    2:             ('(?i)(r[ft]|[ft]r)(""")',
+    1:              bygroups(String.Affix, String.Double),
+    1:              combined('rfstringescape', 'tdqf')),
+    2:             ("(?i)(r[ft]|[ft]r)(''')",
+    1:              bygroups(String.Affix, String.Single),
+    1:              combined('rfstringescape', 'tsqf')),
+    2:             ('(?i)(r[ft]|[ft]r)(")',
+    1:              bygroups(String.Affix, String.Double),
+    1:              combined('rfstringescape', 'dqf')),
+    2:             ("(?i)(r[ft]|[ft]r)(')",
+    1:              bygroups(String.Affix, String.Single),
+    1:              combined('rfstringescape', 'sqf')),
+                   # non-raw f-strings and t-strings
+    2:             ('([fFtT])(""")', bygroups(String.Affix, String.Double),
+    1:              combined('fstringescape', 'tdqf')),
+    2:             ("([fFtT])(''')", bygroups(String.Affix, String.Single),
+    1:              combined('fstringescape', 'tsqf')),
+    2:             ('([fFtT])(")', bygroups(String.Affix, String.Double),
+    1:              combined('fstringescape', 'dqf')),
+    2:             ("([fFtT])(')", bygroups(String.Affix, String.Single),
+    1:              combined('fstringescape', 'sqf')),
+                   # raw bytes and strings
+    2:             ('(?i)(rb|br|r)(""")',
+    1:              bygroups(String.Affix, String.Double), 'tdqs'),
+    2:             ("(?i)(rb|br|r)(''')",
+    1:              bygroups(String.Affix, String.Single), 'tsqs'),
+    2:             ('(?i)(rb|br|r)(")',
+    1:              bygroups(String.Affix, String.Double), 'dqs'),
+    2:             ("(?i)(rb|br|r)(')",
+    1:              bygroups(String.Affix, String.Single), 'sqs'),
+                   # non-raw strings
+    2:             ('([uU]?)(""")', bygroups(String.Affix, String.Double),
+    1:              combined('stringescape', 'tdqs')),
+    2:             ("([uU]?)(''')", bygroups(String.Affix, String.Single),
+    1:              combined('stringescape', 'tsqs')),
+    2:             ('([uU]?)(")', bygroups(String.Affix, String.Double),
+    1:              combined('stringescape', 'dqs')),
+    2:             ("([uU]?)(')", bygroups(String.Affix, String.Single),
+    1:              combined('stringescape', 'sqs')),
+                   # non-raw bytes
+    2:             ('([bB])(""")', bygroups(String.Affix, String.Double),
+    1:              combined('bytesescape', 'tdqs')),
+    2:             ("([bB])(''')", bygroups(String.Affix, String.Single),
+    1:              combined('bytesescape', 'tsqs')),
+    2:             ('([bB])(")', bygroups(String.Affix, String.Double),
+    1:              combined('bytesescape', 'dqs')),
+    2:             ("([bB])(')", bygroups(String.Affix, String.Single),
+    1:              combined('bytesescape', 'sqs')),
+       
+    1:             (r'[^\S\n]+', Text),
+    1:             include('numbers'),
+    1:             (r'!=|==|<<|>>|:=|[-~+/*%=<>&^|.]', Operator),
+    1:             (r'[]{}:(),;[]', Punctuation),
+    1:             (r'(in|is|and|or|not)\b', Operator.Word),
+    1:             include('expr-keywords'),
+    1:             include('builtins'),
+    1:             include('magicfuncs'),
+    1:             include('magicvars'),
+    1:             include('name'),
+               ],
+    2:         'expr-inside-fstring': [
+    1:             (r'[{([]', Punctuation, 'expr-inside-fstring-inner'),
+                   # without format specifier
+    2:             (r'(=\s*)?'         # debug (https://bugs.python.org/issue36817)
+                    r'(\![sraf])?'     # conversion
+    1:              r'\}', String.Interpol, '#pop'),
+                   # with format specifier
+                   # we'll catch the remaining '}' in the outer scope
+    2:             (r'(=\s*)?'         # debug (https://bugs.python.org/issue36817)
+                    r'(\![sraf])?'     # conversion
+    1:              r':', String.Interpol, '#pop'),
+    1:             (r'\s+', Whitespace),  # allow new lines
+    1:             include('expr'),
+               ],
+    2:         'expr-inside-fstring-inner': [
+    1:             (r'[{([]', Punctuation, 'expr-inside-fstring-inner'),
+    1:             (r'[])}]', Punctuation, '#pop'),
+    1:             (r'\s+', Whitespace),  # allow new lines
+    1:             include('expr'),
+               ],
+    2:         'expr-keywords': [
+                   # Based on https://docs.python.org/3/reference/expressions.html
+    3:             (words((
+                       'async for', 'await', 'else', 'for', 'if', 'lambda',
+    1:                 'yield', 'yield from'), suffix=r'\b'),
+    1:              Keyword),
+    1:             (words(('True', 'False', 'None'), suffix=r'\b'), Keyword.Constant),
+               ],
+    2:         'keywords': [
+    3:             (words((
+                       'assert', 'async', 'await', 'break', 'continue', 'del', 'elif',
+                       'else', 'except', 'finally', 'for', 'global', 'if', 'lambda',
+                       'pass', 'raise', 'nonlocal', 'return', 'try', 'while', 'yield',
+    1:                 'yield from', 'as', 'with'), suffix=r'\b'),
+    1:              Keyword),
+    1:             (words(('True', 'False', 'None'), suffix=r'\b'), Keyword.Constant),
+               ],
+    2:         'soft-keywords': [
+                   # `match`, `case` and `_` soft keywords
+    4:             (r'(^[ \t]*)'              # at beginning of line + possible indentation
+                    r'(match|case)\b'         # a possible keyword
+                    r'(?![ \t]*(?:'           # not followed by...
+                    r'[:,;=^&|@~)\]}]|(?:' +  # characters and keywords that mean this isn't
+                                              # pattern matching (but None/True/False is ok)
+   38:              r'|'.join(k for k in keyword.kwlist if k[0].islower()) + r')\b))',
+    1:              bygroups(Text, Keyword), 'soft-keywords-inner'),
+               ],
+    2:         'soft-keywords-inner': [
+                   # optional `_` keyword
+    1:             (r'(\s+)([^\n_]*)(_\b)', bygroups(Whitespace, using(this), Keyword)),
+    1:             default('#pop')
+               ],
+    2:         'builtins': [
+    3:             (words((
+                       '__import__', 'abs', 'aiter', 'all', 'any', 'bin', 'bool', 'bytearray',
+                       'breakpoint', 'bytes', 'callable', 'chr', 'classmethod', 'compile',
+                       'complex', 'delattr', 'dict', 'dir', 'divmod', 'enumerate', 'eval',
+                       'filter', 'float', 'format', 'frozenset', 'getattr', 'globals',
+                       'hasattr', 'hash', 'hex', 'id', 'input', 'int', 'isinstance',
+                       'issubclass', 'iter', 'len', 'list', 'locals', 'map', 'max',
+                       'memoryview', 'min', 'next', 'object', 'oct', 'open', 'ord', 'pow',
+                       'print', 'property', 'range', 'repr', 'reversed', 'round', 'set',
+                       'setattr', 'slice', 'sorted', 'staticmethod', 'str', 'sum', 'super',
+    1:                 'tuple', 'type', 'vars', 'zip'), prefix=r'(?<!\.)', suffix=r'\b'),
+    1:              Name.Builtin),
+    1:             (r'(?<!\.)(self|Ellipsis|NotImplemented|cls)\b', Name.Builtin.Pseudo),
+    3:             (words((
+                       'ArithmeticError', 'AssertionError', 'AttributeError',
+                       'BaseException', 'BufferError', 'BytesWarning', 'DeprecationWarning',
+                       'EOFError', 'EnvironmentError', 'Exception', 'FloatingPointError',
+                       'FutureWarning', 'GeneratorExit', 'IOError', 'ImportError',
+                       'ImportWarning', 'IndentationError', 'IndexError', 'KeyError',
+                       'KeyboardInterrupt', 'LookupError', 'MemoryError', 'NameError',
+                       'NotImplementedError', 'OSError', 'OverflowError',
+                       'PendingDeprecationWarning', 'ReferenceError', 'ResourceWarning',
+                       'RuntimeError', 'RuntimeWarning', 'StopIteration',
+                       'SyntaxError', 'SyntaxWarning', 'SystemError', 'SystemExit',
+                       'TabError', 'TypeError', 'UnboundLocalError', 'UnicodeDecodeError',
+                       'UnicodeEncodeError', 'UnicodeError', 'UnicodeTranslateError',
+                       'UnicodeWarning', 'UserWarning', 'ValueError', 'VMSError',
+                       'Warning', 'WindowsError', 'ZeroDivisionError',
+                       # new builtin exceptions from PEP 3151
+                       'BlockingIOError', 'ChildProcessError', 'ConnectionError',
+                       'BrokenPipeError', 'ConnectionAbortedError', 'ConnectionRefusedError',
+                       'ConnectionResetError', 'FileExistsError', 'FileNotFoundError',
+                       'InterruptedError', 'IsADirectoryError', 'NotADirectoryError',
+                       'PermissionError', 'ProcessLookupError', 'TimeoutError',
+                       # others new in Python 3
+                       'StopAsyncIteration', 'ModuleNotFoundError', 'RecursionError',
+                       'EncodingWarning'),
+    1:                 prefix=r'(?<!\.)', suffix=r'\b'),
+    1:              Name.Exception),
+               ],
+    2:         'magicfuncs': [
+    3:             (words((
+                       '__abs__', '__add__', '__aenter__', '__aexit__', '__aiter__',
+                       '__and__', '__anext__', '__await__', '__bool__', '__bytes__',
+                       '__call__', '__complex__', '__contains__', '__del__', '__delattr__',
+                       '__delete__', '__delitem__', '__dir__', '__divmod__', '__enter__',
+                       '__eq__', '__exit__', '__float__', '__floordiv__', '__format__',
+                       '__ge__', '__get__', '__getattr__', '__getattribute__',
+                       '__getitem__', '__gt__', '__hash__', '__iadd__', '__iand__',
+                       '__ifloordiv__', '__ilshift__', '__imatmul__', '__imod__',
+                       '__imul__', '__index__', '__init__', '__instancecheck__',
+                       '__int__', '__invert__', '__ior__', '__ipow__', '__irshift__',
+                       '__isub__', '__iter__', '__itruediv__', '__ixor__', '__le__',
+                       '__len__', '__length_hint__', '__lshift__', '__lt__', '__matmul__',
+                       '__missing__', '__mod__', '__mul__', '__ne__', '__neg__',
+                       '__new__', '__next__', '__or__', '__pos__', '__pow__',
+                       '__prepare__', '__radd__', '__rand__', '__rdivmod__', '__repr__',
+                       '__reversed__', '__rfloordiv__', '__rlshift__', '__rmatmul__',
+                       '__rmod__', '__rmul__', '__ror__', '__round__', '__rpow__',
+                       '__rrshift__', '__rshift__', '__rsub__', '__rtruediv__',
+                       '__rxor__', '__set__', '__setattr__', '__setitem__', '__str__',
+                       '__sub__', '__subclasscheck__', '__truediv__',
+    1:                 '__xor__'), suffix=r'\b'),
+    1:              Name.Function.Magic),
+               ],
+    2:         'magicvars': [
+    3:             (words((
+                       '__annotations__', '__bases__', '__class__', '__closure__',
+                       '__code__', '__defaults__', '__dict__', '__doc__', '__file__',
+                       '__func__', '__globals__', '__kwdefaults__', '__module__',
+                       '__mro__', '__name__', '__objclass__', '__qualname__',
+    1:                 '__self__', '__slots__', '__weakref__'), suffix=r'\b'),
+    1:              Name.Variable.Magic),
+               ],
+    2:         'numbers': [
+    2:             (r'(\d(?:_?\d)*\.(?:\d(?:_?\d)*)?|(?:\d(?:_?\d)*)?\.\d(?:_?\d)*)'
+    1:              r'([eE][+-]?\d(?:_?\d)*)?', Number.Float),
+    1:             (r'\d(?:_?\d)*[eE][+-]?\d(?:_?\d)*j?', Number.Float),
+    1:             (r'0[oO](?:_?[0-7])+', Number.Oct),
+    1:             (r'0[bB](?:_?[01])+', Number.Bin),
+    1:             (r'0[xX](?:_?[a-fA-F0-9])+', Number.Hex),
+    1:             (r'\d(?:_?\d)*', Number.Integer),
+               ],
+    2:         'name': [
+    1:             (r'@' + uni_name, Name.Decorator),
+    1:             (r'@', Operator),  # new matrix multiplication operator
+    1:             (uni_name, Name),
+               ],
+    2:         'funcname': [
+    1:             include('magicfuncs'),
+    1:             (uni_name, Name.Function, '#pop'),
+    1:             default('#pop'),
+               ],
+    2:         'classname': [
+    1:             (uni_name, Name.Class, '#pop'),
+               ],
+    2:         'import': [
+    1:             (r'(\s+)(as)(\s+)', bygroups(Whitespace, Keyword, Whitespace)),
+    1:             (r'\.', Name.Namespace),
+    1:             (uni_name, Name.Namespace),
+    1:             (r'(\s*)(,)(\s*)', bygroups(Whitespace, Operator, Whitespace)),
+    1:             default('#pop')  # all else: go back
+               ],
+    2:         'fromimport': [
+    1:             (r'(\s+)(import)\b', bygroups(Whitespace, Keyword.Namespace), '#pop'),
+    1:             (r'\.', Name.Namespace),
+                   # if None occurs here, it's "raise x from None", since None can
+                   # never be a module name
+    1:             (r'None\b', Keyword.Constant, '#pop'),
+    1:             (uni_name, Name.Namespace),
+    1:             default('#pop'),
+               ],
+    2:         'rfstringescape': [
+    1:             (r'\{\{', String.Escape),
+    1:             (r'\}\}', String.Escape),
+               ],
+    2:         'fstringescape': [
+    1:             include('rfstringescape'),
+    1:             include('stringescape'),
+               ],
+    2:         'bytesescape': [
+    1:             (r'\\([\\abfnrtv"\']|\n|x[a-fA-F0-9]{2}|[0-7]{1,3})', String.Escape)
+               ],
+    2:         'stringescape': [
+    1:             (r'\\(N\{.*?\}|u[a-fA-F0-9]{4}|U[a-fA-F0-9]{8})', String.Escape),
+    1:             include('bytesescape')
+               ],
+    1:         'fstrings-single': fstring_rules(String.Single),
+    1:         'fstrings-double': fstring_rules(String.Double),
+    1:         'strings-single': innerstring_rules(String.Single),
+    1:         'strings-double': innerstring_rules(String.Double),
+    2:         'dqf': [
+    1:             (r'"', String.Double, '#pop'),
+    1:             (r'\\\\|\\"|\\\n', String.Escape),  # included here for raw strings
+    1:             include('fstrings-double')
+               ],
+    2:         'sqf': [
+    1:             (r"'", String.Single, '#pop'),
+    1:             (r"\\\\|\\'|\\\n", String.Escape),  # included here for raw strings
+    1:             include('fstrings-single')
+               ],
+    2:         'dqs': [
+    1:             (r'"', String.Double, '#pop'),
+    1:             (r'\\\\|\\"|\\\n', String.Escape),  # included here for raw strings
+    1:             include('strings-double')
+               ],
+    2:         'sqs': [
+    1:             (r"'", String.Single, '#pop'),
+    1:             (r"\\\\|\\'|\\\n", String.Escape),  # included here for raw strings
+    1:             include('strings-single')
+               ],
+    2:         'tdqf': [
+    1:             (r'"""', String.Double, '#pop'),
+    1:             include('fstrings-double'),
+    1:             (r'\n', String.Double)
+               ],
+    2:         'tsqf': [
+    1:             (r"'''", String.Single, '#pop'),
+    1:             include('fstrings-single'),
+    1:             (r'\n', String.Single)
+               ],
+    2:         'tdqs': [
+    1:             (r'"""', String.Double, '#pop'),
+    1:             include('strings-double'),
+    1:             (r'\n', String.Double)
+               ],
+    2:         'tsqs': [
+    1:             (r"'''", String.Single, '#pop'),
+    1:             include('strings-single'),
+    1:             (r'\n', String.Single)
+               ],
+           }
+       
+    1:     def analyse_text(text):
+               return shebang_matches(text, r'pythonw?(3(\.\d)?)?') or \
+                   'import ' in text[:1000]
+       
+       
+    1: Python3Lexer = PythonLexer
+       
+       
+    2: class Python2Lexer(RegexLexer):
+    1:     """
+           For Python 2.x source code.
+       
+           .. versionchanged:: 2.5
+              This class has been renamed from ``PythonLexer``.  ``PythonLexer`` now
+              refers to the Python 3 variant.  File name patterns like ``*.py`` have
+              been moved to Python 3 as well.
+           """
+       
+    1:     name = 'Python 2.x'
+    1:     url = 'https://www.python.org'
+    1:     aliases = ['python2', 'py2']
+    1:     filenames = []  # now taken over by PythonLexer (3.x)
+    1:     mimetypes = ['text/x-python2', 'application/x-python2']
+    1:     version_added = ''
+       
+    1:     def innerstring_rules(ttype):
+    2:         return [
+                   # the old style '%s' % (...) string formatting
+    4:             (r'%(\(\w+\))?[-#0 +]*([0-9]+|[*])?(\.([0-9]+|[*]))?'
+    2:              '[hlL]?[E-GXc-giorsux%]', String.Interpol),
+                   # backslashes, quotes and formatting signs must be parsed one at a time
+    2:             (r'[^\\\'"%\n]+', ttype),
+    2:             (r'[\'"\\]', ttype),
+                   # unhandled string formatting sign
+    2:             (r'%', ttype),
+                   # newlines are an error (use "nl" state)
+               ]
+       
+   19:     tokens = {
+    2:         'root': [
+    1:             (r'\n', Whitespace),
+    2:             (r'^(\s*)([rRuUbB]{,2})("""(?:.|\n)*?""")',
+    1:              bygroups(Whitespace, String.Affix, String.Doc)),
+    2:             (r"^(\s*)([rRuUbB]{,2})('''(?:.|\n)*?''')",
+    1:              bygroups(Whitespace, String.Affix, String.Doc)),
+    1:             (r'[^\S\n]+', Text),
+    1:             (r'\A#!.+$', Comment.Hashbang),
+    1:             (r'#.*$', Comment.Single),
+    1:             (r'[]{}:(),;[]', Punctuation),
+    1:             (r'\\\n', Text),
+    1:             (r'\\', Text),
+    1:             (r'(in|is|and|or|not)\b', Operator.Word),
+    1:             (r'!=|==|<<|>>|[-~+/*%=<>&^|.]', Operator),
+    1:             include('keywords'),
+    1:             (r'(def)((?:\s|\\\s)+)', bygroups(Keyword, Whitespace), 'funcname'),
+    1:             (r'(class)((?:\s|\\\s)+)', bygroups(Keyword, Whitespace), 'classname'),
+    2:             (r'(from)((?:\s|\\\s)+)', bygroups(Keyword.Namespace, Whitespace),
+    1:              'fromimport'),
+    2:             (r'(import)((?:\s|\\\s)+)', bygroups(Keyword.Namespace, Whitespace),
+    1:              'import'),
+    1:             include('builtins'),
+    1:             include('magicfuncs'),
+    1:             include('magicvars'),
+    1:             include('backtick'),
+    2:             ('([rR]|[uUbB][rR]|[rR][uUbB])(""")',
+    1:              bygroups(String.Affix, String.Double), 'tdqs'),
+    2:             ("([rR]|[uUbB][rR]|[rR][uUbB])(''')",
+    1:              bygroups(String.Affix, String.Single), 'tsqs'),
+    2:             ('([rR]|[uUbB][rR]|[rR][uUbB])(")',
+    1:              bygroups(String.Affix, String.Double), 'dqs'),
+    2:             ("([rR]|[uUbB][rR]|[rR][uUbB])(')",
+    1:              bygroups(String.Affix, String.Single), 'sqs'),
+    2:             ('([uUbB]?)(""")', bygroups(String.Affix, String.Double),
+    1:              combined('stringescape', 'tdqs')),
+    2:             ("([uUbB]?)(''')", bygroups(String.Affix, String.Single),
+    1:              combined('stringescape', 'tsqs')),
+    2:             ('([uUbB]?)(")', bygroups(String.Affix, String.Double),
+    1:              combined('stringescape', 'dqs')),
+    2:             ("([uUbB]?)(')", bygroups(String.Affix, String.Single),
+    1:              combined('stringescape', 'sqs')),
+    1:             include('name'),
+    1:             include('numbers'),
+               ],
+    2:         'keywords': [
+    3:             (words((
+                       'assert', 'break', 'continue', 'del', 'elif', 'else', 'except',
+                       'exec', 'finally', 'for', 'global', 'if', 'lambda', 'pass',
+                       'print', 'raise', 'return', 'try', 'while', 'yield',
+    1:                 'yield from', 'as', 'with'), suffix=r'\b'),
+    1:              Keyword),
+               ],
+    2:         'builtins': [
+    3:             (words((
+                       '__import__', 'abs', 'all', 'any', 'apply', 'basestring', 'bin',
+                       'bool', 'buffer', 'bytearray', 'bytes', 'callable', 'chr', 'classmethod',
+                       'cmp', 'coerce', 'compile', 'complex', 'delattr', 'dict', 'dir', 'divmod',
+                       'enumerate', 'eval', 'execfile', 'exit', 'file', 'filter', 'float',
+                       'frozenset', 'getattr', 'globals', 'hasattr', 'hash', 'hex', 'id',
+                       'input', 'int', 'intern', 'isinstance', 'issubclass', 'iter', 'len',
+                       'list', 'locals', 'long', 'map', 'max', 'min', 'next', 'object',
+                       'oct', 'open', 'ord', 'pow', 'property', 'range', 'raw_input', 'reduce',
+                       'reload', 'repr', 'reversed', 'round', 'set', 'setattr', 'slice',
+                       'sorted', 'staticmethod', 'str', 'sum', 'super', 'tuple', 'type',
+                       'unichr', 'unicode', 'vars', 'xrange', 'zip'),
+    1:                 prefix=r'(?<!\.)', suffix=r'\b'),
+    1:              Name.Builtin),
+    2:             (r'(?<!\.)(self|None|Ellipsis|NotImplemented|False|True|cls'
+    1:              r')\b', Name.Builtin.Pseudo),
+    3:             (words((
+                       'ArithmeticError', 'AssertionError', 'AttributeError',
+                       'BaseException', 'DeprecationWarning', 'EOFError', 'EnvironmentError',
+                       'Exception', 'FloatingPointError', 'FutureWarning', 'GeneratorExit',
+                       'IOError', 'ImportError', 'ImportWarning', 'IndentationError',
+                       'IndexError', 'KeyError', 'KeyboardInterrupt', 'LookupError',
+                       'MemoryError', 'NameError',
+                       'NotImplementedError', 'OSError', 'OverflowError', 'OverflowWarning',
+                       'PendingDeprecationWarning', 'ReferenceError',
+                       'RuntimeError', 'RuntimeWarning', 'StandardError', 'StopIteration',
+                       'SyntaxError', 'SyntaxWarning', 'SystemError', 'SystemExit',
+                       'TabError', 'TypeError', 'UnboundLocalError', 'UnicodeDecodeError',
+                       'UnicodeEncodeError', 'UnicodeError', 'UnicodeTranslateError',
+                       'UnicodeWarning', 'UserWarning', 'ValueError', 'VMSError', 'Warning',
+    1:                 'WindowsError', 'ZeroDivisionError'), prefix=r'(?<!\.)', suffix=r'\b'),
+    1:              Name.Exception),
+               ],
+    2:         'magicfuncs': [
+    3:             (words((
+                       '__abs__', '__add__', '__and__', '__call__', '__cmp__', '__coerce__',
+                       '__complex__', '__contains__', '__del__', '__delattr__', '__delete__',
+                       '__delitem__', '__delslice__', '__div__', '__divmod__', '__enter__',
+                       '__eq__', '__exit__', '__float__', '__floordiv__', '__ge__', '__get__',
+                       '__getattr__', '__getattribute__', '__getitem__', '__getslice__', '__gt__',
+                       '__hash__', '__hex__', '__iadd__', '__iand__', '__idiv__', '__ifloordiv__',
+                       '__ilshift__', '__imod__', '__imul__', '__index__', '__init__',
+                       '__instancecheck__', '__int__', '__invert__', '__iop__', '__ior__',
+                       '__ipow__', '__irshift__', '__isub__', '__iter__', '__itruediv__',
+                       '__ixor__', '__le__', '__len__', '__long__', '__lshift__', '__lt__',
+                       '__missing__', '__mod__', '__mul__', '__ne__', '__neg__', '__new__',
+                       '__nonzero__', '__oct__', '__op__', '__or__', '__pos__', '__pow__',
+                       '__radd__', '__rand__', '__rcmp__', '__rdiv__', '__rdivmod__', '__repr__',
+                       '__reversed__', '__rfloordiv__', '__rlshift__', '__rmod__', '__rmul__',
+                       '__rop__', '__ror__', '__rpow__', '__rrshift__', '__rshift__', '__rsub__',
+                       '__rtruediv__', '__rxor__', '__set__', '__setattr__', '__setitem__',
+                       '__setslice__', '__str__', '__sub__', '__subclasscheck__', '__truediv__',
+    1:                 '__unicode__', '__xor__'), suffix=r'\b'),
+    1:              Name.Function.Magic),
+               ],
+    2:         'magicvars': [
+    3:             (words((
+                       '__bases__', '__class__', '__closure__', '__code__', '__defaults__',
+                       '__dict__', '__doc__', '__file__', '__func__', '__globals__',
+                       '__metaclass__', '__module__', '__mro__', '__name__', '__self__',
+                       '__slots__', '__weakref__'),
+    1:                 suffix=r'\b'),
+    1:              Name.Variable.Magic),
+               ],
+    2:         'numbers': [
+    1:             (r'(\d+\.\d*|\d*\.\d+)([eE][+-]?[0-9]+)?j?', Number.Float),
+    1:             (r'\d+[eE][+-]?[0-9]+j?', Number.Float),
+    1:             (r'0[0-7]+j?', Number.Oct),
+    1:             (r'0[bB][01]+', Number.Bin),
+    1:             (r'0[xX][a-fA-F0-9]+', Number.Hex),
+    1:             (r'\d+L', Number.Integer.Long),
+    1:             (r'\d+j?', Number.Integer)
+               ],
+    2:         'backtick': [
+    1:             ('`.*?`', String.Backtick),
+               ],
+    2:         'name': [
+    1:             (r'@[\w.]+', Name.Decorator),
+    1:             (r'[a-zA-Z_]\w*', Name),
+               ],
+    2:         'funcname': [
+    1:             include('magicfuncs'),
+    1:             (r'[a-zA-Z_]\w*', Name.Function, '#pop'),
+    1:             default('#pop'),
+               ],
+    2:         'classname': [
+    1:             (r'[a-zA-Z_]\w*', Name.Class, '#pop')
+               ],
+    2:         'import': [
+    1:             (r'(?:[ \t]|\\\n)+', Text),
+    1:             (r'as\b', Keyword.Namespace),
+    1:             (r',', Operator),
+    1:             (r'[a-zA-Z_][\w.]*', Name.Namespace),
+    1:             default('#pop')  # all else: go back
+               ],
+    2:         'fromimport': [
+    1:             (r'(?:[ \t]|\\\n)+', Text),
+    1:             (r'import\b', Keyword.Namespace, '#pop'),
+                   # if None occurs here, it's "raise x from None", since None can
+                   # never be a module name
+    1:             (r'None\b', Name.Builtin.Pseudo, '#pop'),
+                   # sadly, in "raise x from y" y will be highlighted as namespace too
+    1:             (r'[a-zA-Z_.][\w.]*', Name.Namespace),
+                   # anything else here also means "raise x from y" and is therefore
+                   # not an error
+    1:             default('#pop'),
+               ],
+    2:         'stringescape': [
+    2:             (r'\\([\\abfnrtv"\']|\n|N\{.*?\}|u[a-fA-F0-9]{4}|'
+    1:              r'U[a-fA-F0-9]{8}|x[a-fA-F0-9]{2}|[0-7]{1,3})', String.Escape)
+               ],
+    1:         'strings-single': innerstring_rules(String.Single),
+    1:         'strings-double': innerstring_rules(String.Double),
+    2:         'dqs': [
+    1:             (r'"', String.Double, '#pop'),
+    1:             (r'\\\\|\\"|\\\n', String.Escape),  # included here for raw strings
+    1:             include('strings-double')
+               ],
+    2:         'sqs': [
+    1:             (r"'", String.Single, '#pop'),
+    1:             (r"\\\\|\\'|\\\n", String.Escape),  # included here for raw strings
+    1:             include('strings-single')
+               ],
+    1:         'tdqs': [
+    1:             (r'"""', String.Double, '#pop'),
+    1:             include('strings-double'),
+    1:             (r'\n', String.Double)
+               ],
+    1:         'tsqs': [
+    1:             (r"'''", String.Single, '#pop'),
+    1:             include('strings-single'),
+    1:             (r'\n', String.Single)
+               ],
+           }
+       
+    1:     def analyse_text(text):
+               return shebang_matches(text, r'pythonw?2(\.\d)?')
+       
+       
+    2: class _PythonConsoleLexerBase(RegexLexer):
+    1:     name = 'Python console session'
+    1:     aliases = ['pycon', 'python-console']
+    1:     mimetypes = ['text/x-python-doctest']
+       
+    1:     """Auxiliary lexer for `PythonConsoleLexer`.
+       
+           Code tokens are output as ``Token.Other.Code``, traceback tokens as
+           ``Token.Other.Traceback``.
+           """
+    1:     tokens = {
+    1:         'root': [
+    1:             (r'(>>> )(.*\n)', bygroups(Generic.Prompt, Other.Code), 'continuations'),
+                   # This happens, e.g., when tracebacks are embedded in documentation;
+                   # trailing whitespaces are often stripped in such contexts.
+    1:             (r'(>>>)(\n)', bygroups(Generic.Prompt, Whitespace)),
+    1:             (r'(\^C)?Traceback \(most recent call last\):\n', Other.Traceback, 'traceback'),
+                   # SyntaxError starts with this
+    1:             (r'  File "[^"]+", line \d+', Other.Traceback, 'traceback'),
+    1:             (r'.*\n', Generic.Output),
+               ],
+    1:         'continuations': [
+    1:             (r'(\.\.\. )(.*\n)', bygroups(Generic.Prompt, Other.Code)),
+                   # See above.
+    1:             (r'(\.\.\.)(\n)', bygroups(Generic.Prompt, Whitespace)),
+    1:             default('#pop'),
+               ],
+    1:         'traceback': [
+                   # As soon as we see a traceback, consume everything until the next
+                   # >>> prompt.
+    1:             (r'(?=>>>( |$))', Text, '#pop'),
+    1:             (r'(KeyboardInterrupt)(\n)', bygroups(Name.Class, Whitespace)),
+    1:             (r'.*\n', Other.Traceback),
+               ],
+           }
+       
+       
+    2: class PythonConsoleLexer(DelegatingLexer):
+    1:     """
+           For Python console output or doctests, such as:
+       
+           .. sourcecode:: pycon
+       
+               >>> a = 'foo'
+               >>> print(a)
+               foo
+               >>> 1 / 0
+               Traceback (most recent call last):
+                 File "<stdin>", line 1, in <module>
+               ZeroDivisionError: integer division or modulo by zero
+       
+           Additional options:
+       
+           `python3`
+               Use Python 3 lexer for code.  Default is ``True``.
+       
+               .. versionadded:: 1.0
+               .. versionchanged:: 2.5
+                  Now defaults to ``True``.
+           """
+       
+    1:     name = 'Python console session'
+    1:     aliases = ['pycon', 'python-console']
+    1:     mimetypes = ['text/x-python-doctest']
+    1:     url = 'https://python.org'
+    1:     version_added = ''
+       
+    1:     def __init__(self, **options):
+               python3 = get_bool_opt(options, 'python3', True)
+               if python3:
+                   pylexer = PythonLexer
+                   tblexer = PythonTracebackLexer
+               else:
+                   pylexer = Python2Lexer
+                   tblexer = Python2TracebackLexer
+               # We have two auxiliary lexers. Use DelegatingLexer twice with
+               # different tokens.  TODO: DelegatingLexer should support this
+               # directly, by accepting a tuplet of auxiliary lexers and a tuple of
+               # distinguishing tokens. Then we wouldn't need this intermediary
+               # class.
+               class _ReplaceInnerCode(DelegatingLexer):
+                   def __init__(self, **options):
+                       super().__init__(pylexer, _PythonConsoleLexerBase, Other.Code, **options)
+               super().__init__(tblexer, _ReplaceInnerCode, Other.Traceback, **options)
+       
+       
+    2: class PythonTracebackLexer(RegexLexer):
+    1:     """
+           For Python 3.x tracebacks, with support for chained exceptions.
+       
+           .. versionchanged:: 2.5
+              This is now the default ``PythonTracebackLexer``.  It is still available
+              as the alias ``Python3TracebackLexer``.
+           """
+       
+    1:     name = 'Python Traceback'
+    1:     aliases = ['pytb', 'py3tb']
+    1:     filenames = ['*.pytb', '*.py3tb']
+    1:     mimetypes = ['text/x-python-traceback', 'text/x-python3-traceback']
+    1:     url = 'https://python.org'
+    1:     version_added = '1.0'
+       
+    1:     tokens = {
+    1:         'root': [
+    1:             (r'\n', Whitespace),
+    1:             (r'^(\^C)?Traceback \(most recent call last\):\n', Generic.Traceback, 'intb'),
+    2:             (r'^During handling of the above exception, another '
+    1:              r'exception occurred:\n\n', Generic.Traceback),
+    2:             (r'^The above exception was the direct cause of the '
+    1:              r'following exception:\n\n', Generic.Traceback),
+    1:             (r'^(?=  File "[^"]+", line \d+)', Generic.Traceback, 'intb'),
+    1:             (r'^.*\n', Other),
+               ],
+    1:         'intb': [
+    2:             (r'^(  File )("[^"]+")(, line )(\d+)(, in )(.+)(\n)',
+    1:              bygroups(Text, Name.Builtin, Text, Number, Text, Name, Whitespace)),
+    2:             (r'^(  File )("[^"]+")(, line )(\d+)(\n)',
+    1:              bygroups(Text, Name.Builtin, Text, Number, Whitespace)),
+    2:             (r'^(    )(.+)(\n)',
+    1:              bygroups(Whitespace, using(PythonLexer), Whitespace), 'markers'),
+    2:             (r'^([ \t]*)(\.\.\.)(\n)',
+    1:              bygroups(Whitespace, Comment, Whitespace)),  # for doctests...
+    2:             (r'^([^:]+)(: )(.+)(\n)',
+    1:              bygroups(Generic.Error, Text, Name, Whitespace), '#pop'),
+    2:             (r'^([a-zA-Z_][\w.]*)(:?\n)',
+    1:              bygroups(Generic.Error, Whitespace), '#pop'),
+    1:             default('#pop'),
+               ],
+    1:         'markers': [
+                   # Either `PEP 657 <https://www.python.org/dev/peps/pep-0657/>`
+                   # error locations in Python 3.11+, or single-caret markers
+                   # for syntax errors before that.
+    2:             (r'^( {4,})([~^]+)(\n)',
+    1:              bygroups(Whitespace, Punctuation.Marker, Whitespace),
+    1:              '#pop'),
+    1:             default('#pop'),
+               ],
+           }
+       
+       
+    1: Python3TracebackLexer = PythonTracebackLexer
+       
+       
+    2: class Python2TracebackLexer(RegexLexer):
+    1:     """
+           For Python tracebacks.
+       
+           .. versionchanged:: 2.5
+              This class has been renamed from ``PythonTracebackLexer``.
+              ``PythonTracebackLexer`` now refers to the Python 3 variant.
+           """
+       
+    1:     name = 'Python 2.x Traceback'
+    1:     aliases = ['py2tb']
+    1:     filenames = ['*.py2tb']
+    1:     mimetypes = ['text/x-python2-traceback']
+    1:     url = 'https://python.org'
+    1:     version_added = '0.7'
+       
+    1:     tokens = {
+    1:         'root': [
+                   # Cover both (most recent call last) and (innermost last)
+                   # The optional ^C allows us to catch keyboard interrupt signals.
+    2:             (r'^(\^C)?(Traceback.*\n)',
+    1:              bygroups(Text, Generic.Traceback), 'intb'),
+                   # SyntaxError starts with this.
+    1:             (r'^(?=  File "[^"]+", line \d+)', Generic.Traceback, 'intb'),
+    1:             (r'^.*\n', Other),
+               ],
+    1:         'intb': [
+    2:             (r'^(  File )("[^"]+")(, line )(\d+)(, in )(.+)(\n)',
+    1:              bygroups(Text, Name.Builtin, Text, Number, Text, Name, Whitespace)),
+    2:             (r'^(  File )("[^"]+")(, line )(\d+)(\n)',
+    1:              bygroups(Text, Name.Builtin, Text, Number, Whitespace)),
+    2:             (r'^(    )(.+)(\n)',
+    1:              bygroups(Text, using(Python2Lexer), Whitespace), 'marker'),
+    2:             (r'^([ \t]*)(\.\.\.)(\n)',
+    1:              bygroups(Text, Comment, Whitespace)),  # for doctests...
+    2:             (r'^([^:]+)(: )(.+)(\n)',
+    1:              bygroups(Generic.Error, Text, Name, Whitespace), '#pop'),
+    2:             (r'^([a-zA-Z_]\w*)(:?\n)',
+    1:              bygroups(Generic.Error, Whitespace), '#pop')
+               ],
+    1:         'marker': [
+                   # For syntax errors.
+    1:             (r'( {4,})(\^)', bygroups(Text, Punctuation.Marker), '#pop'),
+    1:             default('#pop'),
+               ],
+           }
+       
+       
+    2: class CythonLexer(RegexLexer):
+    1:     """
+           For Pyrex and Cython source code.
+           """
+       
+    1:     name = 'Cython'
+    1:     url = 'https://cython.org'
+    1:     aliases = ['cython', 'pyx', 'pyrex']
+    1:     filenames = ['*.pyx', '*.pxd', '*.pxi']
+    1:     mimetypes = ['text/x-cython', 'application/x-cython']
+    1:     version_added = '1.1'
+       
+   19:     tokens = {
+   32:         'root': [
+    1:             (r'\n', Whitespace),
+    1:             (r'^(\s*)("""(?:.|\n)*?""")', bygroups(Whitespace, String.Doc)),
+    1:             (r"^(\s*)('''(?:.|\n)*?''')", bygroups(Whitespace, String.Doc)),
+    1:             (r'[^\S\n]+', Text),
+    1:             (r'#.*$', Comment),
+    1:             (r'[]{}:(),;[]', Punctuation),
+    1:             (r'\\\n', Whitespace),
+    1:             (r'\\', Text),
+    1:             (r'(in|is|and|or|not)\b', Operator.Word),
+    2:             (r'(<)([a-zA-Z0-9.?]+)(>)',
+    1:              bygroups(Punctuation, Keyword.Type, Punctuation)),
+    1:             (r'!=|==|<<|>>|[-~+/*%=<>&^|.?]', Operator),
+    2:             (r'(from)(\d+)(<=)(\s+)(<)(\d+)(:)',
+    2:              bygroups(Keyword, Number.Integer, Operator, Whitespace, Operator,
+    1:                       Name, Punctuation)),
+    1:             include('keywords'),
+    1:             (r'(def|property)(\s+)', bygroups(Keyword, Whitespace), 'funcname'),
+    1:             (r'(cp?def)(\s+)', bygroups(Keyword, Whitespace), 'cdef'),
+                   # (should actually start a block with only cdefs)
+    1:             (r'(cdef)(:)', bygroups(Keyword, Punctuation)),
+    1:             (r'(class|cppclass|struct)(\s+)', bygroups(Keyword, Whitespace), 'classname'),
+    1:             (r'(from)(\s+)', bygroups(Keyword, Whitespace), 'fromimport'),
+    1:             (r'(c?import)(\s+)', bygroups(Keyword, Whitespace), 'import'),
+    1:             include('builtins'),
+    1:             include('backtick'),
+    1:             ('(?:[rR]|[uU][rR]|[rR][uU])"""', String, 'tdqs'),
+    1:             ("(?:[rR]|[uU][rR]|[rR][uU])'''", String, 'tsqs'),
+    1:             ('(?:[rR]|[uU][rR]|[rR][uU])"', String, 'dqs'),
+    1:             ("(?:[rR]|[uU][rR]|[rR][uU])'", String, 'sqs'),
+    1:             ('[uU]?"""', String, combined('stringescape', 'tdqs')),
+    1:             ("[uU]?'''", String, combined('stringescape', 'tsqs')),
+    1:             ('[uU]?"', String, combined('stringescape', 'dqs')),
+    1:             ("[uU]?'", String, combined('stringescape', 'sqs')),
+    1:             include('name'),
+    1:             include('numbers'),
+               ],
+    2:         'keywords': [
+    3:             (words((
+                       'assert', 'async', 'await', 'break', 'by', 'continue', 'ctypedef', 'del',
+                       'elif', 'else', 'except', 'except?', 'exec', 'finally', 'for', 'fused', 'gil',
+                       'global', 'if', 'include', 'lambda', 'namespace', 'new', 'noexcept','nogil',
+                       'pass', 'print', 'raise', 'return', 'try', 'while', 'yield', 'as', 'with'),
+    1:              suffix=r'\b'),
+    1:              Keyword),
+    1:              (words(('True', 'False', 'None', 'NULL'), suffix=r'\b'), Keyword.Constant),
+    1:             (r'(DEF|IF|ELIF|ELSE)\b', Comment.Preproc),
+               ],
+    2:         'builtins': [
+    3:             (words((
+                       '__import__', 'abs', 'all', 'any', 'apply', 'basestring', 'bin', 'bint',
+                       'bool', 'buffer', 'bytearray', 'bytes', 'callable', 'char', 'chr',
+                       'classmethod', 'cmp', 'coerce', 'compile', 'complex', 'delattr',
+                       'dict', 'dir', 'divmod', 'double', 'enumerate', 'eval', 'execfile', 'exit',
+                       'file', 'filter', 'float', 'frozenset', 'getattr', 'globals',
+                       'hasattr', 'hash', 'hex', 'id', 'input', 'int', 'intern', 'isinstance',
+                       'issubclass', 'iter', 'len', 'list', 'locals', 'long', 'map', 'max',
+                       'min', 'next', 'object', 'oct', 'open', 'ord', 'pow', 'property',
+                       'Py_ssize_t', 'range', 'raw_input', 'reduce', 'reload', 'repr', 'reversed',
+                       'round', 'set', 'setattr', 'size_t', 'slice', 'sorted', 'staticmethod',
+                       'ssize_t', 'str', 'sum', 'super', 'tuple', 'type', 'unichr', 'unicode',
+    1:                 'unsigned', 'vars', 'xrange', 'zip'), prefix=r'(?<!\.)', suffix=r'\b'),
+    1:              Name.Builtin),
+    1:             (r'(?<!\.)(self|cls|Ellipsis|NotImplemented)\b', Name.Builtin.Pseudo),
+    3:             (words((
+                       'ArithmeticError', 'AssertionError', 'AttributeError',
+                       'BaseException', 'DeprecationWarning', 'EOFError', 'EnvironmentError',
+                       'Exception', 'FloatingPointError', 'FutureWarning', 'GeneratorExit',
+                       'IOError', 'ImportError', 'ImportWarning', 'IndentationError',
+                       'IndexError', 'KeyError', 'KeyboardInterrupt', 'LookupError',
+                       'MemoryError', 'NameError', 'NotImplementedError',
+                       'OSError', 'OverflowError', 'OverflowWarning',
+                       'PendingDeprecationWarning', 'ReferenceError', 'RuntimeError',
+                       'RuntimeWarning', 'StandardError', 'StopIteration', 'SyntaxError',
+                       'SyntaxWarning', 'SystemError', 'SystemExit', 'TabError',
+                       'TypeError', 'UnboundLocalError', 'UnicodeDecodeError',
+                       'UnicodeEncodeError', 'UnicodeError', 'UnicodeTranslateError',
+                       'UnicodeWarning', 'UserWarning', 'ValueError', 'Warning',
+    1:                 'ZeroDivisionError'), prefix=r'(?<!\.)', suffix=r'\b'),
+    1:              Name.Exception),
+               ],
+    2:         'numbers': [
+    1:             (r'(\d+\.?\d*|\d*\.\d+)([eE][+-]?[0-9]+)?', Number.Float),
+    1:             (r'0\d+', Number.Oct),
+    1:             (r'0[xX][a-fA-F0-9]+', Number.Hex),
+    1:             (r'\d+L', Number.Integer.Long),
+    1:             (r'\d+', Number.Integer)
+               ],
+    2:         'backtick': [
+    1:             ('`.*?`', String.Backtick),
+               ],
+    2:         'name': [
+    1:             (r'@\w+', Name.Decorator),
+    1:             (r'[a-zA-Z_]\w*', Name),
+               ],
+    2:         'funcname': [
+    1:             (r'[a-zA-Z_]\w*', Name.Function, '#pop')
+               ],
+    2:         'cdef': [
+    1:             (r"(public|readonly|extern|api|inline|packed)\b", Keyword.Reserved),
+    2:             (r"(struct|enum|union|class|cppclass)\b(\s+)([a-zA-Z_]\w*)",
+    1:              bygroups(Keyword, Whitespace, Name.Class), "#pop",),
+    1:             (r"([a-zA-Z_]\w*)(\s*)(?=\()", bygroups(Name.Function, Whitespace), "#pop"),
+    1:             (r"([a-zA-Z_]\w*)(\s*)(?=[:,=#\n]|$)", bygroups(Name.Variable, Whitespace), "#pop"),
+    1:             (r"([a-zA-Z_]\w*)(\s*)(,)", bygroups(Name.Variable, Whitespace, Punctuation)),
+    1:             (r'from\b', Keyword, '#pop'),
+    1:             (r'as\b', Keyword),
+    1:             (r':', Punctuation, '#pop'),
+    1:             (r'(?=["\'])', Text, '#pop'),
+    1:             (r'[a-zA-Z_]\w*', Keyword.Type),
+    1:             (r'.', Text),
+               ],
+    2:         'classname': [
+    1:             (r'[a-zA-Z_]\w*', Name.Class, '#pop')
+               ],
+    2:         'import': [
+    1:             (r'(\s+)(as)(\s+)', bygroups(Whitespace, Keyword, Whitespace)),
+    1:             (r'[a-zA-Z_][\w.]*', Name.Namespace),
+    1:             (r'(\s*)(,)(\s*)', bygroups(Whitespace, Operator, Whitespace)),
+    1:             default('#pop')  # all else: go back
+               ],
+    2:         'fromimport': [
+    1:             (r'(\s+)(c?import)\b', bygroups(Whitespace, Keyword), '#pop'),
+    1:             (r'[a-zA-Z_.][\w.]*', Name.Namespace),
+                   # ``cdef foo from "header"``, or ``for foo from 0 < i < 10``
+    1:             default('#pop'),
+               ],
+    2:         'stringescape': [
+    2:             (r'\\([\\abfnrtv"\']|\n|N\{.*?\}|u[a-fA-F0-9]{4}|'
+    1:              r'U[a-fA-F0-9]{8}|x[a-fA-F0-9]{2}|[0-7]{1,3})', String.Escape)
+               ],
+    2:         'strings': [
+    2:             (r'%(\([a-zA-Z0-9]+\))?[-#0 +]*([0-9]+|[*])?(\.([0-9]+|[*]))?'
+    1:              '[hlL]?[E-GXc-giorsux%]', String.Interpol),
+    1:             (r'[^\\\'"%\n]+', String),
+                   # quotes, percents and backslashes must be parsed one at a time
+    1:             (r'[\'"\\]', String),
+                   # unhandled string formatting sign
+    1:             (r'%', String)
+                   # newlines are an error (use "nl" state)
+               ],
+    2:         'nl': [
+    1:             (r'\n', String)
+               ],
+    2:         'dqs': [
+    1:             (r'"', String, '#pop'),
+    1:             (r'\\\\|\\"|\\\n', String.Escape),  # included here again for raw strings
+    1:             include('strings')
+               ],
+    2:         'sqs': [
+    1:             (r"'", String, '#pop'),
+    1:             (r"\\\\|\\'|\\\n", String.Escape),  # included here again for raw strings
+    1:             include('strings')
+               ],
+    2:         'tdqs': [
+    1:             (r'"""', String, '#pop'),
+    1:             include('strings'),
+    1:             include('nl')
+               ],
+    2:         'tsqs': [
+    1:             (r"'''", String, '#pop'),
+    1:             include('strings'),
+    1:             include('nl')
+               ],
+           }
+       
+       
+    2: class DgLexer(RegexLexer):
+    1:     """
+           Lexer for dg,
+           a functional and object-oriented programming language
+           running on the CPython 3 VM.
+           """
+    1:     name = 'dg'
+    1:     aliases = ['dg']
+    1:     filenames = ['*.dg']
+    1:     mimetypes = ['text/x-dg']
+    1:     url = 'http://pyos.github.io/dg'
+    1:     version_added = '1.6'
+       
+    1:     tokens = {
+    1:         'root': [
+    1:             (r'\s+', Text),
+    1:             (r'#.*?$', Comment.Single),
+       
+    1:             (r'(?i)0b[01]+', Number.Bin),
+    1:             (r'(?i)0o[0-7]+', Number.Oct),
+    1:             (r'(?i)0x[0-9a-f]+', Number.Hex),
+    1:             (r'(?i)[+-]?[0-9]+\.[0-9]+(e[+-]?[0-9]+)?j?', Number.Float),
+    1:             (r'(?i)[+-]?[0-9]+e[+-]?\d+j?', Number.Float),
+    1:             (r'(?i)[+-]?[0-9]+j?', Number.Integer),
+       
+    1:             (r"(?i)(br|r?b?)'''", String, combined('stringescape', 'tsqs', 'string')),
+    1:             (r'(?i)(br|r?b?)"""', String, combined('stringescape', 'tdqs', 'string')),
+    1:             (r"(?i)(br|r?b?)'", String, combined('stringescape', 'sqs', 'string')),
+    1:             (r'(?i)(br|r?b?)"', String, combined('stringescape', 'dqs', 'string')),
+       
+    1:             (r"`\w+'*`", Operator),
+    1:             (r'\b(and|in|is|or|where)\b', Operator.Word),
+    1:             (r'[!$%&*+\-./:<-@\\^|~;,]+', Operator),
+       
+    3:             (words((
+                       'bool', 'bytearray', 'bytes', 'classmethod', 'complex', 'dict', 'dict\'',
+                       'float', 'frozenset', 'int', 'list', 'list\'', 'memoryview', 'object',
+                       'property', 'range', 'set', 'set\'', 'slice', 'staticmethod', 'str',
+                       'super', 'tuple', 'tuple\'', 'type'),
+    1:                    prefix=r'(?<!\.)', suffix=r'(?![\'\w])'),
+    1:              Name.Builtin),
+    3:             (words((
+                       '__import__', 'abs', 'all', 'any', 'bin', 'bind', 'chr', 'cmp', 'compile',
+                       'complex', 'delattr', 'dir', 'divmod', 'drop', 'dropwhile', 'enumerate',
+                       'eval', 'exhaust', 'filter', 'flip', 'foldl1?', 'format', 'fst',
+                       'getattr', 'globals', 'hasattr', 'hash', 'head', 'hex', 'id', 'init',
+                       'input', 'isinstance', 'issubclass', 'iter', 'iterate', 'last', 'len',
+                       'locals', 'map', 'max', 'min', 'next', 'oct', 'open', 'ord', 'pow',
+                       'print', 'repr', 'reversed', 'round', 'setattr', 'scanl1?', 'snd',
+                       'sorted', 'sum', 'tail', 'take', 'takewhile', 'vars', 'zip'),
+    1:                    prefix=r'(?<!\.)', suffix=r'(?![\'\w])'),
+    1:              Name.Builtin),
+    2:             (r"(?<!\.)(self|Ellipsis|NotImplemented|None|True|False)(?!['\w])",
+    1:              Name.Builtin.Pseudo),
+       
+    2:             (r"(?<!\.)[A-Z]\w*(Error|Exception|Warning)'*(?!['\w])",
+    1:              Name.Exception),
+    2:             (r"(?<!\.)(Exception|GeneratorExit|KeyboardInterrupt|StopIteration|"
+    1:              r"SystemExit)(?!['\w])", Name.Exception),
+       
+    2:             (r"(?<![\w.])(except|finally|for|if|import|not|otherwise|raise|"
+    1:              r"subclass|while|with|yield)(?!['\w])", Keyword.Reserved),
+       
+    1:             (r"[A-Z_]+'*(?!['\w])", Name),
+    1:             (r"[A-Z]\w+'*(?!['\w])", Keyword.Type),
+    1:             (r"\w+'*", Name),
+       
+    1:             (r'[()]', Punctuation),
+    1:             (r'.', Error),
+               ],
+    1:         'stringescape': [
+    2:             (r'\\([\\abfnrtv"\']|\n|N\{.*?\}|u[a-fA-F0-9]{4}|'
+    1:              r'U[a-fA-F0-9]{8}|x[a-fA-F0-9]{2}|[0-7]{1,3})', String.Escape)
+               ],
+    1:         'string': [
+    2:             (r'%(\(\w+\))?[-#0 +]*([0-9]+|[*])?(\.([0-9]+|[*]))?'
+    1:              '[hlL]?[E-GXc-giorsux%]', String.Interpol),
+    1:             (r'[^\\\'"%\n]+', String),
+                   # quotes, percents and backslashes must be parsed one at a time
+    1:             (r'[\'"\\]', String),
+                   # unhandled string formatting sign
+    1:             (r'%', String),
+    1:             (r'\n', String)
+               ],
+    1:         'dqs': [
+    1:             (r'"', String, '#pop')
+               ],
+    1:         'sqs': [
+    1:             (r"'", String, '#pop')
+               ],
+    1:         'tdqs': [
+    1:             (r'"""', String, '#pop')
+               ],
+    1:         'tsqs': [
+    1:             (r"'''", String, '#pop')
+               ],
+           }
+       
+       
+    2: class NumPyLexer(PythonLexer):
+    1:     """
+           A Python lexer recognizing Numerical Python builtins.
+           """
+       
+    1:     name = 'NumPy'
+    1:     url = 'https://numpy.org/'
+    1:     aliases = ['numpy']
+    1:     version_added = '0.10'
+       
+           # override the mimetypes to not inherit them from python
+    1:     mimetypes = []
+    1:     filenames = []
+       
+    1:     EXTRA_KEYWORDS = {
+               'abs', 'absolute', 'accumulate', 'add', 'alen', 'all', 'allclose',
+               'alltrue', 'alterdot', 'amax', 'amin', 'angle', 'any', 'append',
+               'apply_along_axis', 'apply_over_axes', 'arange', 'arccos', 'arccosh',
+               'arcsin', 'arcsinh', 'arctan', 'arctan2', 'arctanh', 'argmax', 'argmin',
+               'argsort', 'argwhere', 'around', 'array', 'array2string', 'array_equal',
+               'array_equiv', 'array_repr', 'array_split', 'array_str', 'arrayrange',
+               'asanyarray', 'asarray', 'asarray_chkfinite', 'ascontiguousarray',
+               'asfarray', 'asfortranarray', 'asmatrix', 'asscalar', 'astype',
+               'atleast_1d', 'atleast_2d', 'atleast_3d', 'average', 'bartlett',
+               'base_repr', 'beta', 'binary_repr', 'bincount', 'binomial',
+               'bitwise_and', 'bitwise_not', 'bitwise_or', 'bitwise_xor', 'blackman',
+               'bmat', 'broadcast', 'byte_bounds', 'bytes', 'byteswap', 'c_',
+               'can_cast', 'ceil', 'choose', 'clip', 'column_stack', 'common_type',
+               'compare_chararrays', 'compress', 'concatenate', 'conj', 'conjugate',
+               'convolve', 'copy', 'corrcoef', 'correlate', 'cos', 'cosh', 'cov',
+               'cross', 'cumprod', 'cumproduct', 'cumsum', 'delete', 'deprecate',
+               'diag', 'diagflat', 'diagonal', 'diff', 'digitize', 'disp', 'divide',
+               'dot', 'dsplit', 'dstack', 'dtype', 'dump', 'dumps', 'ediff1d', 'empty',
+               'empty_like', 'equal', 'exp', 'expand_dims', 'expm1', 'extract', 'eye',
+               'fabs', 'fastCopyAndTranspose', 'fft', 'fftfreq', 'fftshift', 'fill',
+               'finfo', 'fix', 'flat', 'flatnonzero', 'flatten', 'fliplr', 'flipud',
+               'floor', 'floor_divide', 'fmod', 'frexp', 'fromarrays', 'frombuffer',
+               'fromfile', 'fromfunction', 'fromiter', 'frompyfunc', 'fromstring',
+               'generic', 'get_array_wrap', 'get_include', 'get_numarray_include',
+               'get_numpy_include', 'get_printoptions', 'getbuffer', 'getbufsize',
+               'geterr', 'geterrcall', 'geterrobj', 'getfield', 'gradient', 'greater',
+               'greater_equal', 'gumbel', 'hamming', 'hanning', 'histogram',
+               'histogram2d', 'histogramdd', 'hsplit', 'hstack', 'hypot', 'i0',
+               'identity', 'ifft', 'imag', 'index_exp', 'indices', 'inf', 'info',
+               'inner', 'insert', 'int_asbuffer', 'interp', 'intersect1d',
+               'intersect1d_nu', 'inv', 'invert', 'iscomplex', 'iscomplexobj',
+               'isfinite', 'isfortran', 'isinf', 'isnan', 'isneginf', 'isposinf',
+               'isreal', 'isrealobj', 'isscalar', 'issctype', 'issubclass_',
+               'issubdtype', 'issubsctype', 'item', 'itemset', 'iterable', 'ix_',
+               'kaiser', 'kron', 'ldexp', 'left_shift', 'less', 'less_equal', 'lexsort',
+               'linspace', 'load', 'loads', 'loadtxt', 'log', 'log10', 'log1p', 'log2',
+               'logical_and', 'logical_not', 'logical_or', 'logical_xor', 'logspace',
+               'lstsq', 'mat', 'matrix', 'max', 'maximum', 'maximum_sctype',
+               'may_share_memory', 'mean', 'median', 'meshgrid', 'mgrid', 'min',
+               'minimum', 'mintypecode', 'mod', 'modf', 'msort', 'multiply', 'nan',
+               'nan_to_num', 'nanargmax', 'nanargmin', 'nanmax', 'nanmin', 'nansum',
+               'ndenumerate', 'ndim', 'ndindex', 'negative', 'newaxis', 'newbuffer',
+               'newbyteorder', 'nonzero', 'not_equal', 'obj2sctype', 'ogrid', 'ones',
+               'ones_like', 'outer', 'permutation', 'piecewise', 'pinv', 'pkgload',
+               'place', 'poisson', 'poly', 'poly1d', 'polyadd', 'polyder', 'polydiv',
+               'polyfit', 'polyint', 'polymul', 'polysub', 'polyval', 'power', 'prod',
+               'product', 'ptp', 'put', 'putmask', 'r_', 'randint', 'random_integers',
+               'random_sample', 'ranf', 'rank', 'ravel', 'real', 'real_if_close',
+               'recarray', 'reciprocal', 'reduce', 'remainder', 'repeat', 'require',
+               'reshape', 'resize', 'restoredot', 'right_shift', 'rint', 'roll',
+               'rollaxis', 'roots', 'rot90', 'round', 'round_', 'row_stack', 's_',
+               'sample', 'savetxt', 'sctype2char', 'searchsorted', 'seed', 'select',
+               'set_numeric_ops', 'set_printoptions', 'set_string_function',
+               'setbufsize', 'setdiff1d', 'seterr', 'seterrcall', 'seterrobj',
+               'setfield', 'setflags', 'setmember1d', 'setxor1d', 'shape',
+               'show_config', 'shuffle', 'sign', 'signbit', 'sin', 'sinc', 'sinh',
+               'size', 'slice', 'solve', 'sometrue', 'sort', 'sort_complex', 'source',
+               'split', 'sqrt', 'square', 'squeeze', 'standard_normal', 'std',
+               'subtract', 'sum', 'svd', 'swapaxes', 'take', 'tan', 'tanh', 'tensordot',
+               'test', 'tile', 'tofile', 'tolist', 'tostring', 'trace', 'transpose',
+               'trapz', 'tri', 'tril', 'trim_zeros', 'triu', 'true_divide', 'typeDict',
+               'typename', 'uniform', 'union1d', 'unique', 'unique1d', 'unravel_index',
+               'unwrap', 'vander', 'var', 'vdot', 'vectorize', 'view', 'vonmises',
+               'vsplit', 'vstack', 'weibull', 'where', 'who', 'zeros', 'zeros_like'
+           }
+       
+    1:     def get_tokens_unprocessed(self, text):
+               for index, token, value in \
+                       PythonLexer.get_tokens_unprocessed(self, text):
+                   if token is Name and value in self.EXTRA_KEYWORDS:
+                       yield index, Keyword.Pseudo, value
+                   else:
+                       yield index, token, value
+       
+    1:     def analyse_text(text):
+               ltext = text[:1000]
+               return (shebang_matches(text, r'pythonw?(3(\.\d)?)?') or
+                       'import ' in ltext) \
+                   and ('import numpy' in ltext or 'from numpy import' in ltext)

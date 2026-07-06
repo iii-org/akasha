@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union, Optional
+    1: from datetime import datetime
+    1: from typing_extensions import Annotated, TypedDict
+       
+    1: from .._utils import PropertyInfo
+       
+    1: __all__ = ["DatasetRetrieveVersionParams"]
+       
+       
+    2: class DatasetRetrieveVersionParams(TypedDict, total=False):
+    1:     as_of: Annotated[Union[str, datetime, None], PropertyInfo(format="iso8601")]
+       
+    1:     tag: Optional[str]

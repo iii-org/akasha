@@ -1,0 +1,8 @@
+    1: from .entity_linker import *  # noqa
+    1: from .multi_task import *  # noqa
+    1: from .parser import *  # noqa
+    1: from .span_finder import *  # noqa
+    1: from .spancat import *  # noqa
+    1: from .tagger import *  # noqa
+    1: from .textcat import *  # noqa
+    1: from .tok2vec import *  # noqa

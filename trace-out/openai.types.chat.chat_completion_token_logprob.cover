@@ -1,0 +1,56 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ChatCompletionTokenLogprob", "TopLogprob"]
+       
+       
+    2: class TopLogprob(BaseModel):
+    1:     token: str
+    1:     """The token."""
+       
+    1:     bytes: Optional[List[int]] = None
+    1:     """A list of integers representing the UTF-8 bytes representation of the token.
+       
+           Useful in instances where characters are represented by multiple tokens and
+           their byte representations must be combined to generate the correct text
+           representation. Can be `null` if there is no bytes representation for the token.
+           """
+       
+    1:     logprob: float
+    1:     """The log probability of this token, if it is within the top 20 most likely
+           tokens.
+       
+           Otherwise, the value `-9999.0` is used to signify that the token is very
+           unlikely.
+           """
+       
+       
+    2: class ChatCompletionTokenLogprob(BaseModel):
+    1:     token: str
+    1:     """The token."""
+       
+    1:     bytes: Optional[List[int]] = None
+    1:     """A list of integers representing the UTF-8 bytes representation of the token.
+       
+           Useful in instances where characters are represented by multiple tokens and
+           their byte representations must be combined to generate the correct text
+           representation. Can be `null` if there is no bytes representation for the token.
+           """
+       
+    1:     logprob: float
+    1:     """The log probability of this token, if it is within the top 20 most likely
+           tokens.
+       
+           Otherwise, the value `-9999.0` is used to signify that the token is very
+           unlikely.
+           """
+       
+    1:     top_logprobs: List[TopLogprob]
+    1:     """List of the most likely tokens and their log probability, at this token
+           position.
+       
+           The number of entries may be fewer than the requested `top_logprobs`.
+           """

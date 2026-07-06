@@ -1,0 +1,29 @@
+    1: from collections.abc import Callable
+    1: from typing import Generic, TypeVar
+       
+       
+    1: R = TypeVar("R")
+       
+       
+    2: class Thunk(Generic[R]):
+    1:     """
+           A simple lazy evaluation implementation that lets you delay
+           execution of a function.  It properly handles releasing the
+           function once it is forced.
+           """
+       
+    1:     f: Callable[[], R] | None
+    1:     r: R | None
+       
+    1:     __slots__ = ["f", "r"]
+       
+    1:     def __init__(self, f: Callable[[], R]) -> None:
+               self.f = f
+               self.r = None
+       
+    1:     def force(self) -> R:
+               if self.f is None:
+                   return self.r  # type: ignore[return-value]
+               self.r = self.f()
+               self.f = None
+               return self.r

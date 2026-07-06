@@ -1,0 +1,25 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Dict, Union, Optional
+    1: from datetime import datetime
+    1: from typing_extensions import Literal, Annotated, TypedDict
+       
+    1: from .._utils import PropertyInfo
+       
+    1: __all__ = ["SessionUpdateParams"]
+       
+       
+    2: class SessionUpdateParams(TypedDict, total=False):
+    1:     default_dataset_id: Optional[str]
+       
+    1:     description: Optional[str]
+       
+    1:     end_time: Annotated[Union[str, datetime, None], PropertyInfo(format="iso8601")]
+       
+    1:     extra: Optional[Dict[str, object]]
+       
+    1:     name: Optional[str]
+       
+    1:     trace_tier: Optional[Literal["longlived", "shortlived"]]

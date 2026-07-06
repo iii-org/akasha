@@ -1,0 +1,22 @@
+       # mypy: allow-untyped-defs
+    1: import sys
+    1: import types
+       
+    1: import torch
+       
+       
+    2: class _Deterministic(types.ModuleType):
+    2:     @property
+    2:     def fill_uninitialized_memory(self):
+               """
+               Whether to fill uninitialized memory with a known value when
+               :meth:`torch.use_deterministic_algorithms()` is set to ``True``.
+               """
+               return torch._C._get_deterministic_fill_uninitialized_memory()
+       
+    2:     @fill_uninitialized_memory.setter
+    2:     def fill_uninitialized_memory(self, mode):
+               return torch._C._set_deterministic_fill_uninitialized_memory(mode)
+       
+       
+    1: sys.modules[__name__].__class__ = _Deterministic

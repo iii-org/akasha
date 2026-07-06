@@ -1,0 +1,4 @@
+    2: class SettingsError(ValueError):
+    1:     """Base exception for settings-related errors."""
+       
+    1:     pass

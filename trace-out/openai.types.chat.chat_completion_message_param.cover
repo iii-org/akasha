@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import TypeAlias
+       
+    1: from .chat_completion_tool_message_param import ChatCompletionToolMessageParam
+    1: from .chat_completion_user_message_param import ChatCompletionUserMessageParam
+    1: from .chat_completion_system_message_param import ChatCompletionSystemMessageParam
+    1: from .chat_completion_function_message_param import ChatCompletionFunctionMessageParam
+    1: from .chat_completion_assistant_message_param import ChatCompletionAssistantMessageParam
+    1: from .chat_completion_developer_message_param import ChatCompletionDeveloperMessageParam
+       
+    1: __all__ = ["ChatCompletionMessageParam"]
+       
+    2: ChatCompletionMessageParam: TypeAlias = Union[
+    2:     ChatCompletionDeveloperMessageParam,
+    1:     ChatCompletionSystemMessageParam,
+    1:     ChatCompletionUserMessageParam,
+    1:     ChatCompletionAssistantMessageParam,
+    1:     ChatCompletionToolMessageParam,
+    1:     ChatCompletionFunctionMessageParam,
+       ]

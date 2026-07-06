@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ComputerToolParam"]
+       
+       
+    2: class ComputerToolParam(TypedDict, total=False):
+    1:     """A tool that controls a virtual computer.
+       
+           Learn more about the [computer tool](https://platform.openai.com/docs/guides/tools-computer-use).
+           """
+       
+    1:     type: Required[Literal["computer"]]
+    1:     """The type of the computer tool. Always `computer`."""

@@ -1,0 +1,12 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Required, TypedDict
+       
+    1: __all__ = ["AssistantToolChoiceFunctionParam"]
+       
+       
+    2: class AssistantToolChoiceFunctionParam(TypedDict, total=False):
+    1:     name: Required[str]
+    1:     """The name of the function to call."""

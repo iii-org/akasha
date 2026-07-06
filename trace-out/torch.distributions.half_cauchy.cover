@@ -1,0 +1,93 @@
+       # mypy: allow-untyped-defs
+    1: import math
+    1: from typing import Optional, Union
+       
+    1: import torch
+    1: from torch import inf, Tensor
+    1: from torch.distributions import constraints
+    1: from torch.distributions.cauchy import Cauchy
+    1: from torch.distributions.transformed_distribution import TransformedDistribution
+    1: from torch.distributions.transforms import AbsTransform
+       
+       
+    1: __all__ = ["HalfCauchy"]
+       
+       
+    2: class HalfCauchy(TransformedDistribution):
+    1:     r"""
+           Creates a half-Cauchy distribution parameterized by `scale` where::
+       
+               X ~ Cauchy(0, scale)
+               Y = |X| ~ HalfCauchy(scale)
+       
+           Example::
+       
+               >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+               >>> m = HalfCauchy(torch.tensor([1.0]))
+               >>> m.sample()  # half-cauchy distributed with scale=1
+               tensor([ 2.3214])
+       
+           Args:
+               scale (float or Tensor): scale of the full Cauchy distribution
+           """
+       
+    1:     arg_constraints = {"scale": constraints.positive}
+           # pyrefly: ignore [bad-override]
+    1:     support = constraints.nonnegative
+    1:     has_rsample = True
+           # pyrefly: ignore [bad-override]
+    1:     base_dist: Cauchy
+       
+    4:     def __init__(
+               self,
+    1:         scale: Union[Tensor, float],
+    2:         validate_args: Optional[bool] = None,
+    1:     ) -> None:
+               base_dist = Cauchy(0, scale, validate_args=False)
+               super().__init__(base_dist, AbsTransform(), validate_args=validate_args)
+       
+    1:     def expand(self, batch_shape, _instance=None):
+               new = self._get_checked_instance(HalfCauchy, _instance)
+               return super().expand(batch_shape, _instance=new)
+       
+    2:     @property
+    2:     def scale(self) -> Tensor:
+               return self.base_dist.scale
+       
+    2:     @property
+    2:     def mean(self) -> Tensor:
+               return torch.full(
+                   self._extended_shape(),
+                   math.inf,
+                   dtype=self.scale.dtype,
+                   device=self.scale.device,
+               )
+       
+    2:     @property
+    2:     def mode(self) -> Tensor:
+               return torch.zeros_like(self.scale)
+       
+    2:     @property
+    2:     def variance(self) -> Tensor:
+               return self.base_dist.variance
+       
+    1:     def log_prob(self, value):
+               if self._validate_args:
+                   self._validate_sample(value)
+               value = torch.as_tensor(
+                   value, dtype=self.base_dist.scale.dtype, device=self.base_dist.scale.device
+               )
+               log_prob = self.base_dist.log_prob(value) + math.log(2)
+               log_prob = torch.where(value >= 0, log_prob, -inf)
+               return log_prob
+       
+    1:     def cdf(self, value):
+               if self._validate_args:
+                   self._validate_sample(value)
+               return 2 * self.base_dist.cdf(value) - 1
+       
+    1:     def icdf(self, prob):
+               return self.base_dist.icdf((prob + 1) / 2)
+       
+    1:     def entropy(self):
+               return self.base_dist.entropy() - math.log(2)

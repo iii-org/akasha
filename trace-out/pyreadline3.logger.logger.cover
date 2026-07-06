@@ -1,0 +1,20 @@
+       # -*- coding: utf-8 -*-
+       # *****************************************************************************
+       #     Copyright (C) 2006-2020 Jorgen Stenarson. <jorgen.stenarson@bostream.nu>
+       #     Copyright (C) 2020 Bassem Girgis. <brgirgis@gmail.com>
+       #
+       #  Distributed under the terms of the BSD License.  The full license is in
+       #  the file COPYING, distributed as part of this software.
+       # *****************************************************************************
+       
+    1: import logging
+    1: import os
+       
+    1: from .null_handler import NULLHandler
+       
+    1: _default_log_level = os.environ.get("PYREADLINE_LOG", "DEBUG")
+       
+    1: LOGGER = logging.getLogger("PYREADLINE")
+    1: LOGGER.setLevel(_default_log_level)
+    1: LOGGER.propagate = False
+    1: LOGGER.addHandler(NULLHandler())

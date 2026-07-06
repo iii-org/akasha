@@ -1,0 +1,83 @@
+    1: """**Schemas** are the LangChain Base Classes and Interfaces."""
+       
+    1: from langchain_core.agents import AgentAction, AgentFinish
+    1: from langchain_core.caches import BaseCache
+    1: from langchain_core.chat_history import BaseChatMessageHistory
+    1: from langchain_core.documents import BaseDocumentTransformer, Document
+    1: from langchain_core.exceptions import LangChainException, OutputParserException
+    1: from langchain_core.messages import (
+           AIMessage,
+           BaseMessage,
+           ChatMessage,
+           FunctionMessage,
+           HumanMessage,
+           SystemMessage,
+           _message_from_dict,
+           get_buffer_string,
+           messages_from_dict,
+           messages_to_dict,
+       )
+    1: from langchain_core.messages.base import message_to_dict
+    1: from langchain_core.output_parsers import (
+           BaseLLMOutputParser,
+           BaseOutputParser,
+           StrOutputParser,
+       )
+    1: from langchain_core.outputs import (
+           ChatGeneration,
+           ChatResult,
+           Generation,
+           LLMResult,
+           RunInfo,
+       )
+    1: from langchain_core.prompt_values import PromptValue
+    1: from langchain_core.prompts import BasePromptTemplate, format_document
+    1: from langchain_core.retrievers import BaseRetriever
+    1: from langchain_core.stores import BaseStore
+       
+    1: from langchain_classic.base_memory import BaseMemory
+       
+    1: RUN_KEY = "__run"
+       
+       # Backwards compatibility.
+    1: Memory = BaseMemory
+    1: _message_to_dict = message_to_dict
+       
+    1: __all__ = [
+           "RUN_KEY",
+           "AIMessage",
+           "AgentAction",
+           "AgentFinish",
+           "BaseCache",
+           "BaseChatMessageHistory",
+           "BaseDocumentTransformer",
+           "BaseLLMOutputParser",
+           "BaseMemory",
+           "BaseMessage",
+           "BaseOutputParser",
+           "BasePromptTemplate",
+           "BaseRetriever",
+           "BaseStore",
+           "ChatGeneration",
+           "ChatMessage",
+           "ChatResult",
+           "Document",
+           "FunctionMessage",
+           "Generation",
+           "HumanMessage",
+           "LLMResult",
+           "LangChainException",
+           "Memory",
+           "OutputParserException",
+           "PromptValue",
+           "RunInfo",
+           "StrOutputParser",
+           "SystemMessage",
+           "_message_from_dict",
+           "_message_to_dict",
+           "format_document",
+           "get_buffer_string",
+           "message_to_dict",
+           "messages_from_dict",
+           "messages_to_dict",
+       ]

@@ -1,0 +1,26 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from .skill import Skill
+    1: from .._models import BaseModel
+       
+    1: __all__ = ["SkillList"]
+       
+       
+    2: class SkillList(BaseModel):
+    1:     data: List[Skill]
+    1:     """A list of items"""
+       
+    1:     first_id: Optional[str] = None
+    1:     """The ID of the first item in the list."""
+       
+    1:     has_more: bool
+    1:     """Whether there are more items available."""
+       
+    1:     last_id: Optional[str] = None
+    1:     """The ID of the last item in the list."""
+       
+    1:     object: Literal["list"]
+    1:     """The type of object returned, must be `list`."""

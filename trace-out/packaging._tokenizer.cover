@@ -1,0 +1,193 @@
+    1: from __future__ import annotations
+       
+    1: import contextlib
+    1: import re
+    1: from dataclasses import dataclass
+    1: from typing import Generator, Mapping, NoReturn
+       
+    1: from .specifiers import Specifier
+       
+       
+    3: @dataclass
+    2: class Token:
+    1:     name: str
+    1:     text: str
+    1:     position: int
+       
+       
+    2: class ParserSyntaxError(Exception):
+    1:     """The provided source text could not be parsed correctly."""
+       
+    1:     def __init__(
+               self,
+               message: str,
+               *,
+               source: str,
+               span: tuple[int, int],
+           ) -> None:
+               self.span = span
+               self.message = message
+               self.source = source
+       
+               super().__init__()
+       
+    1:     def __str__(self) -> str:
+               marker = " " * self.span[0] + "~" * (self.span[1] - self.span[0]) + "^"
+               return f"{self.message}\n    {self.source}\n    {marker}"
+       
+       
+   19: DEFAULT_RULES: dict[str, re.Pattern[str]] = {
+    1:     "LEFT_PARENTHESIS": re.compile(r"\("),
+    1:     "RIGHT_PARENTHESIS": re.compile(r"\)"),
+    1:     "LEFT_BRACKET": re.compile(r"\["),
+    1:     "RIGHT_BRACKET": re.compile(r"\]"),
+    1:     "SEMICOLON": re.compile(r";"),
+    1:     "COMMA": re.compile(r","),
+    2:     "QUOTED_STRING": re.compile(
+    1:         r"""
+                   (
+                       ('[^']*')
+                       |
+                       ("[^"]*")
+                   )
+               """,
+    1:         re.VERBOSE,
+           ),
+    1:     "OP": re.compile(r"(===|==|~=|!=|<=|>=|<|>)"),
+    1:     "BOOLOP": re.compile(r"\b(or|and)\b"),
+    1:     "IN": re.compile(r"\bin\b"),
+    1:     "NOT": re.compile(r"\bnot\b"),
+    2:     "VARIABLE": re.compile(
+    1:         r"""
+                   \b(
+                       python_version
+                       |python_full_version
+                       |os[._]name
+                       |sys[._]platform
+                       |platform_(release|system)
+                       |platform[._](version|machine|python_implementation)
+                       |python_implementation
+                       |implementation_(name|version)
+                       |extras?
+                       |dependency_groups
+                   )\b
+               """,
+    1:         re.VERBOSE,
+           ),
+    2:     "SPECIFIER": re.compile(
+    1:         Specifier._specifier_regex_str,
+    1:         re.VERBOSE | re.IGNORECASE,
+           ),
+    1:     "AT": re.compile(r"\@"),
+    1:     "URL": re.compile(r"[^ \t]+"),
+    1:     "IDENTIFIER": re.compile(r"\b[a-zA-Z0-9][a-zA-Z0-9._-]*\b"),
+    1:     "VERSION_PREFIX_TRAIL": re.compile(r"\.\*"),
+    1:     "VERSION_LOCAL_LABEL_TRAIL": re.compile(r"\+[a-z0-9]+(?:[-_\.][a-z0-9]+)*"),
+    1:     "WS": re.compile(r"[ \t]+"),
+    1:     "END": re.compile(r"$"),
+       }
+       
+       
+    2: class Tokenizer:
+    1:     """Context-sensitive token parsing.
+       
+           Provides methods to examine the input stream to check whether the next token
+           matches.
+           """
+       
+    1:     def __init__(
+               self,
+               source: str,
+               *,
+               rules: Mapping[str, re.Pattern[str]],
+           ) -> None:
+               self.source = source
+               self.rules = rules
+               self.next_token: Token | None = None
+               self.position = 0
+       
+    1:     def consume(self, name: str) -> None:
+               """Move beyond provided token name, if at current position."""
+               if self.check(name):
+                   self.read()
+       
+    1:     def check(self, name: str, *, peek: bool = False) -> bool:
+               """Check whether the next token has the provided name.
+       
+               By default, if the check succeeds, the token *must* be read before
+               another check. If `peek` is set to `True`, the token is not loaded and
+               would need to be checked again.
+               """
+               assert self.next_token is None, (
+                   f"Cannot check for {name!r}, already have {self.next_token!r}"
+               )
+               assert name in self.rules, f"Unknown token name: {name!r}"
+       
+               expression = self.rules[name]
+       
+               match = expression.match(self.source, self.position)
+               if match is None:
+                   return False
+               if not peek:
+                   self.next_token = Token(name, match[0], self.position)
+               return True
+       
+    1:     def expect(self, name: str, *, expected: str) -> Token:
+               """Expect a certain token name next, failing with a syntax error otherwise.
+       
+               The token is *not* read.
+               """
+               if not self.check(name):
+                   raise self.raise_syntax_error(f"Expected {expected}")
+               return self.read()
+       
+    1:     def read(self) -> Token:
+               """Consume the next token and return it."""
+               token = self.next_token
+               assert token is not None
+       
+               self.position += len(token.text)
+               self.next_token = None
+       
+               return token
+       
+    1:     def raise_syntax_error(
+               self,
+               message: str,
+               *,
+    1:         span_start: int | None = None,
+    1:         span_end: int | None = None,
+           ) -> NoReturn:
+               """Raise ParserSyntaxError at the given position."""
+               span = (
+                   self.position if span_start is None else span_start,
+                   self.position if span_end is None else span_end,
+               )
+               raise ParserSyntaxError(
+                   message,
+                   source=self.source,
+                   span=span,
+               )
+       
+    2:     @contextlib.contextmanager
+    2:     def enclosing_tokens(
+               self, open_token: str, close_token: str, *, around: str
+           ) -> Generator[None, None, None]:
+               if self.check(open_token):
+                   open_position = self.position
+                   self.read()
+               else:
+                   open_position = None
+       
+               yield
+       
+               if open_position is None:
+                   return
+       
+               if not self.check(close_token):
+                   self.raise_syntax_error(
+                       f"Expected matching {close_token} for {open_token}, after {around}",
+                       span_start=open_position,
+                   )
+       
+               self.read()

@@ -1,0 +1,16 @@
+    1: """A module with the precisions of platform-specific `~numpy.number`s."""
+       
+    1: from typing import Any
+       
+       # To-be replaced with a `npt.NBitBase` subclass by numpy's mypy plugin
+    1: _NBitByte = Any
+    1: _NBitShort = Any
+    1: _NBitIntC = Any
+    1: _NBitIntP = Any
+    1: _NBitInt = Any
+    1: _NBitLongLong = Any
+       
+    1: _NBitHalf = Any
+    1: _NBitSingle = Any
+    1: _NBitDouble = Any
+    1: _NBitLongDouble = Any

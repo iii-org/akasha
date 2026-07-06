@@ -26,8 +26,13 @@ import datetime
 import math
 import logging
 from akasha.helper.token_counter import myTokenizer
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from tqdm import tqdm
+
+
+def _get_recursive_character_text_splitter():
+    from langchain_text_splitters.character import RecursiveCharacterTextSplitter
+
+    return RecursiveCharacterTextSplitter
 
 
 class summary(basic_llm):
@@ -402,7 +407,8 @@ class summary(basic_llm):
         self._display_info()  # display the information of the parameters
         self._display_docs()
 
-        text_splitter = RecursiveCharacterTextSplitter(
+        text_splitter_cls = _get_recursive_character_text_splitter()
+        text_splitter = text_splitter_cls(
             separators=["\n", " ", ",", ".", "。", "!"],
             chunk_size=self.chunk_size,
             chunk_overlap=self.chunk_overlap,

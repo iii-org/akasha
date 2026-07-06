@@ -1,0 +1,19 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ChatCompletionFunctionMessageParam"]
+       
+       
+    2: class ChatCompletionFunctionMessageParam(TypedDict, total=False):
+    1:     content: Required[Optional[str]]
+    1:     """The contents of the function message."""
+       
+    1:     name: Required[str]
+    1:     """The name of the function to call."""
+       
+    1:     role: Required[Literal["function"]]
+    1:     """The role of the messages author, in this case `function`."""

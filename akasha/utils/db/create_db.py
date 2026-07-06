@@ -1,9 +1,6 @@
-from typing import Union, List, Tuple, Callable
+from typing import Any, Union, List, Tuple, Callable
 from langchain_core.embeddings import Embeddings
-from langchain_chroma import Chroma
-from chromadb.config import Settings
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pathlib import Path
 import json
 import logging
@@ -32,6 +29,13 @@ from akasha.utils.db.delete_db import (
     delete_documents_from_chroma_by_file_name,
     delete_documents_by_directory,
 )
+from akasha.utils.db.chroma_compat import get_chroma_components
+
+
+def _get_recursive_character_text_splitter():
+    from langchain_text_splitters.character import RecursiveCharacterTextSplitter
+
+    return RecursiveCharacterTextSplitter
 
 
 def create_directory_db(
@@ -79,6 +83,7 @@ def create_directory_db(
         files.extend(get_load_file_list(directory_path, extension))
 
     progress = tqdm(total=len(files), desc=f"db {directory_path.name}")
+    Chroma, Settings = get_chroma_components()
     client_settings = Settings(
         is_persistent=True,
         persist_directory=storage_directory,
@@ -187,6 +192,7 @@ def create_single_file_db(
     if is_doc_b == ALREADY_BUILT:
         return True
     elif is_doc_b == OLD_BUILT:
+        Chroma, Settings = get_chroma_components()
         client_settings = Settings(
             is_persistent=True,
             persist_directory=storage_directory,
@@ -208,6 +214,7 @@ def create_single_file_db(
         return False
 
     if not loaded:
+        Chroma, Settings = get_chroma_components()
         client_settings = Settings(
             is_persistent=True,
             persist_directory=storage_directory,
@@ -298,6 +305,7 @@ def create_webpage_db(
         Document(page_content=file_doc, metadata={"title": file_title, "url": url})
     ]
 
+    Chroma, Settings = get_chroma_components()
     client_settings = Settings(
         is_persistent=True,
         persist_directory=storage_directory,
@@ -335,7 +343,7 @@ def create_webpage_db(
 
 def create_chromadb_from_file(
     documents: List[Document],
-    docsearch: Chroma,
+    docsearch: Any,
     chunk_size: int,
     embeddings: Embeddings,
     file_name: str,
@@ -354,7 +362,8 @@ def create_chromadb_from_file(
     Returns:
         (chromadb object): return the dbs object
     """
-    text_splitter = RecursiveCharacterTextSplitter(
+    text_splitter_cls = _get_recursive_character_text_splitter()
+    text_splitter = text_splitter_cls(
         separators=["\n", " ", ",", ".", "。", "!"],
         chunk_size=chunk_size,
         chunk_overlap=100,

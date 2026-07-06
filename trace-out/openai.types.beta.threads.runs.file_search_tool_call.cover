@@ -1,0 +1,84 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from ....._models import BaseModel
+       
+    1: __all__ = [
+           "FileSearchToolCall",
+           "FileSearch",
+           "FileSearchRankingOptions",
+           "FileSearchResult",
+           "FileSearchResultContent",
+       ]
+       
+       
+    2: class FileSearchRankingOptions(BaseModel):
+    1:     """The ranking options for the file search."""
+       
+    1:     ranker: Literal["auto", "default_2024_08_21"]
+    1:     """The ranker to use for the file search.
+       
+           If not specified will use the `auto` ranker.
+           """
+       
+    1:     score_threshold: float
+    1:     """The score threshold for the file search.
+       
+           All values must be a floating point number between 0 and 1.
+           """
+       
+       
+    2: class FileSearchResultContent(BaseModel):
+    1:     text: Optional[str] = None
+    1:     """The text content of the file."""
+       
+    1:     type: Optional[Literal["text"]] = None
+    1:     """The type of the content."""
+       
+       
+    2: class FileSearchResult(BaseModel):
+    1:     """A result instance of the file search."""
+       
+    1:     file_id: str
+    1:     """The ID of the file that result was found in."""
+       
+    1:     file_name: str
+    1:     """The name of the file that result was found in."""
+       
+    1:     score: float
+    1:     """The score of the result.
+       
+           All values must be a floating point number between 0 and 1.
+           """
+       
+    1:     content: Optional[List[FileSearchResultContent]] = None
+    1:     """The content of the result that was found.
+       
+           The content is only included if requested via the include query parameter.
+           """
+       
+       
+    2: class FileSearch(BaseModel):
+    1:     """For now, this is always going to be an empty object."""
+       
+    1:     ranking_options: Optional[FileSearchRankingOptions] = None
+    1:     """The ranking options for the file search."""
+       
+    1:     results: Optional[List[FileSearchResult]] = None
+    1:     """The results of the file search."""
+       
+       
+    2: class FileSearchToolCall(BaseModel):
+    1:     id: str
+    1:     """The ID of the tool call object."""
+       
+    1:     file_search: FileSearch
+    1:     """For now, this is always going to be an empty object."""
+       
+    1:     type: Literal["file_search"]
+    1:     """The type of tool call.
+       
+           This is always going to be `file_search` for this type of tool call.
+           """

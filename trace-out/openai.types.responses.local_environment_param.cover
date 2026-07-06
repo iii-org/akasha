@@ -1,0 +1,18 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Iterable
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: from .local_skill_param import LocalSkillParam
+       
+    1: __all__ = ["LocalEnvironmentParam"]
+       
+       
+    2: class LocalEnvironmentParam(TypedDict, total=False):
+    1:     type: Required[Literal["local"]]
+    1:     """Use a local computer environment."""
+       
+    1:     skills: Iterable[LocalSkillParam]
+    1:     """An optional list of skills."""

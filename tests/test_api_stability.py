@@ -3,6 +3,7 @@ import os
 import akasha
 from pathlib import Path
 from dotenv import load_dotenv
+import shutil
 
 # 測試用路徑
 BASE_PATH = Path(__file__).parent
@@ -127,7 +128,7 @@ def test_vision_card_recognition(check_env, model_name):
 @pytest.mark.parametrize("model_name", MODELS)
 @pytest.mark.parametrize("embed_name", EMBEDDINGS)
 def test_memory_stability(check_env, model_name, embed_name):
-    """測試 Memory 記憶功能 (Light 版通常是 API 呼叫 + 摘要保存)"""
+    """測試 Memory 記憶功能 (light 版使用遠端 embedding + Chroma)"""
     mem = akasha.MemoryManager(
         model=model_name,
         embeddings=embed_name,
@@ -150,3 +151,57 @@ def test_memory_stability(check_env, model_name, embed_name):
     
     assert "台北" in response or "拉麵" in response
     print(f"\n[Model: {model_name}, Embed: {embed_name}] Memory Check Response: {response}")
+
+
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
+@pytest.mark.smoke
+@pytest.mark.skipif(os.name != "nt", reason="Windows absolute-path regression test")
+def test_windows_absolute_path_rag_smoke(check_env, tmp_path):
+    """驗證 Windows absolute path 可搭配遠端 embedding 與 Chroma 正常運作。"""
+    test_file = tmp_path / "windows-absolute-rag.txt"
+    test_file.write_text(
+        "The capital of France is Paris. The Eiffel Tower is in Paris.",
+        encoding="utf-8",
+    )
+
+    ak = akasha.RAG(
+        model="openai:gpt-4o",
+        embeddings="openai:text-embedding-3-small",
+        verbose=True,
+        env_file=str(ENV_PATH),
+    )
+    response = ak(data_source=str(test_file), prompt="What is the capital of France?")
+
+    assert "Paris" in response or "巴黎" in response
+    print(f"\n[Windows Absolute Path RAG] Response: {response}")
+
+
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
+@pytest.mark.smoke
+@pytest.mark.skipif(os.name != "nt", reason="Windows absolute-path regression test")
+def test_windows_absolute_path_memory_smoke(check_env, tmp_path):
+    """驗證 MemoryManager 可使用 Windows absolute path 作為持久化目錄。"""
+    mem_root = tmp_path / "memory-root"
+    shutil.rmtree(mem_root, ignore_errors=True)
+
+    mem = akasha.MemoryManager(
+        model="openai:gpt-4o",
+        embeddings="openai:text-embedding-3-small",
+        memory_name="smoke",
+        memory_dirname=str(mem_root),
+        verbose=True,
+        env_file=str(ENV_PATH),
+    )
+    mem.add_memory("使用者：我住在台北。", "助手：收到，您住在台北。")
+    mem.add_memory("使用者：我喜歡吃拉麵。", "助手：好的，您喜歡吃拉麵。")
+
+    history = mem.search_memory("請問我住在哪裡？喜歡吃什麼？", top_k=2)
+
+    assert len(history) >= 2
+    assert any("台北" in item for item in history)
+    assert any("拉麵" in item for item in history)
+    print(f"\n[Windows Absolute Path Memory] History: {history}")

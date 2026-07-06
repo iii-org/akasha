@@ -1,0 +1,52 @@
+    1: from __future__ import annotations
+       
+    1: import logging
+    1: from collections.abc import Callable
+    1: from threading import Lock
+    1: from typing import TypedDict
+       
+    1: from typing_extensions import NotRequired
+       
+    1: logger = logging.getLogger(__name__)
+       
+       
+    2: class SerdeEvent(TypedDict):
+    1:     kind: str
+    1:     module: str
+    1:     name: str
+    1:     method: NotRequired[str]
+       
+       
+    1: SerdeEventListener = Callable[[SerdeEvent], None]
+       
+    1: _listeners: list[SerdeEventListener] = []
+    1: _listeners_lock = Lock()
+       
+       
+    1: def register_serde_event_listener(listener: SerdeEventListener) -> Callable[[], None]:
+           """Register a listener for serde allowlist events."""
+           with _listeners_lock:
+               _listeners.append(listener)
+       
+           def unregister() -> None:
+               with _listeners_lock:
+                   try:
+                       _listeners.remove(listener)
+                   except ValueError:
+                       pass
+       
+           return unregister
+       
+       
+    1: def emit_serde_event(event: SerdeEvent) -> None:
+           """Emit a serde event to all listeners.
+       
+           Listener failures are isolated and logged.
+           """
+           with _listeners_lock:
+               listeners = tuple(_listeners)
+           for listener in listeners:
+               try:
+                   listener(event)
+               except Exception:
+                   logger.warning("Serde listener failed", exc_info=True)

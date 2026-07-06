@@ -1,0 +1,246 @@
+    1: from collections.abc import Sequence
+    1: from typing import (
+           Any,
+           Sequence,
+           Union,
+           TypeVar,
+           Protocol,
+           TypedDict,
+           runtime_checkable,
+       )
+       
+    1: import numpy as np
+       
+    1: from ._shape import _ShapeLike
+       
+    1: from ._char_codes import (
+           _BoolCodes,
+           _UInt8Codes,
+           _UInt16Codes,
+           _UInt32Codes,
+           _UInt64Codes,
+           _Int8Codes,
+           _Int16Codes,
+           _Int32Codes,
+           _Int64Codes,
+           _Float16Codes,
+           _Float32Codes,
+           _Float64Codes,
+           _Complex64Codes,
+           _Complex128Codes,
+           _ByteCodes,
+           _ShortCodes,
+           _IntCCodes,
+           _IntPCodes,
+           _IntCodes,
+           _LongLongCodes,
+           _UByteCodes,
+           _UShortCodes,
+           _UIntCCodes,
+           _UIntPCodes,
+           _UIntCodes,
+           _ULongLongCodes,
+           _HalfCodes,
+           _SingleCodes,
+           _DoubleCodes,
+           _LongDoubleCodes,
+           _CSingleCodes,
+           _CDoubleCodes,
+           _CLongDoubleCodes,
+           _DT64Codes,
+           _TD64Codes,
+           _StrCodes,
+           _BytesCodes,
+           _VoidCodes,
+           _ObjectCodes,
+       )
+       
+    1: _SCT = TypeVar("_SCT", bound=np.generic)
+    1: _DType_co = TypeVar("_DType_co", covariant=True, bound=np.dtype[Any])
+       
+    1: _DTypeLikeNested = Any  # TODO: wait for support for recursive types
+       
+       
+       # Mandatory keys
+    2: class _DTypeDictBase(TypedDict):
+    1:     names: Sequence[str]
+    1:     formats: Sequence[_DTypeLikeNested]
+       
+       
+       # Mandatory + optional keys
+    2: class _DTypeDict(_DTypeDictBase, total=False):
+           # Only `str` elements are usable as indexing aliases,
+           # but `titles` can in principle accept any object
+    1:     offsets: Sequence[int]
+    1:     titles: Sequence[Any]
+    1:     itemsize: int
+    1:     aligned: bool
+       
+       
+       # A protocol for anything with the dtype attribute
+    3: @runtime_checkable
+    2: class _SupportsDType(Protocol[_DType_co]):
+    2:     @property
+    2:     def dtype(self) -> _DType_co: ...
+       
+       
+       # A subset of `npt.DTypeLike` that can be parametrized w.r.t. `np.generic`
+    2: _DTypeLike = Union[
+    2:     np.dtype[_SCT],
+    1:     type[_SCT],
+    1:     _SupportsDType[np.dtype[_SCT]],
+       ]
+       
+       
+       # Would create a dtype[np.void]
+    2: _VoidDTypeLike = Union[
+           # (flexible_dtype, itemsize)
+    2:     tuple[_DTypeLikeNested, int],
+           # (fixed_dtype, shape)
+    1:     tuple[_DTypeLikeNested, _ShapeLike],
+           # [(field_name, field_dtype, field_shape), ...]
+           #
+           # The type here is quite broad because NumPy accepts quite a wide
+           # range of inputs inside the list; see the tests for some
+           # examples.
+    1:     list[Any],
+           # {'names': ..., 'formats': ..., 'offsets': ..., 'titles': ...,
+           #  'itemsize': ...}
+    1:     _DTypeDict,
+           # (base_dtype, new_dtype)
+    1:     tuple[_DTypeLikeNested, _DTypeLikeNested],
+       ]
+       
+       # Anything that can be coerced into numpy.dtype.
+       # Reference: https://docs.scipy.org/doc/numpy/reference/arrays.dtypes.html
+    2: DTypeLike = Union[
+    2:     np.dtype[Any],
+           # default data type (float64)
+    1:     None,
+           # array-scalar types and generic types
+    1:     type[Any],  # NOTE: We're stuck with `type[Any]` due to object dtypes
+           # anything with a dtype attribute
+    1:     _SupportsDType[np.dtype[Any]],
+           # character codes, type strings or comma-separated fields, e.g., 'float64'
+    1:     str,
+    1:     _VoidDTypeLike,
+       ]
+       
+       # NOTE: while it is possible to provide the dtype as a dict of
+       # dtype-like objects (e.g. `{'field1': ..., 'field2': ..., ...}`),
+       # this syntax is officially discourged and
+       # therefore not included in the Union defining `DTypeLike`.
+       #
+       # See https://github.com/numpy/numpy/issues/16891 for more details.
+       
+       # Aliases for commonly used dtype-like objects.
+       # Note that the precision of `np.number` subclasses is ignored herein.
+    2: _DTypeLikeBool = Union[
+    2:     type[bool],
+    1:     type[np.bool_],
+    1:     np.dtype[np.bool_],
+    1:     _SupportsDType[np.dtype[np.bool_]],
+    1:     _BoolCodes,
+       ]
+    2: _DTypeLikeUInt = Union[
+    2:     type[np.unsignedinteger],
+    1:     np.dtype[np.unsignedinteger],
+    1:     _SupportsDType[np.dtype[np.unsignedinteger]],
+    1:     _UInt8Codes,
+    1:     _UInt16Codes,
+    1:     _UInt32Codes,
+    1:     _UInt64Codes,
+    1:     _UByteCodes,
+    1:     _UShortCodes,
+    1:     _UIntCCodes,
+    1:     _UIntPCodes,
+    1:     _UIntCodes,
+    1:     _ULongLongCodes,
+       ]
+    2: _DTypeLikeInt = Union[
+    2:     type[int],
+    1:     type[np.signedinteger],
+    1:     np.dtype[np.signedinteger],
+    1:     _SupportsDType[np.dtype[np.signedinteger]],
+    1:     _Int8Codes,
+    1:     _Int16Codes,
+    1:     _Int32Codes,
+    1:     _Int64Codes,
+    1:     _ByteCodes,
+    1:     _ShortCodes,
+    1:     _IntCCodes,
+    1:     _IntPCodes,
+    1:     _IntCodes,
+    1:     _LongLongCodes,
+       ]
+    2: _DTypeLikeFloat = Union[
+    2:     type[float],
+    1:     type[np.floating],
+    1:     np.dtype[np.floating],
+    1:     _SupportsDType[np.dtype[np.floating]],
+    1:     _Float16Codes,
+    1:     _Float32Codes,
+    1:     _Float64Codes,
+    1:     _HalfCodes,
+    1:     _SingleCodes,
+    1:     _DoubleCodes,
+    1:     _LongDoubleCodes,
+       ]
+    2: _DTypeLikeComplex = Union[
+    2:     type[complex],
+    1:     type[np.complexfloating],
+    1:     np.dtype[np.complexfloating],
+    1:     _SupportsDType[np.dtype[np.complexfloating]],
+    1:     _Complex64Codes,
+    1:     _Complex128Codes,
+    1:     _CSingleCodes,
+    1:     _CDoubleCodes,
+    1:     _CLongDoubleCodes,
+       ]
+    2: _DTypeLikeDT64 = Union[
+    2:     type[np.timedelta64],
+    1:     np.dtype[np.timedelta64],
+    1:     _SupportsDType[np.dtype[np.timedelta64]],
+    1:     _TD64Codes,
+       ]
+    2: _DTypeLikeTD64 = Union[
+    2:     type[np.datetime64],
+    1:     np.dtype[np.datetime64],
+    1:     _SupportsDType[np.dtype[np.datetime64]],
+    1:     _DT64Codes,
+       ]
+    2: _DTypeLikeStr = Union[
+    2:     type[str],
+    1:     type[np.str_],
+    1:     np.dtype[np.str_],
+    1:     _SupportsDType[np.dtype[np.str_]],
+    1:     _StrCodes,
+       ]
+    2: _DTypeLikeBytes = Union[
+    2:     type[bytes],
+    1:     type[np.bytes_],
+    1:     np.dtype[np.bytes_],
+    1:     _SupportsDType[np.dtype[np.bytes_]],
+    1:     _BytesCodes,
+       ]
+    2: _DTypeLikeVoid = Union[
+    2:     type[np.void],
+    1:     np.dtype[np.void],
+    1:     _SupportsDType[np.dtype[np.void]],
+    1:     _VoidCodes,
+    1:     _VoidDTypeLike,
+       ]
+    2: _DTypeLikeObject = Union[
+    2:     type,
+    1:     np.dtype[np.object_],
+    1:     _SupportsDType[np.dtype[np.object_]],
+    1:     _ObjectCodes,
+       ]
+       
+    2: _DTypeLikeComplex_co = Union[
+    2:     _DTypeLikeBool,
+    1:     _DTypeLikeUInt,
+    1:     _DTypeLikeInt,
+    1:     _DTypeLikeFloat,
+    1:     _DTypeLikeComplex,
+       ]

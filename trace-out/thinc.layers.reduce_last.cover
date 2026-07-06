@@ -1,0 +1,29 @@
+    1: from typing import Callable, Tuple, cast
+       
+    1: from ..config import registry
+    1: from ..model import Model
+    1: from ..types import Floats2d, Ragged
+    1: from ..util import ArrayInfo
+       
+    1: InT = Ragged
+    1: OutT = Floats2d
+       
+       
+    2: @registry.layers("reduce_last.v1")
+    2: def reduce_last() -> Model[InT, OutT]:
+           """Reduce ragged-formatted sequences to their last element."""
+           return Model("reduce_last", forward)
+       
+       
+    5: def forward(
+    3:     model: Model[InT, OutT], Xr: InT, is_train: bool
+    1: ) -> Tuple[OutT, Callable[[OutT], InT]]:
+           Y, lasts = model.ops.reduce_last(cast(Floats2d, Xr.data), Xr.lengths)
+           array_info = ArrayInfo.from_array(Y)
+       
+           def backprop(dY: OutT) -> InT:
+               array_info.check_consistency(dY)
+               dX = model.ops.backprop_reduce_last(dY, lasts)
+               return Ragged(dX, Xr.lengths)
+       
+           return Y, backprop

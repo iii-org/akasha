@@ -1,0 +1,11 @@
+    1: """Sub-package containing the matrix class and related functions.
+       
+       """
+    1: from . import defmatrix
+    1: from .defmatrix import *
+       
+    1: __all__ = defmatrix.__all__
+       
+    1: from numpy._pytesttester import PytestTester
+    1: test = PytestTester(__name__)
+    1: del PytestTester

@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ErrorObject"]
+       
+       
+    2: class ErrorObject(BaseModel):
+    1:     code: Optional[str] = None
+       
+    1:     message: str
+       
+    1:     param: Optional[str] = None
+       
+    1:     type: str

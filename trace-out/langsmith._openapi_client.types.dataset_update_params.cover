@@ -1,0 +1,83 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Dict, Union, Iterable, Optional
+    1: from typing_extensions import TypeAlias, TypedDict
+       
+    1: from .._types import SequenceNotStr
+    1: from .missing_param import MissingParam
+    1: from .dataset_transformation_param import DatasetTransformationParam
+       
+    1: __all__ = [
+           "DatasetUpdateParams",
+           "BaselineExperimentID",
+           "Description",
+           "InputsSchemaDefinition",
+           "Metadata",
+           "Name",
+           "OutputsSchemaDefinition",
+           "PatchExamples",
+           "PatchExamplesAttachmentsOperations",
+           "Transformations",
+       ]
+       
+       
+    2: class DatasetUpdateParams(TypedDict, total=False):
+    1:     baseline_experiment_id: Optional[BaselineExperimentID]
+       
+    1:     description: Optional[Description]
+       
+    1:     inputs_schema_definition: Optional[InputsSchemaDefinition]
+       
+    1:     metadata: Optional[Metadata]
+       
+    1:     name: Optional[Name]
+       
+    1:     outputs_schema_definition: Optional[OutputsSchemaDefinition]
+       
+    1:     patch_examples: Optional[Dict[str, PatchExamples]]
+       
+    1:     transformations: Optional[Transformations]
+       
+       
+    1: BaselineExperimentID: TypeAlias = Union[str, MissingParam]
+       
+    1: Description: TypeAlias = Union[str, MissingParam]
+       
+    1: InputsSchemaDefinition: TypeAlias = Union[Dict[str, object], MissingParam]
+       
+    1: Metadata: TypeAlias = Union[Dict[str, object], MissingParam]
+       
+    1: Name: TypeAlias = Union[str, MissingParam]
+       
+    1: OutputsSchemaDefinition: TypeAlias = Union[Dict[str, object], MissingParam]
+       
+       
+    2: class PatchExamplesAttachmentsOperations(TypedDict, total=False):
+    1:     rename: Dict[str, str]
+    1:     """Mapping of old attachment names to new names"""
+       
+    1:     retain: SequenceNotStr[str]
+    1:     """List of attachment names to keep"""
+       
+       
+    2: class PatchExamples(TypedDict, total=False):
+    1:     """Update class for Example."""
+       
+    1:     attachments_operations: Optional[PatchExamplesAttachmentsOperations]
+       
+    1:     dataset_id: Optional[str]
+       
+    1:     inputs: Optional[Dict[str, object]]
+       
+    1:     metadata: Optional[Dict[str, object]]
+       
+    1:     outputs: Optional[Dict[str, object]]
+       
+    1:     overwrite: bool
+       
+    1:     split: Union[SequenceNotStr[str], str, None]
+       
+       
+    1: Transformations: TypeAlias = Union[Iterable[DatasetTransformationParam], MissingParam]

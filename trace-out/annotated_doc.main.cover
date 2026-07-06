@@ -1,0 +1,36 @@
+    2: class Doc:
+    1:     """Define the documentation of a type annotation using `Annotated`, to be
+               used in class attributes, function and method parameters, return values,
+               and variables.
+       
+           The value should be a positional-only string literal to allow static tools
+           like editors and documentation generators to use it.
+       
+           This complements docstrings.
+       
+           The string value passed is available in the attribute `documentation`.
+       
+           Example:
+       
+           ```Python
+           from typing import Annotated
+           from annotated_doc import Doc
+       
+           def hi(name: Annotated[str, Doc("Who to say hi to")]) -> None:
+               print(f"Hi, {name}!")
+           ```
+           """
+       
+    1:     def __init__(self, documentation: str, /) -> None:
+  150:         self.documentation = documentation
+       
+    1:     def __repr__(self) -> str:
+               return f"Doc({self.documentation!r})"
+       
+    1:     def __hash__(self) -> int:
+  150:         return hash(self.documentation)
+       
+    1:     def __eq__(self, other: object) -> bool:
+   32:         if not isinstance(other, Doc):
+                   return NotImplemented
+   32:         return self.documentation == other.documentation

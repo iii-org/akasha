@@ -1,0 +1,31 @@
+    1: """
+       This makes the functions in torch._C._VariableFunctions available as
+           torch._VF.<funcname>
+       without mypy being able to find them.
+       
+       A subset of those functions are mapped to ATen functions in
+       torch/jit/_builtins.py
+       
+       See https://github.com/pytorch/pytorch/issues/21478 for the reason for
+       introducing torch._VF
+       
+       """
+       
+    1: import sys
+    1: import types
+       
+    1: import torch
+       
+       
+    2: class VFModule(types.ModuleType):
+    1:     vf: types.ModuleType
+       
+    1:     def __init__(self, name: str):
+    1:         super().__init__(name)
+    1:         self.vf = torch._C._VariableFunctions
+       
+    1:     def __getattr__(self, name: str) -> object:
+   13:         return getattr(self.vf, name)
+       
+       
+    1: sys.modules[__name__] = VFModule(__name__)

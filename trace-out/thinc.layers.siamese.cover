@@ -1,0 +1,53 @@
+    1: from typing import Callable, Optional, Tuple, TypeVar
+       
+    1: from ..config import registry
+    1: from ..model import Model
+    1: from ..types import ArrayXd
+    1: from ..util import get_width
+       
+    1: LayerT = TypeVar("LayerT")
+    1: SimT = TypeVar("SimT")
+    1: InT = Tuple[LayerT, LayerT]
+    1: OutT = TypeVar("OutT", bound=ArrayXd)
+       
+       
+    2: @registry.layers("siamese.v1")
+    5: def siamese(
+    2:     layer: Model[LayerT, SimT], similarity: Model[Tuple[SimT, SimT], OutT]
+    1: ) -> Model[InT, OutT]:
+           return Model(
+               f"siamese({layer.name}, {similarity.name})",
+               forward,
+               init=init,
+               layers=[layer, similarity],
+               dims={"nI": layer.get_dim("nI"), "nO": similarity.get_dim("nO")},
+           )
+       
+       
+    5: def forward(
+    3:     model: Model[InT, OutT], X1_X2: InT, is_train: bool
+    1: ) -> Tuple[OutT, Callable]:
+           X1, X2 = X1_X2
+           vec1, bp_vec1 = model.layers[0](X1, is_train)
+           vec2, bp_vec2 = model.layers[0](X2, is_train)
+           output, bp_output = model.layers[1]((vec1, vec2), is_train)
+       
+           def finish_update(d_output: OutT) -> InT:
+               d_vec1, d_vec2 = bp_output(d_output)
+               d_input1 = bp_vec1(d_vec1)
+               d_input2 = bp_vec2(d_vec2)
+               return (d_input1, d_input2)
+       
+           return output, finish_update
+       
+       
+    5: def init(
+    4:     model: Model[InT, OutT], X: Optional[InT] = None, Y: Optional[OutT] = None
+    1: ) -> None:
+           if X is not None:
+               model.layers[0].set_dim("nI", get_width(X[1]))
+               model.layers[0].initialize(X=X[0])
+               X = (model.layers[0].predict(X[0]), model.layers[0].predict(X[1]))
+           model.layers[1].initialize(X=X, Y=Y)
+           model.set_dim("nI", model.layers[0].get_dim("nI"))
+           model.set_dim("nO", model.layers[1].get_dim("nO"))

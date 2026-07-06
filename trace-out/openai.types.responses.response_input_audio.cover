@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseInputAudio", "InputAudio"]
+       
+       
+    2: class InputAudio(BaseModel):
+    1:     data: str
+    1:     """Base64-encoded audio data."""
+       
+    1:     format: Literal["mp3", "wav"]
+    1:     """The format of the audio data. Currently supported formats are `mp3` and `wav`."""
+       
+       
+    2: class ResponseInputAudio(BaseModel):
+    1:     """An audio input to the model."""
+       
+    1:     input_audio: InputAudio
+       
+    1:     type: Literal["input_audio"]
+    1:     """The type of the input item. Always `input_audio`."""

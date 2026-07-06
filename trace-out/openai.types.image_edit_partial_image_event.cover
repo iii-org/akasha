@@ -1,0 +1,35 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = ["ImageEditPartialImageEvent"]
+       
+       
+    2: class ImageEditPartialImageEvent(BaseModel):
+    1:     """Emitted when a partial image is available during image editing streaming."""
+       
+    1:     b64_json: str
+    1:     """Base64-encoded partial image data, suitable for rendering as an image."""
+       
+    1:     background: Literal["transparent", "opaque", "auto"]
+    1:     """The background setting for the requested edited image."""
+       
+    1:     created_at: int
+    1:     """The Unix timestamp when the event was created."""
+       
+    1:     output_format: Literal["png", "webp", "jpeg"]
+    1:     """The output format for the requested edited image."""
+       
+    1:     partial_image_index: int
+    1:     """0-based index for the partial image (streaming)."""
+       
+    1:     quality: Literal["low", "medium", "high", "auto"]
+    1:     """The quality setting for the requested edited image."""
+       
+    1:     size: Literal["1024x1024", "1024x1536", "1536x1024", "auto"]
+    1:     """The size of the requested edited image."""
+       
+    1:     type: Literal["image_edit.partial_image"]
+    1:     """The type of the event. Always `image_edit.partial_image`."""

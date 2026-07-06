@@ -9,8 +9,6 @@ from langchain_core.documents import Document
 
 from akasha.helper.run_llm import call_model
 from akasha.helper import handle_embeddings, handle_model_type, handle_model
-from langchain_chroma import Chroma
-from chromadb.config import Settings
 from akasha.helper import get_mac_address, separate_name
 from akasha.helper.handle_objects import handle_embeddings_and_name
 from akasha.utils.db.db_structure import (
@@ -20,6 +18,7 @@ from akasha.utils.db.db_structure import (
     dbs,
 )
 from akasha.utils.db.create_db import create_directory_db
+from akasha.utils.db.chroma_compat import get_chroma_components
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import retri_docs
 from akasha.utils.db.load_db import load_directory_db
@@ -102,6 +101,7 @@ class MemoryManager:
         self.storage_dir = get_storage_directory(self.mem_dir_path,
                                                  self.chunk_size, embed_type,
                                                  embed_name)
+        Chroma, Settings = get_chroma_components()
         client_settings = Settings(
             is_persistent=True,
             persist_directory=self.storage_dir,

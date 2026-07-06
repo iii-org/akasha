@@ -1,0 +1,28 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Dict
+    1: from typing_extensions import Literal
+       
+    1: from pydantic import Field as FieldInfo
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = ["EvalCustomDataSourceConfig"]
+       
+       
+    2: class EvalCustomDataSourceConfig(BaseModel):
+    1:     """
+           A CustomDataSourceConfig which specifies the schema of your `item` and optionally `sample` namespaces.
+           The response schema defines the shape of the data that will be:
+           - Used to define your testing criteria and
+           - What data is required when creating a run
+           """
+       
+    1:     schema_: Dict[str, object] = FieldInfo(alias="schema")
+    1:     """
+           The json schema for the run data source items. Learn how to build JSON schemas
+           [here](https://json-schema.org/).
+           """
+       
+    1:     type: Literal["custom"]
+    1:     """The type of data source. Always `custom`."""

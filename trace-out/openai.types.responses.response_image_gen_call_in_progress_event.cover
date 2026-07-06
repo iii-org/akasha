@@ -1,0 +1,23 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseImageGenCallInProgressEvent"]
+       
+       
+    2: class ResponseImageGenCallInProgressEvent(BaseModel):
+    1:     """Emitted when an image generation tool call is in progress."""
+       
+    1:     item_id: str
+    1:     """The unique identifier of the image generation item being processed."""
+       
+    1:     output_index: int
+    1:     """The index of the output item in the response's output array."""
+       
+    1:     sequence_number: int
+    1:     """The sequence number of the image generation item being processed."""
+       
+    1:     type: Literal["response.image_generation_call.in_progress"]
+    1:     """The type of the event. Always 'response.image_generation_call.in_progress'."""

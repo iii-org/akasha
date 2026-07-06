@@ -1,0 +1,60 @@
+    1: """Interface for selecting examples to include in prompts."""
+       
+    1: from abc import ABC, abstractmethod
+    1: from typing import Any
+       
+    1: from langchain_core.runnables import run_in_executor
+       
+       
+    2: class BaseExampleSelector(ABC):
+    1:     """Interface for selecting examples to include in prompts."""
+       
+    2:     @abstractmethod
+    2:     def add_example(self, example: dict[str, str]) -> Any:
+               """Add new example to store.
+       
+               Args:
+                   example: A dictionary with keys as input variables
+                       and values as their values.
+       
+               Returns:
+                   Any return value.
+               """
+       
+    1:     async def aadd_example(self, example: dict[str, str]) -> Any:
+               """Async add new example to store.
+       
+               Args:
+                   example: A dictionary with keys as input variables
+                       and values as their values.
+       
+               Returns:
+                   Any return value.
+               """
+               return await run_in_executor(None, self.add_example, example)
+       
+    2:     @abstractmethod
+    2:     def select_examples(self, input_variables: dict[str, str]) -> list[dict[str, Any]]:
+               """Select which examples to use based on the inputs.
+       
+               Args:
+                   input_variables: A dictionary with keys as input variables
+                       and values as their values.
+       
+               Returns:
+                   A list of examples.
+               """
+       
+    3:     async def aselect_examples(
+    1:         self, input_variables: dict[str, str]
+    1:     ) -> list[dict[str, Any]]:
+               """Async select which examples to use based on the inputs.
+       
+               Args:
+                   input_variables: A dictionary with keys as input variables
+                       and values as their values.
+       
+               Returns:
+                   A list of examples.
+               """
+               return await run_in_executor(None, self.select_examples, input_variables)

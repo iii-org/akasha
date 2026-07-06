@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ChatCompletionNamedToolChoiceCustomParam", "Custom"]
+       
+       
+    2: class Custom(TypedDict, total=False):
+    1:     name: Required[str]
+    1:     """The name of the custom tool to call."""
+       
+       
+    2: class ChatCompletionNamedToolChoiceCustomParam(TypedDict, total=False):
+    1:     """Specifies a tool the model should use.
+       
+           Use to force the model to call a specific custom tool.
+           """
+       
+    1:     custom: Required[Custom]
+       
+    1:     type: Required[Literal["custom"]]
+    1:     """For custom tool calling, the type is always `custom`."""

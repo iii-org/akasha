@@ -1,0 +1,245 @@
+       # Protocol Buffers - Google's data interchange format
+       # Copyright 2008 Google Inc.  All rights reserved.
+       #
+       # Use of this source code is governed by a BSD-style
+       # license that can be found in the LICENSE file or at
+       # https://developers.google.com/open-source/licenses/bsd
+       
+    1: """Constants and static functions to support protocol buffer wire format."""
+       
+    1: __author__ = 'robinson@google.com (Will Robinson)'
+       
+    1: import struct
+    1: from google.protobuf import descriptor
+    1: from google.protobuf import message
+       
+       
+    1: TAG_TYPE_BITS = 3  # Number of bits used to hold type info in a proto tag.
+    1: TAG_TYPE_MASK = (1 << TAG_TYPE_BITS) - 1  # 0x7
+       
+       # These numbers identify the wire type of a protocol buffer value.
+       # We use the least-significant TAG_TYPE_BITS bits of the varint-encoded
+       # tag-and-type to store one of these WIRETYPE_* constants.
+       # These values must match WireType enum in //google/protobuf/wire_format.h.
+    1: WIRETYPE_VARINT = 0
+    1: WIRETYPE_FIXED64 = 1
+    1: WIRETYPE_LENGTH_DELIMITED = 2
+    1: WIRETYPE_START_GROUP = 3
+    1: WIRETYPE_END_GROUP = 4
+    1: WIRETYPE_FIXED32 = 5
+    1: _WIRETYPE_MAX = 5
+       
+       
+       # Bounds for various integer types.
+    1: INT32_MAX = int((1 << 31) - 1)
+    1: INT32_MIN = int(-(1 << 31))
+    1: UINT32_MAX = (1 << 32) - 1
+       
+    1: INT64_MAX = (1 << 63) - 1
+    1: INT64_MIN = -(1 << 63)
+    1: UINT64_MAX = (1 << 64) - 1
+       
+       # "struct" format strings that will encode/decode the specified formats.
+    1: FORMAT_UINT32_LITTLE_ENDIAN = '<I'
+    1: FORMAT_UINT64_LITTLE_ENDIAN = '<Q'
+    1: FORMAT_FLOAT_LITTLE_ENDIAN = '<f'
+    1: FORMAT_DOUBLE_LITTLE_ENDIAN = '<d'
+       
+       
+       # We'll have to provide alternate implementations of AppendLittleEndian*() on
+       # any architectures where these checks fail.
+    1: if struct.calcsize(FORMAT_UINT32_LITTLE_ENDIAN) != 4:
+         raise AssertionError('Format "I" is not a 32-bit number.')
+    1: if struct.calcsize(FORMAT_UINT64_LITTLE_ENDIAN) != 8:
+         raise AssertionError('Format "Q" is not a 64-bit number.')
+       
+       
+    1: def PackTag(field_number, wire_type):
+         """Returns an unsigned 32-bit integer that encodes the field number and
+         wire type information in standard protocol message wire format.
+       
+         Args:
+           field_number: Expected to be an integer in the range [1, 1 << 29)
+           wire_type: One of the WIRETYPE_* constants.
+         """
+    1:   if not 0 <= wire_type <= _WIRETYPE_MAX:
+           raise message.EncodeError('Unknown wire type: %d' % wire_type)
+    1:   return (field_number << TAG_TYPE_BITS) | wire_type
+       
+       
+    1: def UnpackTag(tag):
+         """The inverse of PackTag().  Given an unsigned 32-bit number,
+         returns a (field_number, wire_type) tuple.
+         """
+         return (tag >> TAG_TYPE_BITS), (tag & TAG_TYPE_MASK)
+       
+       
+    1: def ZigZagEncode(value):
+         """ZigZag Transform:  Encodes signed integers so that they can be
+         effectively used with varint encoding.  See wire_format.h for
+         more details.
+         """
+         if value >= 0:
+           return value << 1
+         return (value << 1) ^ (~0)
+       
+       
+    1: def ZigZagDecode(value):
+         """Inverse of ZigZagEncode()."""
+         if not value & 0x1:
+           return value >> 1
+         return (value >> 1) ^ (~0)
+       
+       
+       
+       # The *ByteSize() functions below return the number of bytes required to
+       # serialize "field number + type" information and then serialize the value.
+       
+       
+    1: def Int32ByteSize(field_number, int32):
+         return Int64ByteSize(field_number, int32)
+       
+       
+    1: def Int32ByteSizeNoTag(int32):
+         return _VarUInt64ByteSizeNoTag(0xffffffffffffffff & int32)
+       
+       
+    1: def Int64ByteSize(field_number, int64):
+         # Have to convert to uint before calling UInt64ByteSize().
+         return UInt64ByteSize(field_number, 0xffffffffffffffff & int64)
+       
+       
+    1: def UInt32ByteSize(field_number, uint32):
+         return UInt64ByteSize(field_number, uint32)
+       
+       
+    1: def UInt64ByteSize(field_number, uint64):
+         return TagByteSize(field_number) + _VarUInt64ByteSizeNoTag(uint64)
+       
+       
+    1: def SInt32ByteSize(field_number, int32):
+         return UInt32ByteSize(field_number, ZigZagEncode(int32))
+       
+       
+    1: def SInt64ByteSize(field_number, int64):
+         return UInt64ByteSize(field_number, ZigZagEncode(int64))
+       
+       
+    1: def Fixed32ByteSize(field_number, fixed32):
+         return TagByteSize(field_number) + 4
+       
+       
+    1: def Fixed64ByteSize(field_number, fixed64):
+         return TagByteSize(field_number) + 8
+       
+       
+    1: def SFixed32ByteSize(field_number, sfixed32):
+         return TagByteSize(field_number) + 4
+       
+       
+    1: def SFixed64ByteSize(field_number, sfixed64):
+         return TagByteSize(field_number) + 8
+       
+       
+    1: def FloatByteSize(field_number, flt):
+         return TagByteSize(field_number) + 4
+       
+       
+    1: def DoubleByteSize(field_number, double):
+         return TagByteSize(field_number) + 8
+       
+       
+    1: def BoolByteSize(field_number, b):
+         return TagByteSize(field_number) + 1
+       
+       
+    1: def EnumByteSize(field_number, enum):
+         return UInt32ByteSize(field_number, enum)
+       
+       
+    1: def StringByteSize(field_number, string):
+         return BytesByteSize(field_number, string.encode('utf-8'))
+       
+       
+    1: def BytesByteSize(field_number, b):
+         return (TagByteSize(field_number)
+                 + _VarUInt64ByteSizeNoTag(len(b))
+                 + len(b))
+       
+       
+    1: def GroupByteSize(field_number, message):
+         return (2 * TagByteSize(field_number)  # START and END group.
+                 + message.ByteSize())
+       
+       
+    1: def MessageByteSize(field_number, message):
+         return (TagByteSize(field_number)
+                 + _VarUInt64ByteSizeNoTag(message.ByteSize())
+                 + message.ByteSize())
+       
+       
+    1: def MessageSetItemByteSize(field_number, msg):
+         # First compute the sizes of the tags.
+         # There are 2 tags for the beginning and ending of the repeated group, that
+         # is field number 1, one with field number 2 (type_id) and one with field
+         # number 3 (message).
+         total_size = (2 * TagByteSize(1) + TagByteSize(2) + TagByteSize(3))
+       
+         # Add the number of bytes for type_id.
+         total_size += _VarUInt64ByteSizeNoTag(field_number)
+       
+         message_size = msg.ByteSize()
+       
+         # The number of bytes for encoding the length of the message.
+         total_size += _VarUInt64ByteSizeNoTag(message_size)
+       
+         # The size of the message.
+         total_size += message_size
+         return total_size
+       
+       
+    1: def TagByteSize(field_number):
+         """Returns the bytes required to serialize a tag with this field number."""
+         # Just pass in type 0, since the type won't affect the tag+type size.
+         return _VarUInt64ByteSizeNoTag(PackTag(field_number, 0))
+       
+       
+       # Private helper function for the *ByteSize() functions above.
+       
+    1: def _VarUInt64ByteSizeNoTag(uint64):
+         """Returns the number of bytes required to serialize a single varint
+         using boundary value comparisons. (unrolled loop optimization -WPierce)
+         uint64 must be unsigned.
+         """
+         if uint64 <= 0x7f: return 1
+         if uint64 <= 0x3fff: return 2
+         if uint64 <= 0x1fffff: return 3
+         if uint64 <= 0xfffffff: return 4
+         if uint64 <= 0x7ffffffff: return 5
+         if uint64 <= 0x3ffffffffff: return 6
+         if uint64 <= 0x1ffffffffffff: return 7
+         if uint64 <= 0xffffffffffffff: return 8
+         if uint64 <= 0x7fffffffffffffff: return 9
+         if uint64 > UINT64_MAX:
+           raise message.EncodeError('Value out of range: %d' % uint64)
+         return 10
+       
+       
+    1: NON_PACKABLE_TYPES = (
+    1:   descriptor.FieldDescriptor.TYPE_STRING,
+    1:   descriptor.FieldDescriptor.TYPE_GROUP,
+    1:   descriptor.FieldDescriptor.TYPE_MESSAGE,
+    1:   descriptor.FieldDescriptor.TYPE_BYTES
+       )
+       
+       
+    1: def IsTypePackable(field_type):
+         """Return true iff packable = true is valid for fields of this type.
+       
+         Args:
+           field_type: a FieldDescriptor::Type value.
+       
+         Returns:
+           True iff fields of this type are packable.
+         """
+         return field_type not in NON_PACKABLE_TYPES

@@ -1,0 +1,10 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List
+    1: from typing_extensions import TypeAlias
+       
+    1: from .response_function_call_output_item import ResponseFunctionCallOutputItem
+       
+    1: __all__ = ["ResponseFunctionCallOutputItemList"]
+       
+    1: ResponseFunctionCallOutputItemList: TypeAlias = List[ResponseFunctionCallOutputItem]

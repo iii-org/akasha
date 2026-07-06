@@ -1,0 +1,214 @@
+    1: """
+           pygments.token
+           ~~~~~~~~~~~~~~
+       
+           Basic token types and the standard tokens.
+       
+           :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+           :license: BSD, see LICENSE for details.
+       """
+       
+       
+    2: class _TokenType(tuple):
+    1:     parent = None
+       
+    1:     def split(self):
+   80:         buf = []
+   80:         node = self
+  333:         while node is not None:
+  253:             buf.append(node)
+  253:             node = node.parent
+   80:         buf.reverse()
+   80:         return buf
+       
+    1:     def __init__(self, *args):
+               # no need to call super.__init__
+   82:         self.subtypes = set()
+       
+    1:     def __contains__(self, val):
+               return self is val or (
+                   type(val) is self.__class__ and
+                   val[:len(self)] == self
+               )
+       
+    1:     def __getattr__(self, val):
+   81:         if not val or not val[0].isupper():
+                   return tuple.__getattribute__(self, val)
+   81:         new = _TokenType(self + (val,))
+   81:         setattr(self, val, new)
+   81:         self.subtypes.add(new)
+   81:         new.parent = self
+   81:         return new
+       
+    1:     def __repr__(self):
+               return 'Token' + (self and '.' or '') + '.'.join(self)
+       
+    1:     def __copy__(self):
+               # These instances are supposed to be singletons
+               return self
+       
+    1:     def __deepcopy__(self, memo):
+               # These instances are supposed to be singletons
+               return self
+       
+       
+    1: Token = _TokenType()
+       
+       # Special token types
+    1: Text = Token.Text
+    1: Whitespace = Text.Whitespace
+    1: Escape = Token.Escape
+    1: Error = Token.Error
+       # Text that doesn't belong to this lexer (e.g. HTML in PHP)
+    1: Other = Token.Other
+       
+       # Common token types for source code
+    1: Keyword = Token.Keyword
+    1: Name = Token.Name
+    1: Literal = Token.Literal
+    1: String = Literal.String
+    1: Number = Literal.Number
+    1: Punctuation = Token.Punctuation
+    1: Operator = Token.Operator
+    1: Comment = Token.Comment
+       
+       # Generic types for non-source code
+    1: Generic = Token.Generic
+       
+       # String and some others are not direct children of Token.
+       # alias them:
+    1: Token.Token = Token
+    1: Token.String = String
+    1: Token.Number = Number
+       
+       
+    1: def is_token_subtype(ttype, other):
+           """
+           Return True if ``ttype`` is a subtype of ``other``.
+       
+           exists for backwards compatibility. use ``ttype in other`` now.
+           """
+           return ttype in other
+       
+       
+    1: def string_to_tokentype(s):
+           """
+           Convert a string into a token type::
+       
+               >>> string_to_token('String.Double')
+               Token.Literal.String.Double
+               >>> string_to_token('Token.Literal.Number')
+               Token.Literal.Number
+               >>> string_to_token('')
+               Token
+       
+           Tokens that are already tokens are returned unchanged:
+       
+               >>> string_to_token(String)
+               Token.Literal.String
+           """
+           if isinstance(s, _TokenType):
+               return s
+           if not s:
+               return Token
+           node = Token
+           for item in s.split('.'):
+               node = getattr(node, item)
+           return node
+       
+       
+       # Map standard token types to short names, used in CSS class naming.
+       # If you add a new item, please be sure to run this file to perform
+       # a consistency check for duplicate values.
+   70: STANDARD_TYPES = {
+    1:     Token:                         '',
+       
+    1:     Text:                          '',
+    1:     Whitespace:                    'w',
+    1:     Escape:                        'esc',
+    1:     Error:                         'err',
+    1:     Other:                         'x',
+       
+    1:     Keyword:                       'k',
+    1:     Keyword.Constant:              'kc',
+    1:     Keyword.Declaration:           'kd',
+    1:     Keyword.Namespace:             'kn',
+    1:     Keyword.Pseudo:                'kp',
+    1:     Keyword.Reserved:              'kr',
+    1:     Keyword.Type:                  'kt',
+       
+    1:     Name:                          'n',
+    1:     Name.Attribute:                'na',
+    1:     Name.Builtin:                  'nb',
+    1:     Name.Builtin.Pseudo:           'bp',
+    1:     Name.Class:                    'nc',
+    1:     Name.Constant:                 'no',
+    1:     Name.Decorator:                'nd',
+    1:     Name.Entity:                   'ni',
+    1:     Name.Exception:                'ne',
+    1:     Name.Function:                 'nf',
+    1:     Name.Function.Magic:           'fm',
+    1:     Name.Property:                 'py',
+    1:     Name.Label:                    'nl',
+    1:     Name.Namespace:                'nn',
+    1:     Name.Other:                    'nx',
+    1:     Name.Tag:                      'nt',
+    1:     Name.Variable:                 'nv',
+    1:     Name.Variable.Class:           'vc',
+    1:     Name.Variable.Global:          'vg',
+    1:     Name.Variable.Instance:        'vi',
+    1:     Name.Variable.Magic:           'vm',
+       
+    1:     Literal:                       'l',
+    1:     Literal.Date:                  'ld',
+       
+    1:     String:                        's',
+    1:     String.Affix:                  'sa',
+    1:     String.Backtick:               'sb',
+    1:     String.Char:                   'sc',
+    1:     String.Delimiter:              'dl',
+    1:     String.Doc:                    'sd',
+    1:     String.Double:                 's2',
+    1:     String.Escape:                 'se',
+    1:     String.Heredoc:                'sh',
+    1:     String.Interpol:               'si',
+    1:     String.Other:                  'sx',
+    1:     String.Regex:                  'sr',
+    1:     String.Single:                 's1',
+    1:     String.Symbol:                 'ss',
+       
+    1:     Number:                        'm',
+    1:     Number.Bin:                    'mb',
+    1:     Number.Float:                  'mf',
+    1:     Number.Hex:                    'mh',
+    1:     Number.Integer:                'mi',
+    1:     Number.Integer.Long:           'il',
+    1:     Number.Oct:                    'mo',
+       
+    1:     Operator:                      'o',
+    1:     Operator.Word:                 'ow',
+       
+    1:     Punctuation:                   'p',
+    1:     Punctuation.Marker:            'pm',
+       
+    1:     Comment:                       'c',
+    1:     Comment.Hashbang:              'ch',
+    1:     Comment.Multiline:             'cm',
+    1:     Comment.Preproc:               'cp',
+    1:     Comment.PreprocFile:           'cpf',
+    1:     Comment.Single:                'c1',
+    1:     Comment.Special:               'cs',
+       
+    1:     Generic:                       'g',
+    1:     Generic.Deleted:               'gd',
+    1:     Generic.Emph:                  'ge',
+    1:     Generic.Error:                 'gr',
+    1:     Generic.Heading:               'gh',
+    1:     Generic.Inserted:              'gi',
+    1:     Generic.Output:                'go',
+    1:     Generic.Prompt:                'gp',
+    1:     Generic.Strong:                'gs',
+    1:     Generic.Subheading:            'gu',
+    1:     Generic.EmphStrong:            'ges',
+    1:     Generic.Traceback:             'gt',
+       }

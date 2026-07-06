@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Union
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: from ..._models import BaseModel
+    1: from .comparison_filter import ComparisonFilter
+       
+    1: __all__ = ["CompoundFilter", "Filter"]
+       
+    1: Filter: TypeAlias = Union[ComparisonFilter, object]
+       
+       
+    2: class CompoundFilter(BaseModel):
+    1:     """Combine multiple filters using `and` or `or`."""
+       
+    1:     filters: List[Filter]
+    1:     """Array of filters to combine.
+       
+           Items can be `ComparisonFilter` or `CompoundFilter`.
+           """
+       
+    1:     type: Literal["and", "or"]
+    1:     """Type of operation: `and` or `or`."""

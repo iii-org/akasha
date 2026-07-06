@@ -1,0 +1,34 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+       
+    1: __all__ = ["FilePathDeltaAnnotation", "FilePath"]
+       
+       
+    2: class FilePath(BaseModel):
+    1:     file_id: Optional[str] = None
+    1:     """The ID of the file that was generated."""
+       
+       
+    2: class FilePathDeltaAnnotation(BaseModel):
+    1:     """
+           A URL for the file that's generated when the assistant used the `code_interpreter` tool to generate a file.
+           """
+       
+    1:     index: int
+    1:     """The index of the annotation in the text content part."""
+       
+    1:     type: Literal["file_path"]
+    1:     """Always `file_path`."""
+       
+    1:     end_index: Optional[int] = None
+       
+    1:     file_path: Optional[FilePath] = None
+       
+    1:     start_index: Optional[int] = None
+       
+    1:     text: Optional[str] = None
+    1:     """The text in the message content that needs to be replaced."""

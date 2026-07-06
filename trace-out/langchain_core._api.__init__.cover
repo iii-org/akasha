@@ -1,0 +1,87 @@
+    1: """Helper functions for managing the LangChain API.
+       
+       This module is only relevant for LangChain developers, not for users.
+       
+       !!! warning
+       
+           This module and its submodules are for internal use only. Do not use them in your
+           own code. We may change the API at any time with no warning.
+       """
+       
+    1: from typing import TYPE_CHECKING
+       
+    1: from langchain_core._import_utils import import_attr
+       
+    1: if TYPE_CHECKING:
+           from langchain_core._api.beta_decorator import (
+               LangChainBetaWarning,
+               beta,
+               suppress_langchain_beta_warning,
+               surface_langchain_beta_warnings,
+           )
+           from langchain_core._api.deprecation import (
+               LangChainDeprecationWarning,
+               deprecated,
+               suppress_langchain_deprecation_warning,
+               surface_langchain_deprecation_warnings,
+               warn_deprecated,
+           )
+           from langchain_core._api.path import as_import_path, get_relative_path
+       
+    1: __all__ = (
+           "LangChainBetaWarning",
+           "LangChainDeprecationWarning",
+           "as_import_path",
+           "beta",
+           "deprecated",
+           "get_relative_path",
+           "suppress_langchain_beta_warning",
+           "suppress_langchain_deprecation_warning",
+           "surface_langchain_beta_warnings",
+           "surface_langchain_deprecation_warnings",
+           "warn_deprecated",
+       )
+       
+    1: _dynamic_imports = {
+    1:     "LangChainBetaWarning": "beta_decorator",
+    1:     "beta": "beta_decorator",
+    1:     "suppress_langchain_beta_warning": "beta_decorator",
+    1:     "surface_langchain_beta_warnings": "beta_decorator",
+    1:     "as_import_path": "path",
+    1:     "get_relative_path": "path",
+    1:     "LangChainDeprecationWarning": "deprecation",
+    1:     "deprecated": "deprecation",
+    1:     "surface_langchain_deprecation_warnings": "deprecation",
+    1:     "suppress_langchain_deprecation_warning": "deprecation",
+    1:     "warn_deprecated": "deprecation",
+       }
+       
+       
+    1: def __getattr__(attr_name: str) -> object:
+           """Dynamically import and return an attribute from a submodule.
+       
+           This function enables lazy loading of API functions from submodules, reducing
+           initial import time and circular dependency issues.
+       
+           Args:
+               attr_name: Name of the attribute to import.
+       
+           Returns:
+               The imported attribute object.
+       
+           Raises:
+               AttributeError: If the attribute is not a valid dynamic import.
+           """
+    6:     module_name = _dynamic_imports.get(attr_name)
+    6:     result = import_attr(attr_name, module_name, __spec__.parent)
+    6:     globals()[attr_name] = result
+    6:     return result
+       
+       
+    1: def __dir__() -> list[str]:
+           """Return a list of available attributes for this module.
+       
+           Returns:
+               List of attribute names that can be imported from this module.
+           """
+           return list(__all__)

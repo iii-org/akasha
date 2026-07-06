@@ -1,0 +1,102 @@
+       # Copyright Jonathan Hartley 2013. BSD 3-Clause license, see LICENSE file.
+    1: '''
+       This module generates ANSI character codes to printing colors to terminals.
+       See: http://en.wikipedia.org/wiki/ANSI_escape_code
+       '''
+       
+    1: CSI = '\033['
+    1: OSC = '\033]'
+    1: BEL = '\a'
+       
+       
+    1: def code_to_chars(code):
+   38:     return CSI + str(code) + 'm'
+       
+    1: def set_title(title):
+           return OSC + '2;' + title + BEL
+       
+    1: def clear_screen(mode=2):
+           return CSI + str(mode) + 'J'
+       
+    1: def clear_line(mode=2):
+           return CSI + str(mode) + 'K'
+       
+       
+    2: class AnsiCodes(object):
+    1:     def __init__(self):
+               # the subclasses declare class attributes which are numbers.
+               # Upon instantiation we define instance attributes, which are the same
+               # as the class attributes but wrapped with the ANSI escape sequence
+  122:         for name in dir(self):
+  119:             if not name.startswith('_'):
+   38:                 value = getattr(self, name)
+   38:                 setattr(self, name, code_to_chars(value))
+       
+       
+    2: class AnsiCursor(object):
+    1:     def UP(self, n=1):
+               return CSI + str(n) + 'A'
+    1:     def DOWN(self, n=1):
+               return CSI + str(n) + 'B'
+    1:     def FORWARD(self, n=1):
+               return CSI + str(n) + 'C'
+    1:     def BACK(self, n=1):
+               return CSI + str(n) + 'D'
+    1:     def POS(self, x=1, y=1):
+               return CSI + str(y) + ';' + str(x) + 'H'
+       
+       
+    2: class AnsiFore(AnsiCodes):
+    1:     BLACK           = 30
+    1:     RED             = 31
+    1:     GREEN           = 32
+    1:     YELLOW          = 33
+    1:     BLUE            = 34
+    1:     MAGENTA         = 35
+    1:     CYAN            = 36
+    1:     WHITE           = 37
+    1:     RESET           = 39
+       
+           # These are fairly well supported, but not part of the standard.
+    1:     LIGHTBLACK_EX   = 90
+    1:     LIGHTRED_EX     = 91
+    1:     LIGHTGREEN_EX   = 92
+    1:     LIGHTYELLOW_EX  = 93
+    1:     LIGHTBLUE_EX    = 94
+    1:     LIGHTMAGENTA_EX = 95
+    1:     LIGHTCYAN_EX    = 96
+    1:     LIGHTWHITE_EX   = 97
+       
+       
+    2: class AnsiBack(AnsiCodes):
+    1:     BLACK           = 40
+    1:     RED             = 41
+    1:     GREEN           = 42
+    1:     YELLOW          = 43
+    1:     BLUE            = 44
+    1:     MAGENTA         = 45
+    1:     CYAN            = 46
+    1:     WHITE           = 47
+    1:     RESET           = 49
+       
+           # These are fairly well supported, but not part of the standard.
+    1:     LIGHTBLACK_EX   = 100
+    1:     LIGHTRED_EX     = 101
+    1:     LIGHTGREEN_EX   = 102
+    1:     LIGHTYELLOW_EX  = 103
+    1:     LIGHTBLUE_EX    = 104
+    1:     LIGHTMAGENTA_EX = 105
+    1:     LIGHTCYAN_EX    = 106
+    1:     LIGHTWHITE_EX   = 107
+       
+       
+    2: class AnsiStyle(AnsiCodes):
+    1:     BRIGHT    = 1
+    1:     DIM       = 2
+    1:     NORMAL    = 22
+    1:     RESET_ALL = 0
+       
+    1: Fore   = AnsiFore()
+    1: Back   = AnsiBack()
+    1: Style  = AnsiStyle()
+    1: Cursor = AnsiCursor()

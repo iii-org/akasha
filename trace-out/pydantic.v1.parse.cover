@@ -1,0 +1,66 @@
+    1: import json
+    1: import pickle
+    1: from enum import Enum
+    1: from pathlib import Path
+    1: from typing import Any, Callable, Union
+       
+    1: from pydantic.v1.types import StrBytes
+       
+       
+    2: class Protocol(str, Enum):
+    1:     json = 'json'
+    1:     pickle = 'pickle'
+       
+       
+    8: def load_str_bytes(
+    1:     b: StrBytes,
+           *,
+    2:     content_type: str = None,
+    2:     encoding: str = 'utf8',
+    2:     proto: Protocol = None,
+    2:     allow_pickle: bool = False,
+    2:     json_loads: Callable[[str], Any] = json.loads,
+    1: ) -> Any:
+           if proto is None and content_type:
+               if content_type.endswith(('json', 'javascript')):
+                   pass
+               elif allow_pickle and content_type.endswith('pickle'):
+                   proto = Protocol.pickle
+               else:
+                   raise TypeError(f'Unknown content-type: {content_type}')
+       
+           proto = proto or Protocol.json
+       
+           if proto == Protocol.json:
+               if isinstance(b, bytes):
+                   b = b.decode(encoding)
+               return json_loads(b)
+           elif proto == Protocol.pickle:
+               if not allow_pickle:
+                   raise RuntimeError('Trying to decode with pickle with allow_pickle=False')
+               bb = b if isinstance(b, bytes) else b.encode()
+               return pickle.loads(bb)
+           else:
+               raise TypeError(f'Unknown protocol: {proto}')
+       
+       
+    8: def load_file(
+    1:     path: Union[str, Path],
+           *,
+    2:     content_type: str = None,
+    2:     encoding: str = 'utf8',
+    2:     proto: Protocol = None,
+    2:     allow_pickle: bool = False,
+    2:     json_loads: Callable[[str], Any] = json.loads,
+    1: ) -> Any:
+           path = Path(path)
+           b = path.read_bytes()
+           if content_type is None:
+               if path.suffix in ('.js', '.json'):
+                   proto = Protocol.json
+               elif path.suffix == '.pkl':
+                   proto = Protocol.pickle
+       
+           return load_str_bytes(
+               b, proto=proto, content_type=content_type, encoding=encoding, allow_pickle=allow_pickle, json_loads=json_loads
+           )

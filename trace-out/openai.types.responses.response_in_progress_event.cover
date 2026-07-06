@@ -1,0 +1,21 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from .response import Response
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseInProgressEvent"]
+       
+       
+    2: class ResponseInProgressEvent(BaseModel):
+    1:     """Emitted when the response is in progress."""
+       
+    1:     response: Response
+    1:     """The response that is in progress."""
+       
+    1:     sequence_number: int
+    1:     """The sequence number of this event."""
+       
+    1:     type: Literal["response.in_progress"]
+    1:     """The type of the event. Always `response.in_progress`."""

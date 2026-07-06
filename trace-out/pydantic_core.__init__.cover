@@ -1,0 +1,171 @@
+    1: from __future__ import annotations
+       
+    1: import sys as _sys
+    1: from typing import Any as _Any
+       
+    1: from typing_extensions import Sentinel
+       
+    1: from ._pydantic_core import (
+           ArgsKwargs,
+           MultiHostUrl,
+           PydanticCustomError,
+           PydanticKnownError,
+           PydanticOmit,
+           PydanticSerializationError,
+           PydanticSerializationUnexpectedValue,
+           PydanticUndefined,
+           PydanticUndefinedType,
+           PydanticUseDefault,
+           SchemaError,
+           SchemaSerializer,
+           SchemaValidator,
+           Some,
+           TzInfo,
+           Url,
+           ValidationError,
+           __version__,
+           from_json,
+           to_json,
+           to_jsonable_python,
+       )
+    1: from .core_schema import CoreConfig, CoreSchema, CoreSchemaType, ErrorType
+       
+    1: if _sys.version_info < (3, 11):
+           from typing_extensions import NotRequired as _NotRequired
+       else:
+    1:     from typing import NotRequired as _NotRequired
+       
+    1: if _sys.version_info < (3, 12):
+    1:     from typing_extensions import TypedDict as _TypedDict
+       else:
+           from typing import TypedDict as _TypedDict
+       
+    1: __all__ = [
+           '__version__',
+           'UNSET',
+           'CoreConfig',
+           'CoreSchema',
+           'CoreSchemaType',
+           'SchemaValidator',
+           'SchemaSerializer',
+           'Some',
+           'Url',
+           'MultiHostUrl',
+           'ArgsKwargs',
+           'PydanticUndefined',
+           'PydanticUndefinedType',
+           'SchemaError',
+           'ErrorDetails',
+           'InitErrorDetails',
+           'ValidationError',
+           'PydanticCustomError',
+           'PydanticKnownError',
+           'PydanticOmit',
+           'PydanticUseDefault',
+           'PydanticSerializationError',
+           'PydanticSerializationUnexpectedValue',
+           'TzInfo',
+           'to_json',
+           'from_json',
+           'to_jsonable_python',
+       ]
+       
+       
+    2: class ErrorDetails(_TypedDict):
+    1:     type: str
+    1:     """
+           The type of error that occurred, this is an identifier designed for
+           programmatic use that will change rarely or never.
+       
+           `type` is unique for each error message, and can hence be used as an identifier to build custom error messages.
+           """
+    1:     loc: tuple[int | str, ...]
+    1:     """Tuple of strings and ints identifying where in the schema the error occurred."""
+    1:     msg: str
+    1:     """A human readable error message."""
+    1:     input: _Any
+    1:     """The input data at this `loc` that caused the error."""
+    1:     ctx: _NotRequired[dict[str, _Any]]
+    1:     """
+           Values which are required to render the error message, and could hence be useful in rendering custom error messages.
+           Also useful for passing custom error data forward.
+           """
+    1:     url: _NotRequired[str]
+    1:     """
+           The documentation URL giving information about the error. No URL is available if
+           a [`PydanticCustomError`][pydantic_core.PydanticCustomError] is used.
+           """
+       
+       
+    2: class InitErrorDetails(_TypedDict):
+    1:     type: str | PydanticCustomError
+    1:     """The type of error that occurred, this should be a "slug" identifier that changes rarely or never."""
+    1:     loc: _NotRequired[tuple[int | str, ...]]
+    1:     """Tuple of strings and ints identifying where in the schema the error occurred."""
+    1:     input: _Any
+    1:     """The input data at this `loc` that caused the error."""
+    1:     ctx: _NotRequired[dict[str, _Any]]
+    1:     """
+           Values which are required to render the error message, and could hence be useful in rendering custom error messages.
+           Also useful for passing custom error data forward.
+           """
+       
+       
+    2: class ErrorTypeInfo(_TypedDict):
+    1:     """
+           Gives information about errors.
+           """
+       
+    1:     type: ErrorType
+    1:     """The type of error that occurred, this should be a "slug" identifier that changes rarely or never."""
+    1:     message_template_python: str
+    1:     """String template to render a human readable error message from using context, when the input is Python."""
+    1:     example_message_python: str
+    1:     """Example of a human readable error message, when the input is Python."""
+    1:     message_template_json: _NotRequired[str]
+    1:     """String template to render a human readable error message from using context, when the input is JSON data."""
+    1:     example_message_json: _NotRequired[str]
+    1:     """Example of a human readable error message, when the input is JSON data."""
+    1:     example_context: dict[str, _Any] | None
+    1:     """Example of context values."""
+       
+       
+    2: class MultiHostHost(_TypedDict):
+    1:     """
+           A host part of a multi-host URL.
+           """
+       
+    1:     username: str | None
+    1:     """The username part of this host, or `None`."""
+    1:     password: str | None
+    1:     """The password part of this host, or `None`."""
+    1:     host: str | None
+    1:     """The host part of this host, or `None`."""
+    1:     port: int | None
+    1:     """The port part of this host, or `None`."""
+       
+       
+    1: MISSING = Sentinel('MISSING')
+    1: """A singleton indicating a field value was not provided during validation.
+       
+       This singleton can be used a default value, as an alternative to `None` when it has
+       an explicit meaning. During serialization, any field with `MISSING` as a value is excluded
+       from the output.
+       
+       Example:
+           ```python
+           from pydantic import BaseModel
+       
+           from pydantic_core import MISSING
+       
+       
+           class Configuration(BaseModel):
+               timeout: int | None | MISSING = MISSING
+       
+       
+           # configuration defaults, stored somewhere else:
+           defaults = {'timeout': 200}
+       
+           conf = Configuration.model_validate({...})
+           timeout = conf.timeout if timeout.timeout is not MISSING else defaults['timeout']
+       """

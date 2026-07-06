@@ -1,0 +1,15 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ContainerReferenceParam"]
+       
+       
+    2: class ContainerReferenceParam(TypedDict, total=False):
+    1:     container_id: Required[str]
+    1:     """The ID of the referenced container."""
+       
+    1:     type: Required[Literal["container_reference"]]
+    1:     """References a container created with the /v1/containers endpoint"""

@@ -1,0 +1,249 @@
+    1: """brain-dead simple parser for ini-style files.
+       (C) Ronny Pfannschmidt, Holger Krekel -- MIT licensed
+       """
+       
+    1: import os
+    1: from collections.abc import Callable
+    1: from collections.abc import Iterator
+    1: from collections.abc import Mapping
+    1: from typing import Final
+    1: from typing import TypeVar
+    1: from typing import overload
+       
+    1: __all__ = ["IniConfig", "ParseError", "COMMENTCHARS", "iscommentline"]
+       
+    1: from . import _parse
+    1: from ._parse import COMMENTCHARS
+    1: from ._parse import iscommentline
+    1: from .exceptions import ParseError
+       
+    1: _D = TypeVar("_D")
+    1: _T = TypeVar("_T")
+       
+       
+    2: class SectionWrapper:
+    1:     config: Final["IniConfig"]
+    1:     name: Final[str]
+       
+    1:     def __init__(self, config: "IniConfig", name: str) -> None:
+    1:         self.config = config
+    1:         self.name = name
+       
+    1:     def lineof(self, name: str) -> int | None:
+               return self.config.lineof(self.name, name)
+       
+    2:     @overload
+    2:     def get(self, key: str) -> str | None: ...
+       
+    2:     @overload
+    5:     def get(
+               self,
+    1:         key: str,
+    1:         convert: Callable[[str], _T],
+    1:     ) -> _T | None: ...
+       
+    2:     @overload
+    6:     def get(
+               self,
+    1:         key: str,
+    1:         default: None,
+    1:         convert: Callable[[str], _T],
+    1:     ) -> _T | None: ...
+       
+    2:     @overload
+    2:     def get(self, key: str, default: _D, convert: None = None) -> str | _D: ...
+       
+    2:     @overload
+    6:     def get(
+               self,
+    1:         key: str,
+    1:         default: _D,
+    1:         convert: Callable[[str], _T],
+    1:     ) -> _T | _D: ...
+       
+           # TODO: investigate possible mypy bug wrt matching the passed over data
+    5:     def get(  # type: ignore [misc]
+               self,
+    1:         key: str,
+    2:         default: _D | None = None,
+    2:         convert: Callable[[str], _T] | None = None,
+    1:     ) -> _D | _T | str | None:
+               return self.config.get(self.name, key, convert=convert, default=default)
+       
+    1:     def __getitem__(self, key: str) -> str:
+    4:         return self.config.sections[self.name][key]
+       
+    1:     def __iter__(self) -> Iterator[str]:
+    1:         section: Mapping[str, str] = self.config.sections.get(self.name, {})
+       
+    1:         def lineof(key: str) -> int:
+    4:             return self.config.lineof(self.name, key)  # type: ignore[return-value]
+       
+    1:         yield from sorted(section, key=lineof)
+       
+    1:     def items(self) -> Iterator[tuple[str, str]]:
+    5:         for name in self:
+    4:             yield name, self[name]
+       
+       
+    2: class IniConfig:
+    1:     path: Final[str]
+    1:     sections: Final[Mapping[str, Mapping[str, str]]]
+    1:     _sources: Final[Mapping[tuple[str, str | None], int]]
+       
+    8:     def __init__(
+               self,
+    1:         path: str | os.PathLike[str],
+    2:         data: str | None = None,
+    2:         encoding: str = "utf-8",
+               *,
+    2:         _sections: Mapping[str, Mapping[str, str]] | None = None,
+    2:         _sources: Mapping[tuple[str, str | None], int] | None = None,
+    1:     ) -> None:
+    1:         self.path = os.fspath(path)
+       
+               # Determine sections and sources
+    1:         if _sections is not None and _sources is not None:
+                   # Use provided pre-parsed data (called from parse())
+                   sections_data = _sections
+                   sources = _sources
+               else:
+                   # Parse the data (backward compatible path)
+    1:             if data is None:
+    2:                 with open(self.path, encoding=encoding) as fp:
+    1:                     data = fp.read()
+       
+                   # Use old behavior (no stripping) for backward compatibility
+    2:             sections_data, sources = _parse.parse_ini_data(
+    1:                 self.path, data, strip_inline_comments=False
+                   )
+       
+               # Assign once to Final attributes
+    1:         self._sources = sources
+    1:         self.sections = sections_data
+       
+    2:     @classmethod
+    9:     def parse(
+               cls,
+    1:         path: str | os.PathLike[str],
+    2:         data: str | None = None,
+    2:         encoding: str = "utf-8",
+               *,
+    2:         strip_inline_comments: bool = True,
+    2:         strip_section_whitespace: bool = False,
+    1:     ) -> "IniConfig":
+               """Parse an INI file.
+       
+               Args:
+                   path: Path to the INI file (used for error messages)
+                   data: Optional INI content as string. If None, reads from path.
+                   encoding: Encoding to use when reading the file (default: utf-8)
+                   strip_inline_comments: Whether to strip inline comments from values
+                       (default: True). When True, comments starting with # or ; are
+                       removed from values, matching the behavior for section comments.
+                   strip_section_whitespace: Whether to strip whitespace from section and key names
+                       (default: False). When True, strips Unicode whitespace from section and key names,
+                       addressing issue #4. When False, preserves existing behavior for backward compatibility.
+       
+               Returns:
+                   IniConfig instance with parsed configuration
+       
+               Example:
+                   # With comment stripping (default):
+                   config = IniConfig.parse("setup.cfg")
+                   # value = "foo" instead of "foo # comment"
+       
+                   # Without comment stripping (old behavior):
+                   config = IniConfig.parse("setup.cfg", strip_inline_comments=False)
+                   # value = "foo # comment"
+       
+                   # With section name stripping (opt-in for issue #4):
+                   config = IniConfig.parse("setup.cfg", strip_section_whitespace=True)
+                   # section names and keys have Unicode whitespace stripped
+               """
+               fspath = os.fspath(path)
+       
+               if data is None:
+                   with open(fspath, encoding=encoding) as fp:
+                       data = fp.read()
+       
+               sections_data, sources = _parse.parse_ini_data(
+                   fspath,
+                   data,
+                   strip_inline_comments=strip_inline_comments,
+                   strip_section_whitespace=strip_section_whitespace,
+               )
+       
+               # Call constructor with pre-parsed sections and sources
+               return cls(path=fspath, _sections=sections_data, _sources=sources)
+       
+    1:     def lineof(self, section: str, name: str | None = None) -> int | None:
+    4:         lineno = self._sources.get((section, name))
+    4:         return None if lineno is None else lineno + 1
+       
+    2:     @overload
+    5:     def get(
+               self,
+    1:         section: str,
+    1:         name: str,
+    1:     ) -> str | None: ...
+       
+    2:     @overload
+    6:     def get(
+               self,
+    1:         section: str,
+    1:         name: str,
+    1:         convert: Callable[[str], _T],
+    1:     ) -> _T | None: ...
+       
+    2:     @overload
+    7:     def get(
+               self,
+    1:         section: str,
+    1:         name: str,
+    1:         default: None,
+    1:         convert: Callable[[str], _T],
+    1:     ) -> _T | None: ...
+       
+    2:     @overload
+    7:     def get(
+    5:         self, section: str, name: str, default: _D, convert: None = None
+    1:     ) -> str | _D: ...
+       
+    2:     @overload
+    7:     def get(
+               self,
+    1:         section: str,
+    1:         name: str,
+    1:         default: _D,
+    1:         convert: Callable[[str], _T],
+    1:     ) -> _T | _D: ...
+       
+    6:     def get(  # type: ignore
+               self,
+    1:         section: str,
+    1:         name: str,
+    2:         default: _D | None = None,
+    2:         convert: Callable[[str], _T] | None = None,
+    1:     ) -> _D | _T | str | None:
+               try:
+                   value: str = self.sections[section][name]
+               except KeyError:
+                   return default
+               else:
+                   if convert is not None:
+                       return convert(value)
+                   else:
+                       return value
+       
+    1:     def __getitem__(self, name: str) -> SectionWrapper:
+    1:         if name not in self.sections:
+                   raise KeyError(name)
+    1:         return SectionWrapper(self, name)
+       
+    1:     def __iter__(self) -> Iterator[SectionWrapper]:
+               for name in sorted(self.sections, key=self.lineof):  # type: ignore
+                   yield SectionWrapper(self, name)
+       
+    1:     def __contains__(self, arg: str) -> bool:
+    1:         return arg in self.sections

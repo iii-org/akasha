@@ -1,0 +1,14 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+       
+    1: from .._models import BaseModel
+    1: from .bulk_delete_evaluator_failed_item import BulkDeleteEvaluatorFailedItem
+       
+    1: __all__ = ["BulkDeleteEvaluatorsResponse"]
+       
+       
+    2: class BulkDeleteEvaluatorsResponse(BaseModel):
+    1:     failed: Optional[List[BulkDeleteEvaluatorFailedItem]] = None
+       
+    1:     succeeded: Optional[List[str]] = None

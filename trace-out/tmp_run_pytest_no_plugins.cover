@@ -1,0 +1,10 @@
+    1: import os
+    1: import sys
+       
+    1: os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+       
+    1: import pytest
+       
+       
+    1: if __name__ == "__main__":
+    1:     raise SystemExit(pytest.main(sys.argv[1:]))

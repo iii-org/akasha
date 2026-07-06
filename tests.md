@@ -137,7 +137,7 @@
 
 1. **建立虛擬環境**:
    ```bash
-   uv venv --python 3.10
+   uv venv --python 3.11
    source .venv/bin/activate  # 或您的環境路徑
    ```
 
@@ -181,7 +181,8 @@ pytest tests/test_api_stability.py -s
   - [ ] **基礎文件**: 1-5 頁的 `.txt` 或 `.pdf` (RAG 基本測試)。
   - [ ] **結構化數據**: 一個簡單的 `.json` 檔案。
 - **環境設定**:
-- [ ] 安裝 `requirements-light.txt` 內的依賴（已包含 `bert-score` 以支援 eval 測試）。
+- [ ] 使用 `uv pip install -e ".[light,dev]"` 建立 light 測試環境。
+- [ ] 若需要純 requirements 安裝，使用由 `pyproject.toml` 同步產生的 `requirements-light.txt`；其中不包含 `bert-score` 與 `pytest*`，但仍包含 `chromadb`。
 
 ### 6.2 [Full] 版準備事項
 **需要 GPU 算力、較大磁碟空間，包含所有本地推理功能。**
@@ -194,7 +195,8 @@ pytest tests/test_api_stability.py -s
   - [ ] **深度文件**: 超過 20 頁的 `.pdf` 或 `.docx` (壓力測試)。
   - [ ] **多模態素材**: 影像檔 `.jpg`, `.png` (Vision 測試)。
 - **環境與模型**:
-  - [ ] 安裝 `requirements.txt` (包含 torch, llama-cpp-python 等重型依賴)。
+  - [ ] 使用 `uv pip install -e ".[full,dev]"` 建立 full 測試環境。
+  - [ ] 若需要純 requirements 安裝，使用由 `pyproject.toml` 同步產生的 `requirements.txt` (包含 torch, llama-cpp-python 等重型依賴)。
   - [ ] **地端模型**: 準備 `.gguf` 或 `GPTQ` 模型檔，並記下存放路徑。
   - [ ] **向量庫設定**: 確保具備磁碟寫入權限，用於 ChromaDB 數據持久化測試。
 

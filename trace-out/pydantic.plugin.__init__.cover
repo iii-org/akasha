@@ -1,0 +1,193 @@
+    1: """!!! abstract "Usage Documentation"
+           [Build a Plugin](../concepts/plugins.md#build-a-plugin)
+       
+       Plugin interface for Pydantic plugins, and related types.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Any, Callable, Literal, NamedTuple
+       
+    1: from pydantic_core import CoreConfig, CoreSchema, ValidationError
+    1: from typing_extensions import Protocol, TypeAlias
+       
+    1: from pydantic.config import ExtraValues
+       
+    1: __all__ = (
+           'PydanticPluginProtocol',
+           'BaseValidateHandlerProtocol',
+           'ValidatePythonHandlerProtocol',
+           'ValidateJsonHandlerProtocol',
+           'ValidateStringsHandlerProtocol',
+           'NewSchemaReturns',
+           'SchemaTypePath',
+           'SchemaKind',
+       )
+       
+    1: NewSchemaReturns: TypeAlias = 'tuple[ValidatePythonHandlerProtocol | None, ValidateJsonHandlerProtocol | None, ValidateStringsHandlerProtocol | None]'
+       
+       
+    2: class SchemaTypePath(NamedTuple):
+    1:     """Path defining where `schema_type` was defined, or where `TypeAdapter` was called."""
+       
+    1:     module: str
+    1:     name: str
+       
+       
+    1: SchemaKind: TypeAlias = Literal['BaseModel', 'TypeAdapter', 'dataclass', 'create_model', 'validate_call']
+       
+       
+    2: class PydanticPluginProtocol(Protocol):
+    1:     """Protocol defining the interface for Pydantic plugins."""
+       
+    1:     def new_schema_validator(
+               self,
+               schema: CoreSchema,
+               schema_type: Any,
+               schema_type_path: SchemaTypePath,
+               schema_kind: SchemaKind,
+               config: CoreConfig | None,
+               plugin_settings: dict[str, object],
+           ) -> tuple[
+               ValidatePythonHandlerProtocol | None, ValidateJsonHandlerProtocol | None, ValidateStringsHandlerProtocol | None
+           ]:
+               """This method is called for each plugin every time a new [`SchemaValidator`][pydantic_core.SchemaValidator]
+               is created.
+       
+               It should return an event handler for each of the three validation methods, or `None` if the plugin does not
+               implement that method.
+       
+               Args:
+                   schema: The schema to validate against.
+                   schema_type: The original type which the schema was created from, e.g. the model class.
+                   schema_type_path: Path defining where `schema_type` was defined, or where `TypeAdapter` was called.
+                   schema_kind: The kind of schema to validate against.
+                   config: The config to use for validation.
+                   plugin_settings: Any plugin settings.
+       
+               Returns:
+                   A tuple of optional event handlers for each of the three validation methods -
+                       `validate_python`, `validate_json`, `validate_strings`.
+               """
+               raise NotImplementedError('Pydantic plugins should implement `new_schema_validator`.')
+       
+       
+    2: class BaseValidateHandlerProtocol(Protocol):
+    1:     """Base class for plugin callbacks protocols.
+       
+           You shouldn't implement this protocol directly, instead use one of the subclasses with adds the correctly
+           typed `on_error` method.
+           """
+       
+    1:     on_enter: Callable[..., None]
+    1:     """`on_enter` is changed to be more specific on all subclasses"""
+       
+    1:     def on_success(self, result: Any) -> None:
+               """Callback to be notified of successful validation.
+       
+               Args:
+                   result: The result of the validation.
+               """
+               return
+       
+    1:     def on_error(self, error: ValidationError) -> None:
+               """Callback to be notified of validation errors.
+       
+               Args:
+                   error: The validation error.
+               """
+               return
+       
+    1:     def on_exception(self, exception: Exception) -> None:
+               """Callback to be notified of validation exceptions.
+       
+               Args:
+                   exception: The exception raised during validation.
+               """
+               return
+       
+       
+    2: class ValidatePythonHandlerProtocol(BaseValidateHandlerProtocol, Protocol):
+    1:     """Event handler for `SchemaValidator.validate_python`."""
+       
+    1:     def on_enter(
+               self,
+               input: Any,
+               *,
+    1:         strict: bool | None = None,
+    1:         extra: ExtraValues | None = None,
+    1:         from_attributes: bool | None = None,
+    1:         context: Any | None = None,
+    1:         self_instance: Any | None = None,
+    1:         by_alias: bool | None = None,
+    1:         by_name: bool | None = None,
+           ) -> None:
+               """Callback to be notified of validation start, and create an instance of the event handler.
+       
+               Args:
+                   input: The input to be validated.
+                   strict: Whether to validate the object in strict mode.
+                   extra: Whether to ignore, allow, or forbid extra data during model validation.
+                   from_attributes: Whether to validate objects as inputs by extracting attributes.
+                   context: The context to use for validation, this is passed to functional validators.
+                   self_instance: An instance of a model to set attributes on from validation, this is used when running
+                       validation from the `__init__` method of a model.
+                   by_alias: Whether to use the field's alias to match the input data to an attribute.
+                   by_name: Whether to use the field's name to match the input data to an attribute.
+               """
+       
+       
+    2: class ValidateJsonHandlerProtocol(BaseValidateHandlerProtocol, Protocol):
+    1:     """Event handler for `SchemaValidator.validate_json`."""
+       
+    1:     def on_enter(
+               self,
+               input: str | bytes | bytearray,
+               *,
+    1:         strict: bool | None = None,
+    1:         extra: ExtraValues | None = None,
+    1:         context: Any | None = None,
+    1:         self_instance: Any | None = None,
+    1:         by_alias: bool | None = None,
+    1:         by_name: bool | None = None,
+           ) -> None:
+               """Callback to be notified of validation start, and create an instance of the event handler.
+       
+               Args:
+                   input: The JSON data to be validated.
+                   strict: Whether to validate the object in strict mode.
+                   extra: Whether to ignore, allow, or forbid extra data during model validation.
+                   context: The context to use for validation, this is passed to functional validators.
+                   self_instance: An instance of a model to set attributes on from validation, this is used when running
+                       validation from the `__init__` method of a model.
+                   by_alias: Whether to use the field's alias to match the input data to an attribute.
+                   by_name: Whether to use the field's name to match the input data to an attribute.
+               """
+       
+       
+    1: StringInput: TypeAlias = 'dict[str, StringInput]'
+       
+       
+    2: class ValidateStringsHandlerProtocol(BaseValidateHandlerProtocol, Protocol):
+    1:     """Event handler for `SchemaValidator.validate_strings`."""
+       
+    1:     def on_enter(
+               self,
+               input: StringInput,
+               *,
+    1:         strict: bool | None = None,
+    1:         extra: ExtraValues | None = None,
+    1:         context: Any | None = None,
+    1:         by_alias: bool | None = None,
+    1:         by_name: bool | None = None,
+           ) -> None:
+               """Callback to be notified of validation start, and create an instance of the event handler.
+       
+               Args:
+                   input: The string data to be validated.
+                   strict: Whether to validate the object in strict mode.
+                   extra: Whether to ignore, allow, or forbid extra data during model validation.
+                   context: The context to use for validation, this is passed to functional validators.
+                   by_alias: Whether to use the field's alias to match the input data to an attribute.
+                   by_name: Whether to use the field's name to match the input data to an attribute.
+               """

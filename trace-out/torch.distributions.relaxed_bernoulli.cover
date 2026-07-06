@@ -1,0 +1,174 @@
+       # mypy: allow-untyped-defs
+    1: from typing import Optional, Union
+       
+    1: import torch
+    1: from torch import Tensor
+    1: from torch.distributions import constraints
+    1: from torch.distributions.distribution import Distribution
+    1: from torch.distributions.transformed_distribution import TransformedDistribution
+    1: from torch.distributions.transforms import SigmoidTransform
+    1: from torch.distributions.utils import (
+           broadcast_all,
+           clamp_probs,
+           lazy_property,
+           logits_to_probs,
+           probs_to_logits,
+       )
+    1: from torch.types import _Number, _size, Number
+       
+       
+    1: __all__ = ["LogitRelaxedBernoulli", "RelaxedBernoulli"]
+       
+       
+    2: class LogitRelaxedBernoulli(Distribution):
+    1:     r"""
+           Creates a LogitRelaxedBernoulli distribution parameterized by :attr:`probs`
+           or :attr:`logits` (but not both), which is the logit of a RelaxedBernoulli
+           distribution.
+       
+           Samples are logits of values in (0, 1). See [1] for more details.
+       
+           Args:
+               temperature (Tensor): relaxation temperature
+               probs (Number, Tensor): the probability of sampling `1`
+               logits (Number, Tensor): the log-odds of sampling `1`
+       
+           [1] The Concrete Distribution: A Continuous Relaxation of Discrete Random
+           Variables (Maddison et al., 2017)
+       
+           [2] Categorical Reparametrization with Gumbel-Softmax
+           (Jang et al., 2017)
+           """
+       
+           # pyrefly: ignore [bad-override]
+    1:     arg_constraints = {"probs": constraints.unit_interval, "logits": constraints.real}
+    1:     support = constraints.real
+       
+    6:     def __init__(
+               self,
+    1:         temperature: Tensor,
+    2:         probs: Optional[Union[Tensor, Number]] = None,
+    2:         logits: Optional[Union[Tensor, Number]] = None,
+    2:         validate_args: Optional[bool] = None,
+    1:     ) -> None:
+               self.temperature = temperature
+               if (probs is None) == (logits is None):
+                   raise ValueError(
+                       "Either `probs` or `logits` must be specified, but not both."
+                   )
+               if probs is not None:
+                   is_scalar = isinstance(probs, _Number)
+                   # pyrefly: ignore [read-only]
+                   (self.probs,) = broadcast_all(probs)
+               else:
+                   assert logits is not None  # helps mypy
+                   is_scalar = isinstance(logits, _Number)
+                   # pyrefly: ignore [read-only]
+                   (self.logits,) = broadcast_all(logits)
+               self._param = self.probs if probs is not None else self.logits
+               if is_scalar:
+                   batch_shape = torch.Size()
+               else:
+                   batch_shape = self._param.size()
+               super().__init__(batch_shape, validate_args=validate_args)
+       
+    1:     def expand(self, batch_shape, _instance=None):
+               new = self._get_checked_instance(LogitRelaxedBernoulli, _instance)
+               batch_shape = torch.Size(batch_shape)
+               new.temperature = self.temperature
+               if "probs" in self.__dict__:
+                   new.probs = self.probs.expand(batch_shape)
+                   new._param = new.probs
+               if "logits" in self.__dict__:
+                   new.logits = self.logits.expand(batch_shape)
+                   new._param = new.logits
+               super(LogitRelaxedBernoulli, new).__init__(batch_shape, validate_args=False)
+               new._validate_args = self._validate_args
+               return new
+       
+    1:     def _new(self, *args, **kwargs):
+               return self._param.new(*args, **kwargs)
+       
+    2:     @lazy_property
+    2:     def logits(self) -> Tensor:
+               return probs_to_logits(self.probs, is_binary=True)
+       
+    2:     @lazy_property
+    2:     def probs(self) -> Tensor:
+               return logits_to_probs(self.logits, is_binary=True)
+       
+    2:     @property
+    2:     def param_shape(self) -> torch.Size:
+               return self._param.size()
+       
+    1:     def rsample(self, sample_shape: _size = torch.Size()) -> Tensor:
+               shape = self._extended_shape(sample_shape)
+               probs = clamp_probs(self.probs.expand(shape))
+               uniforms = clamp_probs(
+                   torch.rand(shape, dtype=probs.dtype, device=probs.device)
+               )
+               return (
+                   uniforms.log() - (-uniforms).log1p() + probs.log() - (-probs).log1p()
+               ) / self.temperature
+       
+    1:     def log_prob(self, value):
+               if self._validate_args:
+                   self._validate_sample(value)
+               logits, value = broadcast_all(self.logits, value)
+               diff = logits - value.mul(self.temperature)
+               return self.temperature.log() + diff - 2 * diff.exp().log1p()
+       
+       
+    2: class RelaxedBernoulli(TransformedDistribution):
+    1:     r"""
+           Creates a RelaxedBernoulli distribution, parametrized by
+           :attr:`temperature`, and either :attr:`probs` or :attr:`logits`
+           (but not both). This is a relaxed version of the `Bernoulli` distribution,
+           so the values are in (0, 1), and has reparametrizable samples.
+       
+           Example::
+       
+               >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+               >>> m = RelaxedBernoulli(torch.tensor([2.2]),
+               ...                      torch.tensor([0.1, 0.2, 0.3, 0.99]))
+               >>> m.sample()
+               tensor([ 0.2951,  0.3442,  0.8918,  0.9021])
+       
+           Args:
+               temperature (Tensor): relaxation temperature
+               probs (Number, Tensor): the probability of sampling `1`
+               logits (Number, Tensor): the log-odds of sampling `1`
+           """
+       
+    1:     arg_constraints = {"probs": constraints.unit_interval, "logits": constraints.real}
+           # pyrefly: ignore [bad-override]
+    1:     support = constraints.unit_interval
+    1:     has_rsample = True
+           # pyrefly: ignore [bad-override]
+    1:     base_dist: LogitRelaxedBernoulli
+       
+    6:     def __init__(
+               self,
+    1:         temperature: Tensor,
+    2:         probs: Optional[Union[Tensor, Number]] = None,
+    2:         logits: Optional[Union[Tensor, Number]] = None,
+    2:         validate_args: Optional[bool] = None,
+    1:     ) -> None:
+               base_dist = LogitRelaxedBernoulli(temperature, probs, logits)
+               super().__init__(base_dist, SigmoidTransform(), validate_args=validate_args)
+       
+    1:     def expand(self, batch_shape, _instance=None):
+               new = self._get_checked_instance(RelaxedBernoulli, _instance)
+               return super().expand(batch_shape, _instance=new)
+       
+    2:     @property
+    2:     def temperature(self) -> Tensor:
+               return self.base_dist.temperature
+       
+    2:     @property
+    2:     def logits(self) -> Tensor:
+               return self.base_dist.logits
+       
+    2:     @property
+    2:     def probs(self) -> Tensor:
+               return self.base_dist.probs

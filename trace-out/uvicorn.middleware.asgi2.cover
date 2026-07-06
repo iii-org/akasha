@@ -1,0 +1,15 @@
+    1: from uvicorn._types import (
+           ASGI2Application,
+           ASGIReceiveCallable,
+           ASGISendCallable,
+           Scope,
+       )
+       
+       
+    2: class ASGI2Middleware:
+    1:     def __init__(self, app: "ASGI2Application"):
+               self.app = app
+       
+    1:     async def __call__(self, scope: "Scope", receive: "ASGIReceiveCallable", send: "ASGISendCallable") -> None:
+               instance = self.app(scope)
+               await instance(receive, send)

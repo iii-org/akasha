@@ -1,0 +1,88 @@
+       # mypy: allow-untyped-defs
+    1: from typing import Optional, Union
+       
+    1: import torch
+    1: from torch import Tensor
+    1: from torch.distributions import constraints
+    1: from torch.distributions.exp_family import ExponentialFamily
+    1: from torch.distributions.utils import broadcast_all
+    1: from torch.types import _Number, Number
+       
+       
+    1: __all__ = ["Poisson"]
+       
+       
+    2: class Poisson(ExponentialFamily):
+    1:     r"""
+           Creates a Poisson distribution parameterized by :attr:`rate`, the rate parameter.
+       
+           Samples are nonnegative integers, with a pmf given by
+       
+           .. math::
+             \mathrm{rate}^k \frac{e^{-\mathrm{rate}}}{k!}
+       
+           Example::
+       
+               >>> # xdoctest: +SKIP("poisson_cpu not implemented for 'Long'")
+               >>> m = Poisson(torch.tensor([4]))
+               >>> m.sample()
+               tensor([ 3.])
+       
+           Args:
+               rate (Number, Tensor): the rate parameter
+           """
+       
+           # pyrefly: ignore [bad-override]
+    1:     arg_constraints = {"rate": constraints.nonnegative}
+    1:     support = constraints.nonnegative_integer
+       
+    2:     @property
+    2:     def mean(self) -> Tensor:
+               return self.rate
+       
+    2:     @property
+    2:     def mode(self) -> Tensor:
+               return self.rate.floor()
+       
+    2:     @property
+    2:     def variance(self) -> Tensor:
+               return self.rate
+       
+    4:     def __init__(
+               self,
+    1:         rate: Union[Tensor, Number],
+    2:         validate_args: Optional[bool] = None,
+    1:     ) -> None:
+               (self.rate,) = broadcast_all(rate)
+               if isinstance(rate, _Number):
+                   batch_shape = torch.Size()
+               else:
+                   batch_shape = self.rate.size()
+               super().__init__(batch_shape, validate_args=validate_args)
+       
+    1:     def expand(self, batch_shape, _instance=None):
+               new = self._get_checked_instance(Poisson, _instance)
+               batch_shape = torch.Size(batch_shape)
+               new.rate = self.rate.expand(batch_shape)
+               super(Poisson, new).__init__(batch_shape, validate_args=False)
+               new._validate_args = self._validate_args
+               return new
+       
+    1:     def sample(self, sample_shape=torch.Size()):
+               shape = self._extended_shape(sample_shape)
+               with torch.no_grad():
+                   return torch.poisson(self.rate.expand(shape))
+       
+    1:     def log_prob(self, value):
+               if self._validate_args:
+                   self._validate_sample(value)
+               rate, value = broadcast_all(self.rate, value)
+               return value.xlogy(rate) - rate - (value + 1).lgamma()
+       
+    2:     @property
+    2:     def _natural_params(self) -> tuple[Tensor]:
+               return (torch.log(self.rate),)
+       
+           # pyrefly: ignore [bad-override]
+    1:     def _log_normalizer(self, x):
+               return torch.exp(x)

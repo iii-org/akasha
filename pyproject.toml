@@ -8,7 +8,7 @@ version = "1.1"
 description = "document QA(RAG) package using langchain and chromadb"
 readme = "README.md"
 authors = [{ name = "chih chuan chang", email = "ccchang@iii.org.tw" }]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.11,<3.13"
 
 # 核心相依（環境標記依照原本的平台分流）
 dependencies = [
@@ -47,25 +47,6 @@ dependencies = [
   "mlflow",
   "json_repair",
   "python-dotenv",
-
-  # 重度相依 (預設安裝，除非指定 [light] )
-  "langchain-huggingface>=0.1.2; extra != 'light'",
-  "onnxruntime<=1.20.0; extra != 'light'",
-  "sentence-transformers>=3.1.1; extra != 'light'",
-  "transformers>=4.50.0; extra != 'light'",
-  "accelerate>=1.7.0; extra != 'light'",
-  "bert-score==0.3.13; extra != 'light'",
-  "tokenizers>=0.19.1; extra != 'light'",
-  "sentencepiece; extra != 'light'",
-
-  # 各平台 Torch/torchvision
-  "torch==2.2.0; platform_system == 'Windows' and extra != 'light'",
-  "torch==2.0.1; platform_system == 'Darwin' and extra != 'light'",
-  "torch==2.2.0; platform_system == 'Linux' and extra != 'light'",
-
-  "torchvision==0.17.0; platform_system == 'Windows' and extra != 'light'",
-  "torchvision==0.15.2; platform_system == 'Darwin' and extra != 'light'",
-  "torchvision==0.17.0; platform_system == 'Linux' and extra != 'light'",
 ]
 
 [project.optional-dependencies]
@@ -90,7 +71,7 @@ full = [
 ]
 llama-cpp = ["llama-cpp-python>=0.3.8"]
 peft = ["auto-gptq==0.3.1"]
-dev = ["pytest", "pytest-cov"]
+dev = ["pytest", "pytest-asyncio", "pytest-cov"]
 
 [project.scripts]
 akasha = "cli.glue:akasha"

@@ -1,0 +1,31 @@
+    1: from __future__ import annotations
+       
+    1: from typing import NoReturn, TypeVar
+       
+    1: from attrs import define as _define, frozen as _frozen
+       
+    1: _T = TypeVar("_T")
+       
+       
+    1: def define(cls: type[_T]) -> type[_T]:  # pragma: no cover
+           cls.__init_subclass__ = _do_not_subclass
+           return _define(cls)
+       
+       
+    1: def frozen(cls: type[_T]) -> type[_T]:
+   16:     cls.__init_subclass__ = _do_not_subclass
+   16:     return _frozen(cls)
+       
+       
+    2: class UnsupportedSubclassing(Exception):
+    1:     def __str__(self):
+               return (
+                   "Subclassing is not part of referencing's public API. "
+                   "If no other suitable API exists for what you're trying to do, "
+                   "feel free to file an issue asking for one."
+               )
+       
+       
+    2: @staticmethod
+    2: def _do_not_subclass() -> NoReturn:  # pragma: no cover
+           raise UnsupportedSubclassing()

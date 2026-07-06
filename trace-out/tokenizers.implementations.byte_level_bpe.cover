@@ -1,0 +1,122 @@
+    1: from typing import Dict, Iterator, List, Optional, Tuple, Union
+       
+    1: from tokenizers import AddedToken, Tokenizer, decoders, pre_tokenizers, processors, trainers
+    1: from tokenizers.models import BPE
+    1: from tokenizers.normalizers import Lowercase, Sequence, unicode_normalizer_from_str
+       
+    1: from .base_tokenizer import BaseTokenizer
+       
+       
+    2: class ByteLevelBPETokenizer(BaseTokenizer):
+    1:     """ByteLevelBPETokenizer
+       
+           Represents a Byte-level BPE as introduced by OpenAI with their GPT-2 model
+           """
+       
+   10:     def __init__(
+               self,
+    2:         vocab: Optional[Union[str, Dict[str, int]]] = None,
+    2:         merges: Optional[Union[str, List[Tuple[str, str]]]] = None,
+    2:         add_prefix_space: bool = False,
+    2:         lowercase: bool = False,
+    2:         dropout: Optional[float] = None,
+    2:         unicode_normalizer: Optional[str] = None,
+    2:         continuing_subword_prefix: Optional[str] = None,
+    2:         end_of_word_suffix: Optional[str] = None,
+    2:         trim_offsets: bool = False,
+           ):
+               if vocab is not None and merges is not None:
+                   tokenizer = Tokenizer(
+                       BPE(
+                           vocab,
+                           merges,
+                           dropout=dropout,
+                           continuing_subword_prefix=continuing_subword_prefix or "",
+                           end_of_word_suffix=end_of_word_suffix or "",
+                       )
+                   )
+               else:
+                   tokenizer = Tokenizer(BPE())
+       
+               # Check for Unicode normalization first (before everything else)
+               normalizers = []
+       
+               if unicode_normalizer:
+                   normalizers += [unicode_normalizer_from_str(unicode_normalizer)]
+       
+               if lowercase:
+                   normalizers += [Lowercase()]
+       
+               # Create the normalizer structure
+               if len(normalizers) > 0:
+                   if len(normalizers) > 1:
+                       tokenizer.normalizer = Sequence(normalizers)
+                   else:
+                       tokenizer.normalizer = normalizers[0]
+       
+               tokenizer.pre_tokenizer = pre_tokenizers.ByteLevel(add_prefix_space=add_prefix_space)
+               tokenizer.decoder = decoders.ByteLevel()
+               tokenizer.post_processor = processors.ByteLevel(trim_offsets=trim_offsets)
+       
+               parameters = {
+                   "model": "ByteLevelBPE",
+                   "add_prefix_space": add_prefix_space,
+                   "lowercase": lowercase,
+                   "dropout": dropout,
+                   "unicode_normalizer": unicode_normalizer,
+                   "continuing_subword_prefix": continuing_subword_prefix,
+                   "end_of_word_suffix": end_of_word_suffix,
+                   "trim_offsets": trim_offsets,
+               }
+       
+               super().__init__(tokenizer, parameters)
+       
+    2:     @staticmethod
+    2:     def from_file(vocab_filename: str, merges_filename: str, **kwargs):
+               vocab, merges = BPE.read_file(vocab_filename, merges_filename)
+               return ByteLevelBPETokenizer(vocab, merges, **kwargs)
+       
+    6:     def train(
+               self,
+    1:         files: Union[str, List[str]],
+    2:         vocab_size: int = 30000,
+    2:         min_frequency: int = 2,
+    2:         show_progress: bool = True,
+    2:         special_tokens: List[Union[str, AddedToken]] = [],
+           ):
+               """Train the model using the given files"""
+       
+               trainer = trainers.BpeTrainer(
+                   vocab_size=vocab_size,
+                   min_frequency=min_frequency,
+                   show_progress=show_progress,
+                   special_tokens=special_tokens,
+                   initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+               )
+               if isinstance(files, str):
+                   files = [files]
+               self._tokenizer.train(files, trainer=trainer)
+       
+    7:     def train_from_iterator(
+               self,
+    1:         iterator: Union[Iterator[str], Iterator[Iterator[str]]],
+    2:         vocab_size: int = 30000,
+    2:         min_frequency: int = 2,
+    2:         show_progress: bool = True,
+    2:         special_tokens: List[Union[str, AddedToken]] = [],
+    2:         length: Optional[int] = None,
+           ):
+               """Train the model using the given iterator"""
+       
+               trainer = trainers.BpeTrainer(
+                   vocab_size=vocab_size,
+                   min_frequency=min_frequency,
+                   show_progress=show_progress,
+                   special_tokens=special_tokens,
+                   initial_alphabet=pre_tokenizers.ByteLevel.alphabet(),
+               )
+               self._tokenizer.train_from_iterator(
+                   iterator,
+                   trainer=trainer,
+                   length=length,
+               )

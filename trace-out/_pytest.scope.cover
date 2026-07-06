@@ -1,0 +1,91 @@
+    1: """
+       Scope definition and related utilities.
+       
+       Those are defined here, instead of in the 'fixtures' module because
+       their use is spread across many other pytest modules, and centralizing it in 'fixtures'
+       would cause circular references.
+       
+       Also this makes the module light to import, as it should.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from enum import Enum
+    1: from functools import total_ordering
+    1: from typing import Literal
+       
+       
+    1: ScopeName = Literal["session", "package", "module", "class", "function"]
+       
+       
+    3: @total_ordering
+    2: class Scope(Enum):
+    1:     """
+           Represents one of the possible fixture scopes in pytest.
+       
+           Scopes are ordered from lower to higher, that is:
+       
+                     ->>> higher ->>>
+       
+           Function < Class < Module < Package < Session
+       
+                     <<<- lower  <<<-
+           """
+       
+           # Scopes need to be listed from lower to higher.
+    1:     Function = "function"
+    1:     Class = "class"
+    1:     Module = "module"
+    1:     Package = "package"
+    1:     Session = "session"
+       
+    1:     def next_lower(self) -> Scope:
+               """Return the next lower scope."""
+    4:         index = _SCOPE_INDICES[self]
+    4:         if index == 0:
+                   raise ValueError(f"{self} is the lower-most scope")
+    4:         return _ALL_SCOPES[index - 1]
+       
+    1:     def next_higher(self) -> Scope:
+               """Return the next higher scope."""
+               index = _SCOPE_INDICES[self]
+               if index == len(_SCOPE_INDICES) - 1:
+                   raise ValueError(f"{self} is the upper-most scope")
+               return _ALL_SCOPES[index + 1]
+       
+    1:     def __lt__(self, other: Scope) -> bool:
+               self_index = _SCOPE_INDICES[self]
+               other_index = _SCOPE_INDICES[other]
+               return self_index < other_index
+       
+    2:     @classmethod
+    2:     def from_user(
+    1:         cls, scope_name: ScopeName, descr: str, where: str | None = None
+           ) -> Scope:
+               """
+               Given a scope name from the user, return the equivalent Scope enum. Should be used
+               whenever we want to convert a user provided scope name to its enum object.
+       
+               If the scope name is invalid, construct a user friendly message and call pytest.fail.
+               """
+   19:         from _pytest.outcomes import fail
+       
+   19:         try:
+                   # Holding this reference is necessary for mypy at the moment.
+   19:             scope = Scope(scope_name)
+               except ValueError:
+                   fail(
+                       "{} {}got an unexpected scope value '{}'".format(
+                           descr, f"from {where} " if where else "", scope_name
+                       ),
+                       pytrace=False,
+                   )
+   19:         return scope
+       
+       
+    1: _ALL_SCOPES = list(Scope)
+    7: _SCOPE_INDICES = {scope: index for index, scope in enumerate(_ALL_SCOPES)}
+       
+       
+       # Ordered list of scopes which can contain many tests (in practice all except Function).
+    7: HIGH_SCOPES = [x for x in Scope if x is not Scope.Function]

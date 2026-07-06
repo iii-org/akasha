@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = ["ServiceURLResponse"]
+       
+       
+    2: class ServiceURLResponse(BaseModel):
+    1:     token: Optional[str] = None
+       
+    1:     browser_url: Optional[str] = None
+       
+    1:     expires_at: Optional[str] = None
+       
+    1:     service_url: Optional[str] = None

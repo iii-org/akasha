@@ -1,0 +1,62 @@
+    1: """asyncio exceptions."""
+       
+       
+    1: __all__ = ('BrokenBarrierError',
+                  'CancelledError', 'InvalidStateError', 'TimeoutError',
+                  'IncompleteReadError', 'LimitOverrunError',
+                  'SendfileNotAvailableError')
+       
+       
+    2: class CancelledError(BaseException):
+    1:     """The Future or Task was cancelled."""
+       
+       
+    1: TimeoutError = TimeoutError  # make local alias for the standard exception
+       
+       
+    2: class InvalidStateError(Exception):
+    1:     """The operation is not allowed in this state."""
+       
+       
+    2: class SendfileNotAvailableError(RuntimeError):
+    1:     """Sendfile syscall is not available.
+       
+           Raised if OS does not support sendfile syscall for given socket or
+           file type.
+           """
+       
+       
+    2: class IncompleteReadError(EOFError):
+    1:     """
+           Incomplete read error. Attributes:
+       
+           - partial: read bytes string before the end of stream was reached
+           - expected: total number of expected bytes (or None if unknown)
+           """
+    1:     def __init__(self, partial, expected):
+               r_expected = 'undefined' if expected is None else repr(expected)
+               super().__init__(f'{len(partial)} bytes read on a total of '
+                                f'{r_expected} expected bytes')
+               self.partial = partial
+               self.expected = expected
+       
+    1:     def __reduce__(self):
+               return type(self), (self.partial, self.expected)
+       
+       
+    2: class LimitOverrunError(Exception):
+    1:     """Reached the buffer limit while looking for a separator.
+       
+           Attributes:
+           - consumed: total number of to be consumed bytes.
+           """
+    1:     def __init__(self, message, consumed):
+               super().__init__(message)
+               self.consumed = consumed
+       
+    1:     def __reduce__(self):
+               return type(self), (self.args[0], self.consumed)
+       
+       
+    2: class BrokenBarrierError(RuntimeError):
+    1:     """Barrier is broken by barrier.abort() call."""

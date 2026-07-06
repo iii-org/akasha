@@ -1,0 +1,99 @@
+    1: import inspect
+    1: import typing as t
+    1: from functools import WRAPPER_ASSIGNMENTS
+    1: from functools import wraps
+       
+    1: from .utils import _PassArg
+    1: from .utils import pass_eval_context
+       
+    1: if t.TYPE_CHECKING:
+           import typing_extensions as te
+       
+    1: V = t.TypeVar("V")
+       
+       
+    1: def async_variant(normal_func):  # type: ignore
+   12:     def decorator(async_func):  # type: ignore
+   12:         pass_arg = _PassArg.from_obj(normal_func)
+   12:         need_eval_context = pass_arg is None
+       
+   12:         if pass_arg is _PassArg.environment:
+       
+    4:             def is_async(args: t.Any) -> bool:
+                       return t.cast(bool, args[0].is_async)
+       
+               else:
+       
+    8:             def is_async(args: t.Any) -> bool:
+                       return t.cast(bool, args[0].environment.is_async)
+       
+               # Take the doc and annotations from the sync function, but the
+               # name from the async function. Pallets-Sphinx-Themes
+               # build_function_directive expects __wrapped__ to point to the
+               # sync function.
+   12:         async_func_attrs = ("__module__", "__name__", "__qualname__")
+   12:         normal_func_attrs = tuple(set(WRAPPER_ASSIGNMENTS).difference(async_func_attrs))
+       
+   24:         @wraps(normal_func, assigned=normal_func_attrs)
+   24:         @wraps(async_func, assigned=async_func_attrs, updated=())
+   24:         def wrapper(*args, **kwargs):  # type: ignore
+                   b = is_async(args)
+       
+                   if need_eval_context:
+                       args = args[1:]
+       
+                   if b:
+                       return async_func(*args, **kwargs)
+       
+                   return normal_func(*args, **kwargs)
+       
+   12:         if need_eval_context:
+    2:             wrapper = pass_eval_context(wrapper)
+       
+   12:         wrapper.jinja_async_variant = True  # type: ignore[attr-defined]
+   12:         return wrapper
+       
+   12:     return decorator
+       
+       
+    1: _common_primitives = {int, float, bool, str, list, dict, tuple, type(None)}
+       
+       
+    1: async def auto_await(value: t.Union[t.Awaitable["V"], "V"]) -> "V":
+           # Avoid a costly call to isawaitable
+           if type(value) in _common_primitives:
+               return t.cast("V", value)
+       
+           if inspect.isawaitable(value):
+               return await t.cast("t.Awaitable[V]", value)
+       
+           return value
+       
+       
+    2: class _IteratorToAsyncIterator(t.Generic[V]):
+    1:     def __init__(self, iterator: "t.Iterator[V]"):
+               self._iterator = iterator
+       
+    1:     def __aiter__(self) -> "te.Self":
+               return self
+       
+    1:     async def __anext__(self) -> V:
+               try:
+                   return next(self._iterator)
+               except StopIteration as e:
+                   raise StopAsyncIteration(e.value) from e
+       
+       
+    3: def auto_aiter(
+    1:     iterable: "t.Union[t.AsyncIterable[V], t.Iterable[V]]",
+    1: ) -> "t.AsyncIterator[V]":
+           if hasattr(iterable, "__aiter__"):
+               return iterable.__aiter__()
+           else:
+               return _IteratorToAsyncIterator(iter(iterable))
+       
+       
+    3: async def auto_to_list(
+    1:     value: "t.Union[t.AsyncIterable[V], t.Iterable[V]]",
+    1: ) -> t.List["V"]:
+           return [x async for x in auto_aiter(value)]

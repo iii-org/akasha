@@ -1,0 +1,175 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+    1: import fnmatch
+    1: from collections.abc import Callable
+    1: from json import dumps
+       
+    1: from typing_extensions import deprecated
+       
+    1: from opentelemetry.attributes import BoundedAttributes
+    1: from opentelemetry.util.types import (  # TODO: see if we can remove F401 when using new sphinx version # noqa: F401 # pylint: disable=unused-import
+           AnyValue,
+           Attributes,
+           _ExtendedAttributes,
+       )
+       
+       
+    2: class InstrumentationInfo:
+    1:     """Immutable information about an instrumentation library module.
+       
+           See `opentelemetry.trace.TracerProvider.get_tracer` for the meaning of these
+           properties.
+           """
+       
+    1:     __slots__ = ("_name", "_version", "_schema_url")
+       
+    3:     @deprecated(
+    1:         "You should use InstrumentationScope. Deprecated since version 1.11.1."
+           )
+    5:     def __init__(
+               self,
+    1:         name: str,
+    2:         version: str | None = None,
+    2:         schema_url: str | None = None,
+           ):
+               self._name = name
+               self._version = version
+               if schema_url is None:
+                   schema_url = ""
+               self._schema_url = schema_url
+       
+    1:     def __repr__(self):
+               return f"{type(self).__name__}({self._name}, {self._version}, {self._schema_url})"
+       
+    1:     def __hash__(self):
+               return hash((self._name, self._version, self._schema_url))
+       
+    1:     def __eq__(self, value):
+               return type(value) is type(self) and (
+                   self._name,
+                   self._version,
+                   self._schema_url,
+               ) == (value._name, value._version, value._schema_url)
+       
+    1:     def __lt__(self, value):
+               if type(value) is not type(self):
+                   return NotImplemented
+               return (self._name, self._version, self._schema_url) < (
+                   value._name,
+                   value._version,
+                   value._schema_url,
+               )
+       
+    2:     @property
+    2:     def schema_url(self) -> str | None:
+               return self._schema_url
+       
+    2:     @property
+    2:     def version(self) -> str | None:
+               return self._version
+       
+    2:     @property
+    2:     def name(self) -> str:
+               return self._name
+       
+       
+    2: class InstrumentationScope:
+    1:     """A logical unit of the application code with which the emitted telemetry can be
+           associated.
+       
+           See `opentelemetry.trace.TracerProvider.get_tracer` for the meaning of these
+           properties.
+           """
+       
+    1:     __slots__ = ("_name", "_version", "_schema_url", "_attributes")
+       
+    6:     def __init__(
+               self,
+    1:         name: str,
+    2:         version: str | None = None,
+    2:         schema_url: str | None = None,
+    2:         attributes: _ExtendedAttributes | None = None,
+    1:     ) -> None:
+               self._name = name
+               self._version = version
+               if schema_url is None:
+                   schema_url = ""
+               self._schema_url = schema_url
+               self._attributes = BoundedAttributes(attributes=attributes)
+       
+    1:     def __repr__(self) -> str:
+               return f"{type(self).__name__}({self._name}, {self._version}, {self._schema_url}, {self._attributes})"
+       
+    1:     def __hash__(self) -> int:
+               return hash((self._name, self._version, self._schema_url))
+       
+    1:     def __eq__(self, value: object) -> bool:
+               if not isinstance(value, InstrumentationScope):
+                   return NotImplemented
+               return (
+                   self._name,
+                   self._version,
+                   self._schema_url,
+                   self._attributes,
+               ) == (
+                   value._name,
+                   value._version,
+                   value._schema_url,
+                   value._attributes,
+               )
+       
+    1:     def __lt__(self, value: object) -> bool:
+               if not isinstance(value, InstrumentationScope):
+                   return NotImplemented
+               return (
+                   self._name,
+                   self._version,
+                   self._schema_url,
+                   self._attributes,
+               ) < (
+                   value._name,
+                   value._version,
+                   value._schema_url,
+                   value._attributes,
+               )
+       
+    2:     @property
+    2:     def schema_url(self) -> str | None:
+               return self._schema_url
+       
+    2:     @property
+    2:     def version(self) -> str | None:
+               return self._version
+       
+    2:     @property
+    2:     def name(self) -> str:
+               return self._name
+       
+    2:     @property
+    2:     def attributes(self) -> Attributes:
+               return self._attributes
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "name": self._name,
+                       "version": self._version,
+                       "schema_url": self._schema_url,
+                       "attributes": (
+                           dict(self._attributes) if bool(self._attributes) else None
+                       ),
+                   },
+                   indent=indent,
+               )
+       
+       
+    1: _InstrumentationScopePredicateT = Callable[[InstrumentationScope], bool]
+       
+       
+    3: def _scope_name_matches_glob(
+    1:     glob_pattern: str,
+    1: ) -> _InstrumentationScopePredicateT:
+           def inner(scope: InstrumentationScope) -> bool:
+               return fnmatch.fnmatch(scope.name, glob_pattern)
+       
+           return inner

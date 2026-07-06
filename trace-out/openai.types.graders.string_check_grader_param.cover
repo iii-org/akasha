@@ -1,0 +1,28 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["StringCheckGraderParam"]
+       
+       
+    2: class StringCheckGraderParam(TypedDict, total=False):
+    1:     """
+           A StringCheckGrader object that performs a string comparison between input and reference using a specified operation.
+           """
+       
+    1:     input: Required[str]
+    1:     """The input text. This may include template strings."""
+       
+    1:     name: Required[str]
+    1:     """The name of the grader."""
+       
+    1:     operation: Required[Literal["eq", "ne", "like", "ilike"]]
+    1:     """The string check operation to perform. One of `eq`, `ne`, `like`, or `ilike`."""
+       
+    1:     reference: Required[str]
+    1:     """The reference text. This may include template strings."""
+       
+    1:     type: Required[Literal["string_check"]]
+    1:     """The object type, which is always `string_check`."""

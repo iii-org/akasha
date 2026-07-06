@@ -1,0 +1,36 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: from ..._models import BaseModel
+    1: from .python_grader import PythonGrader
+    1: from .label_model_grader import LabelModelGrader
+    1: from .score_model_grader import ScoreModelGrader
+    1: from .string_check_grader import StringCheckGrader
+    1: from .text_similarity_grader import TextSimilarityGrader
+       
+    1: __all__ = ["MultiGrader", "Graders"]
+       
+    1: Graders: TypeAlias = Union[StringCheckGrader, TextSimilarityGrader, PythonGrader, ScoreModelGrader, LabelModelGrader]
+       
+       
+    2: class MultiGrader(BaseModel):
+    1:     """
+           A MultiGrader object combines the output of multiple graders to produce a single score.
+           """
+       
+    1:     calculate_output: str
+    1:     """A formula to calculate the output based on grader results."""
+       
+    1:     graders: Graders
+    1:     """
+           A StringCheckGrader object that performs a string comparison between input and
+           reference using a specified operation.
+           """
+       
+    1:     name: str
+    1:     """The name of the grader."""
+       
+    1:     type: Literal["multi"]
+    1:     """The object type, which is always `multi`."""

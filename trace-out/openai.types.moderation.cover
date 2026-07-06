@@ -1,0 +1,194 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal
+       
+    1: from pydantic import Field as FieldInfo
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = ["Moderation", "Categories", "CategoryAppliedInputTypes", "CategoryScores"]
+       
+       
+    2: class Categories(BaseModel):
+    1:     """A list of the categories, and whether they are flagged or not."""
+       
+    1:     harassment: bool
+    1:     """
+           Content that expresses, incites, or promotes harassing language towards any
+           target.
+           """
+       
+    1:     harassment_threatening: bool = FieldInfo(alias="harassment/threatening")
+    1:     """
+           Harassment content that also includes violence or serious harm towards any
+           target.
+           """
+       
+    1:     hate: bool
+    1:     """
+           Content that expresses, incites, or promotes hate based on race, gender,
+           ethnicity, religion, nationality, sexual orientation, disability status, or
+           caste. Hateful content aimed at non-protected groups (e.g., chess players) is
+           harassment.
+           """
+       
+    1:     hate_threatening: bool = FieldInfo(alias="hate/threatening")
+    1:     """
+           Hateful content that also includes violence or serious harm towards the targeted
+           group based on race, gender, ethnicity, religion, nationality, sexual
+           orientation, disability status, or caste.
+           """
+       
+    1:     illicit: Optional[bool] = None
+    1:     """
+           Content that includes instructions or advice that facilitate the planning or
+           execution of wrongdoing, or that gives advice or instruction on how to commit
+           illicit acts. For example, "how to shoplift" would fit this category.
+           """
+       
+    1:     illicit_violent: Optional[bool] = FieldInfo(alias="illicit/violent", default=None)
+    1:     """
+           Content that includes instructions or advice that facilitate the planning or
+           execution of wrongdoing that also includes violence, or that gives advice or
+           instruction on the procurement of any weapon.
+           """
+       
+    1:     self_harm: bool = FieldInfo(alias="self-harm")
+    1:     """
+           Content that promotes, encourages, or depicts acts of self-harm, such as
+           suicide, cutting, and eating disorders.
+           """
+       
+    1:     self_harm_instructions: bool = FieldInfo(alias="self-harm/instructions")
+    1:     """
+           Content that encourages performing acts of self-harm, such as suicide, cutting,
+           and eating disorders, or that gives instructions or advice on how to commit such
+           acts.
+           """
+       
+    1:     self_harm_intent: bool = FieldInfo(alias="self-harm/intent")
+    1:     """
+           Content where the speaker expresses that they are engaging or intend to engage
+           in acts of self-harm, such as suicide, cutting, and eating disorders.
+           """
+       
+    1:     sexual: bool
+    1:     """
+           Content meant to arouse sexual excitement, such as the description of sexual
+           activity, or that promotes sexual services (excluding sex education and
+           wellness).
+           """
+       
+    1:     sexual_minors: bool = FieldInfo(alias="sexual/minors")
+    1:     """Sexual content that includes an individual who is under 18 years old."""
+       
+    1:     violence: bool
+    1:     """Content that depicts death, violence, or physical injury."""
+       
+    1:     violence_graphic: bool = FieldInfo(alias="violence/graphic")
+    1:     """Content that depicts death, violence, or physical injury in graphic detail."""
+       
+       
+    2: class CategoryAppliedInputTypes(BaseModel):
+    1:     """
+           A list of the categories along with the input type(s) that the score applies to.
+           """
+       
+    1:     harassment: List[Literal["text"]]
+    1:     """The applied input type(s) for the category 'harassment'."""
+       
+    1:     harassment_threatening: List[Literal["text"]] = FieldInfo(alias="harassment/threatening")
+    1:     """The applied input type(s) for the category 'harassment/threatening'."""
+       
+    1:     hate: List[Literal["text"]]
+    1:     """The applied input type(s) for the category 'hate'."""
+       
+    1:     hate_threatening: List[Literal["text"]] = FieldInfo(alias="hate/threatening")
+    1:     """The applied input type(s) for the category 'hate/threatening'."""
+       
+    1:     illicit: List[Literal["text"]]
+    1:     """The applied input type(s) for the category 'illicit'."""
+       
+    1:     illicit_violent: List[Literal["text"]] = FieldInfo(alias="illicit/violent")
+    1:     """The applied input type(s) for the category 'illicit/violent'."""
+       
+    1:     self_harm: List[Literal["text", "image"]] = FieldInfo(alias="self-harm")
+    1:     """The applied input type(s) for the category 'self-harm'."""
+       
+    1:     self_harm_instructions: List[Literal["text", "image"]] = FieldInfo(alias="self-harm/instructions")
+    1:     """The applied input type(s) for the category 'self-harm/instructions'."""
+       
+    1:     self_harm_intent: List[Literal["text", "image"]] = FieldInfo(alias="self-harm/intent")
+    1:     """The applied input type(s) for the category 'self-harm/intent'."""
+       
+    1:     sexual: List[Literal["text", "image"]]
+    1:     """The applied input type(s) for the category 'sexual'."""
+       
+    1:     sexual_minors: List[Literal["text"]] = FieldInfo(alias="sexual/minors")
+    1:     """The applied input type(s) for the category 'sexual/minors'."""
+       
+    1:     violence: List[Literal["text", "image"]]
+    1:     """The applied input type(s) for the category 'violence'."""
+       
+    1:     violence_graphic: List[Literal["text", "image"]] = FieldInfo(alias="violence/graphic")
+    1:     """The applied input type(s) for the category 'violence/graphic'."""
+       
+       
+    2: class CategoryScores(BaseModel):
+    1:     """A list of the categories along with their scores as predicted by model."""
+       
+    1:     harassment: float
+    1:     """The score for the category 'harassment'."""
+       
+    1:     harassment_threatening: float = FieldInfo(alias="harassment/threatening")
+    1:     """The score for the category 'harassment/threatening'."""
+       
+    1:     hate: float
+    1:     """The score for the category 'hate'."""
+       
+    1:     hate_threatening: float = FieldInfo(alias="hate/threatening")
+    1:     """The score for the category 'hate/threatening'."""
+       
+    1:     illicit: float
+    1:     """The score for the category 'illicit'."""
+       
+    1:     illicit_violent: float = FieldInfo(alias="illicit/violent")
+    1:     """The score for the category 'illicit/violent'."""
+       
+    1:     self_harm: float = FieldInfo(alias="self-harm")
+    1:     """The score for the category 'self-harm'."""
+       
+    1:     self_harm_instructions: float = FieldInfo(alias="self-harm/instructions")
+    1:     """The score for the category 'self-harm/instructions'."""
+       
+    1:     self_harm_intent: float = FieldInfo(alias="self-harm/intent")
+    1:     """The score for the category 'self-harm/intent'."""
+       
+    1:     sexual: float
+    1:     """The score for the category 'sexual'."""
+       
+    1:     sexual_minors: float = FieldInfo(alias="sexual/minors")
+    1:     """The score for the category 'sexual/minors'."""
+       
+    1:     violence: float
+    1:     """The score for the category 'violence'."""
+       
+    1:     violence_graphic: float = FieldInfo(alias="violence/graphic")
+    1:     """The score for the category 'violence/graphic'."""
+       
+       
+    2: class Moderation(BaseModel):
+    1:     categories: Categories
+    1:     """A list of the categories, and whether they are flagged or not."""
+       
+    1:     category_applied_input_types: CategoryAppliedInputTypes
+    1:     """
+           A list of the categories along with the input type(s) that the score applies to.
+           """
+       
+    1:     category_scores: CategoryScores
+    1:     """A list of the categories along with their scores as predicted by model."""
+       
+    1:     flagged: bool
+    1:     """Whether any of the below categories are flagged."""

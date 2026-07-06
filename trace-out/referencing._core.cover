@@ -1,0 +1,739 @@
+    1: from __future__ import annotations
+       
+    1: from collections.abc import Callable, Iterable, Iterator, Sequence
+    1: from enum import Enum
+    1: from typing import Any, ClassVar, Generic, Protocol
+    1: from urllib.parse import unquote, urldefrag, urljoin
+       
+    1: from attrs import evolve, field
+    1: from rpds import HashTrieMap, HashTrieSet, List
+       
+    1: try:
+    1:     from typing_extensions import TypeVar
+       except ImportError:  # pragma: no cover
+           from typing import TypeVar
+       
+    1: from referencing import exceptions
+    1: from referencing._attrs import frozen
+    1: from referencing.typing import URI, Anchor as AnchorType, D, Mapping, Retrieve
+       
+    1: EMPTY_UNCRAWLED: HashTrieSet[URI] = HashTrieSet()
+    1: EMPTY_PREVIOUS_RESOLVERS: List[URI] = List()
+       
+       
+    2: class _Unset(Enum):
+    1:     """
+           What sillyness...
+           """
+       
+    1:     SENTINEL = 1
+       
+       
+    1: _UNSET = _Unset.SENTINEL
+       
+       
+    2: class _MaybeInSubresource(Protocol[D]):
+    1:     def __call__(
+               self,
+               segments: Sequence[int | str],
+               resolver: Resolver[D],
+               subresource: Resource[D],
+           ) -> Resolver[D]: ...
+       
+       
+    1: def _detect_or_error(contents: D) -> Specification[D]:
+   20:     if not isinstance(contents, Mapping):
+               raise exceptions.CannotDetermineSpecification(contents)
+       
+   20:     jsonschema_dialect_id = contents.get("$schema")  # type: ignore[reportUnknownMemberType]
+   20:     if not isinstance(jsonschema_dialect_id, str):
+               raise exceptions.CannotDetermineSpecification(contents)
+       
+   20:     from referencing.jsonschema import specification_with
+       
+   20:     return specification_with(jsonschema_dialect_id)
+       
+       
+    1: def _detect_or_default(
+           default: Specification[D],
+       ) -> Callable[[D], Specification[D]]:
+  409:     def _detect(contents: D) -> Specification[D]:
+  409:         if not isinstance(contents, Mapping):
+   12:             return default
+       
+  397:         jsonschema_dialect_id = contents.get("$schema")  # type: ignore[reportUnknownMemberType]
+  397:         if jsonschema_dialect_id is None:
+  397:             return default
+       
+               from referencing.jsonschema import specification_with
+       
+               return specification_with(
+                   jsonschema_dialect_id,  # type: ignore[reportUnknownArgumentType]
+                   default=default,
+               )
+       
+  409:     return _detect
+       
+       
+    2: class _SpecificationDetector:
+    1:     def __get__(
+               self,
+               instance: Specification[D] | None,
+               cls: type[Specification[D]],
+           ) -> Callable[[D], Specification[D]]:
+  429:         if instance is None:
+   20:             return _detect_or_error
+               else:
+  409:             return _detect_or_default(instance)
+       
+       
+    3: @frozen
+    2: class Specification(Generic[D]):
+    1:     """
+           A specification which defines referencing behavior.
+       
+           The various methods of a `Specification` allow for varying referencing
+           behavior across JSON Schema specification versions, etc.
+           """
+       
+           #: A short human-readable name for the specification, used for debugging.
+    1:     name: str
+       
+           #: Find the ID of a given document.
+    1:     id_of: Callable[[D], URI | None]
+       
+           #: Retrieve the subresources of the given document (without traversing into
+           #: the subresources themselves).
+    1:     subresources_of: Callable[[D], Iterable[D]]
+       
+           #: While resolving a JSON pointer, conditionally enter a subresource
+           #: (if e.g. we have just entered a keyword whose value is a subresource)
+    1:     maybe_in_subresource: _MaybeInSubresource[D]
+       
+           #: Retrieve the anchors contained in the given document.
+    1:     _anchors_in: Callable[
+               [Specification[D], D],
+               Iterable[AnchorType[D]],
+    1:     ] = field(alias="anchors_in")
+       
+           #: An opaque specification where resources have no subresources
+           #: nor internal identifiers.
+    1:     OPAQUE: ClassVar[Specification[Any]]
+       
+           #: Attempt to discern which specification applies to the given contents.
+           #:
+           #: May be called either as an instance method or as a class method, with
+           #: slightly different behavior in the following case:
+           #:
+           #: Recall that not all contents contains enough internal information about
+           #: which specification it is written for -- the JSON Schema ``{}``,
+           #: for instance, is valid under many different dialects and may be
+           #: interpreted as any one of them.
+           #:
+           #: When this method is used as an instance method (i.e. called on a
+           #: specific specification), that specification is used as the default
+           #: if the given contents are unidentifiable.
+           #:
+           #: On the other hand when called as a class method, an error is raised.
+           #:
+           #: To reiterate, ``DRAFT202012.detect({})`` will return ``DRAFT202012``
+           #: whereas the class method ``Specification.detect({})`` will raise an
+           #: error.
+           #:
+           #: (Note that of course ``DRAFT202012.detect(...)`` may return some other
+           #: specification when given a schema which *does* identify as being for
+           #: another version).
+           #:
+           #: Raises:
+           #:
+           #:     `CannotDetermineSpecification`
+           #:
+           #:         if the given contents don't have any discernible
+           #:         information which could be used to guess which
+           #:         specification they identify as
+    1:     detect = _SpecificationDetector()
+       
+    1:     def __repr__(self) -> str:
+               return f"<Specification name={self.name!r}>"
+       
+    1:     def anchors_in(self, contents: D):
+               """
+               Retrieve the anchors contained in the given document.
+               """
+  429:         return self._anchors_in(self, contents)
+       
+    1:     def create_resource(self, contents: D) -> Resource[D]:
+               """
+               Create a resource which is interpreted using this specification.
+               """
+  444:         return Resource(contents=contents, specification=self)
+       
+       
+    2: Specification.OPAQUE = Specification(
+    1:     name="opaque",
+    1:     id_of=lambda contents: None,
+    1:     subresources_of=lambda contents: [],
+    1:     anchors_in=lambda specification, contents: [],
+    1:     maybe_in_subresource=lambda segments, resolver, subresource: resolver,
+       )
+       
+       
+    3: @frozen
+    2: class Resource(Generic[D]):
+    1:     r"""
+           A document (deserialized JSON) with a concrete interpretation under a spec.
+       
+           In other words, a Python object, along with an instance of `Specification`
+           which describes how the document interacts with referencing -- both
+           internally (how it refers to other `Resource`\ s) and externally (how it
+           should be identified such that it is referenceable by other documents).
+           """
+       
+    1:     contents: D
+    1:     _specification: Specification[D] = field(alias="specification")
+       
+    2:     @classmethod
+    2:     def from_contents(
+               cls,
+               contents: D,
+               default_specification: (
+                   type[Specification[D]] | Specification[D]
+    1:         ) = Specification,
+           ) -> Resource[D]:
+               """
+               Create a resource guessing which specification applies to the contents.
+       
+               Raises:
+       
+                   `CannotDetermineSpecification`
+       
+                       if the given contents don't have any discernible
+                       information which could be used to guess which
+                       specification they identify as
+       
+               """
+  429:         specification = default_specification.detect(contents)
+  429:         return specification.create_resource(contents=contents)
+       
+    2:     @classmethod
+    2:     def opaque(cls, contents: D) -> Resource[D]:
+               """
+               Create an opaque `Resource` -- i.e. one with opaque specification.
+       
+               See `Specification.OPAQUE` for details.
+               """
+    6:         return Specification.OPAQUE.create_resource(contents=contents)
+       
+    1:     def id(self) -> URI | None:
+               """
+               Retrieve this resource's (specification-specific) identifier.
+               """
+  449:         id = self._specification.id_of(self.contents)
+  449:         if id is None:
+  409:             return
+   40:         return id.rstrip("#")
+       
+    1:     def subresources(self) -> Iterable[Resource[D]]:
+               """
+               Retrieve this resource's subresources.
+               """
+ 2105:         return (
+  818:             Resource.from_contents(
+  409:                 each,
+  409:                 default_specification=self._specification,
+                   )
+  838:             for each in self._specification.subresources_of(self.contents)
+               )
+       
+    1:     def anchors(self) -> Iterable[AnchorType[D]]:
+               """
+               Retrieve this resource's (specification-specific) identifier.
+               """
+  429:         return self._specification.anchors_in(self.contents)
+       
+    1:     def pointer(self, pointer: str, resolver: Resolver[D]) -> Resolved[D]:
+               """
+               Resolve the given JSON pointer.
+       
+               Raises:
+       
+                   `exceptions.PointerToNowhere`
+       
+                       if the pointer points to a location not present in the document
+       
+               """
+               if not pointer:
+                   return Resolved(contents=self.contents, resolver=resolver)
+       
+               contents = self.contents
+               segments: list[int | str] = []
+               for segment in unquote(pointer[1:]).split("/"):
+                   if isinstance(contents, Sequence):
+                       segment = int(segment)
+                   else:
+                       segment = segment.replace("~1", "/").replace("~0", "~")
+                   try:
+                       contents = contents[segment]  # type: ignore[reportUnknownArgumentType]
+                   except LookupError as lookup_error:
+                       error = exceptions.PointerToNowhere(ref=pointer, resource=self)
+                       raise error from lookup_error
+       
+                   segments.append(segment)
+                   last = resolver
+                   resolver = self._specification.maybe_in_subresource(
+                       segments=segments,
+                       resolver=resolver,
+                       subresource=self._specification.create_resource(contents),
+                   )
+                   if resolver is not last:
+                       segments = []
+               return Resolved(contents=contents, resolver=resolver)  # type: ignore[reportUnknownArgumentType]
+       
+       
+    1: def _fail_to_retrieve(uri: URI):
+           raise exceptions.NoSuchResource(ref=uri)
+       
+       
+    3: @frozen
+    2: class Registry(Mapping[URI, Resource[D]]):
+    1:     r"""
+           A registry of `Resource`\ s, each identified by their canonical URIs.
+       
+           Registries store a collection of in-memory resources, and optionally
+           enable additional resources which may be stored elsewhere (e.g. in a
+           database, a separate set of files, over the network, etc.).
+       
+           They also lazily walk their known resources, looking for subresources
+           within them. In other words, subresources contained within any added
+           resources will be retrievable via their own IDs (though this discovery of
+           subresources will be delayed until necessary).
+       
+           Registries are immutable, and their methods return new instances of the
+           registry with the additional resources added to them.
+       
+           The ``retrieve`` argument can be used to configure retrieval of resources
+           dynamically, either over the network, from a database, or the like.
+           Pass it a callable which will be called if any URI not present in the
+           registry is accessed. It must either return a `Resource` or else raise a
+           `NoSuchResource` exception indicating that the resource does not exist
+           even according to the retrieval logic.
+           """
+       
+    2:     _resources: HashTrieMap[URI, Resource[D]] = field(
+    1:         default=HashTrieMap(),
+    1:         converter=HashTrieMap.convert,  # type: ignore[reportGeneralTypeIssues]
+    1:         alias="resources",
+           )
+    1:     _anchors: HashTrieMap[tuple[URI, str], AnchorType[D]] = HashTrieMap()
+    1:     _uncrawled: HashTrieSet[URI] = EMPTY_UNCRAWLED
+    1:     _retrieve: Retrieve[D] = field(default=_fail_to_retrieve, alias="retrieve")
+       
+    1:     def __getitem__(self, uri: URI) -> Resource[D]:
+               """
+               Return the (already crawled) `Resource` identified by the given URI.
+               """
+   32:         try:
+   32:             return self._resources[uri.rstrip("#")]
+               except KeyError:
+                   raise exceptions.NoSuchResource(ref=uri) from None
+       
+    1:     def __iter__(self) -> Iterator[URI]:
+               """
+               Iterate over all crawled URIs in the registry.
+               """
+               return iter(self._resources)
+       
+    1:     def __len__(self) -> int:
+               """
+               Count the total number of fully crawled resources in this registry.
+               """
+               return len(self._resources)
+       
+    1:     def __rmatmul__(
+               self,
+               new: Resource[D] | Iterable[Resource[D]],
+           ) -> Registry[D]:
+               """
+               Create a new registry with resource(s) added using their internal IDs.
+       
+               Resources must have a internal IDs (e.g. the :kw:`$id` keyword in
+               modern JSON Schema versions), otherwise an error will be raised.
+       
+               Both a single resource as well as an iterable of resources works, i.e.:
+       
+                   * ``resource @ registry`` or
+       
+                   * ``[iterable, of, multiple, resources] @ registry``
+       
+               which -- again, assuming the resources have internal IDs -- is
+               equivalent to calling `Registry.with_resources` as such:
+       
+               .. code:: python
+       
+                   registry.with_resources(
+                       (resource.id(), resource) for resource in new_resources
+                   )
+       
+               Raises:
+       
+                   `NoInternalID`
+       
+                       if the resource(s) in fact do not have IDs
+       
+               """
+    1:         if isinstance(new, Resource):
+                   new = (new,)
+       
+    1:         resources = self._resources
+    1:         uncrawled = self._uncrawled
+   21:         for resource in new:
+   20:             id = resource.id()
+   20:             if id is None:
+                       raise exceptions.NoInternalID(resource=resource)
+   20:             uncrawled = uncrawled.insert(id)
+   20:             resources = resources.insert(id, resource)
+    1:         return evolve(self, resources=resources, uncrawled=uncrawled)
+       
+    1:     def __repr__(self) -> str:
+               size = len(self)
+               pluralized = "resource" if size == 1 else "resources"
+               if self._uncrawled:
+                   uncrawled = len(self._uncrawled)
+                   if uncrawled == size:
+                       summary = f"uncrawled {pluralized}"
+                   else:
+                       summary = f"{pluralized}, {uncrawled} uncrawled"
+               else:
+                   summary = f"{pluralized}"
+               return f"<Registry ({size} {summary})>"
+       
+    1:     def get_or_retrieve(self, uri: URI) -> Retrieved[D, Resource[D]]:
+               """
+               Get a resource from the registry, crawling or retrieving if necessary.
+       
+               May involve crawling to find the given URI if it is not already known,
+               so the returned object is a `Retrieved` object which contains both the
+               resource value as well as the registry which ultimately contained it.
+               """
+               resource = self._resources.get(uri)
+               if resource is not None:
+                   return Retrieved(registry=self, value=resource)
+       
+               registry = self.crawl()
+               resource = registry._resources.get(uri)
+               if resource is not None:
+                   return Retrieved(registry=registry, value=resource)
+       
+               try:
+                   resource = registry._retrieve(uri)
+               except (
+                   exceptions.CannotDetermineSpecification,
+                   exceptions.NoSuchResource,
+               ):
+                   raise
+               except Exception as error:
+                   raise exceptions.Unretrievable(ref=uri) from error
+               else:
+                   registry = registry.with_resource(uri, resource)
+                   return Retrieved(registry=registry, value=resource)
+       
+    1:     def remove(self, uri: URI):
+               """
+               Return a registry with the resource identified by a given URI removed.
+               """
+               if uri not in self._resources:
+                   raise exceptions.NoSuchResource(ref=uri)
+       
+               return evolve(
+                   self,
+                   resources=self._resources.remove(uri),
+                   uncrawled=self._uncrawled.discard(uri),
+                   anchors=HashTrieMap(
+                       (k, v) for k, v in self._anchors.items() if k[0] != uri
+                   ),
+               )
+       
+    1:     def anchor(self, uri: URI, name: str):
+               """
+               Retrieve a given anchor from a resource which must already be crawled.
+               """
+               value = self._anchors.get((uri, name))
+               if value is not None:
+                   return Retrieved(value=value, registry=self)
+       
+               registry = self.crawl()
+               value = registry._anchors.get((uri, name))
+               if value is not None:
+                   return Retrieved(value=value, registry=registry)
+       
+               resource = self[uri]
+               canonical_uri = resource.id()
+               if canonical_uri is not None:
+                   value = registry._anchors.get((canonical_uri, name))
+                   if value is not None:
+                       return Retrieved(value=value, registry=registry)
+       
+               if "/" in name:
+                   raise exceptions.InvalidAnchor(
+                       ref=uri,
+                       resource=resource,
+                       anchor=name,
+                   )
+               raise exceptions.NoSuchAnchor(ref=uri, resource=resource, anchor=name)
+       
+    1:     def contents(self, uri: URI) -> D:
+               """
+               Retrieve the (already crawled) contents identified by the given URI.
+               """
+    6:         return self[uri].contents
+       
+    1:     def crawl(self) -> Registry[D]:
+               """
+               Crawl all added resources, discovering subresources.
+               """
+    1:         resources = self._resources
+    1:         anchors = self._anchors
+   22:         uncrawled = [(uri, resources[uri]) for uri in self._uncrawled]
+  430:         while uncrawled:
+  429:             uri, resource = uncrawled.pop()
+       
+  429:             id = resource.id()
+  429:             if id is not None:
+   20:                 uri = urljoin(uri, id)
+   20:                 resources = resources.insert(uri, resource)
+  438:             for each in resource.anchors():
+    9:                 anchors = anchors.insert((uri, each.name), each)
+ 1267:             uncrawled.extend((uri, each) for each in resource.subresources())
+    2:         return evolve(
+    1:             self,
+    1:             resources=resources,
+    1:             anchors=anchors,
+    1:             uncrawled=EMPTY_UNCRAWLED,
+               )
+       
+    1:     def with_resource(self, uri: URI, resource: Resource[D]):
+               """
+               Add the given `Resource` to the registry, without crawling it.
+               """
+               return self.with_resources([(uri, resource)])
+       
+    1:     def with_resources(
+               self,
+               pairs: Iterable[tuple[URI, Resource[D]]],
+           ) -> Registry[D]:
+               r"""
+               Add the given `Resource`\ s to the registry, without crawling them.
+               """
+               resources = self._resources
+               uncrawled = self._uncrawled
+               for uri, resource in pairs:
+                   # Empty fragment URIs are equivalent to URIs without the fragment.
+                   # TODO: Is this true for non JSON Schema resources? Probably not.
+                   uri = uri.rstrip("#")
+                   uncrawled = uncrawled.insert(uri)
+                   resources = resources.insert(uri, resource)
+               return evolve(self, resources=resources, uncrawled=uncrawled)
+       
+    1:     def with_contents(
+               self,
+               pairs: Iterable[tuple[URI, D]],
+               **kwargs: Any,
+           ) -> Registry[D]:
+               r"""
+               Add the given contents to the registry, autodetecting when necessary.
+               """
+               return self.with_resources(
+                   (uri, Resource.from_contents(each, **kwargs))
+                   for uri, each in pairs
+               )
+       
+    1:     def combine(self, *registries: Registry[D]) -> Registry[D]:
+               """
+               Combine together one or more other registries, producing a unified one.
+               """
+    1:         if registries == (self,):
+                   return self
+    1:         resources = self._resources
+    1:         anchors = self._anchors
+    1:         uncrawled = self._uncrawled
+    1:         retrieve = self._retrieve
+    2:         for registry in registries:
+    1:             resources = resources.update(registry._resources)
+    1:             anchors = anchors.update(registry._anchors)
+    1:             uncrawled = uncrawled.update(registry._uncrawled)
+       
+    1:             if registry._retrieve is not _fail_to_retrieve:
+    1:                 if registry._retrieve is not retrieve is not _fail_to_retrieve:
+                           raise ValueError(  # noqa: TRY003
+                               "Cannot combine registries with conflicting retrieval "
+                               "functions.",
+                           )
+    1:                 retrieve = registry._retrieve
+    2:         return evolve(
+    1:             self,
+    1:             anchors=anchors,
+    1:             resources=resources,
+    1:             uncrawled=uncrawled,
+    1:             retrieve=retrieve,
+               )
+       
+    1:     def resolver(self, base_uri: URI = "") -> Resolver[D]:
+               """
+               Return a `Resolver` which resolves references against this registry.
+               """
+               return Resolver(base_uri=base_uri, registry=self)
+       
+    1:     def resolver_with_root(self, resource: Resource[D]) -> Resolver[D]:
+               """
+               Return a `Resolver` with a specific root resource.
+               """
+               uri = resource.id() or ""
+               return Resolver(
+                   base_uri=uri,
+                   registry=self.with_resource(uri, resource),
+               )
+       
+       
+       #: An anchor or resource.
+    2: AnchorOrResource = TypeVar(
+    1:     "AnchorOrResource",
+    1:     AnchorType[Any],
+    1:     Resource[Any],
+    1:     default=Resource[Any],
+       )
+       
+       
+    3: @frozen
+    2: class Retrieved(Generic[D, AnchorOrResource]):
+    1:     """
+           A value retrieved from a `Registry`.
+           """
+       
+    1:     value: AnchorOrResource
+    1:     registry: Registry[D]
+       
+       
+    3: @frozen
+    2: class Resolved(Generic[D]):
+    1:     """
+           A reference resolved to its contents by a `Resolver`.
+           """
+       
+    1:     contents: D
+    1:     resolver: Resolver[D]
+       
+       
+    3: @frozen
+    2: class Resolver(Generic[D]):
+    1:     """
+           A reference resolver.
+       
+           Resolvers help resolve references (including relative ones) by
+           pairing a fixed base URI with a `Registry`.
+       
+           This object, under normal circumstances, is expected to be used by
+           *implementers of libraries* built on top of `referencing` (e.g. JSON Schema
+           implementations or other libraries resolving JSON references),
+           not directly by end-users populating registries or while writing
+           schemas or other resources.
+       
+           References are resolved against the base URI, and the combined URI
+           is then looked up within the registry.
+       
+           The process of resolving a reference may itself involve calculating
+           a *new* base URI for future reference resolution (e.g. if an
+           intermediate resource sets a new base URI), or may involve encountering
+           additional subresources and adding them to a new registry.
+           """
+       
+    1:     _base_uri: URI = field(alias="base_uri")
+    1:     _registry: Registry[D] = field(alias="registry")
+    1:     _previous: List[URI] = field(default=List(), repr=False, alias="previous")
+       
+    1:     def lookup(self, ref: URI) -> Resolved[D]:
+               """
+               Resolve the given reference to the resource it points to.
+       
+               Raises:
+       
+                   `exceptions.Unresolvable`
+       
+                       or a subclass thereof (see below) if the reference isn't
+                       resolvable
+       
+                   `exceptions.NoSuchAnchor`
+       
+                       if the reference is to a URI where a resource exists but
+                       contains a plain name fragment which does not exist within
+                       the resource
+       
+                   `exceptions.PointerToNowhere`
+       
+                       if the reference is to a URI where a resource exists but
+                       contains a JSON pointer to a location within the resource
+                       that does not exist
+       
+               """
+               if ref.startswith("#"):
+                   uri, fragment = self._base_uri, ref[1:]
+               else:
+                   uri, fragment = urldefrag(urljoin(self._base_uri, ref))
+               try:
+                   retrieved = self._registry.get_or_retrieve(uri)
+               except exceptions.NoSuchResource:
+                   raise exceptions.Unresolvable(ref=ref) from None
+               except exceptions.Unretrievable as error:
+                   raise exceptions.Unresolvable(ref=ref) from error
+       
+               if fragment.startswith("/"):
+                   resolver = self._evolve(registry=retrieved.registry, base_uri=uri)
+                   return retrieved.value.pointer(pointer=fragment, resolver=resolver)
+       
+               if fragment:
+                   retrieved = retrieved.registry.anchor(uri, fragment)
+                   resolver = self._evolve(registry=retrieved.registry, base_uri=uri)
+                   return retrieved.value.resolve(resolver=resolver)
+       
+               resolver = self._evolve(registry=retrieved.registry, base_uri=uri)
+               return Resolved(contents=retrieved.value.contents, resolver=resolver)
+       
+    1:     def in_subresource(self, subresource: Resource[D]) -> Resolver[D]:
+               """
+               Create a resolver for a subresource (which may have a new base URI).
+               """
+               id = subresource.id()
+               if id is None:
+                   return self
+               return evolve(self, base_uri=urljoin(self._base_uri, id))
+       
+    1:     def dynamic_scope(self) -> Iterable[tuple[URI, Registry[D]]]:
+               """
+               In specs with such a notion, return the URIs in the dynamic scope.
+               """
+               for uri in self._previous:
+                   yield uri, self._registry
+       
+    1:     def _evolve(self, base_uri: URI, **kwargs: Any):
+               """
+               Evolve, appending to the dynamic scope.
+               """
+               previous = self._previous
+               if self._base_uri and (not previous or base_uri != self._base_uri):
+                   previous = previous.push_front(self._base_uri)
+               return evolve(self, base_uri=base_uri, previous=previous, **kwargs)
+       
+       
+    3: @frozen
+    2: class Anchor(Generic[D]):
+    1:     """
+           A simple anchor in a `Resource`.
+           """
+       
+    1:     name: str
+    1:     resource: Resource[D]
+       
+    1:     def resolve(self, resolver: Resolver[D]):
+               """
+               Return the resource for this anchor.
+               """
+               return Resolved(contents=self.resource.contents, resolver=resolver)

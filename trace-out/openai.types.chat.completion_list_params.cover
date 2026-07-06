@@ -1,0 +1,33 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal, TypedDict
+       
+    1: from ..shared_params.metadata import Metadata
+       
+    1: __all__ = ["CompletionListParams"]
+       
+       
+    2: class CompletionListParams(TypedDict, total=False):
+    1:     after: str
+    1:     """Identifier for the last chat completion from the previous pagination request."""
+       
+    1:     limit: int
+    1:     """Number of Chat Completions to retrieve."""
+       
+    1:     metadata: Optional[Metadata]
+    1:     """A list of metadata keys to filter the Chat Completions by. Example:
+       
+           `metadata[key1]=value1&metadata[key2]=value2`
+           """
+       
+    1:     model: str
+    1:     """The model used to generate the Chat Completions."""
+       
+    1:     order: Literal["asc", "desc"]
+    1:     """Sort order for Chat Completions by timestamp.
+       
+           Use `asc` for ascending order or `desc` for descending order. Defaults to `asc`.
+           """

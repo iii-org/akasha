@@ -1,0 +1,42 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Optional
+    1: from typing_extensions import Required, TypedDict
+       
+    1: from .._types import FileTypes, SequenceNotStr
+    1: from .data_type import DataType
+       
+    1: __all__ = ["DatasetUploadParams"]
+       
+       
+    2: class DatasetUploadParams(TypedDict, total=False):
+    1:     file: Required[FileTypes]
+       
+    1:     input_keys: Required[SequenceNotStr[str]]
+       
+    1:     data_type: DataType
+    1:     """Enum for dataset data types."""
+       
+    1:     description: Optional[str]
+       
+    1:     input_key_mappings: Optional[str]
+       
+    1:     inputs_schema_definition: Optional[str]
+       
+    1:     metadata_key_mappings: Optional[str]
+       
+    1:     metadata_keys: SequenceNotStr[str]
+       
+    1:     name: Optional[str]
+       
+    1:     output_key_mappings: Optional[str]
+       
+    1:     output_keys: SequenceNotStr[str]
+       
+    1:     outputs_schema_definition: Optional[str]
+       
+    1:     tag_value_ids: Optional[str]
+       
+    1:     transformations: Optional[str]

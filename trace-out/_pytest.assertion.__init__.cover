@@ -1,0 +1,236 @@
+       # mypy: allow-untyped-defs
+    1: """Support for presenting detailed information in failing assertions."""
+       
+    1: from __future__ import annotations
+       
+    1: from collections.abc import Generator
+    1: import sys
+    1: from typing import Any
+    1: from typing import Protocol
+    1: from typing import TYPE_CHECKING
+       
+    1: from _pytest.assertion import rewrite
+    1: from _pytest.assertion import truncate
+    1: from _pytest.assertion import util
+    1: from _pytest.assertion.rewrite import assertstate_key
+    1: from _pytest.config import Config
+    1: from _pytest.config import hookimpl
+    1: from _pytest.config.argparsing import Parser
+    1: from _pytest.nodes import Item
+       
+       
+    1: if TYPE_CHECKING:
+           from _pytest.main import Session
+       
+       
+    1: def pytest_addoption(parser: Parser) -> None:
+    1:     group = parser.getgroup("debugconfig")
+    2:     group.addoption(
+    1:         "--assert",
+    1:         action="store",
+    1:         dest="assertmode",
+    1:         choices=("rewrite", "plain"),
+    1:         default="rewrite",
+    1:         metavar="MODE",
+               help=(
+    1:             "Control assertion debugging tools.\n"
+                   "'plain' performs no assertion debugging.\n"
+                   "'rewrite' (the default) rewrites assert statements in test modules"
+                   " on import to provide assert expression information."
+               ),
+           )
+    2:     parser.addini(
+    1:         "enable_assertion_pass_hook",
+    1:         type="bool",
+    1:         default=False,
+    1:         help="Enables the pytest_assertion_pass hook. "
+               "Make sure to delete any previously generated pyc cache files.",
+           )
+       
+    2:     parser.addini(
+    1:         "truncation_limit_lines",
+    1:         default=None,
+    1:         help="Set threshold of LINES after which truncation will take effect",
+           )
+    2:     parser.addini(
+    1:         "truncation_limit_chars",
+    1:         default=None,
+    1:         help=("Set threshold of CHARS after which truncation will take effect"),
+           )
+    2:     parser.addini(
+    1:         "assertion_text_diff_style",
+    1:         default=util.ASSERTION_TEXT_DIFF_STYLE_NDIFF,
+               help=(
+    3:             "Choose how pytest renders diffs for string equality assertions: "
+    1:             f"{util.ASSERTION_TEXT_DIFF_STYLE_NDIFF} or "
+    1:             f"{util.ASSERTION_TEXT_DIFF_STYLE_BLOCK}"
+               ),
+           )
+       
+    2:     Config._add_verbosity_ini(
+    1:         parser,
+    1:         Config.VERBOSITY_ASSERTIONS,
+               help=(
+    1:             "Specify a verbosity level for assertions, overriding the main level. "
+                   "Higher levels will provide more detailed explanation when an assertion fails."
+               ),
+           )
+       
+       
+    1: def pytest_configure(config: Config) -> None:
+    1:     util.validate_assertion_text_diff_style(config)
+       
+       
+    1: def register_assert_rewrite(*names: str) -> None:
+           """Register one or more module names to be rewritten on import.
+       
+           This function will make sure that this module or all modules inside
+           the package will get their assert statements rewritten.
+           Thus you should make sure to call this before the module is
+           actually imported, usually in your __init__.py if you are a plugin
+           using a package.
+       
+           :param names: The module names to register.
+           """
+           for name in names:
+               if not isinstance(name, str):
+                   msg = "expected module names as *args, got {0} instead"  # type: ignore[unreachable]
+                   raise TypeError(msg.format(repr(names)))
+           rewrite_hook: RewriteHook
+           for hook in sys.meta_path:
+               if isinstance(hook, rewrite.AssertionRewritingHook):
+                   rewrite_hook = hook
+                   break
+           else:
+               rewrite_hook = DummyRewriteHook()
+           rewrite_hook.mark_rewrite(*names)
+       
+       
+    2: class RewriteHook(Protocol):
+    1:     def mark_rewrite(self, *names: str) -> None: ...
+       
+       
+    2: class DummyRewriteHook:
+    1:     """A no-op import hook for when rewriting is disabled."""
+       
+    1:     def mark_rewrite(self, *names: str) -> None:
+   30:         pass
+       
+       
+    2: class AssertionState:
+    1:     """State for the assertion plugin."""
+       
+    1:     def __init__(self, config: Config, mode) -> None:
+    1:         self.mode = mode
+    1:         self.trace = config.trace.root.get("assertion")
+    1:         self.hook: rewrite.AssertionRewritingHook | None = None
+       
+       
+    1: def install_importhook(config: Config) -> rewrite.AssertionRewritingHook:
+           """Try to install the rewrite hook, raise SystemError if it fails."""
+    1:     config.stash[assertstate_key] = AssertionState(config, "rewrite")
+    1:     config.stash[assertstate_key].hook = hook = rewrite.AssertionRewritingHook(config)
+    1:     sys.meta_path.insert(0, hook)
+    1:     config.stash[assertstate_key].trace("installed rewrite import hook")
+       
+    1:     def undo() -> None:
+    1:         hook = config.stash[assertstate_key].hook
+    1:         if hook is not None and hook in sys.meta_path:
+    1:             sys.meta_path.remove(hook)
+       
+    1:     config.add_cleanup(undo)
+    1:     return hook
+       
+       
+    1: def pytest_collection(session: Session) -> None:
+           # This hook is only called when test modules are collected
+           # so for example not in the managing process of pytest-xdist
+           # (which does not collect test modules).
+    1:     assertstate = session.config.stash.get(assertstate_key, None)
+    1:     if assertstate:
+    1:         if assertstate.hook is not None:
+    1:             assertstate.hook.set_session(session)
+       
+       
+    2: @hookimpl(wrapper=True, tryfirst=True)
+    2: def pytest_runtest_protocol(item: Item) -> Generator[None, object, object]:
+           """Setup the pytest_assertrepr_compare and pytest_assertion_pass hooks.
+       
+           The rewrite module will use util._reprcompare if it exists to use custom
+           reporting via the pytest_assertrepr_compare hook.  This sets up this custom
+           comparison for the test.
+           """
+    6:     ihook = item.ihook
+       
+    6:     def callbinrepr(op, left: object, right: object) -> str | None:
+               """Call the pytest_assertrepr_compare hook and prepare the result.
+       
+               This uses the first result from the hook and then ensures the
+               following:
+               * Overly verbose explanations are truncated unless configured otherwise
+                 (eg. if running in verbose mode).
+               * Embedded newlines are escaped to help util.format_explanation()
+                 later.
+               * If the rewrite mode is used embedded %-characters are replaced
+                 to protect later % formatting.
+       
+               The result can be formatted by util.format_explanation() for
+               pretty printing.
+               """
+               hook_result = ihook.pytest_assertrepr_compare(
+                   config=item.config, op=op, left=left, right=right
+               )
+               for new_expl in hook_result:
+                   if new_expl:
+                       new_expl = truncate.truncate_if_required(new_expl, item)
+                       new_expl = [line.replace("\n", "\\n") for line in new_expl]
+                       res = "\n~".join(new_expl)
+                       if item.config.getvalue("assertmode") == "rewrite":
+                           res = res.replace("%", "%%")
+                       return res
+               return None
+       
+    6:     saved_assert_hooks = util._reprcompare, util._assertion_pass
+    6:     util._reprcompare = callbinrepr
+    6:     util._config = item.config
+       
+    6:     if ihook.pytest_assertion_pass.get_hookimpls():
+       
+               def call_assertion_pass_hook(lineno: int, orig: str, expl: str) -> None:
+                   ihook.pytest_assertion_pass(item=item, lineno=lineno, orig=orig, expl=expl)
+       
+               util._assertion_pass = call_assertion_pass_hook
+       
+    6:     try:
+    6:         return (yield)
+           finally:
+    6:         util._reprcompare, util._assertion_pass = saved_assert_hooks
+    6:         util._config = None
+       
+       
+    1: def pytest_sessionfinish(session: Session) -> None:
+    1:     assertstate = session.config.stash.get(assertstate_key, None)
+    1:     if assertstate:
+    1:         if assertstate.hook is not None:
+    1:             assertstate.hook.set_session(None)
+       
+       
+    1: def pytest_assertrepr_compare(
+           config: Config, op: str, left: Any, right: Any
+       ) -> list[str] | None:
+           if config.pluginmanager.has_plugin("terminalreporter"):
+               highlighter = config.get_terminal_writer()._highlight
+           else:
+               # Keep it plaintext when not using terminalrepoterer (#14377).
+               highlighter = util.dummy_highlighter
+           explanation = list(
+               util.assertrepr_compare(
+                   op=op,
+                   left=left,
+                   right=right,
+                   verbose=config.get_verbosity(Config.VERBOSITY_ASSERTIONS),
+                   highlighter=highlighter,
+                   assertion_text_diff_style=util.get_assertion_text_diff_style(config),
+               )
+           )
+           return explanation or None

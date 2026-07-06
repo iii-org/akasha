@@ -1,0 +1,73 @@
+    1: from __future__ import annotations
+       
+    1: import types
+    1: from abc import ABCMeta, abstractmethod
+    1: from collections.abc import AsyncGenerator, Callable, Coroutine, Iterable
+    1: from typing import Any, TypeVar
+       
+    1: _T = TypeVar("_T")
+       
+       
+    2: class TestRunner(metaclass=ABCMeta):
+    1:     """
+           Encapsulates a running event loop. Every call made through this object will use the
+           same event loop.
+           """
+       
+    1:     def __enter__(self) -> TestRunner:
+               return self
+       
+    2:     @abstractmethod
+    2:     def __exit__(
+               self,
+               exc_type: type[BaseException] | None,
+               exc_val: BaseException | None,
+               exc_tb: types.TracebackType | None,
+           ) -> bool | None: ...
+       
+    2:     @abstractmethod
+    2:     def run_asyncgen_fixture(
+               self,
+               fixture_func: Callable[..., AsyncGenerator[_T, Any]],
+               kwargs: dict[str, Any],
+           ) -> Iterable[_T]:
+               """
+               Run an async generator fixture.
+       
+               :param fixture_func: the fixture function
+               :param kwargs: keyword arguments to call the fixture function with
+               :return: an iterator yielding the value yielded from the async generator
+               """
+       
+    2:     @abstractmethod
+    2:     def run_fixture(
+               self,
+               fixture_func: Callable[..., Coroutine[Any, Any, _T]],
+               kwargs: dict[str, Any],
+           ) -> _T:
+               """
+               Run an async fixture.
+       
+               :param fixture_func: the fixture function
+               :param kwargs: keyword arguments to call the fixture function with
+               :return: the return value of the fixture function
+               """
+       
+    2:     @abstractmethod
+    2:     def run_test(
+               self, test_func: Callable[..., Coroutine[Any, Any, Any]], kwargs: dict[str, Any]
+           ) -> None:
+               """
+               Run an async test function.
+       
+               :param test_func: the test function
+               :param kwargs: keyword arguments to call the test function with
+               """
+       
+    2:     @abstractmethod
+    2:     def is_running(self) -> bool:
+               """
+               Check if the test runner is running.
+       
+               :return: ``True`` if the coroutine is currently being run, ``False`` otherwise.
+               """

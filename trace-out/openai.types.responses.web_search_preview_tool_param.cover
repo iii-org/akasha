@@ -1,0 +1,58 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import List, Optional
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["WebSearchPreviewToolParam", "UserLocation"]
+       
+       
+    2: class UserLocation(TypedDict, total=False):
+    1:     """The user's location."""
+       
+    1:     type: Required[Literal["approximate"]]
+    1:     """The type of location approximation. Always `approximate`."""
+       
+    1:     city: Optional[str]
+    1:     """Free text input for the city of the user, e.g. `San Francisco`."""
+       
+    1:     country: Optional[str]
+    1:     """
+           The two-letter [ISO country code](https://en.wikipedia.org/wiki/ISO_3166-1) of
+           the user, e.g. `US`.
+           """
+       
+    1:     region: Optional[str]
+    1:     """Free text input for the region of the user, e.g. `California`."""
+       
+    1:     timezone: Optional[str]
+    1:     """
+           The [IANA timezone](https://timeapi.io/documentation/iana-timezones) of the
+           user, e.g. `America/Los_Angeles`.
+           """
+       
+       
+    2: class WebSearchPreviewToolParam(TypedDict, total=False):
+    1:     """This tool searches the web for relevant results to use in a response.
+       
+           Learn more about the [web search tool](https://platform.openai.com/docs/guides/tools-web-search).
+           """
+       
+    1:     type: Required[Literal["web_search_preview", "web_search_preview_2025_03_11"]]
+    1:     """The type of the web search tool.
+       
+           One of `web_search_preview` or `web_search_preview_2025_03_11`.
+           """
+       
+    1:     search_content_types: List[Literal["text", "image"]]
+       
+    1:     search_context_size: Literal["low", "medium", "high"]
+    1:     """High level guidance for the amount of context window space to use for the
+           search.
+       
+           One of `low`, `medium`, or `high`. `medium` is the default.
+           """
+       
+    1:     user_location: Optional[UserLocation]
+    1:     """The user's location."""

@@ -1,0 +1,33 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ResponseInputImageContentParam"]
+       
+       
+    2: class ResponseInputImageContentParam(TypedDict, total=False):
+    1:     """An image input to the model.
+       
+           Learn about [image inputs](https://platform.openai.com/docs/guides/vision)
+           """
+       
+    1:     type: Required[Literal["input_image"]]
+    1:     """The type of the input item. Always `input_image`."""
+       
+    1:     detail: Optional[Literal["low", "high", "auto", "original"]]
+    1:     """The detail level of the image to be sent to the model.
+       
+           One of `high`, `low`, `auto`, or `original`. Defaults to `auto`.
+           """
+       
+    1:     file_id: Optional[str]
+    1:     """The ID of the file to be sent to the model."""
+       
+    1:     image_url: Optional[str]
+    1:     """The URL of the image to be sent to the model.
+       
+           A fully qualified URL or base64 encoded image in a data URL.
+           """

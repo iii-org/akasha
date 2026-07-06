@@ -1,0 +1,15 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from .._models import BaseModel
+    1: from .static_file_chunking_strategy import StaticFileChunkingStrategy
+       
+    1: __all__ = ["StaticFileChunkingStrategyObject"]
+       
+       
+    2: class StaticFileChunkingStrategyObject(BaseModel):
+    1:     static: StaticFileChunkingStrategy
+       
+    1:     type: Literal["static"]
+    1:     """Always `static`."""

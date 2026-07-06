@@ -1,0 +1,203 @@
+    1: """Concrete resource implementations."""
+       
+    1: import inspect
+    1: import json
+    1: from collections.abc import Callable
+    1: from pathlib import Path
+    1: from typing import Any
+       
+    1: import anyio
+    1: import anyio.to_thread
+    1: import httpx
+    1: import pydantic
+    1: import pydantic_core
+    1: from pydantic import AnyUrl, Field, ValidationInfo, validate_call
+       
+    1: from mcp.server.fastmcp.resources.base import Resource
+    1: from mcp.types import Annotations, Icon
+       
+       
+    2: class TextResource(Resource):
+    1:     """A resource that reads from a string."""
+       
+    1:     text: str = Field(description="Text content of the resource")
+       
+    1:     async def read(self) -> str:
+               """Read the text content."""
+               return self.text  # pragma: no cover
+       
+       
+    2: class BinaryResource(Resource):
+    1:     """A resource that reads from bytes."""
+       
+    1:     data: bytes = Field(description="Binary content of the resource")
+       
+    1:     async def read(self) -> bytes:
+               """Read the binary content."""
+               return self.data  # pragma: no cover
+       
+       
+    2: class FunctionResource(Resource):
+    1:     """A resource that defers data loading by wrapping a function.
+       
+           The function is only called when the resource is read, allowing for lazy loading
+           of potentially expensive data. This is particularly useful when listing resources,
+           as the function won't be called until the resource is actually accessed.
+       
+           The function can return:
+           - str for text content (default)
+           - bytes for binary content
+           - other types will be converted to JSON
+           """
+       
+    1:     fn: Callable[[], Any] = Field(exclude=True)
+       
+    1:     async def read(self) -> str | bytes:
+               """Read the resource by calling the wrapped function."""
+               try:
+                   # Call the function first to see if it returns a coroutine
+                   result = self.fn()
+                   # If it's a coroutine, await it
+                   if inspect.iscoroutine(result):
+                       result = await result
+       
+                   if isinstance(result, Resource):  # pragma: no cover
+                       return await result.read()
+                   elif isinstance(result, bytes):
+                       return result
+                   elif isinstance(result, str):
+                       return result
+                   else:
+                       return pydantic_core.to_json(result, fallback=str, indent=2).decode()
+               except Exception as e:
+                   raise ValueError(f"Error reading resource {self.uri}: {e}")
+       
+    2:     @classmethod
+   12:     def from_function(
+               cls,
+    1:         fn: Callable[..., Any],
+    1:         uri: str,
+    2:         name: str | None = None,
+    2:         title: str | None = None,
+    2:         description: str | None = None,
+    2:         mime_type: str | None = None,
+    2:         icons: list[Icon] | None = None,
+    2:         annotations: Annotations | None = None,
+    2:         meta: dict[str, Any] | None = None,
+    1:     ) -> "FunctionResource":
+               """Create a FunctionResource from a function."""
+               func_name = name or fn.__name__
+               if func_name == "<lambda>":  # pragma: no cover
+                   raise ValueError("You must provide a name for lambda functions")
+       
+               # ensure the arguments are properly cast
+               fn = validate_call(fn)
+       
+               return cls(
+                   uri=AnyUrl(uri),
+                   name=func_name,
+                   title=title,
+                   description=description or fn.__doc__ or "",
+                   mime_type=mime_type or "text/plain",
+                   fn=fn,
+                   icons=icons,
+                   annotations=annotations,
+                   meta=meta,
+               )
+       
+       
+    2: class FileResource(Resource):
+    1:     """A resource that reads from a file.
+       
+           Set is_binary=True to read file as binary data instead of text.
+           """
+       
+    1:     path: Path = Field(description="Path to the file")
+    2:     is_binary: bool = Field(
+    1:         default=False,
+    1:         description="Whether to read the file as binary data",
+           )
+    2:     mime_type: str = Field(
+    1:         default="text/plain",
+    1:         description="MIME type of the resource content",
+           )
+       
+    2:     @pydantic.field_validator("path")
+    2:     @classmethod
+    2:     def validate_absolute_path(cls, path: Path) -> Path:  # pragma: no cover
+               """Ensure path is absolute."""
+               if not path.is_absolute():
+                   raise ValueError("Path must be absolute")
+               return path
+       
+    2:     @pydantic.field_validator("is_binary")
+    2:     @classmethod
+    2:     def set_binary_from_mime_type(cls, is_binary: bool, info: ValidationInfo) -> bool:
+               """Set is_binary based on mime_type if not explicitly set."""
+               if is_binary:
+                   return True
+               mime_type = info.data.get("mime_type", "text/plain")
+               return not mime_type.startswith("text/")
+       
+    1:     async def read(self) -> str | bytes:
+               """Read the file content."""
+               try:
+                   if self.is_binary:
+                       return await anyio.to_thread.run_sync(self.path.read_bytes)
+                   return await anyio.to_thread.run_sync(self.path.read_text)
+               except Exception as e:
+                   raise ValueError(f"Error reading file {self.path}: {e}")
+       
+       
+    2: class HttpResource(Resource):
+    1:     """A resource that reads from an HTTP endpoint."""
+       
+    1:     url: str = Field(description="URL to fetch content from")
+    1:     mime_type: str = Field(default="application/json", description="MIME type of the resource content")
+       
+    1:     async def read(self) -> str | bytes:
+               """Read the HTTP content."""
+               async with httpx.AsyncClient() as client:  # pragma: no cover
+                   response = await client.get(self.url)
+                   response.raise_for_status()
+                   return response.text
+       
+       
+    2: class DirectoryResource(Resource):
+    1:     """A resource that lists files in a directory."""
+       
+    1:     path: Path = Field(description="Path to the directory")
+    1:     recursive: bool = Field(default=False, description="Whether to list files recursively")
+    1:     pattern: str | None = Field(default=None, description="Optional glob pattern to filter files")
+    1:     mime_type: str = Field(default="application/json", description="MIME type of the resource content")
+       
+    2:     @pydantic.field_validator("path")
+    2:     @classmethod
+    2:     def validate_absolute_path(cls, path: Path) -> Path:  # pragma: no cover
+               """Ensure path is absolute."""
+               if not path.is_absolute():
+                   raise ValueError("Path must be absolute")
+               return path
+       
+    1:     def list_files(self) -> list[Path]:  # pragma: no cover
+               """List files in the directory."""
+               if not self.path.exists():
+                   raise FileNotFoundError(f"Directory not found: {self.path}")
+               if not self.path.is_dir():
+                   raise NotADirectoryError(f"Not a directory: {self.path}")
+       
+               try:
+                   if self.pattern:
+                       return list(self.path.glob(self.pattern)) if not self.recursive else list(self.path.rglob(self.pattern))
+                   return list(self.path.glob("*")) if not self.recursive else list(self.path.rglob("*"))
+               except Exception as e:
+                   raise ValueError(f"Error listing directory {self.path}: {e}")
+       
+    1:     async def read(self) -> str:  # Always returns JSON string  # pragma: no cover
+               """Read the directory listing."""
+               try:
+                   files = await anyio.to_thread.run_sync(self.list_files)
+                   file_list = [str(f.relative_to(self.path)) for f in files if f.is_file()]
+                   return json.dumps({"files": file_list}, indent=2)
+               except Exception as e:
+                   raise ValueError(f"Error reading directory {self.path}: {e}")

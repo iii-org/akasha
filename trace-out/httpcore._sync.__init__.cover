@@ -1,0 +1,39 @@
+    1: from .connection import HTTPConnection
+    1: from .connection_pool import ConnectionPool
+    1: from .http11 import HTTP11Connection
+    1: from .http_proxy import HTTPProxy
+    1: from .interfaces import ConnectionInterface
+       
+    1: try:
+    1:     from .http2 import HTTP2Connection
+    1: except ImportError:  # pragma: nocover
+       
+    2:     class HTTP2Connection:  # type: ignore
+    1:         def __init__(self, *args, **kwargs) -> None:  # type: ignore
+                   raise RuntimeError(
+                       "Attempted to use http2 support, but the `h2` package is not "
+                       "installed. Use 'pip install httpcore[http2]'."
+                   )
+       
+       
+    1: try:
+    1:     from .socks_proxy import SOCKSProxy
+    1: except ImportError:  # pragma: nocover
+       
+    2:     class SOCKSProxy:  # type: ignore
+    1:         def __init__(self, *args, **kwargs) -> None:  # type: ignore
+                   raise RuntimeError(
+                       "Attempted to use SOCKS support, but the `socksio` package is not "
+                       "installed. Use 'pip install httpcore[socks]'."
+                   )
+       
+       
+    1: __all__ = [
+           "HTTPConnection",
+           "ConnectionPool",
+           "HTTPProxy",
+           "HTTP11Connection",
+           "HTTP2Connection",
+           "ConnectionInterface",
+           "SOCKSProxy",
+       ]

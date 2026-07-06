@@ -1,0 +1,25 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from .response_custom_tool_call import ResponseCustomToolCall
+       
+    1: __all__ = ["ResponseCustomToolCallItem"]
+       
+       
+    2: class ResponseCustomToolCallItem(ResponseCustomToolCall):
+    1:     """A call to a custom tool created by the model."""
+       
+    1:     id: str  # type: ignore
+    1:     """The unique ID of the custom tool call item."""
+       
+    1:     status: Literal["in_progress", "completed", "incomplete"]
+    1:     """The status of the item.
+       
+           One of `in_progress`, `completed`, or `incomplete`. Populated when items are
+           returned via API.
+           """
+       
+    1:     created_by: Optional[str] = None
+    1:     """The identifier of the actor that created the item."""

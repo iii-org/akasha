@@ -1,0 +1,605 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: """
+       This package implements `OpenTelemetry Resources
+       <https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/sdk.md#resource-sdk>`_:
+       
+           *A Resource is an immutable representation of the entity producing
+           telemetry. For example, a process producing telemetry that is running in
+           a container on Kubernetes has a Pod name, it is in a namespace and
+           possibly is part of a Deployment which also has a name. All three of
+           these attributes can be included in the Resource.*
+       
+       Resource objects are created with `Resource.create`, which accepts attributes
+       (key-values). Resources should NOT be created via constructor except by `ResourceDetector`
+       instances which can't use `Resource.create` to avoid infinite loops. Working with
+       `Resource` objects should only be done via the Resource API methods. Resource
+       attributes can also be passed at process invocation in the
+       :envvar:`OTEL_RESOURCE_ATTRIBUTES` environment variable. You should register
+       your resource with the  `opentelemetry.sdk.trace.TracerProvider` by passing
+       them into their constructors. The `Resource` passed to a provider is available
+       to the exporter, which can send on this information as it sees fit.
+       
+       .. code-block:: python
+       
+           trace.set_tracer_provider(
+               TracerProvider(
+                   resource=Resource.create({
+                       "service.name": "shoppingcart",
+                       "service.instance.id": "instance-12",
+                   }),
+               ),
+           )
+           print(trace.get_tracer_provider().resource.attributes)
+       
+           {'telemetry.sdk.language': 'python',
+           'telemetry.sdk.name': 'opentelemetry',
+           'telemetry.sdk.version': '0.13.dev0',
+           'service.name': 'shoppingcart',
+           'service.instance.id': 'instance-12'}
+       
+       Note that the OpenTelemetry project documents certain `"standard attributes"
+       <https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/resource/semantic_conventions/README.md>`_
+       that have prescribed semantic meanings, for example ``service.name`` in the
+       above example.
+       """
+       
+       # ResourceAttributes is deprecated
+       # pyright: reportDeprecated=false
+       
+    1: import abc
+    1: import concurrent.futures
+    1: import logging
+    1: import os
+    1: import platform
+    1: import socket
+    1: import sys
+    1: import threading
+    1: import uuid
+    1: from collections.abc import Mapping, Sequence
+    1: from json import dumps
+    1: from os import environ
+    1: from types import ModuleType
+    1: from typing import cast
+    1: from urllib import parse
+       
+    1: from opentelemetry.attributes import BoundedAttributes
+    1: from opentelemetry.sdk.environment_variables import (
+           OTEL_EXPERIMENTAL_RESOURCE_DETECTORS,
+           OTEL_RESOURCE_ATTRIBUTES,
+           OTEL_SERVICE_NAME,
+       )
+    1: from opentelemetry.sdk.version import (
+           __version__ as _OPENTELEMETRY_SDK_VERSION,
+       )
+    1: from opentelemetry.semconv.resource import ResourceAttributes
+    1: from opentelemetry.util.types import AttributeValue
+       
+    1: psutil: ModuleType | None = None
+       
+    1: try:
+    1:     import psutil as psutil_module
+       
+    1:     psutil = psutil_module
+       except ImportError:
+           pass
+       
+    1: LabelValue = AttributeValue
+    1: Attributes = Mapping[str, LabelValue]
+    1: logger = logging.getLogger(__name__)
+       
+    1: CLOUD_PROVIDER = ResourceAttributes.CLOUD_PROVIDER
+    1: CLOUD_ACCOUNT_ID = ResourceAttributes.CLOUD_ACCOUNT_ID
+    1: CLOUD_REGION = ResourceAttributes.CLOUD_REGION
+    1: CLOUD_AVAILABILITY_ZONE = ResourceAttributes.CLOUD_AVAILABILITY_ZONE
+    1: CONTAINER_NAME = ResourceAttributes.CONTAINER_NAME
+    1: CONTAINER_ID = ResourceAttributes.CONTAINER_ID
+    1: CONTAINER_IMAGE_NAME = ResourceAttributes.CONTAINER_IMAGE_NAME
+    1: CONTAINER_IMAGE_TAG = ResourceAttributes.CONTAINER_IMAGE_TAG
+    1: DEPLOYMENT_ENVIRONMENT = ResourceAttributes.DEPLOYMENT_ENVIRONMENT
+    1: FAAS_NAME = ResourceAttributes.FAAS_NAME
+    1: FAAS_ID = ResourceAttributes.FAAS_ID
+    1: FAAS_VERSION = ResourceAttributes.FAAS_VERSION
+    1: FAAS_INSTANCE = ResourceAttributes.FAAS_INSTANCE
+    1: HOST_NAME = ResourceAttributes.HOST_NAME
+    1: HOST_ARCH = ResourceAttributes.HOST_ARCH
+    1: HOST_TYPE = ResourceAttributes.HOST_TYPE
+    1: HOST_IMAGE_NAME = ResourceAttributes.HOST_IMAGE_NAME
+    1: HOST_IMAGE_ID = ResourceAttributes.HOST_IMAGE_ID
+    1: HOST_IMAGE_VERSION = ResourceAttributes.HOST_IMAGE_VERSION
+    1: KUBERNETES_CLUSTER_NAME = ResourceAttributes.K8S_CLUSTER_NAME
+    1: KUBERNETES_NAMESPACE_NAME = ResourceAttributes.K8S_NAMESPACE_NAME
+    1: KUBERNETES_POD_UID = ResourceAttributes.K8S_POD_UID
+    1: KUBERNETES_POD_NAME = ResourceAttributes.K8S_POD_NAME
+    1: KUBERNETES_CONTAINER_NAME = ResourceAttributes.K8S_CONTAINER_NAME
+    1: KUBERNETES_REPLICA_SET_UID = ResourceAttributes.K8S_REPLICASET_UID
+    1: KUBERNETES_REPLICA_SET_NAME = ResourceAttributes.K8S_REPLICASET_NAME
+    1: KUBERNETES_DEPLOYMENT_UID = ResourceAttributes.K8S_DEPLOYMENT_UID
+    1: KUBERNETES_DEPLOYMENT_NAME = ResourceAttributes.K8S_DEPLOYMENT_NAME
+    1: KUBERNETES_STATEFUL_SET_UID = ResourceAttributes.K8S_STATEFULSET_UID
+    1: KUBERNETES_STATEFUL_SET_NAME = ResourceAttributes.K8S_STATEFULSET_NAME
+    1: KUBERNETES_DAEMON_SET_UID = ResourceAttributes.K8S_DAEMONSET_UID
+    1: KUBERNETES_DAEMON_SET_NAME = ResourceAttributes.K8S_DAEMONSET_NAME
+    1: KUBERNETES_JOB_UID = ResourceAttributes.K8S_JOB_UID
+    1: KUBERNETES_JOB_NAME = ResourceAttributes.K8S_JOB_NAME
+    1: KUBERNETES_CRON_JOB_UID = ResourceAttributes.K8S_CRONJOB_UID
+    1: KUBERNETES_CRON_JOB_NAME = ResourceAttributes.K8S_CRONJOB_NAME
+    1: OS_DESCRIPTION = ResourceAttributes.OS_DESCRIPTION
+    1: OS_TYPE = ResourceAttributes.OS_TYPE
+    1: OS_VERSION = ResourceAttributes.OS_VERSION
+    1: PROCESS_PID = ResourceAttributes.PROCESS_PID
+    1: PROCESS_PARENT_PID = ResourceAttributes.PROCESS_PARENT_PID
+    1: PROCESS_EXECUTABLE_NAME = ResourceAttributes.PROCESS_EXECUTABLE_NAME
+    1: PROCESS_EXECUTABLE_PATH = ResourceAttributes.PROCESS_EXECUTABLE_PATH
+    1: PROCESS_COMMAND = ResourceAttributes.PROCESS_COMMAND
+    1: PROCESS_COMMAND_LINE = ResourceAttributes.PROCESS_COMMAND_LINE
+    1: PROCESS_COMMAND_ARGS = ResourceAttributes.PROCESS_COMMAND_ARGS
+    1: PROCESS_OWNER = ResourceAttributes.PROCESS_OWNER
+    1: PROCESS_RUNTIME_NAME = ResourceAttributes.PROCESS_RUNTIME_NAME
+    1: PROCESS_RUNTIME_VERSION = ResourceAttributes.PROCESS_RUNTIME_VERSION
+    1: PROCESS_RUNTIME_DESCRIPTION = ResourceAttributes.PROCESS_RUNTIME_DESCRIPTION
+    1: SERVICE_NAME = ResourceAttributes.SERVICE_NAME
+    1: SERVICE_NAMESPACE = ResourceAttributes.SERVICE_NAMESPACE
+    1: SERVICE_INSTANCE_ID = ResourceAttributes.SERVICE_INSTANCE_ID
+    1: SERVICE_VERSION = ResourceAttributes.SERVICE_VERSION
+    1: TELEMETRY_SDK_NAME = ResourceAttributes.TELEMETRY_SDK_NAME
+    1: TELEMETRY_SDK_VERSION = ResourceAttributes.TELEMETRY_SDK_VERSION
+    1: TELEMETRY_AUTO_VERSION = ResourceAttributes.TELEMETRY_AUTO_VERSION
+    1: TELEMETRY_SDK_LANGUAGE = ResourceAttributes.TELEMETRY_SDK_LANGUAGE
+       
+       
+    2: class Resource:
+    1:     """A Resource is an immutable representation of the entity producing telemetry as Attributes."""
+       
+    1:     _attributes: BoundedAttributes
+    1:     _schema_url: str
+       
+    1:     def __init__(self, attributes: Attributes, schema_url: str | None = None):
+   10:         self._attributes = BoundedAttributes(attributes=attributes)
+   10:         if schema_url is None:
+    6:             schema_url = ""
+   10:         self._schema_url = schema_url
+       
+    2:     @staticmethod
+    5:     def create(
+    2:         attributes: Attributes | None = None,
+    2:         schema_url: str | None = None,
+    1:     ) -> "Resource":
+               """Creates a new `Resource` from attributes.
+       
+               `ResourceDetector` instances should not call this method.
+       
+               Args:
+                   attributes: Optional zero or more key-value pairs.
+                   schema_url: Optional URL pointing to the schema
+       
+               Returns:
+                   The newly-created Resource.
+               """
+       
+    1:         if not attributes:
+    1:             attributes = {}
+       
+    3:         resource = get_aggregated_resources(
+    1:             _build_resource_detectors(), _DEFAULT_RESOURCE
+    1:         ).merge(Resource(attributes, schema_url))
+       
+    1:         if not resource.attributes.get(SERVICE_NAME, None):
+    1:             default_service_name = "unknown_service"
+    2:             process_executable_name = cast(
+    1:                 str | None,
+    1:                 resource.attributes.get(PROCESS_EXECUTABLE_NAME, None),
+                   )
+    1:             if process_executable_name:
+                       default_service_name += ":" + process_executable_name
+    2:             resource = resource.merge(
+    1:                 Resource({SERVICE_NAME: default_service_name}, schema_url)
+                   )
+    1:         return resource
+       
+    2:     @staticmethod
+    2:     def get_empty() -> "Resource":
+               return _EMPTY_RESOURCE
+       
+    2:     @property
+    2:     def attributes(self) -> Attributes:
+   10:         return self._attributes
+       
+    2:     @property
+    2:     def schema_url(self) -> str:
+    8:         return self._schema_url
+       
+    1:     def merge(self, other: "Resource") -> "Resource":
+               """Merges this resource and an updating resource into a new `Resource`.
+       
+               If a key exists on both the old and updating resource, the value of the
+               updating resource will override the old resource value.
+       
+               The updating resource's `schema_url` will be used only if the old
+               `schema_url` is empty. Attempting to merge two resources with
+               different, non-empty values for `schema_url` will result in an error
+               and return the old resource.
+       
+               Args:
+                   other: The other resource to be merged.
+       
+               Returns:
+                   The newly-created Resource.
+               """
+    4:         merged_attributes = dict(self.attributes)
+    4:         merged_attributes.update(other.attributes)
+       
+    4:         if self.schema_url == "":
+    4:             schema_url = other.schema_url
+               elif other.schema_url == "":
+                   schema_url = self.schema_url
+               elif self.schema_url == other.schema_url:
+                   schema_url = other.schema_url
+               else:
+                   logger.error(
+                       "Failed to merge resources: The two schemas %s and %s are incompatible",
+                       self.schema_url,
+                       other.schema_url,
+                   )
+                   return self
+    4:         return Resource(merged_attributes, schema_url)
+       
+    1:     def __eq__(self, other: object) -> bool:
+               if not isinstance(other, Resource):
+                   return False
+               return (
+                   self._attributes == other._attributes
+                   and self._schema_url == other._schema_url
+               )
+       
+    1:     def __hash__(self) -> int:
+               return hash(
+                   f"{dumps(self._attributes.copy(), sort_keys=True)}|{self._schema_url}"
+               )
+       
+    1:     def to_json(self, indent: int | None = 4) -> str:
+               return dumps(
+                   {
+                       "attributes": dict(self.attributes),
+                       "schema_url": self._schema_url,
+                   },
+                   indent=indent,
+               )
+       
+       
+    1: _EMPTY_RESOURCE = Resource({})
+       
+    2: _DEFAULT_RESOURCE = Resource(
+    1:     {
+    1:         TELEMETRY_SDK_LANGUAGE: "python",
+    1:         TELEMETRY_SDK_NAME: "opentelemetry",
+    1:         TELEMETRY_SDK_VERSION: _OPENTELEMETRY_SDK_VERSION,
+           }
+       )
+       
+       
+    1: _service_instance_id: str | None = None
+    1: _service_instance_id_pid: int | None = None
+    1: _service_instance_id_lock = threading.Lock()
+       
+       
+    2: class ResourceDetector(abc.ABC):
+    1:     def __init__(self, raise_on_error: bool = False) -> None:
+    2:         self.raise_on_error = raise_on_error
+       
+    2:     @abc.abstractmethod
+    2:     def detect(self) -> "Resource":
+               """Don't call `Resource.create` here to avoid an infinite loop, instead instantiate `Resource` directly"""
+               raise NotImplementedError()
+       
+       
+    2: class OTELResourceDetector(ResourceDetector):
+           # pylint: disable=no-self-use
+    1:     def detect(self) -> "Resource":
+    1:         env_resources_items = environ.get(OTEL_RESOURCE_ATTRIBUTES)
+    1:         env_resource_map: dict[str, AttributeValue] = {}
+       
+    1:         if env_resources_items:
+                   for item in env_resources_items.split(","):
+                       try:
+                           key, value = item.split("=", maxsplit=1)
+                       except ValueError as exc:
+                           logger.warning(
+                               "Invalid key value resource attribute pair %s: %s",
+                               item,
+                               exc,
+                           )
+                           continue
+                       value_url_decoded = parse.unquote(value.strip())
+                       env_resource_map[key.strip()] = value_url_decoded
+       
+    1:         service_name = environ.get(OTEL_SERVICE_NAME)
+    1:         if service_name:
+                   env_resource_map[SERVICE_NAME] = service_name
+    1:         return Resource(env_resource_map)
+       
+       
+    2: class ProcessResourceDetector(ResourceDetector):
+           # pylint: disable=no-self-use
+    1:     def detect(self) -> "Resource":
+               _runtime_version = ".".join(
+                   map(
+                       str,
+                       (
+                           sys.version_info[:3]
+                           if sys.version_info.releaselevel == "final"
+                           and not sys.version_info.serial
+                           else sys.version_info
+                       ),
+                   )
+               )
+               _process_pid = os.getpid()
+               _process_executable_name = sys.executable
+               _process_executable_path = os.path.dirname(_process_executable_name)
+               # Use sys.orig_argv, which preserves the original arguments received
+               # by the interpreter. This correctly captures ``python -m <module>``
+               # invocations where sys.argv is rewritten to the resolved module path
+               # and the ``-m <module>`` information is lost. sys.orig_argv also
+               # aligns with /proc/<pid>/cmdline, which the OTel semantic
+               # conventions reference for these attributes.
+               _process_argv = list(sys.orig_argv)
+               _process_command = _process_argv[0] if _process_argv else ""
+               _process_command_line = " ".join(_process_argv)
+               _process_command_args = _process_argv
+               resource_info = {
+                   PROCESS_RUNTIME_DESCRIPTION: sys.version,
+                   PROCESS_RUNTIME_NAME: sys.implementation.name,
+                   PROCESS_RUNTIME_VERSION: _runtime_version,
+                   PROCESS_PID: _process_pid,
+                   PROCESS_EXECUTABLE_NAME: _process_executable_name,
+                   PROCESS_EXECUTABLE_PATH: _process_executable_path,
+                   PROCESS_COMMAND: _process_command,
+                   PROCESS_COMMAND_LINE: _process_command_line,
+                   PROCESS_COMMAND_ARGS: _process_command_args,
+               }
+               if hasattr(os, "getppid"):
+                   # pypy3 does not have getppid()
+                   resource_info[PROCESS_PARENT_PID] = os.getppid()
+       
+               if psutil is not None:
+                   process = psutil.Process()
+                   username = process.username()
+                   resource_info[PROCESS_OWNER] = username
+       
+               return Resource(resource_info)  # type: ignore
+       
+       
+    2: class OsResourceDetector(ResourceDetector):
+    1:     """Detect os resources based on `Operating System conventions <https://opentelemetry.io/docs/specs/semconv/resource/os/>`_."""
+       
+    1:     def detect(self) -> "Resource":
+               """Returns a resource with with ``os.type`` and ``os.version``.
+       
+               Python's platform library
+               ~~~~~~~~~~~~~~~~~~~~~~~~~
+       
+               To grab this information, Python's ``platform`` does not return what a
+               user might expect it to. Below is a breakdown of its return values in
+               different operating systems.
+       
+               .. code-block:: python
+                   :caption: Linux
+       
+                   >>> platform.system()
+                   'Linux'
+                   >>> platform.release()
+                   '6.5.0-35-generic'
+                   >>> platform.version()
+                   '#35~22.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue May  7 09:00:52 UTC 2'
+       
+               .. code-block:: python
+                   :caption: MacOS
+       
+                   >>> platform.system()
+                   'Darwin'
+                   >>> platform.release()
+                   '23.0.0'
+                   >>> platform.version()
+                   'Darwin Kernel Version 23.0.0: Fri Sep 15 14:42:57 PDT 2023; root:xnu-10002.1.13~1/RELEASE_ARM64_T8112'
+       
+               .. code-block:: python
+                   :caption: Windows
+       
+                   >>> platform.system()
+                   'Windows'
+                   >>> platform.release()
+                   '2022Server'
+                   >>> platform.version()
+                   '10.0.20348'
+       
+               .. code-block:: python
+                   :caption: FreeBSD
+       
+                   >>> platform.system()
+                   'FreeBSD'
+                   >>> platform.release()
+                   '14.1-RELEASE'
+                   >>> platform.version()
+                   'FreeBSD 14.1-RELEASE releng/14.1-n267679-10e31f0946d8 GENERIC'
+       
+               .. code-block:: python
+                   :caption: Solaris
+       
+                   >>> platform.system()
+                   'SunOS'
+                   >>> platform.release()
+                   '5.11'
+                   >>> platform.version()
+                   '11.4.0.15.0'
+       
+               """
+       
+               os_type = platform.system().lower()
+               os_version = platform.release()
+       
+               # See docstring
+               if os_type == "windows":
+                   os_version = platform.version()
+               # Align SunOS with conventions
+               elif os_type == "sunos":
+                   os_type = "solaris"
+                   os_version = platform.version()
+       
+               return Resource(
+                   {
+                       OS_TYPE: os_type,
+                       OS_VERSION: os_version,
+                   }
+               )
+       
+       
+    2: class _HostResourceDetector(ResourceDetector):  # type: ignore[reportUnusedClass]
+    1:     """
+           The HostResourceDetector detects the hostname and architecture attributes.
+           """
+       
+    1:     def detect(self) -> "Resource":
+               return Resource(
+                   {
+                       HOST_NAME: socket.gethostname(),
+                       HOST_ARCH: platform.machine(),
+                   }
+               )
+       
+       
+    2: class ServiceInstanceIdResourceDetector(ResourceDetector):
+    1:     """Detects service.instance.id as a random UUID v4.
+       
+           Per the OpenTelemetry specification, SDKs SHOULD generate a random v1/v4
+           UUID for service.instance.id to uniquely identify each service instance.
+           The ID is shared across all detector instances within the same process and
+           regenerated automatically when the process PID changes (e.g. after a fork).
+           """
+       
+    1:     def detect(self) -> "Resource":
+               # pylint: disable-next=global-statement
+               global _service_instance_id, _service_instance_id_pid
+    2:         with _service_instance_id_lock:
+    1:             current_pid = os.getpid()
+                   if (
+    1:                 _service_instance_id is None
+                       or _service_instance_id_pid != current_pid
+                   ):
+    1:                 _service_instance_id = str(uuid.uuid4())
+    1:                 _service_instance_id_pid = current_pid
+    1:             instance_id = _service_instance_id
+    1:         return Resource({SERVICE_INSTANCE_ID: instance_id})
+       
+       
+    1: def _build_resource_detectors() -> list["ResourceDetector"]:
+           """Returns the ordered list of resource detectors to use for Resource.create.
+       
+           Fast path: if no extra detectors are configured, returns only the two
+           built-in detectors without scanning entry_points.
+       
+           "service_instance" (ServiceInstanceIdResourceDetector) and "otel"
+           (OTELResourceDetector) are always appended as defaults. "otel" is last so
+           that OTEL_RESOURCE_ATTRIBUTES and OTEL_SERVICE_NAME take highest merge
+           priority, but an explicit position in OTEL_EXPERIMENTAL_RESOURCE_DETECTORS
+           is respected for either name.
+           """
+    2:     detector_names: list[str] = list(
+    2:         dict.fromkeys(
+    6:             [
+                       name.strip()
+    3:                 for name in environ.get(
+    1:                     OTEL_EXPERIMENTAL_RESOURCE_DETECTORS, ""
+    1:                 ).split(",")
+    1:                 if name.strip()
+                   ]
+    1:             + ["service_instance", "otel"]
+               )
+           )
+       
+           # Fast path: only the two built-in detectors — no entry_points scan needed.
+    1:     if detector_names == ["service_instance", "otel"]:
+    1:         return [ServiceInstanceIdResourceDetector(), OTELResourceDetector()]
+       
+           # pylint: disable=import-outside-toplevel
+           from opentelemetry.util._importlib_metadata import (  # noqa: PLC0415
+               entry_points,  # type: ignore[reportUnknownVariableType]
+           )
+       
+           if "*" in detector_names:
+               registered = set(
+                   name
+                   for name in entry_points(
+                       group="opentelemetry_resource_detector"
+                   ).names  # type: ignore[reportUnknownArgumentType]
+                   if name != "otel"
+               )
+               expansion = sorted(registered - set(detector_names))
+               idx = detector_names.index("*")
+               detector_names = (
+                   detector_names[:idx] + expansion + detector_names[idx + 1 :]
+               )
+       
+           detectors: list[ResourceDetector] = []
+           for name in detector_names:
+               try:
+                   detectors.append(
+                       next(
+                           iter(
+                               entry_points(
+                                   group="opentelemetry_resource_detector",
+                                   name=name,
+                               )  # type: ignore[reportUnknownArgumentType]
+                           )
+                       ).load()()
+                   )
+               except Exception:  # pylint: disable=broad-exception-caught
+                   logger.exception(
+                       "Failed to load resource detector '%s', skipping",
+                       name,
+                   )
+           return detectors
+       
+       
+    5: def get_aggregated_resources(
+    1:     detectors: Sequence["ResourceDetector"],
+    2:     initial_resource: Resource | None = None,
+    2:     timeout: int = 5,
+    1: ) -> "Resource":
+           """Retrieves resources from detectors in the order that they were passed
+       
+           :param detectors: List of resources in order of priority
+           :param initial_resource: Static resource. This has highest priority
+           :param timeout: Number of seconds to wait for each detector to return
+           :return:
+           """
+    1:     detectors_merged_resource = initial_resource or Resource.create()
+       
+    2:     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    4:         futures = [executor.submit(detector.detect) for detector in detectors]
+    3:         for detector_ind, future in enumerate(futures):
+    2:             detector = detectors[detector_ind]
+    2:             detected_resource: Resource = _EMPTY_RESOURCE
+    2:             try:
+    2:                 detected_resource = future.result(timeout=timeout)
+                   except concurrent.futures.TimeoutError as ex:
+                       if detector.raise_on_error:
+                           raise ex
+                       logger.warning(
+                           "Detector %s took longer than %s seconds, skipping",
+                           detector,
+                           timeout,
+                       )
+                   # pylint: disable=broad-exception-caught
+                   except Exception as ex:
+                       if detector.raise_on_error:
+                           raise ex
+                       logger.warning(
+                           "Exception %s in detector %s, ignoring", ex, detector
+                       )
+                   finally:
+    4:                 detectors_merged_resource = detectors_merged_resource.merge(
+    2:                     detected_resource
+                       )
+       
+    1:     return detectors_merged_resource

@@ -1,0 +1,21 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from .response import Response
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseCompletedEvent"]
+       
+       
+    2: class ResponseCompletedEvent(BaseModel):
+    1:     """Emitted when the model response is complete."""
+       
+    1:     response: Response
+    1:     """Properties of the completed response."""
+       
+    1:     sequence_number: int
+    1:     """The sequence number for this event."""
+       
+    1:     type: Literal["response.completed"]
+    1:     """The type of the event. Always `response.completed`."""

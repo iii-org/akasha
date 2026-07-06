@@ -1,0 +1,46 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: from collections.abc import Mapping, Sequence
+       
+       # This is the implementation of the "Any" type as specified by the specifications of OpenTelemetry data model for logs.
+       # For more details, refer to the OTel specification:
+       # https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/logs/data-model.md#type-any
+    1: AnyValue = (
+    8:     str
+    1:     | bool
+    1:     | int
+    1:     | float
+    1:     | bytes
+    1:     | Sequence["AnyValue"]
+    1:     | Mapping[str, "AnyValue"]
+    1:     | None
+       )
+       
+    1: AttributeValue = (
+    8:     str
+    1:     | bool
+    1:     | int
+    1:     | float
+    1:     | Sequence[str]
+    1:     | Sequence[bool]
+    1:     | Sequence[int]
+    1:     | Sequence[float]
+       )
+    1: Attributes = Mapping[str, AttributeValue] | None
+    2: AttributesAsKey = tuple[
+    3:     tuple[
+    2:         str,
+    8:         str
+    1:         | bool
+    1:         | int
+    1:         | float
+    1:         | tuple[str | None, ...]
+    1:         | tuple[bool | None, ...]
+    1:         | tuple[int | None, ...]
+    1:         | tuple[float | None, ...],
+           ],
+    1:     ...,
+       ]
+       
+    1: _ExtendedAttributes = Mapping[str, "AnyValue"]

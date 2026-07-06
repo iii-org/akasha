@@ -1,0 +1,1896 @@
+    1: import functools
+    1: import importlib
+    1: import importlib.util
+    1: import inspect
+    1: import itertools
+    1: import logging
+    1: import os
+    1: import re
+    1: import shlex
+    1: import shutil
+    1: import socket
+    1: import stat
+    1: import subprocess
+    1: import sys
+    1: import tempfile
+    1: import warnings
+    1: from collections import defaultdict
+    1: from contextlib import contextmanager
+    1: from pathlib import Path
+    1: from types import ModuleType
+    1: from typing import (
+           TYPE_CHECKING,
+           Any,
+           Callable,
+           Dict,
+           Generator,
+           Iterable,
+           Iterator,
+           List,
+           Mapping,
+           NoReturn,
+           Optional,
+           Pattern,
+           Set,
+           Tuple,
+           Type,
+           Union,
+           cast,
+       )
+       
+    1: import catalogue
+    1: import numpy
+    1: import srsly
+    1: import thinc
+    1: from catalogue import Registry, RegistryError
+    1: from packaging.requirements import Requirement
+    1: from packaging.specifiers import InvalidSpecifier, SpecifierSet
+    1: from packaging.version import InvalidVersion, Version
+    1: from thinc.api import (
+           Adam,
+           Config,
+           ConfigValidationError,
+           Model,
+           NumpyOps,
+           Optimizer,
+           get_current_ops,
+       )
+       
+    1: try:
+    1:     import cupy.random
+    1: except ImportError:
+    1:     cupy = None
+       
+       # These are functions that were previously (v2.x) available from spacy.util
+       # and have since moved to Thinc. We're importing them here so people's code
+       # doesn't break, but they should always be imported from Thinc from now on,
+       # not from spacy.util.
+    1: from thinc.api import compounding, decaying, fix_random_seed  # noqa: F401
+       
+    1: from . import about
+    1: from .compat import CudaStream, cupy, importlib_metadata, is_windows
+    1: from .errors import OLD_MODEL_SHORTCUTS, Errors, Warnings
+    1: from .symbols import ORTH
+       
+    1: if TYPE_CHECKING:
+           # This lets us add type hints for mypy etc. without causing circular imports
+           from .language import Language, PipeCallable  # noqa: F401
+           from .tokens import Doc, Span  # noqa: F401
+           from .vocab import Vocab  # noqa: F401
+       
+       
+       # fmt: off
+    1: OOV_RANK = numpy.iinfo(numpy.uint64).max
+    1: DEFAULT_OOV_PROB = -20
+    1: LEXEME_NORM_LANGS = ["cs", "da", "de", "el", "en", "grc", "id", "lb", "mk", "pt", "ru", "sr", "ta", "th"]
+       
+       # Default order of sections in the config file. Not all sections needs to exist,
+       # and additional sections are added at the end, in alphabetical order.
+    1: CONFIG_SECTION_ORDER = ["paths", "variables", "system", "nlp", "components", "corpora", "training", "pretraining", "initialize"]
+       
+   70: LANG_ALIASES = {
+    1:     "af": ["afr"],
+    1:     "am": ["amh"],
+    1:     "ar": ["ara"],
+    1:     "az": ["aze"],
+    1:     "bg": ["bul"],
+    1:     "bn": ["ben"],
+    1:     "bo": ["bod", "tib"],
+    1:     "ca": ["cat"],
+    1:     "cs": ["ces", "cze"],
+    1:     "da": ["dan"],
+    1:     "de": ["deu", "ger"],
+    1:     "el": ["ell", "gre"],
+    1:     "en": ["eng"],
+    1:     "es": ["spa"],
+    1:     "et": ["est"],
+    1:     "eu": ["eus", "baq"],
+    1:     "fa": ["fas", "per"],
+    1:     "fi": ["fin"],
+    1:     "fo": ["fao"],
+    1:     "fr": ["fra", "fre"],
+    1:     "ga": ["gle"],
+    1:     "gd": ["gla"],
+    1:     "gu": ["guj"],
+    1:     "he": ["heb", "iw"], # "iw" is the obsolete ISO 639-1 code for Hebrew
+    1:     "hi": ["hin"],
+    1:     "hr": ["hrv", "scr"], # "scr" is the deprecated ISO 639-2/B for Croatian
+    1:     "hu": ["hun"],
+    1:     "hy": ["hye"],
+    1:     "id": ["ind", "in"], # "in" is the obsolete ISO 639-1 code for Hebrew
+    1:     "is": ["isl", "ice"],
+    1:     "it": ["ita"],
+    1:     "ja": ["jpn"],
+    1:     "kn": ["kan"],
+    1:     "ko": ["kor"],
+    1:     "ky": ["kir"],
+    1:     "la": ["lat"],
+    1:     "lb": ["ltz"],
+    1:     "lg": ["lug"],
+    1:     "lt": ["lit"],
+    1:     "lv": ["lav"],
+    1:     "mk": ["mkd", "mac"],
+    1:     "ml": ["mal"],
+    1:     "mr": ["mar"],
+    1:     "ms": ["msa", "may"],
+    1:     "nb": ["nob"],
+    1:     "ne": ["nep"],
+    1:     "nl": ["nld", "dut"],
+    1:     "nn": ["nno"],
+    1:     "pl": ["pol"],
+    1:     "pt": ["por"],
+    1:     "ro": ["ron", "rom", "mo", "mol"], # "mo" and "mol" are deprecated codes for Moldavian
+    1:     "ru": ["rus"],
+    1:     "sa": ["san"],
+    1:     "si": ["sin"],
+    1:     "sk": ["slk", "slo"],
+    1:     "sl": ["slv"],
+    1:     "sq": ["sqi", "alb"],
+    1:     "sr": ["srp", "scc"], # "scc" is the deprecated ISO 639-2/B code for Serbian
+    1:     "sv": ["swe"],
+    1:     "ta": ["tam"],
+    1:     "te": ["tel"],
+    1:     "th": ["tha"],
+    1:     "ti": ["tir"],
+    1:     "tl": ["tgl"],
+    1:     "tn": ["tsn"],
+    1:     "tr": ["tur"],
+    1:     "tt": ["tat"],
+    1:     "uk": ["ukr"],
+    1:     "ur": ["urd"],
+    1:     "vi": ["viw"],
+    1:     "yo": ["yor"],
+    1:     "zh": ["zho", "chi"],
+       
+    1:     "xx": ["mul"],
+       }
+       # fmt: on
+       
+    1: logger = logging.getLogger("spacy")
+    1: logger_stream_handler = logging.StreamHandler()
+    2: logger_stream_handler.setFormatter(
+    1:     logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+       )
+    1: logger.addHandler(logger_stream_handler)
+       
+       
+    2: class ENV_VARS:
+    1:     CONFIG_OVERRIDES = "SPACY_CONFIG_OVERRIDES"
+       
+       
+    2: class registry(thinc.registry):
+    1:     languages = catalogue.create("spacy", "languages", entry_points=True)
+    1:     architectures = catalogue.create("spacy", "architectures", entry_points=True)
+    1:     tokenizers = catalogue.create("spacy", "tokenizers", entry_points=True)
+    1:     lemmatizers = catalogue.create("spacy", "lemmatizers", entry_points=True)
+    1:     lookups = catalogue.create("spacy", "lookups", entry_points=True)
+    1:     displacy_colors = catalogue.create("spacy", "displacy_colors", entry_points=True)
+    1:     misc = catalogue.create("spacy", "misc", entry_points=True)
+           # Callback functions used to manipulate nlp object etc.
+    1:     callbacks = catalogue.create("spacy", "callbacks", entry_points=True)
+    1:     batchers = catalogue.create("spacy", "batchers", entry_points=True)
+    1:     readers = catalogue.create("spacy", "readers", entry_points=True)
+    1:     augmenters = catalogue.create("spacy", "augmenters", entry_points=True)
+    1:     loggers = catalogue.create("spacy", "loggers", entry_points=True)
+    1:     scorers = catalogue.create("spacy", "scorers", entry_points=True)
+    1:     vectors = catalogue.create("spacy", "vectors", entry_points=True)
+           # These are factories registered via third-party packages and the
+           # spacy_factories entry point. This registry only exists so we can easily
+           # load them via the entry points. The "true" factories are added via the
+           # Language.factory decorator (in the spaCy code base and user code) and those
+           # are the factories used to initialize components via registry.resolve.
+    1:     _entry_point_factories = catalogue.create("spacy", "factories", entry_points=True)
+    1:     factories = catalogue.create("spacy", "internal_factories")
+           # This is mostly used to get a list of all installed models in the current
+           # environment. spaCy models packaged with `spacy package` will "advertise"
+           # themselves via entry points.
+    1:     models = catalogue.create("spacy", "models", entry_points=True)
+    1:     cli = catalogue.create("spacy", "cli", entry_points=True)
+       
+    2:     @classmethod
+    2:     def ensure_populated(cls) -> None:
+               """Ensure the registry is populated with all necessary components."""
+               from .registrations import REGISTRY_POPULATED, populate_registry
+       
+               if not REGISTRY_POPULATED:
+                   populate_registry()
+       
+    2:     @classmethod
+    2:     def get_registry_names(cls) -> List[str]:
+               """List all available registries."""
+               cls.ensure_populated()
+               names = []
+               for name, value in inspect.getmembers(cls):
+                   if not name.startswith("_") and isinstance(value, Registry):
+                       names.append(name)
+               return sorted(names)
+       
+    2:     @classmethod
+    2:     def get(cls, registry_name: str, func_name: str) -> Callable:
+               """Get a registered function from the registry."""
+               cls.ensure_populated()
+               # We're overwriting this classmethod so we're able to provide more
+               # specific error messages and implement a fallback to spacy-legacy.
+               if not hasattr(cls, registry_name):
+                   names = ", ".join(cls.get_registry_names()) or "none"
+                   raise RegistryError(Errors.E892.format(name=registry_name, available=names))
+               reg = getattr(cls, registry_name)
+               try:
+                   func = reg.get(func_name)
+               except RegistryError:
+                   if func_name.startswith("spacy."):
+                       legacy_name = func_name.replace("spacy.", "spacy-legacy.")
+                       try:
+                           return reg.get(legacy_name)
+                       except catalogue.RegistryError:
+                           pass
+                   available = ", ".join(sorted(reg.get_all().keys())) or "none"
+                   raise RegistryError(
+                       Errors.E893.format(
+                           name=func_name, reg_name=registry_name, available=available
+                       )
+                   ) from None
+               return func
+       
+    2:     @classmethod
+    5:     def find(
+    2:         cls, registry_name: str, func_name: str
+    1:     ) -> Dict[str, Optional[Union[str, int]]]:
+               """Find information about a registered function, including the
+               module and path to the file it's defined in, the line number and the
+               docstring, if available.
+       
+               registry_name (str): Name of the catalogue registry.
+               func_name (str): Name of the registered function.
+               RETURNS (Dict[str, Optional[Union[str, int]]]): The function info.
+               """
+               cls.ensure_populated()
+               # We're overwriting this classmethod so we're able to provide more
+               # specific error messages and implement a fallback to spacy-legacy.
+               if not hasattr(cls, registry_name):
+                   names = ", ".join(cls.get_registry_names()) or "none"
+                   raise RegistryError(Errors.E892.format(name=registry_name, available=names))
+               reg = getattr(cls, registry_name)
+               try:
+                   func_info = reg.find(func_name)
+               except RegistryError:
+                   if func_name.startswith("spacy."):
+                       legacy_name = func_name.replace("spacy.", "spacy-legacy.")
+                       try:
+                           return reg.find(legacy_name)
+                       except catalogue.RegistryError:
+                           pass
+                   available = ", ".join(sorted(reg.get_all().keys())) or "none"
+                   raise RegistryError(
+                       Errors.E893.format(
+                           name=func_name, reg_name=registry_name, available=available
+                       )
+                   ) from None
+               return func_info
+       
+    2:     @classmethod
+    2:     def has(cls, registry_name: str, func_name: str) -> bool:
+               """Check whether a function is available in a registry."""
+               cls.ensure_populated()
+               if not hasattr(cls, registry_name):
+                   return False
+               reg = getattr(cls, registry_name)
+               if func_name.startswith("spacy."):
+                   legacy_name = func_name.replace("spacy.", "spacy-legacy.")
+                   return func_name in reg or legacy_name in reg
+               return func_name in reg
+       
+       
+    2: class SimpleFrozenDict(dict):
+    1:     """Simplified implementation of a frozen dict, mainly used as default
+           function or method argument (for arguments that should default to empty
+           dictionary). Will raise an error if user or spaCy attempts to add to dict.
+           """
+       
+    1:     def __init__(self, *args, error: str = Errors.E095, **kwargs) -> None:
+               """Initialize the frozen dict. Can be initialized with pre-defined
+               values.
+       
+               error (str): The error message when user tries to assign to dict.
+               """
+   29:         super().__init__(*args, **kwargs)
+   29:         self.error = error
+       
+    1:     def __setitem__(self, key, value):
+               raise NotImplementedError(self.error)
+       
+    1:     def pop(self, key, default=None):
+               raise NotImplementedError(self.error)
+       
+    1:     def update(self, other):
+               raise NotImplementedError(self.error)
+       
+       
+    2: class SimpleFrozenList(list):
+    1:     """Wrapper class around a list that lets us raise custom errors if certain
+           attributes/methods are accessed. Mostly used for properties like
+           Language.pipeline that return an immutable list (and that we don't want to
+           convert to a tuple to not break too much backwards compatibility). If a user
+           accidentally calls nlp.pipeline.append(), we can raise a more helpful error.
+           """
+       
+    1:     def __init__(self, *args, error: str = Errors.E927) -> None:
+               """Initialize the frozen list.
+       
+               error (str): The error message when user tries to mutate the list.
+               """
+   45:         self.error = error
+   45:         super().__init__(*args)
+       
+    1:     def append(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def clear(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def extend(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def insert(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def pop(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def remove(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def reverse(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+    1:     def sort(self, *args, **kwargs):
+               raise NotImplementedError(self.error)
+       
+       
+    1: def lang_class_is_loaded(lang: str) -> bool:
+           """Check whether a Language class is already loaded. Language classes are
+           loaded lazily, to avoid expensive setup code associated with the language
+           data.
+       
+           lang (str): Two-letter language code, e.g. 'en'.
+           RETURNS (bool): Whether a Language class has been loaded.
+           """
+           return lang in registry.languages
+       
+       
+    1: def find_matching_language(lang: str) -> Optional[str]:
+           """
+           Given a two-letter ISO 639-1 or three-letter ISO 639-3 language code,
+           find a supported spaCy language.
+       
+           Returns the language code if a matching language is available, or None
+           if there is no matching language.
+       
+           >>> find_matching_language('fra')  # ISO 639-3 code for French
+           'fr'
+           >>> find_matching_language('fre')  # ISO 639-2/B code for French
+           'fr'
+           >>> find_matching_language('iw')  # Obsolete ISO 639-1 code for Hebrew
+           'he'
+           >>> find_matching_language('mo')  # Deprecated code for Moldavian
+           'ro'
+           >>> find_matching_language('scc')  # Deprecated ISO 639-2/B code for Serbian
+           'sr'
+           >>> find_matching_language('zxx')
+           None
+           """
+           import spacy.lang  # noqa: F401
+       
+           # Check aliases
+           for lang_code, aliases in LANG_ALIASES.items():
+               if lang in aliases:
+                   return lang_code
+       
+           return None
+       
+       
+    1: def get_lang_class(lang: str) -> Type["Language"]:
+           """Import and load a Language class.
+       
+           lang (str): Two-letter ISO 639-1 or three-letter ISO 639-3 language code, such as 'en' and 'eng'.
+           RETURNS (Language): Language class.
+           """
+           # Check if language is registered / entry point is available
+           if lang in registry.languages:
+               return registry.languages.get(lang)
+           else:
+               # Find the language in the spacy.lang subpackage
+               try:
+                   module = importlib.import_module(f".lang.{lang}", "spacy")
+               except ImportError as err:
+                   # Find a matching language. For example, if the language 'eng' is
+                   # requested, we can use language-matching to load `spacy.lang.en`.
+                   match = find_matching_language(lang)
+       
+                   if match:
+                       lang = match
+                       module = importlib.import_module(f".lang.{lang}", "spacy")
+                   else:
+                       raise ImportError(Errors.E048.format(lang=lang, err=err)) from err
+               set_lang_class(lang, getattr(module, module.__all__[0]))  # type: ignore[attr-defined]
+           return registry.languages.get(lang)
+       
+       
+    1: def set_lang_class(name: str, cls: Type["Language"]) -> None:
+           """Set a custom Language class name that can be loaded via get_lang_class.
+       
+           name (str): Name of Language class.
+           cls (Language): Language class.
+           """
+           registry.languages.register(name, func=cls)
+       
+       
+    1: def ensure_path(path: Any) -> Any:
+           """Ensure string is converted to a Path.
+       
+           path (Any): Anything. If string, it's converted to Path.
+           RETURNS: Path or original argument.
+           """
+    1:     if isinstance(path, str):
+               return Path(path)
+           else:
+    1:         return path
+       
+       
+    1: def load_language_data(path: Union[str, Path]) -> Union[dict, list]:
+           """Load JSON language data using the given path as a base. If the provided
+           path isn't present, will attempt to load a gzipped version before giving up.
+       
+           path (str / Path): The data to load.
+           RETURNS: The loaded data.
+           """
+           path = ensure_path(path)
+           if path.exists():
+               return srsly.read_json(path)
+           path = path.with_suffix(path.suffix + ".gz")
+           if path.exists():
+               return srsly.read_gzip_json(path)
+           raise ValueError(Errors.E160.format(path=path))
+       
+       
+    1: def get_module_path(module: ModuleType) -> Path:
+           """Get the path of a Python module.
+       
+           module (ModuleType): The Python module.
+           RETURNS (Path): The path.
+           """
+           if not hasattr(module, "__module__"):
+               raise ValueError(Errors.E169.format(module=repr(module)))
+           file_path = Path(cast(os.PathLike, sys.modules[module.__module__].__file__))
+           return file_path.parent
+       
+       
+       # Default value for passed enable/disable values.
+    1: _DEFAULT_EMPTY_PIPES = SimpleFrozenList()
+       
+       
+    8: def load_model(
+    1:     name: Union[str, Path],
+           *,
+    2:     vocab: Union["Vocab", bool] = True,
+    2:     disable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     enable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     exclude: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     config: Union[Dict[str, Any], Config] = SimpleFrozenDict(),
+    1: ) -> "Language":
+           """Load a model from a package or data path.
+       
+           name (str): Package name or model path.
+           vocab (Vocab / True): Optional vocab to pass in on initialization. If True,
+               a new Vocab object will be created.
+           disable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to disable.
+           enable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to enable. All others will be disabled.
+           exclude (Union[str, Iterable[str]]):  Name(s) of pipeline component(s) to exclude.
+           config (Dict[str, Any] / Config): Config overrides as nested dict or dict
+               keyed by section values in dot notation.
+           RETURNS (Language): The loaded nlp object.
+           """
+           kwargs = {
+               "vocab": vocab,
+               "disable": disable,
+               "enable": enable,
+               "exclude": exclude,
+               "config": config,
+           }
+           if isinstance(name, str):  # name or string path
+               if name.startswith("blank:"):  # shortcut for blank model
+                   return get_lang_class(name.replace("blank:", ""))()
+               if is_package(name):  # installed as package
+                   return load_model_from_package(name, **kwargs)  # type: ignore[arg-type]
+               if Path(name).exists():  # path to model data directory
+                   return load_model_from_path(Path(name), **kwargs)  # type: ignore[arg-type]
+           elif hasattr(name, "exists"):  # Path or Path-like to model data
+               return load_model_from_path(name, **kwargs)  # type: ignore[arg-type]
+           if name in OLD_MODEL_SHORTCUTS:
+               raise IOError(Errors.E941.format(name=name, full=OLD_MODEL_SHORTCUTS[name]))  # type: ignore[index]
+           raise IOError(Errors.E050.format(name=name))
+       
+       
+    8: def load_model_from_package(
+    1:     name: str,
+           *,
+    2:     vocab: Union["Vocab", bool] = True,
+    2:     disable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     enable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     exclude: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     config: Union[Dict[str, Any], Config] = SimpleFrozenDict(),
+    1: ) -> "Language":
+           """Load a model from an installed package.
+       
+           name (str): The package name.
+           vocab (Vocab / True): Optional vocab to pass in on initialization. If True,
+               a new Vocab object will be created.
+           disable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to disable. Disabled
+               pipes will be loaded but they won't be run unless you explicitly
+               enable them by calling nlp.enable_pipe.
+           enable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to enable. All other
+               pipes will be disabled (and can be enabled using `nlp.enable_pipe`).
+           exclude (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to exclude. Excluded
+               components won't be loaded.
+           config (Dict[str, Any] / Config): Config overrides as nested dict or dict
+               keyed by section values in dot notation.
+           RETURNS (Language): The loaded nlp object.
+           """
+           cls = importlib.import_module(name)
+           return cls.load(
+               vocab=vocab, disable=disable, enable=enable, exclude=exclude, config=config
+           )  # type: ignore[attr-defined]
+       
+       
+    9: def load_model_from_path(
+    1:     model_path: Path,
+           *,
+    2:     meta: Optional[Dict[str, Any]] = None,
+    2:     vocab: Union["Vocab", bool] = True,
+    2:     disable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     enable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     exclude: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     config: Union[Dict[str, Any], Config] = SimpleFrozenDict(),
+    1: ) -> "Language":
+           """Load a model from a data directory path. Creates Language class with
+           pipeline from config.cfg and then calls from_disk() with path.
+       
+           model_path (Path): Model path.
+           meta (Dict[str, Any]): Optional model meta.
+           vocab (Vocab / True): Optional vocab to pass in on initialization. If True,
+               a new Vocab object will be created.
+           disable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to disable. Disabled
+               pipes will be loaded but they won't be run unless you explicitly
+               enable them by calling nlp.enable_pipe.
+           enable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to enable. All other
+               pipes will be disabled (and can be enabled using `nlp.enable_pipe`).
+           exclude (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to exclude. Excluded
+               components won't be loaded.
+           config (Dict[str, Any] / Config): Config overrides as nested dict or dict
+               keyed by section values in dot notation.
+           RETURNS (Language): The loaded nlp object.
+           """
+           if not model_path.exists():
+               raise IOError(Errors.E052.format(path=model_path))
+           if not meta:
+               meta = get_model_meta(model_path)
+           config_path = model_path / "config.cfg"
+           overrides = dict_to_dot(config, for_overrides=True)
+           config = load_config(config_path, overrides=overrides)
+           nlp = load_model_from_config(
+               config,
+               vocab=vocab,
+               disable=disable,
+               enable=enable,
+               exclude=exclude,
+               meta=meta,
+           )
+           return nlp.from_disk(model_path, exclude=exclude, overrides=overrides)
+       
+       
+   10: def load_model_from_config(
+    1:     config: Union[Dict[str, Any], Config],
+           *,
+    2:     meta: Dict[str, Any] = SimpleFrozenDict(),
+    2:     vocab: Union["Vocab", bool] = True,
+    2:     disable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     enable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     exclude: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     auto_fill: bool = False,
+    2:     validate: bool = True,
+    1: ) -> "Language":
+           """Create an nlp object from a config. Expects the full config file including
+           a section "nlp" containing the settings for the nlp object.
+       
+           name (str): Package name or model path.
+           meta (Dict[str, Any]): Optional model meta.
+           vocab (Vocab / True): Optional vocab to pass in on initialization. If True,
+               a new Vocab object will be created.
+           disable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to disable. Disabled
+               pipes will be loaded but they won't be run unless you explicitly
+               enable them by calling nlp.enable_pipe.
+           enable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to enable. All other
+               pipes will be disabled (and can be enabled using `nlp.enable_pipe`).
+           exclude (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to exclude. Excluded
+               components won't be loaded.
+           auto_fill (bool): Whether to auto-fill config with missing defaults.
+           validate (bool): Whether to show config validation errors.
+           RETURNS (Language): The loaded nlp object.
+           """
+           if "nlp" not in config:
+               raise ValueError(Errors.E985.format(config=config))
+           nlp_config = config["nlp"]
+           if "lang" not in nlp_config or nlp_config["lang"] is None:
+               raise ValueError(Errors.E993.format(config=nlp_config))
+           # This will automatically handle all codes registered via the languages
+           # registry, including custom subclasses provided via entry points
+           lang_cls = get_lang_class(nlp_config["lang"])
+           nlp = lang_cls.from_config(
+               config,
+               vocab=vocab,
+               disable=disable,
+               enable=enable,
+               exclude=exclude,
+               auto_fill=auto_fill,
+               validate=validate,
+               meta=meta,
+           )
+           return nlp
+       
+       
+    3: def get_sourced_components(
+    1:     config: Union[Dict[str, Any], Config],
+    1: ) -> Dict[str, Dict[str, Any]]:
+           """RETURNS (List[str]): All sourced components in the original config,
+           e.g. {"source": "en_core_web_sm"}. If the config contains a key
+           "factory", we assume it refers to a component factory.
+           """
+           return {
+               name: cfg
+               for name, cfg in config.get("components", {}).items()
+               if "factory" not in cfg and "source" in cfg
+           }
+       
+       
+    4: def resolve_dot_names(
+    2:     config: Config, dot_names: List[Optional[str]]
+    1: ) -> Tuple[Any, ...]:
+           """Resolve one or more "dot notation" names, e.g. corpora.train.
+           The paths could point anywhere into the config, so we don't know which
+           top-level section we'll be looking within.
+       
+           We resolve the whole top-level section, although we could resolve less --
+           we could find the lowest part of the tree.
+           """
+           # TODO: include schema?
+           resolved = {}
+           output: List[Any] = []
+           errors = []
+           for name in dot_names:
+               if name is None:
+                   output.append(name)
+               else:
+                   section = name.split(".")[0]
+                   # We want to avoid resolving the same thing twice
+                   if section not in resolved:
+                       if registry.is_promise(config[section]):
+                           # Otherwise we can't resolve [corpus] if it's a promise
+                           result = registry.resolve({"config": config[section]})["config"]
+                       else:
+                           result = registry.resolve(config[section])
+                       resolved[section] = result
+                   try:
+                       output.append(dot_to_object(resolved, name))  # type: ignore[arg-type]
+                   except KeyError:
+                       msg = f"not a valid section reference: {name}"
+                       errors.append({"loc": name.split("."), "msg": msg})
+           if errors:
+               raise ConfigValidationError(config=config, errors=errors)
+           return tuple(output)
+       
+       
+    8: def load_model_from_init_py(
+    1:     init_file: Union[Path, str],
+           *,
+    2:     vocab: Union["Vocab", bool] = True,
+    2:     disable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     enable: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     exclude: Union[str, Iterable[str]] = _DEFAULT_EMPTY_PIPES,
+    2:     config: Union[Dict[str, Any], Config] = SimpleFrozenDict(),
+    1: ) -> "Language":
+           """Helper function to use in the `load()` method of a model package's
+           __init__.py.
+       
+           vocab (Vocab / True): Optional vocab to pass in on initialization. If True,
+               a new Vocab object will be created.
+           disable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to disable. Disabled
+               pipes will be loaded but they won't be run unless you explicitly
+               enable them by calling nlp.enable_pipe.
+           enable (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to enable. All other
+               pipes will be disabled (and can be enabled using `nlp.enable_pipe`).
+           exclude (Union[str, Iterable[str]]): Name(s) of pipeline component(s) to exclude. Excluded
+               components won't be loaded.
+           config (Dict[str, Any] / Config): Config overrides as nested dict or dict
+               keyed by section values in dot notation.
+           RETURNS (Language): The loaded nlp object.
+           """
+           model_path = Path(init_file).parent
+           meta = get_model_meta(model_path)
+           data_dir = f"{meta['lang']}_{meta['name']}-{meta['version']}"
+           data_path = model_path / data_dir
+           if not model_path.exists():
+               raise IOError(Errors.E052.format(path=data_path))
+           return load_model_from_path(
+               data_path,
+               vocab=vocab,
+               meta=meta,
+               disable=disable,
+               enable=enable,
+               exclude=exclude,
+               config=config,
+           )
+       
+       
+    5: def load_config(
+    1:     path: Union[str, Path],
+    2:     overrides: Dict[str, Any] = SimpleFrozenDict(),
+    2:     interpolate: bool = False,
+    1: ) -> Config:
+           """Load a config file. Takes care of path validation and section order.
+       
+           path (Union[str, Path]): Path to the config file or "-" to read from stdin.
+           overrides: (Dict[str, Any]): Config overrides as nested dict or
+               dict keyed by section values in dot notation.
+           interpolate (bool): Whether to interpolate and resolve variables.
+           RETURNS (Config): The loaded config.
+           """
+    1:     config_path = ensure_path(path)
+    1:     config = Config(section_order=CONFIG_SECTION_ORDER)
+    1:     if str(config_path) == "-":  # read from standard input
+               return config.from_str(
+                   sys.stdin.read(), overrides=overrides, interpolate=interpolate
+               )
+           else:
+    1:         if not config_path or not config_path.is_file():
+                   raise IOError(Errors.E053.format(path=config_path, name="config file"))
+    2:         return config.from_disk(
+    1:             config_path, overrides=overrides, interpolate=interpolate
+               )
+       
+       
+    4: def load_config_from_str(
+    4:     text: str, overrides: Dict[str, Any] = SimpleFrozenDict(), interpolate: bool = False
+       ):
+           """Load a full config from a string. Wrapper around Thinc's Config.from_str.
+       
+           text (str): The string config to load.
+           interpolate (bool): Whether to interpolate and resolve variables.
+           RETURNS (Config): The loaded config.
+           """
+           return Config(section_order=CONFIG_SECTION_ORDER).from_str(
+               text, overrides=overrides, interpolate=interpolate
+           )
+       
+       
+    1: def get_installed_models() -> List[str]:
+           """List all model packages currently installed in the environment.
+       
+           RETURNS (List[str]): The string names of the models.
+           """
+           return list(registry.models.get_all().keys())
+       
+       
+    1: def get_package_version(name: str) -> Optional[str]:
+           """Get the version of an installed package. Typically used to get model
+           package versions.
+       
+           name (str): The name of the installed Python package.
+           RETURNS (str / None): The version or None if package not installed.
+           """
+           try:
+               return importlib_metadata.version(name)  # type: ignore[attr-defined]
+           except importlib_metadata.PackageNotFoundError:  # type: ignore[attr-defined]
+               return None
+       
+       
+    5: def is_compatible_version(
+    4:     version: str, constraint: str, prereleases: bool = True
+    1: ) -> Optional[bool]:
+           """Check if a version (e.g. "2.0.0") is compatible given a version
+           constraint (e.g. ">=1.9.0,<2.2.1"). If the constraint is a specific version,
+           it's interpreted as =={version}.
+       
+           version (str): The version to check.
+           constraint (str): The constraint string.
+           prereleases (bool): Whether to allow prereleases. If set to False,
+               prerelease versions will be considered incompatible.
+           RETURNS (bool / None): Whether the version is compatible, or None if the
+               version or constraint are invalid.
+           """
+           # Handle cases where exact version is provided as constraint
+           if constraint[0].isdigit():
+               constraint = f"=={constraint}"
+           try:
+               spec = SpecifierSet(constraint)
+               version = Version(version)  # type: ignore[assignment]
+           except (InvalidSpecifier, InvalidVersion):
+               return None
+           spec.prereleases = prereleases
+           return version in spec
+       
+       
+    4: def is_unconstrained_version(
+    3:     constraint: str, prereleases: bool = True
+    1: ) -> Optional[bool]:
+           # We have an exact version, this is the ultimate constrained version
+           if constraint[0].isdigit():
+               return False
+           try:
+               spec = SpecifierSet(constraint)
+           except InvalidSpecifier:
+               return None
+           spec.prereleases = prereleases
+           specs = [sp for sp in spec]
+           # We only have one version spec and it defines > or >=
+           if len(specs) == 1 and specs[0].operator in (">", ">="):
+               return True
+           # One specifier is exact version
+           if any(sp.operator in ("==") for sp in specs):
+               return False
+           has_upper = any(sp.operator in ("<", "<=") for sp in specs)
+           has_lower = any(sp.operator in (">", ">=") for sp in specs)
+           # We have a version spec that defines an upper and lower bound
+           if has_upper and has_lower:
+               return False
+           # Everything else, like only an upper version, only a lower version etc.
+           return True
+       
+       
+    1: def split_requirement(requirement: str) -> Tuple[str, str]:
+           """Split a requirement like spacy>=1.2.3 into ("spacy", ">=1.2.3")."""
+           req = Requirement(requirement)
+           return (req.name, str(req.specifier))
+       
+       
+    1: def get_minor_version_range(version: str) -> str:
+           """Generate a version range like >=1.2.3,<1.3.0 based on a given version
+           (e.g. of spaCy).
+           """
+           release = Version(version).release
+           return f">={version},<{release[0]}.{release[1] + 1}.0"
+       
+       
+    1: def get_model_lower_version(constraint: str) -> Optional[str]:
+           """From a version range like >=1.2.3,<1.3.0 return the lower pin."""
+           try:
+               specset = SpecifierSet(constraint)
+               for spec in specset:
+                   if spec.operator in (">=", "==", "~="):
+                       return spec.version
+           except Exception:
+               pass
+           return None
+       
+       
+    1: def is_prerelease_version(version: str) -> bool:
+           """Check whether a version is a prerelease version.
+       
+           version (str): The version, e.g. "3.0.0.dev1".
+           RETURNS (bool): Whether the version is a prerelease version.
+           """
+           return Version(version).is_prerelease
+       
+       
+    1: def get_base_version(version: str) -> str:
+           """Generate the base version without any prerelease identifiers.
+       
+           version (str): The version, e.g. "3.0.0.dev1".
+           RETURNS (str): The base version, e.g. "3.0.0".
+           """
+           return Version(version).base_version
+       
+       
+    1: def get_minor_version(version: str) -> Optional[str]:
+           """Get the major + minor version (without patch or prerelease identifiers).
+       
+           version (str): The version.
+           RETURNS (str): The major + minor version or None if version is invalid.
+           """
+           try:
+               v = Version(version)
+           except (TypeError, InvalidVersion):
+               return None
+           return f"{v.major}.{v.minor}"
+       
+       
+    1: def is_minor_version_match(version_a: str, version_b: str) -> bool:
+           """Compare two versions and check if they match in major and minor, without
+           patch or prerelease identifiers. Used internally for compatibility checks
+           that should be insensitive to patch releases.
+       
+           version_a (str): The first version
+           version_b (str): The second version.
+           RETURNS (bool): Whether the versions match.
+           """
+           a = get_minor_version(version_a)
+           b = get_minor_version(version_b)
+           return a is not None and b is not None and a == b
+       
+       
+    1: def load_meta(path: Union[str, Path]) -> Dict[str, Any]:
+           """Load a model meta.json from a path and validate its contents.
+       
+           path (Union[str, Path]): Path to meta.json.
+           RETURNS (Dict[str, Any]): The loaded meta.
+           """
+           path = ensure_path(path)
+           if not path.parent.exists():
+               raise IOError(Errors.E052.format(path=path.parent))
+           if not path.exists() or not path.is_file():
+               raise IOError(Errors.E053.format(path=path.parent, name="meta.json"))
+           meta = srsly.read_json(path)
+           for setting in ["lang", "name", "version"]:
+               if setting not in meta or not meta[setting]:
+                   raise ValueError(Errors.E054.format(setting=setting))
+           if "spacy_version" in meta:
+               if not is_compatible_version(about.__version__, meta["spacy_version"]):
+                   lower_version = get_model_lower_version(meta["spacy_version"])
+                   lower_version = get_base_version(lower_version)  # type: ignore[arg-type]
+                   if lower_version is not None:
+                       lower_version = "v" + lower_version
+                   elif "spacy_git_version" in meta:
+                       lower_version = "git commit " + meta["spacy_git_version"]
+                   else:
+                       lower_version = "version unknown"
+                   warn_msg = Warnings.W095.format(
+                       model=f"{meta['lang']}_{meta['name']}",
+                       model_version=meta["version"],
+                       version=lower_version,
+                       current=about.__version__,
+                   )
+                   warnings.warn(warn_msg)
+               if is_unconstrained_version(meta["spacy_version"]):
+                   warn_msg = Warnings.W094.format(
+                       model=f"{meta['lang']}_{meta['name']}",
+                       model_version=meta["version"],
+                       version=meta["spacy_version"],
+                       example=get_minor_version_range(about.__version__),
+                   )
+                   warnings.warn(warn_msg)
+           return meta
+       
+       
+    1: def get_model_meta(path: Union[str, Path]) -> Dict[str, Any]:
+           """Get model meta.json from a directory path and validate its contents.
+       
+           path (str / Path): Path to model directory.
+           RETURNS (Dict[str, Any]): The model's meta data.
+           """
+           model_path = ensure_path(path)
+           return load_meta(model_path / "meta.json")
+       
+       
+    1: def is_package(name: str) -> bool:
+           """Check if string maps to a package installed via pip.
+       
+           name (str): Name of package.
+           RETURNS (bool): True if installed package, False if not.
+           """
+           try:
+               importlib_metadata.distribution(name)  # type: ignore[attr-defined]
+               return True
+           except:  # noqa: E722
+               return False
+       
+       
+    1: def get_package_path(name: str) -> Path:
+           """Get the path to an installed package.
+       
+           name (str): Package name.
+           RETURNS (Path): Path to installed package.
+           """
+           # Here we're importing the module just to find it. This is worryingly
+           # indirect, but it's otherwise very difficult to find the package.
+           pkg = importlib.import_module(name)
+           return Path(cast(Union[str, os.PathLike], pkg.__file__)).parent
+       
+       
+    1: def replace_model_node(model: Model, target: Model, replacement: Model) -> None:
+           """Replace a node within a model with a new one, updating refs.
+       
+           model (Model): The parent model.
+           target (Model): The target node.
+           replacement (Model): The node to replace the target with.
+           """
+           # Place the node into the sublayers
+           for node in model.walk():
+               if target in node.layers:
+                   node.layers[node.layers.index(target)] = replacement
+           # Now fix any node references
+           for node in model.walk():
+               for ref_name in node.ref_names:
+                   if node.maybe_get_ref(ref_name) is target:
+                       node.set_ref(ref_name, replacement)
+       
+       
+    1: def split_command(command: str) -> List[str]:
+           """Split a string command using shlex. Handles platform compatibility.
+           command (str) : The command to split
+           RETURNS (List[str]): The split command.
+           """
+           return shlex.split(command, posix=not is_windows)
+       
+       
+    5: def run_command(
+    1:     command: Union[str, List[str]],
+           *,
+    2:     stdin: Optional[Any] = None,
+    2:     capture: bool = False,
+    1: ) -> subprocess.CompletedProcess:
+           """Run a command on the command line as a subprocess. If the subprocess
+           returns a non-zero exit code, a system exit is performed.
+           command (str / List[str]): The command. If provided as a string, the
+               string will be split using shlex.split.
+           stdin (Optional[Any]): stdin to read from or None.
+           capture (bool): Whether to capture the output and errors. If False,
+               the stdout and stderr will not be redirected, and if there's an error,
+               sys.exit will be called with the return code. You should use capture=False
+               when you want to turn over execution to the command, and capture=True
+               when you want to run the command more like a function.
+           RETURNS (Optional[CompletedProcess]): The process object.
+           """
+           if isinstance(command, str):
+               cmd_list = split_command(command)
+               cmd_str = command
+           else:
+               cmd_list = command
+               cmd_str = " ".join(command)
+           try:
+               ret = subprocess.run(
+                   cmd_list,
+                   env=os.environ.copy(),
+                   input=stdin,
+                   encoding="utf8",
+                   check=False,
+                   stdout=subprocess.PIPE if capture else None,
+                   stderr=subprocess.STDOUT if capture else None,
+               )
+           except FileNotFoundError:
+               # Indicates the *command* wasn't found, it's an error before the command
+               # is run.
+               raise FileNotFoundError(
+                   Errors.E970.format(str_command=cmd_str, tool=cmd_list[0])
+               ) from None
+           if ret.returncode != 0 and capture:
+               message = f"Error running command:\n\n{cmd_str}\n\n"
+               message += f"Subprocess exited with status {ret.returncode}"
+               if ret.stdout is not None:
+                   message += f"\n\nProcess log (stdout and stderr):\n\n"
+                   message += ret.stdout
+               error = subprocess.SubprocessError(message)
+               error.ret = ret  # type: ignore[attr-defined]
+               error.command = cmd_str  # type: ignore[attr-defined]
+               raise error
+           elif ret.returncode != 0:
+               sys.exit(ret.returncode)
+           return ret
+       
+       
+    2: @contextmanager
+    2: def working_dir(path: Union[str, Path]) -> Iterator[Path]:
+           """Change current working directory and returns to previous on exit.
+           path (str / Path): The directory to navigate to.
+           YIELDS (Path): The absolute path to the current working directory. This
+               should be used if the block needs to perform actions within the working
+               directory, to prevent mismatches with relative paths.
+           """
+           prev_cwd = Path.cwd()
+           current = Path(path).resolve()
+           os.chdir(str(current))
+           try:
+               yield current
+           finally:
+               os.chdir(str(prev_cwd))
+       
+       
+    2: @contextmanager
+    2: def make_tempdir() -> Generator[Path, None, None]:
+           """Execute a block in a temporary directory and remove the directory and
+           its contents at the end of the with block.
+           YIELDS (Path): The path of the temp directory.
+           """
+           d = Path(tempfile.mkdtemp())
+           yield d
+       
+           # On Windows, git clones use read-only files, which cause permission errors
+           # when being deleted. This forcibly fixes permissions.
+           def force_remove(rmfunc, path, ex):
+               os.chmod(path, stat.S_IWRITE)
+               rmfunc(path)
+       
+           try:
+               if sys.version_info >= (3, 12):
+                   shutil.rmtree(str(d), onexc=force_remove)
+               else:
+                   shutil.rmtree(str(d), onerror=force_remove)
+           except PermissionError as e:
+               warnings.warn(Warnings.W091.format(dir=d, msg=e))
+       
+       
+    1: def is_in_jupyter() -> bool:
+           """Check if user is running spaCy from a Jupyter or Colab notebook by
+           detecting the IPython kernel. Mainly used for the displaCy visualizer.
+           RETURNS (bool): True if in Jupyter/Colab, False if not.
+           """
+           # https://stackoverflow.com/a/39662359/6400719
+           # https://stackoverflow.com/questions/15411967
+           try:
+               if get_ipython().__class__.__name__ == "ZMQInteractiveShell":  # type: ignore[name-defined]
+                   return True  # Jupyter notebook or qtconsole
+               if get_ipython().__class__.__module__ == "google.colab._shell":  # type: ignore[name-defined]
+                   return True  # Colab notebook
+           except NameError:
+               pass  # Probably standard Python interpreter
+           # additional check for Colab
+           try:
+               import google.colab
+       
+               return True  # Colab notebook
+           except ImportError:
+               pass
+           return False
+       
+       
+    1: def is_in_interactive() -> bool:
+           """Check if user is running spaCy from an interactive Python
+           shell. Will return True in Jupyter notebooks too.
+           RETURNS (bool): True if in interactive mode, False if not.
+           """
+           # https://stackoverflow.com/questions/2356399/tell-if-python-is-in-interactive-mode
+           return hasattr(sys, "ps1") or hasattr(sys, "ps2")
+       
+       
+    1: def get_object_name(obj: Any) -> str:
+           """Get a human-readable name of a Python object, e.g. a pipeline component.
+       
+           obj (Any): The Python object, typically a function or class.
+           RETURNS (str): A human-readable name.
+           """
+           if hasattr(obj, "name") and obj.name is not None:
+               return obj.name
+           if hasattr(obj, "__name__"):
+               return obj.__name__
+           if hasattr(obj, "__class__") and hasattr(obj.__class__, "__name__"):
+               return obj.__class__.__name__
+           return repr(obj)
+       
+       
+    1: def is_same_func(func1: Callable, func2: Callable) -> bool:
+           """Approximately decide whether two functions are the same, even if their
+           identity is different (e.g. after they have been live reloaded). Mostly
+           used in the @Language.component and @Language.factory decorators to decide
+           whether to raise if a factory already exists. Allows decorator to run
+           multiple times with the same function.
+       
+           func1 (Callable): The first function.
+           func2 (Callable): The second function.
+           RETURNS (bool): Whether it's the same function (most likely).
+           """
+           if not callable(func1) or not callable(func2):
+               return False
+           if not hasattr(func1, "__qualname__") or not hasattr(func2, "__qualname__"):
+               return False
+           same_name = func1.__qualname__ == func2.__qualname__
+           same_file = inspect.getfile(func1) == inspect.getfile(func2)
+           same_code = inspect.getsourcelines(func1) == inspect.getsourcelines(func2)
+           return same_name and same_file and same_code
+       
+       
+    4: def get_cuda_stream(
+    3:     require: bool = False, non_blocking: bool = True
+    1: ) -> Optional[CudaStream]:
+           ops = get_current_ops()
+           if CudaStream is None:
+               return None
+           elif isinstance(ops, NumpyOps):
+               return None
+           else:
+               return CudaStream(non_blocking=non_blocking)
+       
+       
+    1: def get_async(stream, numpy_array):
+           if cupy is None:
+               return numpy_array
+           else:
+               array = cupy.ndarray(numpy_array.shape, order="C", dtype=numpy_array.dtype)
+               array.set(numpy_array, stream=stream)
+               return array
+       
+       
+    1: def read_regex(path: Union[str, Path]) -> Pattern:
+           path = ensure_path(path)
+           with path.open(encoding="utf8") as file_:
+               entries = file_.read().split("\n")
+           expression = "|".join(
+               ["^" + re.escape(piece) for piece in entries if piece.strip()]
+           )
+           return re.compile(expression)
+       
+       
+    1: def compile_prefix_regex(entries: Iterable[Union[str, Pattern]]) -> Pattern:
+           """Compile a sequence of prefix rules into a regex object.
+       
+           entries (Iterable[Union[str, Pattern]]): The prefix rules, e.g.
+               spacy.lang.punctuation.TOKENIZER_PREFIXES.
+           RETURNS (Pattern): The regex object. to be used for Tokenizer.prefix_search.
+           """
+           expression = "|".join(["^" + piece for piece in entries if piece.strip()])  # type: ignore[operator, union-attr]
+           return re.compile(expression)
+       
+       
+    1: def compile_suffix_regex(entries: Iterable[Union[str, Pattern]]) -> Pattern:
+           """Compile a sequence of suffix rules into a regex object.
+       
+           entries (Iterable[Union[str, Pattern]]): The suffix rules, e.g.
+               spacy.lang.punctuation.TOKENIZER_SUFFIXES.
+           RETURNS (Pattern): The regex object. to be used for Tokenizer.suffix_search.
+           """
+           expression = "|".join([piece + "$" for piece in entries if piece.strip()])  # type: ignore[operator, union-attr]
+           return re.compile(expression)
+       
+       
+    1: def compile_infix_regex(entries: Iterable[Union[str, Pattern]]) -> Pattern:
+           """Compile a sequence of infix rules into a regex object.
+       
+           entries (Iterable[Union[str, Pattern]]): The infix rules, e.g.
+               spacy.lang.punctuation.TOKENIZER_INFIXES.
+           RETURNS (regex object): The regex object. to be used for Tokenizer.infix_finditer.
+           """
+           expression = "|".join([piece for piece in entries if piece.strip()])  # type: ignore[misc, union-attr]
+           return re.compile(expression)
+       
+       
+    1: def add_lookups(default_func: Callable[[str], Any], *lookups) -> Callable[[str], Any]:
+           """Extend an attribute function with special cases. If a word is in the
+           lookups, the value is returned. Otherwise the previous function is used.
+       
+           default_func (callable): The default function to execute.
+           *lookups (dict): Lookup dictionary mapping string to attribute value.
+           RETURNS (callable): Lexical attribute getter.
+           """
+           # This is implemented as functools.partial instead of a closure, to allow
+           # pickle to work.
+           return functools.partial(_get_attr_unless_lookup, default_func, lookups)
+       
+       
+    5: def _get_attr_unless_lookup(
+    3:     default_func: Callable[[str], Any], lookups: Dict[str, Any], string: str
+    1: ) -> Any:
+           for lookup in lookups:
+               if string in lookup:
+                   return lookup[string]  # type: ignore[index]
+           return default_func(string)
+       
+       
+    3: def update_exc(
+    1:     base_exceptions: Dict[str, List[dict]], *addition_dicts
+    1: ) -> Dict[str, List[dict]]:
+           """Update and validate tokenizer exceptions. Will overwrite exceptions.
+       
+           base_exceptions (Dict[str, List[dict]]): Base exceptions.
+           *addition_dicts (Dict[str, List[dict]]): Exceptions to add to the base dict, in order.
+           RETURNS (Dict[str, List[dict]]): Combined tokenizer exceptions.
+           """
+    1:     exc = dict(base_exceptions)
+    2:     for additions in addition_dicts:
+  813:         for orth, token_attrs in additions.items():
+ 3312:             if not all(isinstance(attr[ORTH], str) for attr in token_attrs):
+                       raise ValueError(Errors.E055.format(key=orth, orths=token_attrs))
+ 3312:             described_orth = "".join(attr[ORTH] for attr in token_attrs)
+  812:             if orth != described_orth:
+                       raise ValueError(Errors.E056.format(key=orth, orths=described_orth))
+    1:         exc.update(additions)
+    1:     exc = expand_exc(exc, "'", "’")
+    1:     return exc
+       
+       
+    5: def expand_exc(
+    3:     excs: Dict[str, List[dict]], search: str, replace: str
+    1: ) -> Dict[str, List[dict]]:
+           """Find string in tokenizer exceptions, duplicate entry and replace string.
+           For example, to add additional versions with typographic apostrophes.
+       
+           excs (Dict[str, List[dict]]): Tokenizer exceptions.
+           search (str): String to find and replace.
+           replace (str): Replacement.
+           RETURNS (Dict[str, List[dict]]): Combined tokenizer exceptions.
+           """
+       
+    1:     def _fix_token(token, search, replace):
+  782:         fixed = dict(token)
+  782:         fixed[ORTH] = fixed[ORTH].replace(search, replace)
+  782:         return fixed
+       
+    1:     new_excs = dict(excs)
+  989:     for token_string, tokens in excs.items():
+  988:         if search in token_string:
+  359:             new_key = token_string.replace(search, replace)
+ 1500:             new_value = [_fix_token(t, search, replace) for t in tokens]
+  359:             new_excs[new_key] = new_value
+    1:     return new_excs
+       
+       
+    6: def normalize_slice(
+    5:     length: int, start: int, stop: int, step: Optional[int] = None
+    1: ) -> Tuple[int, int]:
+           if not (step is None or step == 1):
+               raise ValueError(Errors.E057)
+           if start is None:
+               start = 0
+           elif start < 0:
+               start += length
+           start = min(length, max(0, start))
+           if stop is None:
+               stop = length
+           elif stop < 0:
+               stop += length
+           stop = min(length, max(start, stop))
+           return start, stop
+       
+       
+    1: def filter_spans(spans: Iterable["Span"]) -> List["Span"]:
+           """Filter a sequence of spans and remove duplicates or overlaps. Useful for
+           creating named entities (where one token can only be part of one entity) or
+           when merging spans with `Retokenizer.merge`. When spans overlap, the (first)
+           longest span is preferred over shorter spans.
+       
+           spans (Iterable[Span]): The spans to filter.
+           RETURNS (List[Span]): The filtered spans.
+           """
+           get_sort_key = lambda span: (span.end - span.start, -span.start)
+           sorted_spans = sorted(spans, key=get_sort_key, reverse=True)
+           result = []
+           seen_tokens: Set[int] = set()
+           for span in sorted_spans:
+               # Check for end - 1 here because boundaries are inclusive
+               if span.start not in seen_tokens and span.end - 1 not in seen_tokens:
+                   result.append(span)
+                   seen_tokens.update(range(span.start, span.end))
+           result = sorted(result, key=lambda span: span.start)
+           return result
+       
+       
+    1: def filter_chain_spans(*spans: Iterable["Span"]) -> List["Span"]:
+           return filter_spans(itertools.chain(*spans))
+       
+       
+    1: def make_first_longest_spans_filter():
+           return filter_chain_spans
+       
+       
+    1: def to_bytes(getters: Dict[str, Callable[[], bytes]], exclude: Iterable[str]) -> bytes:
+           return srsly.msgpack_dumps(to_dict(getters, exclude))
+       
+       
+    5: def from_bytes(
+    1:     bytes_data: bytes,
+    1:     setters: Dict[str, Callable[[bytes], Any]],
+    1:     exclude: Iterable[str],
+    1: ) -> None:
+           return from_dict(srsly.msgpack_loads(bytes_data), setters, exclude)  # type: ignore[return-value]
+       
+       
+    4: def to_dict(
+    2:     getters: Dict[str, Callable[[], Any]], exclude: Iterable[str]
+    1: ) -> Dict[str, Any]:
+           serialized = {}
+           for key, getter in getters.items():
+               # Split to support file names like meta.json
+               if key.split(".")[0] not in exclude:
+                   serialized[key] = getter()
+           return serialized
+       
+       
+    5: def from_dict(
+    1:     msg: Dict[str, Any],
+    1:     setters: Dict[str, Callable[[Any], Any]],
+    1:     exclude: Iterable[str],
+    1: ) -> Dict[str, Any]:
+           for key, setter in setters.items():
+               # Split to support file names like meta.json
+               if key.split(".")[0] not in exclude and key in msg:
+                   setter(msg[key])
+           return msg
+       
+       
+    5: def to_disk(
+    1:     path: Union[str, Path],
+    1:     writers: Dict[str, Callable[[Path], None]],
+    1:     exclude: Iterable[str],
+    1: ) -> Path:
+           path = ensure_path(path)
+           if not path.exists():
+               path.mkdir()
+           for key, writer in writers.items():
+               # Split to support file names like meta.json
+               if key.split(".")[0] not in exclude:
+                   writer(path / key)
+           return path
+       
+       
+    5: def from_disk(
+    1:     path: Union[str, Path],
+    1:     readers: Dict[str, Callable[[Path], None]],
+    1:     exclude: Iterable[str],
+    1: ) -> Path:
+           path = ensure_path(path)
+           for key, reader in readers.items():
+               # Split to support file names like meta.json
+               if key.split(".")[0] not in exclude:
+                   reader(path / key)
+           return path
+       
+       
+    1: def import_file(name: str, loc: Union[str, Path]) -> ModuleType:
+           """Import module from a file. Used to load models from a directory.
+       
+           name (str): Name of module to load.
+           loc (str / Path): Path to the file.
+           RETURNS: The loaded module.
+           """
+           spec = importlib.util.spec_from_file_location(name, str(loc))
+           module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+           spec.loader.exec_module(module)  # type: ignore[union-attr]
+           return module
+       
+       
+    1: def minify_html(html: str) -> str:
+           """Perform a template-specific, rudimentary HTML minification for displaCy.
+           Disclaimer: NOT a general-purpose solution, only removes indentation and
+           newlines.
+       
+           html (str): Markup to minify.
+           RETURNS (str): "Minified" HTML.
+           """
+           return html.strip().replace("    ", "").replace("\n", "")
+       
+       
+    1: def escape_html(text: str) -> str:
+           """Replace <, >, &, " with their HTML encoded representation. Intended to
+           prevent HTML errors in rendered displaCy markup.
+       
+           text (str): The original text.
+           RETURNS (str): Equivalent text to be safely used within HTML.
+           """
+           text = text.replace("&", "&amp;")
+           text = text.replace("<", "&lt;")
+           text = text.replace(">", "&gt;")
+           text = text.replace('"', "&quot;")
+           return text
+       
+       
+    4: def get_words_and_spaces(
+    2:     words: Iterable[str], text: str
+    1: ) -> Tuple[List[str], List[bool]]:
+           """Given a list of words and a text, reconstruct the original tokens and
+           return a list of words and spaces that can be used to create a Doc. This
+           can help recover destructive tokenization that didn't preserve any
+           whitespace information.
+       
+           words (Iterable[str]): The words.
+           text (str): The original text.
+           RETURNS (Tuple[List[str], List[bool]]): The words and spaces.
+           """
+           if "".join("".join(words).split()) != "".join(text.split()):
+               raise ValueError(Errors.E194.format(text=text, words=words))
+           text_words = []
+           text_spaces = []
+           text_pos = 0
+           # normalize words to remove all whitespace tokens
+           norm_words = [word for word in words if not word.isspace()]
+           # align words with text
+           for word in norm_words:
+               try:
+                   word_start = text[text_pos:].index(word)
+               except ValueError:
+                   raise ValueError(Errors.E194.format(text=text, words=words)) from None
+               if word_start > 0:
+                   text_words.append(text[text_pos : text_pos + word_start])
+                   text_spaces.append(False)
+                   text_pos += word_start
+               text_words.append(word)
+               text_spaces.append(False)
+               text_pos += len(word)
+               if text_pos < len(text) and text[text_pos] == " ":
+                   text_spaces[-1] = True
+                   text_pos += 1
+           if text_pos < len(text):
+               text_words.append(text[text_pos:])
+               text_spaces.append(False)
+           return (text_words, text_spaces)
+       
+       
+    1: def copy_config(config: Union[Dict[str, Any], Config]) -> Config:
+           """Deep copy a Config. Will raise an error if the config contents are not
+           JSON-serializable.
+       
+           config (Config): The config to copy.
+           RETURNS (Config): The copied config.
+           """
+           try:
+               return Config(config).copy()
+           except ValueError:
+               raise ValueError(Errors.E961.format(config=config)) from None
+       
+       
+    1: def dot_to_dict(values: Dict[str, Any]) -> Dict[str, dict]:
+           """Convert dot notation to a dict. For example: {"token.pos": True,
+           "token._.xyz": True} becomes {"token": {"pos": True, "_": {"xyz": True }}}.
+       
+           values (Dict[str, Any]): The key/value pairs to convert.
+           RETURNS (Dict[str, dict]): The converted values.
+           """
+    8:     result: Dict[str, dict] = {}
+   16:     for key, value in values.items():
+    8:         path = result
+    8:         parts = key.lower().split(".")
+   24:         for i, item in enumerate(parts):
+   16:             is_last = i == len(parts) - 1
+   16:             path = path.setdefault(item, value if is_last else {})
+    8:     return result
+       
+       
+    1: def dict_to_dot(obj: Dict[str, dict], *, for_overrides: bool = False) -> Dict[str, Any]:
+           """Convert dot notation to a dict. For example: {"token": {"pos": True,
+           "_": {"xyz": True }}} becomes {"token.pos": True, "token._.xyz": True}.
+       
+           obj (Dict[str, dict]): The dict to convert.
+           for_overrides (bool): Whether to enable special handling for registered
+               functions in overrides.
+           RETURNS (Dict[str, Any]): The key/value pairs.
+           """
+           return {
+               ".".join(key): value
+               for key, value in walk_dict(obj, for_overrides=for_overrides)
+           }
+       
+       
+    1: def dot_to_object(config: Config, section: str):
+           """Convert dot notation of a "section" to a specific part of the Config.
+           e.g. "training.optimizer" would return the Optimizer object.
+           Throws an error if the section is not defined in this config.
+       
+           config (Config): The config.
+           section (str): The dot notation of the section in the config.
+           RETURNS: The object denoted by the section
+           """
+           component = config
+           parts = section.split(".")
+           for item in parts:
+               try:
+                   component = component[item]
+               except (KeyError, TypeError):
+                   raise KeyError(Errors.E952.format(name=section)) from None
+           return component
+       
+       
+    1: def set_dot_to_object(config: Config, section: str, value: Any) -> None:
+           """Update a config at a given position from a dot notation.
+       
+           config (Config): The config.
+           section (str): The dot notation of the section in the config.
+           value (Any): The value to set in the config.
+           """
+           component = config
+           parts = section.split(".")
+           for i, item in enumerate(parts):
+               try:
+                   if i == len(parts) - 1:
+                       component[item] = value
+                   else:
+                       component = component[item]
+               except (KeyError, TypeError):
+                   raise KeyError(Errors.E952.format(name=section)) from None
+       
+       
+    6: def walk_dict(
+    5:     node: Dict[str, Any], parent: List[str] = [], *, for_overrides: bool = False
+    1: ) -> Iterator[Tuple[List[str], Any]]:
+           """Walk a dict and yield the path and values of the leaves.
+       
+           for_overrides (bool): Whether to treat registered functions that start with
+               @ as final values rather than dicts to traverse.
+           """
+           for key, value in node.items():
+               key_parent = [*parent, key]
+               if isinstance(value, dict) and (
+                   not for_overrides
+                   or not any(value_key.startswith("@") for value_key in value)
+               ):
+                   yield from walk_dict(value, key_parent, for_overrides=for_overrides)
+               else:
+                   yield (key_parent, value)
+       
+       
+    1: def get_arg_names(func: Callable) -> List[str]:
+           """Get a list of all named arguments of a function (regular,
+           keyword-only).
+       
+           func (Callable): The function
+           RETURNS (List[str]): The argument names.
+           """
+    4:     argspec = inspect.getfullargspec(func)
+    4:     return list(dict.fromkeys([*argspec.args, *argspec.kwonlyargs]))
+       
+       
+    4: def combine_score_weights(
+    1:     weights: List[Dict[str, Optional[float]]],
+    2:     overrides: Dict[str, Optional[float]] = SimpleFrozenDict(),
+    1: ) -> Dict[str, Optional[float]]:
+           """Combine and normalize score weights defined by components, e.g.
+           {"ents_r": 0.2, "ents_p": 0.3, "ents_f": 0.5} and {"some_other_score": 1.0}.
+       
+           weights (List[dict]): The weights defined by the components.
+           overrides (Dict[str, Optional[Union[float, int]]]): Existing scores that
+               should be preserved.
+           RETURNS (Dict[str, float]): The combined and normalized weights.
+           """
+           # We divide each weight by the total weight sum.
+           # We first need to extract all None/null values for score weights that
+           # shouldn't be shown in the table *or* be weighted
+           result: Dict[str, Optional[float]] = {
+               key: value for w_dict in weights for (key, value) in w_dict.items()
+           }
+           result.update(overrides)
+           weight_sum = sum([v if v else 0.0 for v in result.values()])
+           for key, value in result.items():
+               if value and weight_sum > 0:
+                   result[key] = round(value / weight_sum, 2)
+           return result
+       
+       
+    2: class DummyTokenizer:
+    1:     def __call__(self, text):
+               raise NotImplementedError
+       
+    1:     def pipe(self, texts, **kwargs):
+               for text in texts:
+                   yield self(text)
+       
+           # add dummy methods for to_bytes, from_bytes, to_disk and from_disk to
+           # allow serialization (see #1557)
+    1:     def to_bytes(self, **kwargs):
+               return b""
+       
+    1:     def from_bytes(self, data: bytes, **kwargs) -> "DummyTokenizer":
+               return self
+       
+    1:     def to_disk(self, path: Union[str, Path], **kwargs) -> None:
+               return None
+       
+    1:     def from_disk(self, path: Union[str, Path], **kwargs) -> "DummyTokenizer":
+               return self
+       
+       
+    1: def create_default_optimizer() -> Optimizer:
+           return Adam()
+       
+       
+    1: def minibatch(items, size):
+           """Iterate over batches of items. `size` may be an iterator,
+           so that batch-size can vary on each step.
+           """
+           if isinstance(size, int):
+               size_ = itertools.repeat(size)
+           else:
+               size_ = size
+           items = iter(items)
+           while True:
+               batch_size = next(size_)
+               batch = list(itertools.islice(items, int(batch_size)))
+               if len(batch) == 0:
+                   break
+               yield list(batch)
+       
+       
+    1: def is_cython_func(func: Callable) -> bool:
+           """Slightly hacky check for whether a callable is implemented in Cython.
+           Can be used to implement slightly different behaviors, especially around
+           inspecting and parameter annotations. Note that this will only return True
+           for actual cdef functions and methods, not regular Python functions defined
+           in Python modules.
+       
+           func (Callable): The callable to check.
+           RETURNS (bool): Whether the callable is Cython (probably).
+           """
+           attr = "__pyx_vtable__"
+           if hasattr(func, attr):  # function or class instance
+               return True
+           # https://stackoverflow.com/a/55767059
+           if (
+               hasattr(func, "__qualname__")
+               and hasattr(func, "__module__")
+               and func.__module__ in sys.modules
+           ):  # method
+               cls_func = vars(sys.modules[func.__module__])[func.__qualname__.split(".")[0]]
+               return hasattr(cls_func, attr)
+           return False
+       
+       
+    1: def check_bool_env_var(env_var: str) -> bool:
+           """Convert the value of an environment variable to a boolean. Add special
+           check for "0" (falsy) and consider everything else truthy, except unset.
+       
+           env_var (str): The name of the environment variable to check.
+           RETURNS (bool): Its boolean value.
+           """
+           value = os.environ.get(env_var, False)
+           if value == "0":
+               return False
+           return bool(value)
+       
+       
+    7: def _pipe(
+    1:     docs: Iterable["Doc"],
+    1:     proc: "PipeCallable",
+    1:     name: str,
+    2:     default_error_handler: Callable[
+    1:         [str, "PipeCallable", List["Doc"], Exception], NoReturn
+           ],
+    1:     kwargs: Mapping[str, Any],
+    1: ) -> Iterator["Doc"]:
+           if hasattr(proc, "pipe"):
+               yield from proc.pipe(docs, **kwargs)
+           else:
+               # We added some args for pipe that __call__ doesn't expect.
+               kwargs = dict(kwargs)
+               error_handler = default_error_handler
+               if hasattr(proc, "get_error_handler"):
+                   error_handler = proc.get_error_handler()
+               for arg in ["batch_size"]:
+                   if arg in kwargs:
+                       kwargs.pop(arg)
+               for doc in docs:
+                   try:
+                       doc = proc(doc, **kwargs)  # type: ignore[call-arg]
+                       yield doc
+                   except Exception as e:
+                       error_handler(name, proc, [doc], e)
+       
+       
+    1: def raise_error(proc_name, proc, docs, e):
+           raise e
+       
+       
+    1: def ignore_error(proc_name, proc, docs, e):
+           pass
+       
+       
+    1: def warn_if_jupyter_cupy():
+           """Warn about require_gpu if a jupyter notebook + cupy + mismatched
+           contextvars vs. thread ops are detected
+           """
+           if is_in_jupyter():
+               from thinc.backends.cupy_ops import CupyOps
+       
+               if CupyOps.xp is not None:
+                   from thinc.backends import contextvars_eq_thread_ops
+       
+                   if not contextvars_eq_thread_ops():
+                       warnings.warn(Warnings.W111)
+       
+       
+    1: def check_lexeme_norms(vocab, component_name):
+           lexeme_norms = vocab.lookups.get_table("lexeme_norm", {})
+           if len(lexeme_norms) == 0 and vocab.lang in LEXEME_NORM_LANGS:
+               langs = ", ".join(LEXEME_NORM_LANGS)
+               logger.debug(Warnings.W033.format(model=component_name, langs=langs))
+       
+       
+    1: def to_ternary_int(val) -> int:
+           """Convert a value to the ternary 1/0/-1 int used for True/None/False in
+           attributes such as SENT_START: True/1/1.0 is 1 (True), None/0/0.0 is 0
+           (None), any other values are -1 (False).
+           """
+           if val is True:
+               return 1
+           elif val is None:
+               return 0
+           elif val is False:
+               return -1
+           elif val == 1:
+               return 1
+           elif val == 0:
+               return 0
+           else:
+               return -1
+       
+       
+       # The following implementation of packages_distributions() is adapted from
+       # importlib_metadata, which is distributed under the Apache 2.0 License.
+       # Copyright (c) 2017-2019 Jason R. Coombs, Barry Warsaw
+       # See licenses/3rd_party_licenses.txt
+    1: def packages_distributions() -> Dict[str, List[str]]:
+           """Return a mapping of top-level packages to their distributions. We're
+           inlining this helper from the importlib_metadata "backport" here, since
+           it's not available in the builtin importlib.metadata.
+           """
+           pkg_to_dist = defaultdict(list)
+           for dist in importlib_metadata.distributions():
+               for pkg in (dist.read_text("top_level.txt") or "").split():
+                   pkg_to_dist[pkg].append(dist.metadata["Name"])
+           return dict(pkg_to_dist)
+       
+       
+    1: def all_equal(iterable):
+           """Return True if all the elements are equal to each other
+           (or if the input is an empty sequence), False otherwise."""
+           g = itertools.groupby(iterable)
+           return next(g, True) and not next(g, False)
+       
+       
+    1: def _is_port_in_use(port: int, host: str = "localhost") -> bool:
+           """Check if 'host:port' is in use. Return True if it is, False otherwise.
+       
+           port (int): the port to check
+           host (str): the host to check (default "localhost")
+           RETURNS (bool): Whether 'host:port' is in use.
+           """
+           s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+           try:
+               s.bind((host, port))
+               return False
+           except socket.error:
+               return True
+           finally:
+               s.close()
+       
+       
+    1: def find_available_port(start: int, host: str, auto_select: bool = False) -> int:
+           """Given a starting port and a host, handle finding a port.
+       
+           If `auto_select` is False, a busy port will raise an error.
+       
+           If `auto_select` is True, the next free higher port will be used.
+       
+           start (int): the port to start looking from
+           host (str): the host to find a port on
+           auto_select (bool): whether to automatically select a new port if the given port is busy (default False)
+           RETURNS (int): The port to use.
+           """
+           if not _is_port_in_use(start, host):
+               return start
+       
+           port = start
+           if not auto_select:
+               raise ValueError(Errors.E1050.format(port=port))
+       
+           while _is_port_in_use(port, host) and port < 65535:
+               port += 1
+       
+           if port == 65535 and _is_port_in_use(port, host):
+               raise ValueError(Errors.E1049.format(host=host))
+       
+           # if we get here, the port changed
+           warnings.warn(Warnings.W124.format(host=host, port=start, serve_port=port))
+           return port

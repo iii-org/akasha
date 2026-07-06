@@ -1,0 +1,20 @@
+       # Variable names to colors, just for completion
+    1: BLACK = "black"
+    1: RED = "red"
+    1: GREEN = "green"
+    1: YELLOW = "yellow"
+    1: BLUE = "blue"
+    1: MAGENTA = "magenta"
+    1: CYAN = "cyan"
+    1: WHITE = "white"
+       
+    1: RESET = "reset"
+       
+    1: BRIGHT_BLACK = "bright_black"
+    1: BRIGHT_RED = "bright_red"
+    1: BRIGHT_GREEN = "bright_green"
+    1: BRIGHT_YELLOW = "bright_yellow"
+    1: BRIGHT_BLUE = "bright_blue"
+    1: BRIGHT_MAGENTA = "bright_magenta"
+    1: BRIGHT_CYAN = "bright_cyan"
+    1: BRIGHT_WHITE = "bright_white"

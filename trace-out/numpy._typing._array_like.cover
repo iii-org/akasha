@@ -1,0 +1,167 @@
+    1: from __future__ import annotations
+       
+    1: import sys
+    1: from collections.abc import Collection, Callable, Sequence
+    1: from typing import Any, Protocol, Union, TypeVar, runtime_checkable
+       
+    1: from numpy import (
+           ndarray,
+           dtype,
+           generic,
+           bool_,
+           unsignedinteger,
+           integer,
+           floating,
+           complexfloating,
+           number,
+           timedelta64,
+           datetime64,
+           object_,
+           void,
+           str_,
+           bytes_,
+       )
+    1: from ._nested_sequence import _NestedSequence
+       
+    1: _T = TypeVar("_T")
+    1: _ScalarType = TypeVar("_ScalarType", bound=generic)
+    1: _ScalarType_co = TypeVar("_ScalarType_co", bound=generic, covariant=True)
+    1: _DType = TypeVar("_DType", bound=dtype[Any])
+    1: _DType_co = TypeVar("_DType_co", covariant=True, bound=dtype[Any])
+       
+    1: NDArray = ndarray[Any, dtype[_ScalarType_co]]
+       
+       # The `_SupportsArray` protocol only cares about the default dtype
+       # (i.e. `dtype=None` or no `dtype` parameter at all) of the to-be returned
+       # array.
+       # Concrete implementations of the protocol are responsible for adding
+       # any and all remaining overloads
+    3: @runtime_checkable
+    2: class _SupportsArray(Protocol[_DType_co]):
+    1:     def __array__(self) -> ndarray[Any, _DType_co]: ...
+       
+       
+    3: @runtime_checkable
+    2: class _SupportsArrayFunc(Protocol):
+    1:     """A protocol class representing `~class.__array_function__`."""
+    1:     def __array_function__(
+               self,
+               func: Callable[..., Any],
+               types: Collection[type[Any]],
+               args: tuple[Any, ...],
+               kwargs: dict[str, Any],
+           ) -> object: ...
+       
+       
+       # TODO: Wait until mypy supports recursive objects in combination with typevars
+    2: _FiniteNestedSequence = Union[
+    2:     _T,
+    1:     Sequence[_T],
+    1:     Sequence[Sequence[_T]],
+    1:     Sequence[Sequence[Sequence[_T]]],
+    1:     Sequence[Sequence[Sequence[Sequence[_T]]]],
+       ]
+       
+       # A subset of `npt.ArrayLike` that can be parametrized w.r.t. `np.generic`
+    2: _ArrayLike = Union[
+    2:     _SupportsArray[dtype[_ScalarType]],
+    1:     _NestedSequence[_SupportsArray[dtype[_ScalarType]]],
+       ]
+       
+       # A union representing array-like objects; consists of two typevars:
+       # One representing types that can be parametrized w.r.t. `np.dtype`
+       # and another one for the rest
+    2: _DualArrayLike = Union[
+    2:     _SupportsArray[_DType],
+    1:     _NestedSequence[_SupportsArray[_DType]],
+    1:     _T,
+    1:     _NestedSequence[_T],
+       ]
+       
+    1: if sys.version_info >= (3, 12):
+           from collections.abc import Buffer
+       
+           ArrayLike = Buffer | _DualArrayLike[
+               dtype[Any],
+               Union[bool, int, float, complex, str, bytes],
+           ]
+       else:
+    2:     ArrayLike = _DualArrayLike[
+    2:         dtype[Any],
+    1:         Union[bool, int, float, complex, str, bytes],
+           ]
+       
+       # `ArrayLike<X>_co`: array-like objects that can be coerced into `X`
+       # given the casting rules `same_kind`
+    2: _ArrayLikeBool_co = _DualArrayLike[
+    2:     dtype[bool_],
+    1:     bool,
+       ]
+    2: _ArrayLikeUInt_co = _DualArrayLike[
+    2:     dtype[Union[bool_, unsignedinteger[Any]]],
+    1:     bool,
+       ]
+    2: _ArrayLikeInt_co = _DualArrayLike[
+    2:     dtype[Union[bool_, integer[Any]]],
+    1:     Union[bool, int],
+       ]
+    2: _ArrayLikeFloat_co = _DualArrayLike[
+    2:     dtype[Union[bool_, integer[Any], floating[Any]]],
+    1:     Union[bool, int, float],
+       ]
+    2: _ArrayLikeComplex_co = _DualArrayLike[
+    3:     dtype[Union[
+    2:         bool_,
+    1:         integer[Any],
+    1:         floating[Any],
+    1:         complexfloating[Any, Any],
+           ]],
+    1:     Union[bool, int, float, complex],
+       ]
+    2: _ArrayLikeNumber_co = _DualArrayLike[
+    2:     dtype[Union[bool_, number[Any]]],
+    1:     Union[bool, int, float, complex],
+       ]
+    2: _ArrayLikeTD64_co = _DualArrayLike[
+    2:     dtype[Union[bool_, integer[Any], timedelta64]],
+    1:     Union[bool, int],
+       ]
+    2: _ArrayLikeDT64_co = Union[
+    2:     _SupportsArray[dtype[datetime64]],
+    1:     _NestedSequence[_SupportsArray[dtype[datetime64]]],
+       ]
+    2: _ArrayLikeObject_co = Union[
+    2:     _SupportsArray[dtype[object_]],
+    1:     _NestedSequence[_SupportsArray[dtype[object_]]],
+       ]
+       
+    2: _ArrayLikeVoid_co = Union[
+    2:     _SupportsArray[dtype[void]],
+    1:     _NestedSequence[_SupportsArray[dtype[void]]],
+       ]
+    2: _ArrayLikeStr_co = _DualArrayLike[
+    2:     dtype[str_],
+    1:     str,
+       ]
+    2: _ArrayLikeBytes_co = _DualArrayLike[
+    2:     dtype[bytes_],
+    1:     bytes,
+       ]
+       
+    2: _ArrayLikeInt = _DualArrayLike[
+    2:     dtype[integer[Any]],
+    1:     int,
+       ]
+       
+       # Extra ArrayLike type so that pyright can deal with NDArray[Any]
+       # Used as the first overload, should only match NDArray[Any],
+       # not any actual types.
+       # https://github.com/numpy/numpy/pull/22193
+    2: class _UnknownType:
+    1:     ...
+       
+       
+    2: _ArrayLikeUnknown = _DualArrayLike[
+    2:     dtype[_UnknownType],
+    1:     _UnknownType,
+       ]

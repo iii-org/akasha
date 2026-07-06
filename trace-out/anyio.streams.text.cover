@@ -1,0 +1,176 @@
+    1: from __future__ import annotations
+       
+    1: __all__ = (
+           "TextConnectable",
+           "TextReceiveStream",
+           "TextSendStream",
+           "TextStream",
+       )
+       
+    1: import codecs
+    1: import sys
+    1: from collections.abc import Callable, Mapping
+    1: from dataclasses import InitVar, dataclass, field
+    1: from typing import Any
+       
+    1: from ..abc import (
+           AnyByteReceiveStream,
+           AnyByteSendStream,
+           AnyByteStream,
+           AnyByteStreamConnectable,
+           ObjectReceiveStream,
+           ObjectSendStream,
+           ObjectStream,
+           ObjectStreamConnectable,
+       )
+       
+    1: if sys.version_info >= (3, 12):
+           from typing import override
+       else:
+    1:     from typing_extensions import override
+       
+       
+    3: @dataclass(eq=False)
+    2: class TextReceiveStream(ObjectReceiveStream[str]):
+    1:     """
+           Stream wrapper that decodes bytes to strings using the given encoding.
+       
+           Decoding is done using :class:`~codecs.IncrementalDecoder` which returns any
+           completely received unicode characters as soon as they come in.
+       
+           :param transport_stream: any bytes-based receive stream
+           :param encoding: character encoding to use for decoding bytes to strings (defaults
+               to ``utf-8``)
+           :param errors: handling scheme for decoding errors (defaults to ``strict``; see the
+               `codecs module documentation`_ for a comprehensive list of options)
+       
+           .. _codecs module documentation:
+               https://docs.python.org/3/library/codecs.html#codec-objects
+           """
+       
+    1:     transport_stream: AnyByteReceiveStream
+    1:     encoding: InitVar[str] = "utf-8"
+    1:     errors: InitVar[str] = "strict"
+    1:     _decoder: codecs.IncrementalDecoder = field(init=False)
+       
+    1:     def __post_init__(self, encoding: str, errors: str) -> None:
+               decoder_class = codecs.getincrementaldecoder(encoding)
+               self._decoder = decoder_class(errors=errors)
+       
+    1:     async def receive(self) -> str:
+               while True:
+                   chunk = await self.transport_stream.receive()
+                   decoded = self._decoder.decode(chunk)
+                   if decoded:
+                       return decoded
+       
+    1:     async def aclose(self) -> None:
+               await self.transport_stream.aclose()
+               self._decoder.reset()
+       
+    2:     @property
+    2:     def extra_attributes(self) -> Mapping[Any, Callable[[], Any]]:
+               return self.transport_stream.extra_attributes
+       
+       
+    3: @dataclass(eq=False)
+    2: class TextSendStream(ObjectSendStream[str]):
+    1:     """
+           Sends strings to the wrapped stream as bytes using the given encoding.
+       
+           :param AnyByteSendStream transport_stream: any bytes-based send stream
+           :param str encoding: character encoding to use for encoding strings to bytes
+               (defaults to ``utf-8``)
+           :param str errors: handling scheme for encoding errors (defaults to ``strict``; see
+               the `codecs module documentation`_ for a comprehensive list of options)
+       
+           .. _codecs module documentation:
+               https://docs.python.org/3/library/codecs.html#codec-objects
+           """
+       
+    1:     transport_stream: AnyByteSendStream
+    1:     encoding: InitVar[str] = "utf-8"
+    1:     errors: str = "strict"
+    1:     _encoder: Callable[..., tuple[bytes, int]] = field(init=False)
+       
+    1:     def __post_init__(self, encoding: str) -> None:
+               self._encoder = codecs.getencoder(encoding)
+       
+    1:     async def send(self, item: str) -> None:
+               encoded = self._encoder(item, self.errors)[0]
+               await self.transport_stream.send(encoded)
+       
+    1:     async def aclose(self) -> None:
+               await self.transport_stream.aclose()
+       
+    2:     @property
+    2:     def extra_attributes(self) -> Mapping[Any, Callable[[], Any]]:
+               return self.transport_stream.extra_attributes
+       
+       
+    3: @dataclass(eq=False)
+    2: class TextStream(ObjectStream[str]):
+    1:     """
+           A bidirectional stream that decodes bytes to strings on receive and encodes strings
+           to bytes on send.
+       
+           Extra attributes will be provided from both streams, with the receive stream
+           providing the values in case of a conflict.
+       
+           :param AnyByteStream transport_stream: any bytes-based stream
+           :param str encoding: character encoding to use for encoding/decoding strings to/from
+               bytes (defaults to ``utf-8``)
+           :param str errors: handling scheme for encoding errors (defaults to ``strict``; see
+               the `codecs module documentation`_ for a comprehensive list of options)
+       
+           .. _codecs module documentation:
+               https://docs.python.org/3/library/codecs.html#codec-objects
+           """
+       
+    1:     transport_stream: AnyByteStream
+    1:     encoding: InitVar[str] = "utf-8"
+    1:     errors: InitVar[str] = "strict"
+    1:     _receive_stream: TextReceiveStream = field(init=False)
+    1:     _send_stream: TextSendStream = field(init=False)
+       
+    1:     def __post_init__(self, encoding: str, errors: str) -> None:
+               self._receive_stream = TextReceiveStream(
+                   self.transport_stream, encoding=encoding, errors=errors
+               )
+               self._send_stream = TextSendStream(
+                   self.transport_stream, encoding=encoding, errors=errors
+               )
+       
+    1:     async def receive(self) -> str:
+               return await self._receive_stream.receive()
+       
+    1:     async def send(self, item: str) -> None:
+               await self._send_stream.send(item)
+       
+    1:     async def send_eof(self) -> None:
+               await self.transport_stream.send_eof()
+       
+    1:     async def aclose(self) -> None:
+               await self._send_stream.aclose()
+               await self._receive_stream.aclose()
+       
+    2:     @property
+    2:     def extra_attributes(self) -> Mapping[Any, Callable[[], Any]]:
+               return {
+                   **self._send_stream.extra_attributes,
+                   **self._receive_stream.extra_attributes,
+               }
+       
+       
+    2: class TextConnectable(ObjectStreamConnectable[str]):
+    1:     def __init__(self, connectable: AnyByteStreamConnectable):
+               """
+               :param connectable: the bytestream endpoint to wrap
+       
+               """
+               self.connectable = connectable
+       
+    2:     @override
+    2:     async def connect(self) -> TextStream:
+               stream = await self.connectable.connect()
+               return TextStream(stream)

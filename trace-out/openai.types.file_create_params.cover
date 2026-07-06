@@ -1,0 +1,52 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: from .._types import FileTypes
+    1: from .file_purpose import FilePurpose
+       
+    1: __all__ = ["FileCreateParams", "ExpiresAfter"]
+       
+       
+    2: class FileCreateParams(TypedDict, total=False):
+    1:     file: Required[FileTypes]
+    1:     """The File object (not file name) to be uploaded."""
+       
+    1:     purpose: Required[FilePurpose]
+    1:     """The intended purpose of the uploaded file. One of:
+       
+           - `assistants`: Used in the Assistants API
+           - `batch`: Used in the Batch API
+           - `fine-tune`: Used for fine-tuning
+           - `vision`: Images used for vision fine-tuning
+           - `user_data`: Flexible file type for any purpose
+           - `evals`: Used for eval data sets
+           """
+       
+    1:     expires_after: ExpiresAfter
+    1:     """The expiration policy for a file.
+       
+           By default, files with `purpose=batch` expire after 30 days and all other files
+           are persisted until they are manually deleted.
+           """
+       
+       
+    2: class ExpiresAfter(TypedDict, total=False):
+    1:     """The expiration policy for a file.
+       
+           By default, files with `purpose=batch` expire after 30 days and all other files are persisted until they are manually deleted.
+           """
+       
+    1:     anchor: Required[Literal["created_at"]]
+    1:     """Anchor timestamp after which the expiration policy applies.
+       
+           Supported anchors: `created_at`.
+           """
+       
+    1:     seconds: Required[int]
+    1:     """The number of seconds after the anchor time that the file will expire.
+       
+           Must be between 3600 (1 hour) and 2592000 (30 days).
+           """

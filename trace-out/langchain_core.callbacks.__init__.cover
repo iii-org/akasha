@@ -1,0 +1,132 @@
+    1: """Callback handlers allow listening to events in LangChain."""
+       
+    1: from typing import TYPE_CHECKING
+       
+    1: from langchain_core._import_utils import import_attr
+       
+    1: if TYPE_CHECKING:
+           from langchain_core.callbacks.base import (
+               AsyncCallbackHandler,
+               BaseCallbackHandler,
+               BaseCallbackManager,
+               CallbackManagerMixin,
+               Callbacks,
+               ChainManagerMixin,
+               LLMManagerMixin,
+               RetrieverManagerMixin,
+               RunManagerMixin,
+               ToolManagerMixin,
+           )
+           from langchain_core.callbacks.file import FileCallbackHandler
+           from langchain_core.callbacks.manager import (
+               AsyncCallbackManager,
+               AsyncCallbackManagerForChainGroup,
+               AsyncCallbackManagerForChainRun,
+               AsyncCallbackManagerForLLMRun,
+               AsyncCallbackManagerForRetrieverRun,
+               AsyncCallbackManagerForToolRun,
+               AsyncParentRunManager,
+               AsyncRunManager,
+               BaseRunManager,
+               CallbackManager,
+               CallbackManagerForChainGroup,
+               CallbackManagerForChainRun,
+               CallbackManagerForLLMRun,
+               CallbackManagerForRetrieverRun,
+               CallbackManagerForToolRun,
+               ParentRunManager,
+               RunManager,
+               adispatch_custom_event,
+               dispatch_custom_event,
+           )
+           from langchain_core.callbacks.stdout import StdOutCallbackHandler
+           from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+           from langchain_core.callbacks.usage import (
+               UsageMetadataCallbackHandler,
+               get_usage_metadata_callback,
+           )
+       
+    1: __all__ = (
+           "AsyncCallbackHandler",
+           "AsyncCallbackManager",
+           "AsyncCallbackManagerForChainGroup",
+           "AsyncCallbackManagerForChainRun",
+           "AsyncCallbackManagerForLLMRun",
+           "AsyncCallbackManagerForRetrieverRun",
+           "AsyncCallbackManagerForToolRun",
+           "AsyncParentRunManager",
+           "AsyncRunManager",
+           "BaseCallbackHandler",
+           "BaseCallbackManager",
+           "BaseRunManager",
+           "CallbackManager",
+           "CallbackManagerForChainGroup",
+           "CallbackManagerForChainRun",
+           "CallbackManagerForLLMRun",
+           "CallbackManagerForRetrieverRun",
+           "CallbackManagerForToolRun",
+           "CallbackManagerMixin",
+           "Callbacks",
+           "ChainManagerMixin",
+           "FileCallbackHandler",
+           "LLMManagerMixin",
+           "ParentRunManager",
+           "RetrieverManagerMixin",
+           "RunManager",
+           "RunManagerMixin",
+           "StdOutCallbackHandler",
+           "StreamingStdOutCallbackHandler",
+           "ToolManagerMixin",
+           "UsageMetadataCallbackHandler",
+           "adispatch_custom_event",
+           "dispatch_custom_event",
+           "get_usage_metadata_callback",
+       )
+       
+   35: _dynamic_imports = {
+    1:     "AsyncCallbackHandler": "base",
+    1:     "BaseCallbackHandler": "base",
+    1:     "BaseCallbackManager": "base",
+    1:     "CallbackManagerMixin": "base",
+    1:     "Callbacks": "base",
+    1:     "ChainManagerMixin": "base",
+    1:     "LLMManagerMixin": "base",
+    1:     "RetrieverManagerMixin": "base",
+    1:     "RunManagerMixin": "base",
+    1:     "ToolManagerMixin": "base",
+    1:     "FileCallbackHandler": "file",
+    1:     "AsyncCallbackManager": "manager",
+    1:     "AsyncCallbackManagerForChainGroup": "manager",
+    1:     "AsyncCallbackManagerForChainRun": "manager",
+    1:     "AsyncCallbackManagerForLLMRun": "manager",
+    1:     "AsyncCallbackManagerForRetrieverRun": "manager",
+    1:     "AsyncCallbackManagerForToolRun": "manager",
+    1:     "AsyncParentRunManager": "manager",
+    1:     "AsyncRunManager": "manager",
+    1:     "BaseRunManager": "manager",
+    1:     "CallbackManager": "manager",
+    1:     "CallbackManagerForChainGroup": "manager",
+    1:     "CallbackManagerForChainRun": "manager",
+    1:     "CallbackManagerForLLMRun": "manager",
+    1:     "CallbackManagerForRetrieverRun": "manager",
+    1:     "CallbackManagerForToolRun": "manager",
+    1:     "ParentRunManager": "manager",
+    1:     "RunManager": "manager",
+    1:     "adispatch_custom_event": "manager",
+    1:     "dispatch_custom_event": "manager",
+    1:     "StdOutCallbackHandler": "stdout",
+    1:     "StreamingStdOutCallbackHandler": "streaming_stdout",
+    1:     "UsageMetadataCallbackHandler": "usage",
+    1:     "get_usage_metadata_callback": "usage",
+       }
+       
+       
+    1: def __getattr__(attr_name: str) -> object:
+   11:     module_name = _dynamic_imports.get(attr_name)
+   11:     result = import_attr(attr_name, module_name, __spec__.parent)
+   11:     globals()[attr_name] = result
+   11:     return result
+       
+       
+    1: def __dir__() -> list[str]:
+           return list(__all__)

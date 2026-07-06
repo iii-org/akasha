@@ -1,0 +1,503 @@
+       # mypy: allow-untyped-defs
+    1: from __future__ import annotations
+       
+    1: import argparse
+    1: from collections.abc import Callable
+    1: from collections.abc import Sequence
+    1: import os
+    1: import sys
+    1: import textwrap
+    1: from typing import Any
+    1: from typing import final
+    1: from typing import Literal
+    1: from typing import NoReturn
+       
+    1: from .exceptions import UsageError
+    1: import _pytest._io
+    1: from _pytest.compat import NOTSET
+    1: from _pytest.deprecated import check_ispytest
+       
+       
+    1: FILE_OR_DIR = "file_or_dir"
+       
+       
+    3: @final
+    2: class Parser:
+    1:     """Parser for command line arguments and config-file values.
+       
+           :ivar extra_info: Dict of generic param -> value to display in case
+               there's an error processing the command line arguments.
+           """
+       
+    2:     def __init__(
+               self,
+    1:         usage: str | None = None,
+    1:         processopt: Callable[[Argument], None] | None = None,
+               *,
+    1:         prog: str | None = None,
+    1:         _ispytest: bool = False,
+           ) -> None:
+    1:         check_ispytest(_ispytest)
+       
+    1:         from _pytest._argcomplete import filescompleter
+       
+    1:         self._processopt = processopt
+    1:         self.extra_info: dict[str, Any] = {}
+    1:         self.optparser = PytestArgumentParser(usage, self.extra_info, prog=prog)
+    1:         anonymous_arggroup = self.optparser.add_argument_group("Custom options")
+    2:         self._anonymous = OptionGroup(
+    1:             anonymous_arggroup, "_anonymous", self, _ispytest=True
+               )
+    1:         self._groups = [self._anonymous]
+               # Maps option strings -> dest, e.g. "-V" and "--version" to "version".
+    1:         self._opt2dest: dict[str, str] = {}
+    1:         file_or_dir_arg = self.optparser.add_argument(FILE_OR_DIR, nargs="*")
+    1:         file_or_dir_arg.completer = filescompleter  # type: ignore
+       
+    1:         self._inidict: dict[str, tuple[str, str, Any]] = {}
+               # Maps alias -> canonical name.
+    1:         self._ini_aliases: dict[str, str] = {}
+       
+    2:     @property
+    2:     def prog(self) -> str:
+               return self.optparser.prog
+       
+    2:     @prog.setter
+    2:     def prog(self, value: str) -> None:
+               self.optparser.prog = value
+       
+    1:     def processoption(self, option: Argument) -> None:
+   92:         if self._processopt:
+   92:             if option.dest:
+   92:                 self._processopt(option)
+       
+    1:     def getgroup(
+    1:         self, name: str, description: str = "", after: str | None = None
+           ) -> OptionGroup:
+               """Get (or create) a named option Group.
+       
+               :param name: Name of the option group.
+               :param description: Long description for --help output.
+               :param after: Name of another group, used for ordering --help output.
+               :returns: The option group.
+       
+               The returned group object has an ``addoption`` method with the same
+               signature as :func:`parser.addoption <pytest.Parser.addoption>` but
+               will be shown in the respective group in the output of
+               ``pytest --help``.
+               """
+   79:         for group in self._groups:
+   73:             if group.name == name:
+   15:                 return group
+       
+    6:         arggroup = self.optparser.add_argument_group(description or name)
+    6:         group = OptionGroup(arggroup, name, self, _ispytest=True)
+    6:         i = 0
+   23:         for i, grp in enumerate(self._groups):
+   18:             if grp.name == after:
+    1:                 break
+    6:         self._groups.insert(i + 1, group)
+               # argparse doesn't provide a way to control `--help` order, so must
+               # access its internals ☹.
+    6:         self.optparser._action_groups.insert(i + 1, self.optparser._action_groups.pop())
+    6:         return group
+       
+    1:     def addoption(self, *opts: str, **attrs: Any) -> None:
+               """Register a command line option.
+       
+               :param opts:
+                   Option names, can be short or long options.
+               :param attrs:
+                   Same attributes as the argparse library's :meth:`add_argument()
+                   <argparse.ArgumentParser.add_argument>` function accepts.
+       
+               After command line parsing, options are available on the pytest config
+               object via ``config.option.NAME`` where ``NAME`` is usually set
+               by passing a ``dest`` attribute, for example
+               ``addoption("--long", dest="NAME", ...)``.
+               """
+               self._anonymous.addoption(*opts, **attrs)
+       
+    1:     def parse(
+               self,
+               args: Sequence[str | os.PathLike[str]],
+    1:         namespace: argparse.Namespace | None = None,
+           ) -> argparse.Namespace:
+               """Parse the arguments.
+       
+               Unlike ``parse_known_args`` and ``parse_known_and_unknown_args``,
+               raises PrintHelp on `--help` and UsageError on unknown flags
+       
+               :meta private:
+               """
+    1:         from _pytest._argcomplete import try_argcomplete
+       
+    1:         try_argcomplete(self.optparser)
+    9:         strargs = [os.fspath(x) for x in args]
+    1:         if namespace is None:
+                   namespace = argparse.Namespace()
+    1:         try:
+    1:             namespace._raise_print_help = True
+    1:             return self.optparser.parse_intermixed_args(strargs, namespace=namespace)
+               finally:
+    1:             del namespace._raise_print_help
+       
+    1:     def parse_known_args(
+               self,
+               args: Sequence[str | os.PathLike[str]],
+    1:         namespace: argparse.Namespace | None = None,
+           ) -> argparse.Namespace:
+               """Parse the known arguments at this point.
+       
+               :returns: An argparse namespace object.
+               """
+    3:         return self.parse_known_and_unknown_args(args, namespace=namespace)[0]
+       
+    1:     def parse_known_and_unknown_args(
+               self,
+               args: Sequence[str | os.PathLike[str]],
+    1:         namespace: argparse.Namespace | None = None,
+           ) -> tuple[argparse.Namespace, list[str]]:
+               """Parse the known arguments at this point, and also return the
+               remaining unknown flag arguments.
+       
+               :returns:
+                   A tuple containing an argparse namespace object for the known
+                   arguments, and a list of unknown flag arguments.
+               """
+   29:         strargs = [os.fspath(x) for x in args]
+    4:         if sys.version_info < (3, 12, 8) or (3, 13) <= sys.version_info < (3, 13, 1):
+                   # Older argparse have a bugged parse_known_intermixed_args.
+    4:             namespace, unknown = self.optparser.parse_known_args(strargs, namespace)
+    4:             assert namespace is not None
+    4:             file_or_dir = getattr(namespace, FILE_OR_DIR)
+    4:             unknown_flags: list[str] = []
+    4:             for arg in unknown:
+                       (unknown_flags if arg.startswith("-") else file_or_dir).append(arg)
+    4:             return namespace, unknown_flags
+               else:
+                   return self.optparser.parse_known_intermixed_args(strargs, namespace)
+       
+    2:     def addini(
+               self,
+               name: str,
+               help: str,
+               type: Literal[
+                   "string", "paths", "pathlist", "args", "linelist", "bool", "int", "float"
+               ]
+    1:         | None = None,
+    1:         default: Any = NOTSET,
+               *,
+    1:         aliases: Sequence[str] = (),
+           ) -> None:
+               """Register a configuration file option.
+       
+               :param name:
+                   Name of the configuration.
+               :param type:
+                   Type of the configuration. Can be:
+       
+                       * ``string``: a string
+                       * ``bool``: a boolean
+                       * ``args``: a list of strings, separated as in a shell
+                       * ``linelist``: a list of strings, separated by line breaks
+                       * ``paths``: a list of :class:`pathlib.Path`, separated as in a shell
+                       * ``pathlist``: a list of ``py.path``, separated as in a shell
+                       * ``int``: an integer
+                       * ``float``: a floating-point number
+       
+                       .. versionadded:: 8.4
+       
+                           The ``float`` and ``int`` types.
+       
+                   For ``paths`` and ``pathlist`` types, they are considered relative to the config-file.
+                   In case the execution is happening without a config-file defined,
+                   they will be considered relative to the current working directory (for example with ``--override-ini``).
+       
+                   .. versionadded:: 7.0
+                       The ``paths`` variable type.
+       
+                   .. versionadded:: 8.1
+                       Use the current working directory to resolve ``paths`` and ``pathlist`` in the absence of a config-file.
+       
+                   Defaults to ``string`` if ``None`` or not passed.
+               :param default:
+                   Default value if no config-file option exists but is queried.
+               :param aliases:
+                   Additional names by which this option can be referenced.
+                   Aliases resolve to the canonical name.
+       
+                   .. versionadded:: 9.0
+                       The ``aliases`` parameter.
+       
+               The value of configuration keys can be retrieved via a call to
+               :py:func:`config.getini(name) <pytest.Config.getini>`.
+               """
+   55:         assert type in (
+                   None,
+                   "string",
+                   "paths",
+                   "pathlist",
+                   "args",
+                   "linelist",
+                   "bool",
+                   "int",
+                   "float",
+               )
+   55:         if type is None:
+   26:             type = "string"
+   55:         if default is NOTSET:
+    6:             default = get_ini_default_for_type(type)
+       
+   55:         self._inidict[name] = (help, type, default)
+       
+   56:         for alias in aliases:
+    1:             if alias in self._inidict:
+                       raise ValueError(
+                           f"alias {alias!r} conflicts with existing configuration option"
+                       )
+    1:             if (already := self._ini_aliases.get(alias)) is not None:
+                       raise ValueError(f"{alias!r} is already an alias of {already!r}")
+    1:             self._ini_aliases[alias] = name
+       
+       
+    1: def get_ini_default_for_type(
+           type: Literal[
+               "string", "paths", "pathlist", "args", "linelist", "bool", "int", "float"
+           ],
+       ) -> Any:
+           """
+           Used by addini to get the default value for a given config option type, when
+           default is not supplied.
+           """
+    6:     if type in ("paths", "pathlist", "args", "linelist"):
+    3:         return []
+    3:     elif type == "bool":
+               return False
+    3:     elif type == "int":
+               return 0
+    3:     elif type == "float":
+               return 0.0
+           else:
+    3:         return ""
+       
+       
+    2: class Argument:
+    1:     """An option defined in an OptionGroup."""
+       
+    1:     def __init__(self, action: argparse.Action) -> None:
+   92:         self._action = action
+       
+    1:     def attrs(self) -> dict[str, Any]:
+               return self._action.__dict__
+       
+    1:     def names(self) -> Sequence[str]:
+  848:         return self._action.option_strings
+       
+    2:     @property
+    2:     def dest(self) -> str:
+  392:         return self._action.dest
+       
+    2:     @property
+    2:     def default(self) -> Any:
+   87:         return self._action.default
+       
+    2:     @property
+    2:     def type(self) -> Any | None:
+               return self._action.type
+       
+    1:     def __repr__(self) -> str:
+               action = getattr(self, "_action", None)
+               if action is None:
+                   return "Argument(<uninitialized>)"
+               args: list[str] = []
+               args += ["opts: " + repr(self.names())]
+               args += ["dest: " + repr(self.dest)]
+               if action.type:
+                   args += ["type: " + repr(self.type)]
+               args += ["default: " + repr(self.default)]
+               return "Argument({})".format(", ".join(args))
+       
+       
+    2: class OptionGroup:
+    1:     """A group of options shown in its own section."""
+       
+    1:     def __init__(
+               self,
+               arggroup: argparse._ArgumentGroup,
+               name: str,
+               parser: Parser | None,
+    1:         _ispytest: bool = False,
+           ) -> None:
+    7:         check_ispytest(_ispytest)
+    7:         self._arggroup = arggroup
+    7:         self.name = name
+    7:         self.options: list[Argument] = []
+    7:         self.parser = parser
+       
+    1:     def addoption(self, *opts: str, **attrs: Any) -> None:
+               """Add an option to this group.
+       
+               If a shortened version of a long option is specified, it will
+               be suppressed in the help. ``addoption('--twowords', '--two-words')``
+               results in help showing ``--two-words`` only, but ``--twowords`` gets
+               accepted **and** the automatic destination is in ``args.twowords``.
+       
+               :param opts:
+                   Option names, can be short or long options.
+                   Note that lower-case short options (e.g. `-x`) are reserved.
+               :param attrs:
+                   Same attributes as the argparse library's :meth:`add_argument()
+                   <argparse.ArgumentParser.add_argument>` function accepts.
+               """
+ 3668:         conflict = set(opts).intersection(
+ 1794:             name for opt in self.options for name in opt.names()
+               )
+   80:         if conflict:
+                   raise ValueError(f"option names {conflict} already added")
+   80:         self._addoption_inner(opts, attrs, allow_reserved=False)
+       
+    1:     def _addoption(self, *opts: str, **attrs: Any) -> None:
+               """Like addoption(), but also allows registering short lower case options (e.g. -x),
+               which are reserved for pytest core."""
+   12:         self._addoption_inner(opts, attrs, allow_reserved=True)
+       
+    1:     def _addoption_inner(
+               self, opts: tuple[str, ...], attrs: dict[str, Any], allow_reserved: bool
+           ) -> None:
+   92:         if not allow_reserved:
+  181:             for opt in opts:
+  101:                 if len(opt) >= 2 and opt[0] == "-" and opt[1].islower():
+                           raise ValueError("lowercase short options are reserved")
+       
+   92:         action = self._arggroup.add_argument(*opts, **attrs)
+   92:         option = Argument(action)
+   92:         self.options.append(option)
+   92:         if self.parser:
+  213:             for name in option.names():
+  121:                 self.parser._opt2dest[name] = option.dest
+   92:             self.parser.processoption(option)
+       
+       
+    2: class PytestArgumentParser(argparse.ArgumentParser):
+    1:     def __init__(
+               self,
+               usage: str | None,
+               extra_info: dict[str, str],
+               *,
+    1:         prog: str | None = None,
+           ) -> None:
+    2:         super().__init__(
+    1:             usage=usage,
+    1:             prog=prog,
+    1:             add_help=False,
+    1:             formatter_class=DropShorterLongHelpFormatter,
+    1:             allow_abbrev=False,
+    1:             fromfile_prefix_chars="@",
+               )
+               # extra_info is a dict of (param -> value) to display if there's
+               # an usage error to provide more contextual information to the user.
+    1:         self.extra_info = extra_info
+       
+    1:     def error(self, message: str) -> NoReturn:
+               """Transform argparse error message into UsageError."""
+               # TODO(py313): Replace with `exit_on_error=False`. Note that while it
+               # was added in Python 3.9, it was broken until 3.13 (cpython#121018).
+               msg = f"{self.prog}: error: {message}"
+               if self.extra_info:
+                   msg += "\n" + "\n".join(
+                       f"  {k}: {v}" for k, v in sorted(self.extra_info.items())
+                   )
+               raise UsageError(self.format_usage() + msg)
+       
+       
+    2: class DropShorterLongHelpFormatter(argparse.HelpFormatter):
+    1:     """Shorten help for long options that differ only in extra hyphens.
+       
+           - Collapse **long** options that are the same except for extra hyphens.
+           - Shortcut if there are only two options and one of them is a short one.
+           """
+       
+    1:     def __init__(self, *args: Any, **kwargs: Any) -> None:
+               # Use more accurate terminal width.
+    1:         if "width" not in kwargs:
+    1:             kwargs["width"] = _pytest._io.get_terminal_width()
+    1:         super().__init__(*args, **kwargs)
+       
+    1:     def _format_action_invocation(self, action: argparse.Action) -> str:
+               orgstr = super()._format_action_invocation(action)
+               if orgstr and orgstr[0] != "-":  # only optional arguments
+                   return orgstr
+               options = orgstr.split(", ")
+               if len(options) == 2 and (len(options[0]) == 2 or len(options[1]) == 2):
+                   # a shortcut for '-h, --help' or '--abc', '-a'
+                   return orgstr
+               return_list = []
+               short_long: dict[str, str] = {}
+               for option in options:
+                   if len(option) == 2 or option[2] == " ":
+                       continue
+                   assert option.startswith("--"), (
+                       f'long optional argument without "--": [{option}]'
+                   )
+                   xxoption = option[2:]
+                   shortened = xxoption.replace("-", "")
+                   if shortened not in short_long or len(short_long[shortened]) < len(
+                       xxoption
+                   ):
+                       short_long[shortened] = xxoption
+               # now short_long has been filled out to the longest with dashes
+               # **and** we keep the right option ordering from add_argument
+               for option in options:
+                   if len(option) == 2 or option[2] == " ":
+                       return_list.append(option)
+                   if option[2:] == short_long.get(option.replace("-", "")):
+                       return_list.append(option.replace(" ", "=", 1))
+               return ", ".join(return_list)
+       
+    1:     def _split_lines(self, text: str, width: int) -> list[str]:
+               """Wrap lines after splitting on original newlines.
+       
+               This allows to have explicit line breaks in the help text.
+               """
+               lines = []
+               for line in text.splitlines():
+                   lines.extend(textwrap.wrap(line.strip(), width))
+               return lines
+       
+       
+    2: class OverrideIniAction(argparse.Action):
+    1:     """Custom argparse action that makes a CLI flag equivalent to overriding an
+           option, in addition to behaving like `store_true`.
+       
+           This can simplify things since code only needs to inspect the config option
+           and not consider the CLI flag.
+           """
+       
+    1:     def __init__(
+               self,
+               option_strings: Sequence[str],
+               dest: str,
+    1:         nargs: int | str | None = None,
+               *args,
+               ini_option: str,
+               ini_value: str,
+               **kwargs,
+           ) -> None:
+    3:         super().__init__(option_strings, dest, 0, *args, **kwargs)
+    3:         self.ini_option = ini_option
+    3:         self.ini_value = ini_value
+       
+    1:     def __call__(
+               self,
+               parser: argparse.ArgumentParser,
+               namespace: argparse.Namespace,
+               *args,
+               **kwargs,
+           ) -> None:
+               setattr(namespace, self.dest, True)
+               current_overrides = getattr(namespace, "override_ini", None)
+               if current_overrides is None:
+                   current_overrides = []
+               current_overrides.append(f"{self.ini_option}={self.ini_value}")
+               setattr(namespace, "override_ini", current_overrides)

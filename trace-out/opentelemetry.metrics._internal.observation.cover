@@ -1,0 +1,51 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+       
+    1: from opentelemetry.context import Context
+    1: from opentelemetry.util.types import Attributes
+       
+       
+    2: class Observation:
+    1:     """A measurement observed in an asynchronous instrument
+       
+           Return/yield instances of this class from asynchronous instrument callbacks.
+       
+           Args:
+               value: The float or int measured value
+               attributes: The measurement's attributes
+               context: The measurement's context
+           """
+       
+    5:     def __init__(
+               self,
+    1:         value: int | float,
+    2:         attributes: Attributes = None,
+    2:         context: Context | None = None,
+    1:     ) -> None:
+               self._value = value
+               self._attributes = attributes
+               self._context = context
+       
+    2:     @property
+    2:     def value(self) -> float | int:
+               return self._value
+       
+    2:     @property
+    2:     def attributes(self) -> Attributes:
+               return self._attributes
+       
+    2:     @property
+    2:     def context(self) -> Context | None:
+               return self._context
+       
+    1:     def __eq__(self, other: object) -> bool:
+               return (
+                   isinstance(other, Observation)
+                   and self.value == other.value
+                   and self.attributes == other.attributes
+                   and self.context == other.context
+               )
+       
+    1:     def __repr__(self) -> str:
+               return f"Observation(value={self.value}, attributes={self.attributes}, context={self.context})"

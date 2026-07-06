@@ -1,0 +1,19 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Literal, TypeAlias
+       
+    1: from .chat_completion_named_tool_choice_param import ChatCompletionNamedToolChoiceParam
+    1: from .chat_completion_allowed_tool_choice_param import ChatCompletionAllowedToolChoiceParam
+    1: from .chat_completion_named_tool_choice_custom_param import ChatCompletionNamedToolChoiceCustomParam
+       
+    1: __all__ = ["ChatCompletionToolChoiceOptionParam"]
+       
+    2: ChatCompletionToolChoiceOptionParam: TypeAlias = Union[
+    2:     Literal["none", "auto", "required"],
+    1:     ChatCompletionAllowedToolChoiceParam,
+    1:     ChatCompletionNamedToolChoiceParam,
+    1:     ChatCompletionNamedToolChoiceCustomParam,
+       ]

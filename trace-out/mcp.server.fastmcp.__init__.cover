@@ -1,0 +1,11 @@
+    1: """FastMCP - A more ergonomic interface for MCP servers."""
+       
+    1: from importlib.metadata import version
+       
+    1: from mcp.types import Icon
+       
+    1: from .server import Context, FastMCP
+    1: from .utilities.types import Audio, Image
+       
+    1: __version__ = version("mcp")
+    1: __all__ = ["FastMCP", "Context", "Image", "Audio", "Icon"]

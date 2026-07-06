@@ -1,0 +1,35 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Required, TypeAlias, TypedDict
+       
+    1: from .._types import FileTypes
+    1: from .video_seconds import VideoSeconds
+       
+    1: __all__ = ["VideoExtendParams", "Video", "VideoVideoReferenceInputParam"]
+       
+       
+    2: class VideoExtendParams(TypedDict, total=False):
+    1:     prompt: Required[str]
+    1:     """Updated text prompt that directs the extension generation."""
+       
+    1:     seconds: Required[VideoSeconds]
+    1:     """
+           Length of the newly generated extension segment in seconds (allowed values: 4,
+           8, 12, 16, 20).
+           """
+       
+    1:     video: Required[Video]
+    1:     """Reference to the completed video to extend."""
+       
+       
+    2: class VideoVideoReferenceInputParam(TypedDict, total=False):
+    1:     """Reference to the completed video."""
+       
+    1:     id: Required[str]
+    1:     """The identifier of the completed video."""
+       
+       
+    1: Video: TypeAlias = Union[FileTypes, VideoVideoReferenceInputParam]

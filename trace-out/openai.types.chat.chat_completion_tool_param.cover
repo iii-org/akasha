@@ -1,0 +1,14 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import TypeAlias
+       
+    1: from .chat_completion_function_tool_param import (
+           FunctionDefinition as FunctionDefinition,
+           ChatCompletionFunctionToolParam,
+       )
+       
+    1: __all__ = ["ChatCompletionToolParam", "FunctionDefinition"]
+       
+    1: ChatCompletionToolParam: TypeAlias = ChatCompletionFunctionToolParam

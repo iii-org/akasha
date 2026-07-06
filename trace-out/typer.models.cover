@@ -1,0 +1,651 @@
+    1: import inspect
+    1: import io
+    1: from collections.abc import Callable, Sequence
+    1: from typing import (
+           TYPE_CHECKING,
+           Any,
+           Optional,
+           TypeVar,
+       )
+       
+    1: import click
+    1: import click.shell_completion
+       
+    1: if TYPE_CHECKING:  # pragma: no cover
+           from .core import TyperCommand, TyperGroup
+           from .main import Typer
+       
+       
+    1: NoneType = type(None)
+       
+    1: AnyType = type[Any]
+       
+    1: Required = ...
+       
+       
+    2: class Context(click.Context):
+    1:     """
+           The [`Context`](https://click.palletsprojects.com/en/stable/api/#click.Context) has some additional data about the current execution of your program.
+           When declaring it in a [callback](https://typer.tiangolo.com/tutorial/options/callback-and-context/) function,
+           you can access this additional information.
+           """
+       
+    1:     pass
+       
+       
+    2: class FileText(io.TextIOWrapper):
+    1:     """
+           Gives you a file-like object for reading text, and you will get a `str` data from it.
+           The default mode of this class is `mode="r"`.
+       
+           **Example**
+       
+           ```python
+           from typing import Annotated
+       
+           import typer
+       
+           app = typer.Typer()
+       
+           @app.command()
+           def main(config: Annotated[typer.FileText, typer.Option()]):
+               for line in config:
+                   print(f"Config line: {line}")
+       
+           if __name__ == "__main__":
+               app()
+           ```
+           """
+       
+    1:     pass
+       
+       
+    2: class FileTextWrite(FileText):
+    1:     """
+           You can use this class for writing text. Alternatively, you can use `FileText` with `mode="w"`.
+           The default mode of this class is `mode="w"`.
+       
+           **Example**
+       
+           ```python
+           from typing import Annotated
+       
+           import typer
+       
+           app = typer.Typer()
+       
+           @app.command()
+           def main(config: Annotated[typer.FileTextWrite, typer.Option()]):
+               config.write("Some config written by the app")
+               print("Config written")
+       
+           if __name__ == "__main__":
+               app()
+           ```
+           """
+       
+    1:     pass
+       
+       
+    2: class FileBinaryRead(io.BufferedReader):
+    1:     """
+           You can use this class to read binary data, receiving `bytes`.
+           The default mode of this class is `mode="rb"`.
+           It is useful for reading binary files like images:
+       
+           **Example**
+       
+           ```python
+           from typing import Annotated
+       
+           import typer
+       
+           app = typer.Typer()
+       
+           @app.command()
+           def main(file: Annotated[typer.FileBinaryRead, typer.Option()]):
+               processed_total = 0
+               for bytes_chunk in file:
+                   # Process the bytes in bytes_chunk
+                   processed_total += len(bytes_chunk)
+                   print(f"Processed bytes total: {processed_total}")
+       
+           if __name__ == "__main__":
+               app()
+           ```
+           """
+       
+    1:     pass
+       
+       
+    2: class FileBinaryWrite(io.BufferedWriter):
+    1:     """
+           You can use this class to write binary data: you pass `bytes` to it instead of strings.
+           The default mode of this class is `mode="wb"`.
+           It is useful for writing binary files like images:
+       
+           **Example**
+       
+           ```python
+           from typing import Annotated
+       
+           import typer
+       
+           app = typer.Typer()
+       
+           @app.command()
+           def main(file: Annotated[typer.FileBinaryWrite, typer.Option()]):
+               first_line_str = "some settings\\n"
+               # You cannot write str directly to a binary file; encode it first
+               first_line_bytes = first_line_str.encode("utf-8")
+               # Then you can write the bytes
+               file.write(first_line_bytes)
+               # This is already bytes, it starts with b"
+               second_line = b"la cig\xc3\xbce\xc3\xb1a trae al ni\xc3\xb1o"
+               file.write(second_line)
+               print("Binary file written")
+       
+           if __name__ == "__main__":
+               app()
+           ```
+           """
+       
+    1:     pass
+       
+       
+    2: class CallbackParam(click.Parameter):
+    1:     """
+           In a callback function, you can declare a function parameter with type `CallbackParam`
+           to access the specific Click [`Parameter`](https://click.palletsprojects.com/en/stable/api/#click.Parameter) object.
+           """
+       
+    1:     pass
+       
+       
+    2: class DefaultPlaceholder:
+    1:     """
+           You shouldn't use this class directly.
+       
+           It's used internally to recognize when a default value has been overwritten, even
+           if the new value is `None`.
+           """
+       
+    1:     def __init__(self, value: Any):
+   68:         self.value = value
+       
+    1:     def __bool__(self) -> bool:
+   38:         return bool(self.value)
+       
+       
+    1: DefaultType = TypeVar("DefaultType")
+       
+    1: CommandFunctionType = TypeVar("CommandFunctionType", bound=Callable[..., Any])
+       
+       
+    1: def Default(value: DefaultType) -> DefaultType:
+           """
+           You shouldn't use this function directly.
+       
+           It's used internally to recognize when a default value has been overwritten, even
+           if the new value is `None`.
+           """
+   68:     return DefaultPlaceholder(value)  # type: ignore
+       
+       
+    2: class CommandInfo:
+   15:     def __init__(
+               self,
+    2:         name: str | None = None,
+               *,
+    2:         cls: type["TyperCommand"] | None = None,
+    2:         context_settings: dict[Any, Any] | None = None,
+    2:         callback: Callable[..., Any] | None = None,
+    2:         help: str | None = None,
+    2:         epilog: str | None = None,
+    2:         short_help: str | None = None,
+    2:         options_metavar: str = "[OPTIONS]",
+    2:         add_help_option: bool = True,
+    2:         no_args_is_help: bool = False,
+    2:         hidden: bool = False,
+    2:         deprecated: bool = False,
+               # Rich settings
+    2:         rich_help_panel: str | None = None,
+           ):
+   34:         self.name = name
+   34:         self.cls = cls
+   34:         self.context_settings = context_settings
+   34:         self.callback = callback
+   34:         self.help = help
+   34:         self.epilog = epilog
+   34:         self.short_help = short_help
+   34:         self.options_metavar = options_metavar
+   34:         self.add_help_option = add_help_option
+   34:         self.no_args_is_help = no_args_is_help
+   34:         self.hidden = hidden
+   34:         self.deprecated = deprecated
+               # Rich settings
+   34:         self.rich_help_panel = rich_help_panel
+       
+       
+    2: class TyperInfo:
+   20:     def __init__(
+               self,
+    2:         typer_instance: Optional["Typer"] = Default(None),
+               *,
+    2:         name: str | None = Default(None),
+    2:         cls: type["TyperGroup"] | None = Default(None),
+    2:         invoke_without_command: bool = Default(False),
+    2:         no_args_is_help: bool = Default(False),
+    2:         subcommand_metavar: str | None = Default(None),
+    2:         chain: bool = Default(False),
+    2:         result_callback: Callable[..., Any] | None = Default(None),
+               # Command
+    2:         context_settings: dict[Any, Any] | None = Default(None),
+    2:         callback: Callable[..., Any] | None = Default(None),
+    2:         help: str | None = Default(None),
+    2:         epilog: str | None = Default(None),
+    2:         short_help: str | None = Default(None),
+    2:         options_metavar: str = Default("[OPTIONS]"),
+    2:         add_help_option: bool = Default(True),
+    2:         hidden: bool = Default(False),
+    2:         deprecated: bool = Default(False),
+               # Rich settings
+    2:         rich_help_panel: str | None = Default(None),
+           ):
+    9:         self.typer_instance = typer_instance
+    9:         self.name = name
+    9:         self.cls = cls
+    9:         self.invoke_without_command = invoke_without_command
+    9:         self.no_args_is_help = no_args_is_help
+    9:         self.subcommand_metavar = subcommand_metavar
+    9:         self.chain = chain
+    9:         self.result_callback = result_callback
+    9:         self.context_settings = context_settings
+    9:         self.callback = callback
+    9:         self.help = help
+    9:         self.epilog = epilog
+    9:         self.short_help = short_help
+    9:         self.options_metavar = options_metavar
+    9:         self.add_help_option = add_help_option
+    9:         self.hidden = hidden
+    9:         self.deprecated = deprecated
+    9:         self.rich_help_panel = rich_help_panel
+       
+       
+    2: class ParameterInfo:
+   37:     def __init__(
+               self,
+               *,
+    2:         default: Any | None = None,
+    2:         param_decls: Sequence[str] | None = None,
+    2:         callback: Callable[..., Any] | None = None,
+    2:         metavar: str | None = None,
+    2:         expose_value: bool = True,
+    2:         is_eager: bool = False,
+    2:         envvar: str | list[str] | None = None,
+               # Note that shell_complete is not fully supported and will be removed in future versions
+               # TODO: Remove shell_complete in a future version (after 0.16.0)
+    3:         shell_complete: Callable[
+    2:             [click.Context, click.Parameter, str],
+    1:             list["click.shell_completion.CompletionItem"] | list[str],
+               ]
+    2:         | None = None,
+    2:         autocompletion: Callable[..., Any] | None = None,
+    2:         default_factory: Callable[[], Any] | None = None,
+               # Custom type
+    2:         parser: Callable[[str], Any] | None = None,
+    2:         click_type: click.ParamType | None = None,
+               # TyperArgument
+    2:         show_default: bool | str = True,
+    2:         show_choices: bool = True,
+    2:         show_envvar: bool = True,
+    2:         help: str | None = None,
+    2:         hidden: bool = False,
+               # Choice
+    2:         case_sensitive: bool = True,
+               # Numbers
+    2:         min: int | float | None = None,
+    2:         max: int | float | None = None,
+    2:         clamp: bool = False,
+               # DateTime
+    2:         formats: list[str] | None = None,
+               # File
+    2:         mode: str | None = None,
+    2:         encoding: str | None = None,
+    2:         errors: str | None = "strict",
+    2:         lazy: bool | None = None,
+    2:         atomic: bool = False,
+               # Path
+    2:         exists: bool = False,
+    2:         file_okay: bool = True,
+    2:         dir_okay: bool = True,
+    2:         writable: bool = False,
+    2:         readable: bool = True,
+    2:         resolve_path: bool = False,
+    2:         allow_dash: bool = False,
+    2:         path_type: None | type[str] | type[bytes] = None,
+               # Rich settings
+    2:         rich_help_panel: str | None = None,
+           ):
+               # Check if user has provided multiple custom parsers
+  177:         if parser and click_type:
+                   raise ValueError(
+                       "Multiple custom type parsers provided. "
+                       "`parser` and `click_type` may not both be provided."
+                   )
+       
+  177:         self.default = default
+  177:         self.param_decls = param_decls
+  177:         self.callback = callback
+  177:         self.metavar = metavar
+  177:         self.expose_value = expose_value
+  177:         self.is_eager = is_eager
+  177:         self.envvar = envvar
+  177:         self.shell_complete = shell_complete
+  177:         self.autocompletion = autocompletion
+  177:         self.default_factory = default_factory
+               # Custom type
+  177:         self.parser = parser
+  177:         self.click_type = click_type
+               # TyperArgument
+  177:         self.show_default = show_default
+  177:         self.show_choices = show_choices
+  177:         self.show_envvar = show_envvar
+  177:         self.help = help
+  177:         self.hidden = hidden
+               # Choice
+  177:         self.case_sensitive = case_sensitive
+               # Numbers
+  177:         self.min = min
+  177:         self.max = max
+  177:         self.clamp = clamp
+               # DateTime
+  177:         self.formats = formats
+               # File
+  177:         self.mode = mode
+  177:         self.encoding = encoding
+  177:         self.errors = errors
+  177:         self.lazy = lazy
+  177:         self.atomic = atomic
+               # Path
+  177:         self.exists = exists
+  177:         self.file_okay = file_okay
+  177:         self.dir_okay = dir_okay
+  177:         self.writable = writable
+  177:         self.readable = readable
+  177:         self.resolve_path = resolve_path
+  177:         self.allow_dash = allow_dash
+  177:         self.path_type = path_type
+               # Rich settings
+  177:         self.rich_help_panel = rich_help_panel
+       
+       
+    2: class OptionInfo(ParameterInfo):
+   45:     def __init__(
+               self,
+               *,
+               # ParameterInfo
+    2:         default: Any | None = None,
+    2:         param_decls: Sequence[str] | None = None,
+    2:         callback: Callable[..., Any] | None = None,
+    2:         metavar: str | None = None,
+    2:         expose_value: bool = True,
+    2:         is_eager: bool = False,
+    2:         envvar: str | list[str] | None = None,
+               # Note that shell_complete is not fully supported and will be removed in future versions
+               # TODO: Remove shell_complete in a future version (after 0.16.0)
+    3:         shell_complete: Callable[
+    2:             [click.Context, click.Parameter, str],
+    1:             list["click.shell_completion.CompletionItem"] | list[str],
+               ]
+    2:         | None = None,
+    2:         autocompletion: Callable[..., Any] | None = None,
+    2:         default_factory: Callable[[], Any] | None = None,
+               # Custom type
+    2:         parser: Callable[[str], Any] | None = None,
+    2:         click_type: click.ParamType | None = None,
+               # Option
+    2:         show_default: bool | str = True,
+    2:         prompt: bool | str = False,
+    2:         confirmation_prompt: bool = False,
+    2:         prompt_required: bool = True,
+    2:         hide_input: bool = False,
+               # TODO: remove is_flag and flag_value in a future release
+    2:         is_flag: bool | None = None,
+    2:         flag_value: Any | None = None,
+    2:         count: bool = False,
+    2:         allow_from_autoenv: bool = True,
+    2:         help: str | None = None,
+    2:         hidden: bool = False,
+    2:         show_choices: bool = True,
+    2:         show_envvar: bool = True,
+               # Choice
+    2:         case_sensitive: bool = True,
+               # Numbers
+    2:         min: int | float | None = None,
+    2:         max: int | float | None = None,
+    2:         clamp: bool = False,
+               # DateTime
+    2:         formats: list[str] | None = None,
+               # File
+    2:         mode: str | None = None,
+    2:         encoding: str | None = None,
+    2:         errors: str | None = "strict",
+    2:         lazy: bool | None = None,
+    2:         atomic: bool = False,
+               # Path
+    2:         exists: bool = False,
+    2:         file_okay: bool = True,
+    2:         dir_okay: bool = True,
+    2:         writable: bool = False,
+    2:         readable: bool = True,
+    2:         resolve_path: bool = False,
+    2:         allow_dash: bool = False,
+    2:         path_type: None | type[str] | type[bytes] = None,
+               # Rich settings
+    2:         rich_help_panel: str | None = None,
+           ):
+ 4588:         super().__init__(
+  124:             default=default,
+  124:             param_decls=param_decls,
+  124:             callback=callback,
+  124:             metavar=metavar,
+  124:             expose_value=expose_value,
+  124:             is_eager=is_eager,
+  124:             envvar=envvar,
+  124:             shell_complete=shell_complete,
+  124:             autocompletion=autocompletion,
+  124:             default_factory=default_factory,
+                   # Custom type
+  124:             parser=parser,
+  124:             click_type=click_type,
+                   # TyperArgument
+  124:             show_default=show_default,
+  124:             show_choices=show_choices,
+  124:             show_envvar=show_envvar,
+  124:             help=help,
+  124:             hidden=hidden,
+                   # Choice
+  124:             case_sensitive=case_sensitive,
+                   # Numbers
+  124:             min=min,
+  124:             max=max,
+  124:             clamp=clamp,
+                   # DateTime
+  124:             formats=formats,
+                   # File
+  124:             mode=mode,
+  124:             encoding=encoding,
+  124:             errors=errors,
+  124:             lazy=lazy,
+  124:             atomic=atomic,
+                   # Path
+  124:             exists=exists,
+  124:             file_okay=file_okay,
+  124:             dir_okay=dir_okay,
+  124:             writable=writable,
+  124:             readable=readable,
+  124:             resolve_path=resolve_path,
+  124:             allow_dash=allow_dash,
+  124:             path_type=path_type,
+                   # Rich settings
+  124:             rich_help_panel=rich_help_panel,
+               )
+  124:         if is_flag is not None or flag_value is not None:
+                   import warnings
+       
+                   warnings.warn(
+                       "The 'is_flag' and 'flag_value' parameters are not supported by Typer "
+                       "and will be removed entirely in a future release.",
+                       DeprecationWarning,
+                       stacklevel=2,
+                   )
+  124:         self.prompt = prompt
+  124:         self.confirmation_prompt = confirmation_prompt
+  124:         self.prompt_required = prompt_required
+  124:         self.hide_input = hide_input
+  124:         self.count = count
+  124:         self.allow_from_autoenv = allow_from_autoenv
+       
+       
+    2: class ArgumentInfo(ParameterInfo):
+   37:     def __init__(
+               self,
+               *,
+               # ParameterInfo
+    2:         default: Any | None = None,
+    2:         param_decls: Sequence[str] | None = None,
+    2:         callback: Callable[..., Any] | None = None,
+    2:         metavar: str | None = None,
+    2:         expose_value: bool = True,
+    2:         is_eager: bool = False,
+    2:         envvar: str | list[str] | None = None,
+               # Note that shell_complete is not fully supported and will be removed in future versions
+               # TODO: Remove shell_complete in a future version (after 0.16.0)
+    3:         shell_complete: Callable[
+    2:             [click.Context, click.Parameter, str],
+    1:             list["click.shell_completion.CompletionItem"] | list[str],
+               ]
+    2:         | None = None,
+    2:         autocompletion: Callable[..., Any] | None = None,
+    2:         default_factory: Callable[[], Any] | None = None,
+               # Custom type
+    2:         parser: Callable[[str], Any] | None = None,
+    2:         click_type: click.ParamType | None = None,
+               # TyperArgument
+    2:         show_default: bool | str = True,
+    2:         show_choices: bool = True,
+    2:         show_envvar: bool = True,
+    2:         help: str | None = None,
+    2:         hidden: bool = False,
+               # Choice
+    2:         case_sensitive: bool = True,
+               # Numbers
+    2:         min: int | float | None = None,
+    2:         max: int | float | None = None,
+    2:         clamp: bool = False,
+               # DateTime
+    2:         formats: list[str] | None = None,
+               # File
+    2:         mode: str | None = None,
+    2:         encoding: str | None = None,
+    2:         errors: str | None = "strict",
+    2:         lazy: bool | None = None,
+    2:         atomic: bool = False,
+               # Path
+    2:         exists: bool = False,
+    2:         file_okay: bool = True,
+    2:         dir_okay: bool = True,
+    2:         writable: bool = False,
+    2:         readable: bool = True,
+    2:         resolve_path: bool = False,
+    2:         allow_dash: bool = False,
+    2:         path_type: None | type[str] | type[bytes] = None,
+               # Rich settings
+    2:         rich_help_panel: str | None = None,
+           ):
+ 1961:         super().__init__(
+   53:             default=default,
+   53:             param_decls=param_decls,
+   53:             callback=callback,
+   53:             metavar=metavar,
+   53:             expose_value=expose_value,
+   53:             is_eager=is_eager,
+   53:             envvar=envvar,
+   53:             shell_complete=shell_complete,
+   53:             autocompletion=autocompletion,
+   53:             default_factory=default_factory,
+                   # Custom type
+   53:             parser=parser,
+   53:             click_type=click_type,
+                   # TyperArgument
+   53:             show_default=show_default,
+   53:             show_choices=show_choices,
+   53:             show_envvar=show_envvar,
+   53:             help=help,
+   53:             hidden=hidden,
+                   # Choice
+   53:             case_sensitive=case_sensitive,
+                   # Numbers
+   53:             min=min,
+   53:             max=max,
+   53:             clamp=clamp,
+                   # DateTime
+   53:             formats=formats,
+                   # File
+   53:             mode=mode,
+   53:             encoding=encoding,
+   53:             errors=errors,
+   53:             lazy=lazy,
+   53:             atomic=atomic,
+                   # Path
+   53:             exists=exists,
+   53:             file_okay=file_okay,
+   53:             dir_okay=dir_okay,
+   53:             writable=writable,
+   53:             readable=readable,
+   53:             resolve_path=resolve_path,
+   53:             allow_dash=allow_dash,
+   53:             path_type=path_type,
+                   # Rich settings
+   53:             rich_help_panel=rich_help_panel,
+               )
+       
+       
+    2: class ParamMeta:
+    1:     empty = inspect.Parameter.empty
+       
+    5:     def __init__(
+               self,
+               *,
+    1:         name: str,
+    2:         default: Any = inspect.Parameter.empty,
+    2:         annotation: Any = inspect.Parameter.empty,
+    1:     ) -> None:
+               self.name = name
+               self.default = default
+               self.annotation = annotation
+       
+       
+    2: class DeveloperExceptionConfig:
+    5:     def __init__(
+               self,
+               *,
+    2:         pretty_exceptions_enable: bool = True,
+    2:         pretty_exceptions_show_locals: bool = True,
+    2:         pretty_exceptions_short: bool = True,
+    1:     ) -> None:
+               self.pretty_exceptions_enable = pretty_exceptions_enable
+               self.pretty_exceptions_show_locals = pretty_exceptions_show_locals
+               self.pretty_exceptions_short = pretty_exceptions_short
+       
+       
+    2: class TyperPath(click.Path):
+           # Overwrite Click's behaviour to be compatible with Typer's autocompletion system
+    5:     def shell_complete(
+    3:         self, ctx: click.Context, param: click.Parameter, incomplete: str
+    1:     ) -> list[click.shell_completion.CompletionItem]:
+               """Return an empty list so that the autocompletion functionality
+               will work properly from the commandline.
+               """
+               return []

@@ -1,0 +1,30 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union, Iterable
+    1: from typing_extensions import Required, TypedDict
+       
+    1: from .._types import SequenceNotStr
+    1: from .moderation_model import ModerationModel
+    1: from .moderation_multi_modal_input_param import ModerationMultiModalInputParam
+       
+    1: __all__ = ["ModerationCreateParams"]
+       
+       
+    2: class ModerationCreateParams(TypedDict, total=False):
+    1:     input: Required[Union[str, SequenceNotStr[str], Iterable[ModerationMultiModalInputParam]]]
+    1:     """Input (or inputs) to classify.
+       
+           Can be a single string, an array of strings, or an array of multi-modal input
+           objects similar to other models.
+           """
+       
+    1:     model: Union[str, ModerationModel]
+    1:     """The content moderation model you would like to use.
+       
+           Learn more in
+           [the moderation guide](https://platform.openai.com/docs/guides/moderation), and
+           learn about available models
+           [here](https://platform.openai.com/docs/models#moderation).
+           """

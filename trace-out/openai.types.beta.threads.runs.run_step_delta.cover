@@ -1,0 +1,22 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union, Optional
+    1: from typing_extensions import Annotated, TypeAlias
+       
+    1: from ....._utils import PropertyInfo
+    1: from ....._models import BaseModel
+    1: from .tool_call_delta_object import ToolCallDeltaObject
+    1: from .run_step_delta_message_delta import RunStepDeltaMessageDelta
+       
+    1: __all__ = ["RunStepDelta", "StepDetails"]
+       
+    2: StepDetails: TypeAlias = Annotated[
+    1:     Union[RunStepDeltaMessageDelta, ToolCallDeltaObject], PropertyInfo(discriminator="type")
+       ]
+       
+       
+    2: class RunStepDelta(BaseModel):
+    1:     """The delta containing the fields that have changed on the run step."""
+       
+    1:     step_details: Optional[StepDetails] = None
+    1:     """The details of the run step."""

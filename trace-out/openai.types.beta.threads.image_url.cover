@@ -1,0 +1,23 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+       
+    1: __all__ = ["ImageURL"]
+       
+       
+    2: class ImageURL(BaseModel):
+    1:     url: str
+    1:     """
+           The external URL of the image, must be a supported image types: jpeg, jpg, png,
+           gif, webp.
+           """
+       
+    1:     detail: Optional[Literal["auto", "low", "high"]] = None
+    1:     """Specifies the detail level of the image.
+       
+           `low` uses fewer tokens, you can opt in to high resolution using `high`. Default
+           value is `auto`
+           """

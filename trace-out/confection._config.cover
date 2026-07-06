@@ -1,0 +1,268 @@
+    1: from __future__ import annotations
+       
+    1: import copy
+    1: import sys
+    1: from pathlib import Path
+    1: from typing import Any, Dict, List, Optional, Union
+       
+    1: if sys.version_info >= (3, 11):
+    1:     from typing import Self
+       else:
+           from typing_extensions import Self
+       
+    1: from ._errors import ConfectionError, ConfigValidationError
+    1: from ._parser import parse_config, serialize_config
+    1: from .validation import ValidationError, ensure_schema
+       
+       
+    2: class Config(dict):
+           # TODO: Improve doc string
+    1:     """Dict subclass to save TOML-style configuration format from/to string, file
+           or bytes.
+           """
+       
+    1:     is_interpolated: bool
+       
+    2:     def __init__(
+               self,
+    1:         data: Optional[Union[Dict[str, Any], "Config"]] = None,
+               *,
+    1:         is_interpolated: Optional[bool] = None,
+    1:         section_order: Optional[List[str]] = None,
+           ) -> None:
+               """Initialize a new Config object with optional data."""
+   23:         dict.__init__(self)
+   23:         if data is None:
+   15:             data = {}
+   23:         if not isinstance(data, (dict, Config)):
+                   raise ConfectionError(
+                       f"Can't initialize Config with data. Expected dict or "
+                       f"Config but got: {type(data)}"
+                   )
+               # Whether the config has been interpolated. We can use this to check
+               # whether we need to interpolate again when it's resolved. We assume
+               # that a config is interpolated by default.
+   23:         if is_interpolated is not None:
+    6:             self.is_interpolated = is_interpolated
+   17:         elif isinstance(data, Config):
+    2:             self.is_interpolated = data.is_interpolated
+               else:
+   15:             self.is_interpolated = True
+   23:         if section_order is not None:
+    8:             self.section_order = section_order
+   15:         elif isinstance(data, Config):
+    2:             self.section_order = data.section_order
+               else:
+   13:             self.section_order = []
+               # Update with data
+   23:         self.update(data)
+       
+    1:     def interpolate(self) -> Self:
+               """Interpolate (resolve var references) a config.
+       
+               Returns a copy of the object.
+               """
+               # This is currently the most effective way because we need our custom
+               # to_str logic to run in order to re-serialize the values so we can
+               # interpolate them again. ConfigParser.read_dict will just call str()
+               # on all values, which isn't enough.
+               return type(self)().from_str(self.to_str())
+       
+    1:     def copy(self) -> Self:
+               """Deepcopy the config."""
+    4:         config = copy.deepcopy(self)
+    8:         return type(self)(
+    4:             config,
+    4:             is_interpolated=self.is_interpolated,
+    4:             section_order=self.section_order,
+               )
+       
+    1:     def merge(
+    1:         self, updates: Union[Dict[str, Any], "Config"], remove_extra: bool = False
+           ) -> Self:
+               """Deep merge the config with updates, using current as defaults."""
+    2:         defaults = self.copy()
+    2:         updates = Config(updates).copy()
+    2:         merged = deep_merge_configs(updates, defaults, remove_extra=remove_extra)
+    4:         return type(self)(
+    2:             merged,
+    2:             is_interpolated=defaults.is_interpolated and updates.is_interpolated,
+    2:             section_order=defaults.section_order,
+               )
+       
+    1:     def validate(self, schema) -> Self:
+               """Validate the config against a schema. Raises ConfigValidationError
+               if validation fails.
+               """
+               schema = ensure_schema(schema)
+               _validate_recursive(dict(self), schema, self)
+               return self
+       
+    1:     def fill_defaults(self, schema) -> Self:
+               """Fill in missing values from schema defaults and remove extra
+               fields if the schema forbids them. Modifies in place and returns self.
+               """
+               schema = ensure_schema(schema)
+               extra = schema.model_config.get("extra", "allow")
+               # Fill defaults
+               for name, field in schema.model_fields.items():
+                   if name not in self and not field.is_required():
+                       self[name] = field.default
+                   elif name in self and isinstance(self[name], dict):
+                       field_schema = field.annotation
+                       if isinstance(field_schema, type) and hasattr(
+                           field_schema, "model_fields"
+                       ):
+                           sub_schema = ensure_schema(field_schema)
+                           _fill_defaults_recursive(self[name], sub_schema)
+               # Strip extras
+               if extra == "forbid":
+                   known = set(schema.model_fields.keys())
+                   for key in list(self.keys()):
+                       if key not in known:
+                           del self[key]
+               return self
+       
+    1:     def from_str(
+               self,
+               text: str,
+               *,
+    1:         interpolate: bool = True,
+    1:         overrides: Dict[str, Any] = {},
+    1:         schema=None,
+           ) -> Self:
+               """Load the config from a string."""
+   14:         self.clear()
+   14:         self.update(parse_config(text, interpolate=interpolate, overrides=overrides))
+   14:         if overrides and interpolate:
+                   # Re-interpolate now that overrides are applied. The recursive
+                   # from_str call will have no overrides, so this doesn't loop.
+                   self = self.interpolate()
+   14:         self.is_interpolated = interpolate
+   14:         if schema is not None:
+                   self.fill_defaults(schema)
+                   self.validate(schema)
+   14:         return self
+       
+    1:     def to_str(self, *, interpolate: bool = True) -> str:
+               """Write the config to a string."""
+               return serialize_config(self, interpolate=interpolate)
+       
+    1:     def to_bytes(self, *, interpolate: bool = True) -> bytes:
+               """Serialize the config to a byte string."""
+               return self.to_str(interpolate=interpolate).encode("utf8")
+       
+    1:     def from_bytes(
+               self,
+               bytes_data: bytes,
+               *,
+    1:         interpolate: bool = True,
+    1:         overrides: Dict[str, Any] = {},
+           ) -> Self:
+               """Load the config from a byte string."""
+               return self.from_str(
+                   bytes_data.decode("utf8"), interpolate=interpolate, overrides=overrides
+               )
+       
+    1:     def to_disk(self, path: Union[str, Path], *, interpolate: bool = True) -> None:
+               """Serialize the config to a file."""
+               path = Path(path) if isinstance(path, str) else path
+               with path.open("w", encoding="utf8") as file_:
+                   file_.write(self.to_str(interpolate=interpolate))
+       
+    1:     def from_disk(
+               self,
+               path: Union[str, Path],
+               *,
+    1:         interpolate: bool = True,
+    1:         overrides: Dict[str, Any] = {},
+           ) -> Self:
+               """Load config from a file."""
+    1:         path = Path(path) if isinstance(path, str) else path
+    2:         with path.open("r", encoding="utf8") as file_:
+    1:             text = file_.read()
+    1:         return self.from_str(text, interpolate=interpolate, overrides=overrides)
+       
+       
+    1: def _fill_defaults_recursive(data, schema):
+           """Fill defaults and strip extras recursively for nested schemas."""
+           extra = schema.model_config.get("extra", "allow")
+           for name, field in schema.model_fields.items():
+               if name not in data and not field.is_required():
+                   data[name] = field.default
+               elif name in data and isinstance(data[name], dict):
+                   field_schema = field.annotation
+                   if isinstance(field_schema, type) and hasattr(field_schema, "model_fields"):
+                       _fill_defaults_recursive(data[name], ensure_schema(field_schema))
+           if extra == "forbid":
+               known = set(schema.model_fields.keys())
+               for key in list(data.keys()):
+                   if key not in known:
+                       del data[key]
+       
+       
+    1: def _validate_recursive(data, schema, config, parent=""):
+           """Validate data against a schema, recursing into nested schemas."""
+           try:
+               schema.model_validate(data)
+           except ValidationError as e:
+               section = f" in [{parent}]" if parent else ""
+               raise ConfigValidationError(
+                   config=config,
+                   errors=e.errors(),
+                   title=f"Config validation error{section}",
+               ) from None
+           # Recurse into fields that are themselves schemas
+           for name, field in schema.model_fields.items():
+               annotation = field.annotation
+               if (
+                   isinstance(annotation, type)
+                   and hasattr(annotation, "model_validate")
+                   and name in data
+                   and isinstance(data[name], dict)
+               ):
+                   child_parent = f"{parent}.{name}" if parent else name
+                   _validate_recursive(data[name], annotation, config, parent=child_parent)
+       
+       
+    1: def deep_merge_configs(
+           config: Union[Dict[str, Any], Config],
+           defaults: Union[Dict[str, Any], Config],
+           *,
+    1:     remove_extra: bool = False,
+       ) -> Union[Dict[str, Any], Config]:
+           """Deep merge two configs."""
+   38:     if remove_extra:
+               # Filter out values in the original config that are not in defaults
+               keys = list(config.keys())
+               for key in keys:
+                   if key not in defaults:
+                       del config[key]
+  202:     for key, value in defaults.items():
+  164:         if isinstance(value, dict):
+   36:             node = config.setdefault(key, {})
+   36:             if not isinstance(node, dict):
+                       continue
+  222:             value_promises = [k for k in value if k.startswith("@")]
+   36:             value_promise = value_promises[0] if value_promises else None
+   36:             node_promises = [k for k in node if k.startswith("@")] if node else []
+   36:             node_promise = node_promises[0] if node_promises else None
+                   # We only update the block from defaults if it refers to the same
+                   # registered function
+   52:             if (
+   36:                 value_promise
+   16:                 and node_promise
+                       and (
+                           value_promise in node
+                           and node[value_promise] != value[value_promise]
+                       )
+                   ):
+                       continue
+   36:             if node_promise and (
+                       node_promise not in value or node[node_promise] != value[node_promise]
+                   ):
+                       continue
+   36:             defaults = deep_merge_configs(node, value, remove_extra=remove_extra)
+  128:         elif key not in config:
+  128:             config[key] = value
+   38:     return config

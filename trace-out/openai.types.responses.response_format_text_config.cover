@@ -1,0 +1,16 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Union
+    1: from typing_extensions import Annotated, TypeAlias
+       
+    1: from ..._utils import PropertyInfo
+    1: from ..shared.response_format_text import ResponseFormatText
+    1: from ..shared.response_format_json_object import ResponseFormatJSONObject
+    1: from .response_format_text_json_schema_config import ResponseFormatTextJSONSchemaConfig
+       
+    1: __all__ = ["ResponseFormatTextConfig"]
+       
+    2: ResponseFormatTextConfig: TypeAlias = Annotated[
+    2:     Union[ResponseFormatText, ResponseFormatTextJSONSchemaConfig, ResponseFormatJSONObject],
+    1:     PropertyInfo(discriminator="type"),
+       ]

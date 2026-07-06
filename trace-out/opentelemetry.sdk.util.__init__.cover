@@ -1,0 +1,149 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: import copy
+    1: import datetime
+    1: import threading
+    1: from collections import deque
+    1: from collections.abc import MutableMapping, Sequence
+       
+    1: from typing_extensions import deprecated
+       
+       
+    1: def ns_to_iso_str(nanoseconds):
+           """Get an ISO 8601 string from time_ns value."""
+           ts = datetime.datetime.fromtimestamp(
+               nanoseconds / 1e9, tz=datetime.timezone.utc
+           )
+           return ts.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+       
+       
+    1: def get_dict_as_key(labels):
+           """Converts a dict to be used as a unique key"""
+           return tuple(
+               sorted(
+                   map(
+                       lambda kv: (
+                           (kv[0], tuple(kv[1])) if isinstance(kv[1], list) else kv
+                       ),
+                       labels.items(),
+                   )
+               )
+           )
+       
+       
+    2: class BoundedList(Sequence):
+    1:     """An append only list with a fixed max size.
+       
+           Calls to `append` and `extend` will drop the oldest elements if there is
+           not enough room.
+           """
+       
+    1:     def __init__(self, maxlen: int | None):
+               self.dropped = 0
+               self._dq = deque(maxlen=maxlen)  # type: deque
+               self._lock = threading.Lock()
+       
+    1:     def __deepcopy__(self, memo):
+               copy_ = BoundedList(0)
+               memo[id(self)] = copy_
+               with self._lock:
+                   copy_.dropped = self.dropped
+                   copy_._dq = copy.deepcopy(self._dq, memo)
+               return copy_
+       
+    1:     def __repr__(self):
+               return f"{type(self).__name__}({list(self._dq)}, maxlen={self._dq.maxlen})"
+       
+    1:     def __getitem__(self, index):
+               return self._dq[index]
+       
+    1:     def __len__(self):
+               return len(self._dq)
+       
+    1:     def __iter__(self):
+               with self._lock:
+                   return iter(list(self._dq))
+       
+    1:     def append(self, item):
+               with self._lock:
+                   if (
+                       self._dq.maxlen is not None
+                       and len(self._dq) == self._dq.maxlen
+                   ):
+                       self.dropped += 1
+                   self._dq.append(item)
+       
+    1:     def extend(self, seq):
+               with self._lock:
+                   if self._dq.maxlen is not None:
+                       to_drop = len(seq) + len(self._dq) - self._dq.maxlen
+                       if to_drop > 0:
+                           self.dropped += to_drop
+                   self._dq.extend(seq)
+       
+    2:     @classmethod
+    2:     def from_seq(cls, maxlen, seq):
+               seq = tuple(seq)
+               bounded_list = cls(maxlen)
+               bounded_list.extend(seq)
+               return bounded_list
+       
+       
+    3: @deprecated("Deprecated since version 1.4.0.")
+    2: class BoundedDict(MutableMapping):
+    1:     """An ordered dict with a fixed max capacity.
+       
+           Oldest elements are dropped when the dict is full and a new element is
+           added.
+           """
+       
+    1:     def __init__(self, maxlen: int | None):
+               if maxlen is not None:
+                   if not isinstance(maxlen, int):
+                       raise ValueError
+                   if maxlen < 0:
+                       raise ValueError
+               self.maxlen = maxlen
+               self.dropped = 0
+               self._dict = {}  # type: dict
+               self._lock = threading.Lock()  # type: threading.Lock
+       
+    1:     def __repr__(self):
+               return (
+                   f"{type(self).__name__}({dict(self._dict)}, maxlen={self.maxlen})"
+               )
+       
+    1:     def __getitem__(self, key):
+               return self._dict[key]
+       
+    1:     def __setitem__(self, key, value):
+               with self._lock:
+                   if self.maxlen is not None and self.maxlen == 0:
+                       self.dropped += 1
+                       return
+       
+                   if key in self._dict:
+                       del self._dict[key]
+                   elif self.maxlen is not None and len(self._dict) == self.maxlen:
+                       del self._dict[next(iter(self._dict.keys()))]
+                       self.dropped += 1
+                   self._dict[key] = value
+       
+    1:     def __delitem__(self, key):
+               del self._dict[key]
+       
+    1:     def __iter__(self):
+               with self._lock:
+                   return iter(self._dict.copy())
+       
+    1:     def __len__(self):
+               return len(self._dict)
+       
+    2:     @classmethod
+    2:     def from_map(cls, maxlen, mapping):
+               mapping = dict(mapping)
+               bounded_dict = cls(maxlen)
+               for key, value in mapping.items():
+                   bounded_dict[key] = value
+               return bounded_dict

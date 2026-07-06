@@ -1,0 +1,500 @@
+    1: import inspect
+    1: from collections import defaultdict
+    1: from enum import Enum
+    1: from typing import (
+           TYPE_CHECKING,
+           Any,
+           Callable,
+           Dict,
+           Iterable,
+           List,
+           Optional,
+           Tuple,
+           Type,
+           TypeVar,
+           Union,
+       )
+       
+    1: from pydantic import (
+           BaseModel,
+           ConfigDict,
+           Field,
+           StrictBool,
+           StrictFloat,
+           StrictInt,
+           StrictStr,
+           ValidationError,
+           constr,
+           create_model,
+           field_validator,
+       )
+    1: from thinc.api import ConfigValidationError, Model, Optimizer
+    1: from thinc.config import Promise
+       
+    1: from .attrs import NAMES
+    1: from .compat import Literal
+    1: from .lookups import Lookups
+    1: from .util import is_cython_func
+       
+    1: if TYPE_CHECKING:
+           # This lets us add type hints for mypy etc. without causing circular imports
+           from .language import Language  # noqa: F401
+           from .training import Example  # noqa: F401
+           from .vocab import Vocab  # noqa: F401
+       
+       
+       # fmt: off
+    1: ItemT = TypeVar("ItemT")
+    1: Batcher = Union[Callable[[Iterable[ItemT]], Iterable[List[ItemT]]], Promise]
+    1: Reader = Union[Callable[["Language", str], Iterable["Example"]], Promise]
+    1: Logger = Union[Callable[["Language"], Tuple[Callable[[Dict[str, Any]], None], Callable]], Promise]
+       # fmt: on
+       
+       
+    1: def validate(schema: Type[BaseModel], obj: Dict[str, Any]) -> List[str]:
+           """Validate data against a given pydantic schema.
+       
+           obj (Dict[str, Any]): JSON-serializable data to validate.
+           schema (pydantic.BaseModel): The schema to validate against.
+           RETURNS (List[str]): A list of error messages, if available.
+           """
+           try:
+               schema(**obj)
+               return []
+           except ValidationError as e:
+               errors = e.errors()
+               data = defaultdict(list)
+               for error in errors:
+                   err_loc = " -> ".join([str(p) for p in error.get("loc", [])])
+                   data[err_loc].append(error.get("msg"))
+               return [f"[{loc}] {', '.join(msg)}" for loc, msg in data.items()]  # type: ignore[arg-type]
+       
+       
+       # Initialization
+       
+       
+    1: ArgSchemaConfig = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+       
+    1: ArgSchemaConfigExtra = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+       
+       
+    6: def get_arg_model(
+    1:     func: Callable,
+           *,
+    2:     exclude: Iterable[str] = tuple(),
+    2:     name: str = "ArgModel",
+    2:     strict: bool = True,
+    1: ) -> type[BaseModel]:
+           """Generate a pydantic model for function arguments.
+       
+           func (Callable): The function to generate the schema for.
+           exclude (Iterable[str]): Parameter names to ignore.
+           name (str): Name of created model class.
+           strict (bool): Don't allow extra arguments if no variable keyword arguments
+               are allowed on the function.
+           RETURNS (type[BaseModel]): A pydantic model.
+           """
+           sig_args = {}
+           try:
+               sig = inspect.signature(func)
+           except ValueError:
+               # Typically happens if the method is part of a Cython module without
+               # binding=True. Here we just use an empty model that allows everything.
+               return create_model(name, __config__=ArgSchemaConfigExtra)  # type: ignore[arg-type, return-value]
+           has_variable = False
+           for param in sig.parameters.values():
+               if param.name in exclude:
+                   continue
+               if param.kind == param.VAR_KEYWORD:
+                   # The function allows variable keyword arguments so we shouldn't
+                   # include **kwargs etc. in the schema and switch to non-strict
+                   # mode and pass through all other values
+                   has_variable = True
+                   continue
+               # If no annotation is specified assume it's anything
+               annotation = param.annotation if param.annotation != param.empty else Any
+               # If no default value is specified assume that it's required. Cython
+               # functions/methods will have param.empty for default value None so we
+               # need to treat them differently
+               default_empty = None if is_cython_func(func) else ...
+               default = param.default if param.default != param.empty else default_empty
+               sig_args[param.name] = (annotation, default)
+           is_strict = strict and not has_variable
+           sig_args["__config__"] = ArgSchemaConfig if is_strict else ArgSchemaConfigExtra  # type: ignore[assignment]
+           return create_model(name, **sig_args)  # type: ignore[call-overload, arg-type, return-value]
+       
+       
+    7: def validate_init_settings(
+    1:     func: Callable,
+    1:     settings: Dict[str, Any],
+           *,
+    2:     section: Optional[str] = None,
+    2:     name: str = "",
+    2:     exclude: Iterable[str] = ("get_examples", "nlp"),
+    1: ) -> Dict[str, Any]:
+           """Validate initialization settings against the expected arguments in
+           the method signature. Will parse values if possible (e.g. int to string)
+           and return the updated settings dict. Will raise a ConfigValidationError
+           if types don't match or required values are missing.
+       
+           func (Callable): The initialize method of a given component etc.
+           settings (Dict[str, Any]): The settings from the respective [initialize] block.
+           section (str): Initialize section, for error message.
+           name (str): Name of the block in the section.
+           exclude (Iterable[str]): Parameter names to exclude from schema.
+           RETURNS (Dict[str, Any]): The validated settings.
+           """
+           schema = get_arg_model(func, exclude=exclude, name="InitArgModel")
+           try:
+               return schema.model_validate(settings).model_dump()
+           except ValidationError as e:
+               block = "initialize" if not section else f"initialize.{section}"
+               title = f"Error validating initialization settings in [{block}]"
+               raise ConfigValidationError(
+                   title=title, errors=e.errors(), config=settings, parent=name
+               ) from None
+       
+       
+       # Matcher token patterns
+       
+       
+    1: def validate_token_pattern(obj: list) -> List[str]:
+           # Try to convert non-string keys (e.g. {ORTH: "foo"} -> {"ORTH": "foo"})
+           get_key = lambda k: NAMES[k] if isinstance(k, int) and k < len(NAMES) else k
+           if isinstance(obj, list):
+               converted = []
+               for pattern in obj:
+                   if isinstance(pattern, dict):
+                       pattern = {get_key(k): v for k, v in pattern.items()}
+                   converted.append(pattern)
+               obj = converted
+           return validate(TokenPatternSchema, {"pattern": obj})
+       
+       
+    2: class TokenPatternString(BaseModel):
+    1:     REGEX: Optional[Union[StrictStr, "TokenPatternString"]] = Field(None, alias="regex")
+    1:     IN: Optional[List[StrictStr]] = Field(None, alias="in")
+    1:     NOT_IN: Optional[List[StrictStr]] = Field(None, alias="not_in")
+    1:     IS_SUBSET: Optional[List[StrictStr]] = Field(None, alias="is_subset")
+    1:     IS_SUPERSET: Optional[List[StrictStr]] = Field(None, alias="is_superset")
+    1:     INTERSECTS: Optional[List[StrictStr]] = Field(None, alias="intersects")
+    1:     FUZZY: Optional[Union[StrictStr, "TokenPatternString"]] = Field(None, alias="fuzzy")
+    2:     FUZZY1: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy1"
+           )
+    2:     FUZZY2: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy2"
+           )
+    2:     FUZZY3: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy3"
+           )
+    2:     FUZZY4: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy4"
+           )
+    2:     FUZZY5: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy5"
+           )
+    2:     FUZZY6: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy6"
+           )
+    2:     FUZZY7: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy7"
+           )
+    2:     FUZZY8: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy8"
+           )
+    2:     FUZZY9: Optional[Union[StrictStr, "TokenPatternString"]] = Field(
+    1:         None, alias="fuzzy9"
+           )
+       
+    1:     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+       
+    2:     @field_validator("*", mode="before")
+    2:     @classmethod
+    2:     def raise_for_none(cls, v):
+               if v is None:
+                   raise ValueError("None / null is not allowed")
+               return v
+       
+       
+    2: class TokenPatternNumber(BaseModel):
+    1:     REGEX: Optional[StrictStr] = Field(None, alias="regex")
+    1:     IN: Optional[List[StrictInt]] = Field(None, alias="in")
+    1:     NOT_IN: Optional[List[StrictInt]] = Field(None, alias="not_in")
+    1:     IS_SUBSET: Optional[List[StrictInt]] = Field(None, alias="is_subset")
+    1:     IS_SUPERSET: Optional[List[StrictInt]] = Field(None, alias="is_superset")
+    1:     INTERSECTS: Optional[List[StrictInt]] = Field(None, alias="intersects")
+    1:     EQ: Optional[Union[StrictInt, StrictFloat]] = Field(None, alias="==")
+    1:     NEQ: Optional[Union[StrictInt, StrictFloat]] = Field(None, alias="!=")
+    1:     GEQ: Optional[Union[StrictInt, StrictFloat]] = Field(None, alias=">=")
+    1:     LEQ: Optional[Union[StrictInt, StrictFloat]] = Field(None, alias="<=")
+    1:     GT: Optional[Union[StrictInt, StrictFloat]] = Field(None, alias=">")
+    1:     LT: Optional[Union[StrictInt, StrictFloat]] = Field(None, alias="<")
+       
+    1:     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+       
+    2:     @field_validator("*", mode="before")
+    2:     @classmethod
+    2:     def raise_for_none(cls, v):
+               if v is None:
+                   raise ValueError("None / null is not allowed")
+               return v
+       
+       
+    2: class TokenPatternOperatorSimple(str, Enum):
+    1:     plus: StrictStr = StrictStr("+")
+    1:     star: StrictStr = StrictStr("*")
+    1:     question: StrictStr = StrictStr("?")
+    1:     exclamation: StrictStr = StrictStr("!")
+       
+       
+    1: TokenPatternOperatorMinMax = constr(pattern=r"^(\{\d+\}|\{\d+,\d*\}|\{\d*,\d+\})$")
+       
+       
+    1: TokenPatternOperator = Union[TokenPatternOperatorSimple, TokenPatternOperatorMinMax]  # type: ignore[valid-type]
+    1: StringValue = Union[TokenPatternString, StrictStr]
+    1: NumberValue = Union[TokenPatternNumber, StrictInt, StrictFloat]
+    2: UnderscoreValue = Union[
+    1:     TokenPatternString, TokenPatternNumber, str, int, float, list, bool
+       ]
+    1: IobValue = Literal["", "I", "O", "B", 0, 1, 2, 3]
+       
+       
+    2: class TokenPattern(BaseModel):
+    1:     orth: Optional[StringValue] = None
+    1:     text: Optional[StringValue] = None
+    1:     lower: Optional[StringValue] = None
+    1:     pos: Optional[StringValue] = None
+    1:     tag: Optional[StringValue] = None
+    1:     morph: Optional[StringValue] = None
+    1:     dep: Optional[StringValue] = None
+    1:     lemma: Optional[StringValue] = None
+    1:     shape: Optional[StringValue] = None
+    1:     ent_type: Optional[StringValue] = None
+    1:     ent_iob: Optional[IobValue] = None
+    1:     ent_id: Optional[StringValue] = None
+    1:     ent_kb_id: Optional[StringValue] = None
+    1:     norm: Optional[StringValue] = None
+    1:     length: Optional[NumberValue] = None
+    1:     spacy: Optional[StrictBool] = None
+    1:     is_alpha: Optional[StrictBool] = None
+    1:     is_ascii: Optional[StrictBool] = None
+    1:     is_digit: Optional[StrictBool] = None
+    1:     is_lower: Optional[StrictBool] = None
+    1:     is_upper: Optional[StrictBool] = None
+    1:     is_title: Optional[StrictBool] = None
+    1:     is_punct: Optional[StrictBool] = None
+    1:     is_space: Optional[StrictBool] = None
+    1:     is_bracket: Optional[StrictBool] = None
+    1:     is_quote: Optional[StrictBool] = None
+    1:     is_left_punct: Optional[StrictBool] = None
+    1:     is_right_punct: Optional[StrictBool] = None
+    1:     is_currency: Optional[StrictBool] = None
+    1:     is_stop: Optional[StrictBool] = None
+    1:     is_sent_start: Optional[StrictBool] = None
+    1:     sent_start: Optional[StrictBool] = None
+    1:     like_num: Optional[StrictBool] = None
+    1:     like_url: Optional[StrictBool] = None
+    1:     like_email: Optional[StrictBool] = None
+    1:     op: Optional[TokenPatternOperator] = None
+    1:     underscore: Optional[Dict[StrictStr, UnderscoreValue]] = Field(None, alias="_")
+       
+    2:     model_config = ConfigDict(
+    1:         extra="forbid",
+    1:         populate_by_name=True,
+   37:         alias_generator=lambda value: value.upper(),
+           )
+       
+    2:     @field_validator("*", mode="before")
+    2:     @classmethod
+    2:     def raise_for_none(cls, v):
+               if v is None:
+                   raise ValueError("None / null is not allowed")
+               return v
+       
+       
+    2: class TokenPatternSchema(BaseModel):
+    1:     pattern: List[TokenPattern] = Field(..., min_length=1)
+       
+    1:     model_config = ConfigDict(extra="forbid")
+       
+       
+       # Model meta
+       
+       
+    2: class ModelMetaSchema(BaseModel):
+           # fmt: off
+    1:     lang: StrictStr = Field(..., title="Two-letter language code, e.g. 'en'")
+    1:     name: StrictStr = Field(..., title="Model name")
+    1:     version: StrictStr = Field(..., title="Model version")
+    1:     spacy_version: StrictStr = Field("", title="Compatible spaCy version identifier")
+    1:     parent_package: StrictStr = Field("spacy", title="Name of parent spaCy package, e.g. spacy or spacy-nightly")
+    1:     requirements: List[StrictStr] = Field([], title="Additional Python package dependencies, used for the Python package setup")
+    1:     pipeline: List[StrictStr] = Field([], title="Names of pipeline components")
+    1:     description: StrictStr = Field("", title="Model description")
+    1:     license: StrictStr = Field("", title="Model license")
+    1:     author: StrictStr = Field("", title="Model author name")
+    1:     email: StrictStr = Field("", title="Model author email")
+    1:     url: StrictStr = Field("", title="Model author URL")
+    1:     sources: Optional[Union[List[StrictStr], List[Dict[str, str]]]] = Field(None, title="Training data sources")
+    1:     vectors: Dict[str, Any] = Field({}, title="Included word vectors")
+    1:     labels: Dict[str, List[str]] = Field({}, title="Component labels, keyed by component name")
+    1:     performance: Dict[str, Any] = Field({}, title="Accuracy and speed numbers")
+    1:     spacy_git_version: StrictStr = Field("", title="Commit of spaCy version used")
+           # fmt: on
+       
+       
+       # Config schema
+       # We're not setting any defaults here (which is too messy) and are making all
+       # fields required, so we can raise validation errors for missing values. To
+       # provide a default, we include a separate .cfg file with all values and
+       # check that against this schema in the test suite to make sure it's always
+       # up to date.
+       
+       
+    2: class ConfigSchemaTraining(BaseModel):
+           # fmt: off
+    1:     dev_corpus: StrictStr = Field(..., title="Path in the config to the dev data")
+    1:     train_corpus: StrictStr = Field(..., title="Path in the config to the training data")
+    1:     batcher: Batcher = Field(..., title="Batcher for the training data")
+    1:     dropout: StrictFloat = Field(..., title="Dropout rate")
+    1:     patience: StrictInt = Field(..., title="How many steps to continue without improvement in evaluation score")
+    1:     max_epochs: StrictInt = Field(..., title="Maximum number of epochs to train for")
+    1:     max_steps: StrictInt = Field(..., title="Maximum number of update steps to train for")
+    1:     eval_frequency: StrictInt = Field(..., title="How often to evaluate during training (steps)")
+    1:     seed: Optional[StrictInt] = Field(..., title="Random seed")
+    1:     gpu_allocator: Optional[StrictStr] = Field(..., title="Memory allocator when running on GPU")
+    1:     accumulate_gradient: StrictInt = Field(..., title="Whether to divide the batch up into substeps")
+    1:     score_weights: Dict[StrictStr, Optional[Union[StrictFloat, StrictInt]]] = Field(..., title="Scores to report and their weights for selecting final model")
+    1:     optimizer: Optimizer = Field(..., title="The optimizer to use")
+    1:     logger: Logger = Field(..., title="The logger to track training progress")
+    1:     frozen_components: List[str] = Field(..., title="Pipeline components that shouldn't be updated during training")
+    1:     annotating_components: List[str] = Field(..., title="Pipeline components that should set annotations during training")
+    1:     before_to_disk: Optional[Callable[["Language"], "Language"]] = Field(..., title="Optional callback to modify nlp object after training, before it's saved to disk")
+    1:     before_update: Optional[Callable[["Language", Dict[str, Any]], None]] = Field(..., title="Optional callback that is invoked at the start of each training step")
+           # fmt: on
+       
+    1:     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+       
+       
+    2: class ConfigSchemaNlp(BaseModel):
+           # fmt: off
+    1:     lang: StrictStr = Field(..., title="The base language to use")
+    1:     pipeline: List[StrictStr] = Field(..., title="The pipeline component names in order")
+    1:     disabled: List[StrictStr] = Field(..., title="Pipeline components to disable by default")
+    1:     tokenizer: Callable = Field(..., title="The tokenizer to use")
+    1:     before_creation: Optional[Callable[[Type["Language"]], Type["Language"]]] = Field(..., title="Optional callback to modify Language class before initialization")
+    1:     after_creation: Optional[Callable[["Language"], "Language"]] = Field(..., title="Optional callback to modify nlp object after creation and before the pipeline is constructed")
+    1:     after_pipeline_creation: Optional[Callable[["Language"], "Language"]] = Field(..., title="Optional callback to modify nlp object after the pipeline is constructed")
+    1:     batch_size: Optional[int] = Field(..., title="Default batch size")
+    1:     vectors: Callable = Field(..., title="Vectors implementation")
+           # fmt: on
+       
+    1:     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+       
+       
+    2: class ConfigSchemaPretrainEmpty(BaseModel):
+    1:     model_config = ConfigDict(extra="forbid")
+       
+       
+    2: class ConfigSchemaPretrain(BaseModel):
+           # fmt: off
+    1:     max_epochs: StrictInt = Field(..., title="Maximum number of epochs to train for")
+    1:     dropout: StrictFloat = Field(..., title="Dropout rate")
+    1:     n_save_every: Optional[StrictInt] = Field(..., title="Saving additional temporary model after n batches within an epoch")
+    1:     n_save_epoch: Optional[StrictInt] = Field(..., title="Saving model after every n epoch")
+    1:     optimizer: Optimizer = Field(..., title="The optimizer to use")
+    1:     corpus: StrictStr = Field(..., title="Path in the config to the training data")
+    1:     batcher: Batcher = Field(..., title="Batcher for the training data")
+    1:     component: str = Field(..., title="Component to find the layer to pretrain")
+    1:     layer: str = Field(..., title="Layer to pretrain. Whole model if empty.")
+    1:     objective: Callable[["Vocab", Model], Model] = Field(..., title="A function that creates the pretraining objective.")
+           # fmt: on
+       
+    1:     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+       
+       
+    2: class ConfigSchemaInit(BaseModel):
+           # fmt: off
+    1:     vocab_data: Optional[StrictStr] = Field(..., title="Path to JSON-formatted vocabulary file")
+    1:     lookups: Optional[Lookups] = Field(..., title="Vocabulary lookups, e.g. lexeme normalization")
+    1:     vectors: Optional[StrictStr] = Field(..., title="Path to vectors")
+    1:     init_tok2vec: Optional[StrictStr] = Field(..., title="Path to pretrained tok2vec weights")
+    1:     tokenizer: Dict[StrictStr, Any] = Field(..., title="Arguments to be passed into Tokenizer.initialize")
+    1:     components: Dict[StrictStr, Dict[StrictStr, Any]] = Field(..., title="Arguments for TrainablePipe.initialize methods of pipeline components, keyed by component")
+    1:     before_init: Optional[Callable[["Language"], "Language"]] = Field(..., title="Optional callback to modify nlp object before initialization")
+    1:     after_init: Optional[Callable[["Language"], "Language"]] = Field(..., title="Optional callback to modify nlp object after initialization")
+           # fmt: on
+       
+    1:     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+       
+       
+    2: class ConfigSchema(BaseModel):
+    1:     training: ConfigSchemaTraining
+    1:     nlp: ConfigSchemaNlp
+    1:     pretraining: Union[ConfigSchemaPretrain, ConfigSchemaPretrainEmpty] = {}  # type: ignore[assignment]
+    1:     components: Dict[str, Dict[str, Any]]
+    1:     corpora: Dict[str, Reader]
+    1:     initialize: ConfigSchemaInit
+       
+    1:     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
+       
+       
+    1: CONFIG_SCHEMAS = {
+    1:     "nlp": ConfigSchemaNlp,
+    1:     "training": ConfigSchemaTraining,
+    1:     "pretraining": ConfigSchemaPretrain,
+    1:     "initialize": ConfigSchemaInit,
+       }
+       
+       # Recommendations for init config workflows
+       
+       
+    2: class RecommendationTrfItem(BaseModel):
+    1:     name: str
+    1:     size_factor: int
+       
+       
+    2: class RecommendationTrf(BaseModel):
+    1:     efficiency: RecommendationTrfItem
+    1:     accuracy: RecommendationTrfItem
+       
+       
+    2: class RecommendationSchema(BaseModel):
+    1:     word_vectors: Optional[str] = None
+    1:     transformer: Optional[RecommendationTrf] = None
+    1:     has_letters: bool = True
+       
+       
+    2: class DocJSONSchema(BaseModel):
+    1:     """
+           JSON/dict format for JSON representation of Doc objects.
+           """
+       
+    2:     cats: Optional[Dict[StrictStr, StrictFloat]] = Field(
+    1:         None, title="Categories with corresponding probabilities"
+           )
+    2:     ents: Optional[List[Dict[StrictStr, Union[StrictInt, StrictStr]]]] = Field(
+    1:         None, title="Information on entities"
+           )
+    2:     sents: Optional[List[Dict[StrictStr, StrictInt]]] = Field(
+    1:         None, title="Indices of sentences' start and end indices"
+           )
+    1:     text: StrictStr = Field(..., title="Document text")
+    2:     spans: Optional[
+    1:         Dict[StrictStr, List[Dict[StrictStr, Union[StrictStr, StrictInt]]]]
+    1:     ] = Field(None, title="Span information - end/start indices, label, KB ID")
+    2:     tokens: List[Dict[StrictStr, Union[StrictStr, StrictInt]]] = Field(
+    1:         ..., title="Token information - ID, start, annotations"
+           )
+    2:     underscore_doc: Optional[Dict[StrictStr, Any]] = Field(
+    1:         None,
+    1:         title="Any custom data stored in the document's _ attribute",
+    1:         alias="_",
+           )
+    2:     underscore_token: Optional[Dict[StrictStr, List[Dict[StrictStr, Any]]]] = Field(
+    1:         None, title="Any custom data stored in the token's _ attribute"
+           )
+    2:     underscore_span: Optional[Dict[StrictStr, List[Dict[StrictStr, Any]]]] = Field(
+    1:         None, title="Any custom data stored in the span's _ attribute"
+           )

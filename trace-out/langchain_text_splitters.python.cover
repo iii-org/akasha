@@ -1,0 +1,17 @@
+    1: """Python code text splitter."""
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Any
+       
+    1: from langchain_text_splitters.base import Language
+    1: from langchain_text_splitters.character import RecursiveCharacterTextSplitter
+       
+       
+    2: class PythonCodeTextSplitter(RecursiveCharacterTextSplitter):
+    1:     """Attempts to split the text along Python syntax."""
+       
+    1:     def __init__(self, **kwargs: Any) -> None:
+               """Initialize a `PythonCodeTextSplitter`."""
+               separators = self.get_separators_for_language(Language.PYTHON)
+               super().__init__(separators=separators, **kwargs)

@@ -1,0 +1,91 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Union, Optional
+    1: from typing_extensions import Literal, Annotated, TypeAlias
+       
+    1: from ..._utils import PropertyInfo
+    1: from ..._models import BaseModel
+       
+    1: __all__ = [
+           "ResponseFunctionWebSearch",
+           "Action",
+           "ActionSearch",
+           "ActionSearchSource",
+           "ActionOpenPage",
+           "ActionFind",
+       ]
+       
+       
+    2: class ActionSearchSource(BaseModel):
+    1:     """A source used in the search."""
+       
+    1:     type: Literal["url"]
+    1:     """The type of source. Always `url`."""
+       
+    1:     url: str
+    1:     """The URL of the source."""
+       
+       
+    2: class ActionSearch(BaseModel):
+    1:     """Action type "search" - Performs a web search query."""
+       
+    1:     type: Literal["search"]
+    1:     """The action type."""
+       
+    1:     queries: Optional[List[str]] = None
+    1:     """The search queries."""
+       
+    1:     query: Optional[str] = None
+    1:     """The search query."""
+       
+    1:     sources: Optional[List[ActionSearchSource]] = None
+    1:     """The sources used in the search."""
+       
+       
+    2: class ActionOpenPage(BaseModel):
+    1:     """Action type "open_page" - Opens a specific URL from search results."""
+       
+    1:     type: Literal["open_page"]
+    1:     """The action type."""
+       
+    1:     url: Optional[str] = None
+    1:     """The URL opened by the model."""
+       
+       
+    2: class ActionFind(BaseModel):
+    1:     """Action type "find_in_page": Searches for a pattern within a loaded page."""
+       
+    1:     pattern: str
+    1:     """The pattern or text to search for within the page."""
+       
+    1:     type: Literal["find_in_page"]
+    1:     """The action type."""
+       
+    1:     url: str
+    1:     """The URL of the page searched for the pattern."""
+       
+       
+    1: Action: TypeAlias = Annotated[Union[ActionSearch, ActionOpenPage, ActionFind], PropertyInfo(discriminator="type")]
+       
+       
+    2: class ResponseFunctionWebSearch(BaseModel):
+    1:     """The results of a web search tool call.
+       
+           See the
+           [web search guide](https://platform.openai.com/docs/guides/tools-web-search) for more information.
+           """
+       
+    1:     id: str
+    1:     """The unique ID of the web search tool call."""
+       
+    1:     action: Action
+    1:     """
+           An object describing the specific action taken in this web search call. Includes
+           details on how the model used the web (search, open_page, find_in_page).
+           """
+       
+    1:     status: Literal["in_progress", "searching", "completed", "failed"]
+    1:     """The status of the web search tool call."""
+       
+    1:     type: Literal["web_search_call"]
+    1:     """The type of the web search tool call. Always `web_search_call`."""

@@ -1,0 +1,146 @@
+    1: from langchain_core.documents import Document
+    1: from typing import Union
+    1: from pathlib import Path
+    1: import re
+       
+       
+    2: class dbs:
+    1:     def __init__(self, chrdb=[]):
+    5:         self.ids = []
+    5:         self.embeds = []
+    5:         self.metadatas = []
+    5:         self.docs = []
+    5:         self.vis = set()
+    5:         if isinstance(chrdb, list):
+    4:             pass
+       
+               else:
+    1:             data = chrdb.get(include=["embeddings", "metadatas", "documents"])
+    1:             if "ids" in data:
+    1:                 self.ids = list(data["ids"])
+    1:                 self.vis = set(self.ids)
+    1:             if "embeddings" in data and data["embeddings"] is not None:
+                       # Use tolist() if it's a numpy array, otherwise use list()
+    1:                 self.embeds = getattr(data["embeddings"], "tolist", lambda: list(data["embeddings"]))()
+                   else:
+                       self.embeds = [[] for _ in range(len(self.ids))]
+    1:             if "metadatas" in data and data["metadatas"] is not None:
+                       self.metadatas = list(data["metadatas"])
+                   else:
+    4:                 self.metadatas = [{} for _ in range(len(self.ids))]
+    1:             if "documents" in data and data["documents"] is not None:
+    1:                 self.docs = list(data["documents"])
+                   else:
+                       self.docs = ["" for _ in range(len(self.ids))]
+       
+    1:     def merge(self, db: "dbs"):
+    3:         for i in range(len(db.ids)):
+    2:             if db.ids[i] not in self.vis:
+    1:                 self.ids.append(db.ids[i])
+    1:                 self.embeds.append(db.embeds[i])
+    1:                 self.metadatas.append(db.metadatas[i])
+    1:                 self.docs.append(db.docs[i])
+    1:                 self.vis.add(db.ids[i])
+               # self.ids.extend(db.ids)
+               # self.embeds.extend(db.embeds)
+               # self.metadatas.extend(db.metadatas)
+               # self.docs.extend(db.docs)
+       
+    1:     def add_chromadb(self, chrdb):
+    1:         data = chrdb.get(include=["embeddings", "metadatas", "documents"])
+    1:         if "ids" in data:
+    1:             self.ids.extend(list(data["ids"]))
+       
+    1:         if "embeddings" in data and data["embeddings"] is not None:
+    2:             self.embeds.extend(getattr(data["embeddings"], "tolist", lambda: list(data["embeddings"]))())
+               else:
+                   self.embeds.extend([[] for _ in range(len(data["ids"]))])
+    1:         if "metadatas" in data and data["metadatas"] is not None:
+    1:             self.metadatas.extend(list(data["metadatas"]))
+               else:
+                   self.metadatas.extend([{} for _ in range(len(data["ids"]))])
+    1:         if "documents" in data and data["documents"] is not None:
+    1:             self.docs.extend(list(data["documents"]))
+               else:
+                   self.docs.extend(["" for _ in range(len(data["ids"]))])
+       
+    1:     def get_Documents(self):
+    5:         return [
+    1:             Document(page_content=self.docs[i], metadata=self.metadatas[i])
+    2:             for i in range(len(self.docs))
+               ]
+       
+    1:     def get_docs(self):
+    4:         return self.docs
+       
+    1:     def get_ids(self):
+    4:         return self.ids
+       
+    1:     def get_metadatas(self):
+    2:         return self.metadatas
+       
+    1:     def get_embeds(self):
+    2:         return self.embeds
+       
+       
+    1: NO_PARENT_DIR_NAME = "NoPaReNtDiR"
+    1: FILE_LAST_CHANGE_FILE_NAME = "file_last_changed.json"
+    1: TEXT_EXTENSIONS = ["pdf", "md", "docx", "txt", "csv", "pptx"]
+    1: ALREADY_BUILT = "already_built"
+    1: NOT_BUILT = "not_built"
+    1: OLD_BUILT = "old_built"
+    1: HNSW_THRESHOLD = 400000
+       
+       
+    6: def get_storage_directory(
+    1:     dir_path: Union[Path, str],
+    1:     chunk_size: int,
+    1:     embed_type: str,
+    1:     embed_name: str,
+    1: ) -> str:
+    3:     if isinstance(dir_path, str):
+    3:         if is_url(dir_path):
+    1:             sanitized_dir_path = _sanitize_path_string(dir_path)
+    1:             storage_directory = (
+    8:                 "chromadb/"
+    1:                 + sanitized_dir_path
+    1:                 + "_"
+    1:                 + embed_type
+    1:                 + "_"
+    1:                 + embed_name.replace("/", "-")
+    1:                 + "_"
+    1:                 + str(chunk_size)
+                   )
+    1:             return storage_directory
+               else:
+    2:             dir_path = Path(dir_path)
+       
+    2:     if dir_path != Path("."):
+    2:         db_dir = "-".join(
+    4:             [part.replace(" ", "").replace("_", "") for part in dir_path.parts if part]
+               )
+           else:
+    1:         db_dir = NO_PARENT_DIR_NAME
+       
+    2:     storage_directory = (
+   16:         "chromadb/"
+    2:         + db_dir
+    2:         + "_"
+    2:         + embed_type
+    2:         + "_"
+    2:         + embed_name.replace("/", "-")
+    2:         + "_"
+    2:         + str(chunk_size)
+           )
+       
+    2:     return storage_directory
+       
+       
+    1: def _sanitize_path_string(path: str, max_len: int = 30) -> str:
+           # Remove special characters and limit length to 30
+    2:     sanitized = re.sub(r"[^a-zA-Z0-9]", "", path)[:max_len]
+    2:     return sanitized
+       
+       
+    1: def is_url(pattern: str) -> bool:
+    5:     return bool(re.match(r"^(http|https)://", pattern))

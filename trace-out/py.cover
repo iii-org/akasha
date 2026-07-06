@@ -1,0 +1,15 @@
+       # shim for pylib going away
+       # if pylib is installed this file will get skipped
+       # (`py/__init__.py` has higher precedence)
+    1: from __future__ import annotations
+       
+    1: import sys
+       
+    1: import _pytest._py.error as error
+    1: import _pytest._py.path as path
+       
+       
+    1: sys.modules["py.error"] = error
+    1: sys.modules["py.path"] = path
+       
+    1: __all__ = ["error", "path"]

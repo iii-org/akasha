@@ -1,0 +1,38 @@
+    1: """
+       Load all the JSON Schema specification's official schemas.
+       """
+       
+    1: import json
+       
+    1: try:
+    1:     from importlib.resources import files
+       except ImportError:
+           from importlib_resources import (  # type: ignore[import-not-found, no-redef]
+               files,
+           )
+       
+    1: from referencing import Resource
+       
+       
+    1: def _schemas():
+           """
+           All schemas we ship.
+           """
+           # importlib.resources.abc.Traversal doesn't have nice ways to do this that
+           # I'm aware of...
+           #
+           # It can't recurse arbitrarily, e.g. no ``.glob()``.
+           #
+           # So this takes some liberties given the real layout of what we ship
+           # (only 2 levels of nesting, no directories within the second level).
+       
+    7:     for version in files(__package__).joinpath("schemas").iterdir():
+    6:         if version.name.startswith("."):
+                   continue
+   14:         for child in version.iterdir():
+    8:             children = [child] if child.is_file() else child.iterdir()
+   28:             for path in children:
+   20:                 if path.name.startswith("."):
+                           continue
+   20:                 contents = json.loads(path.read_text(encoding="utf-8"))
+   20:                 yield Resource.from_contents(contents)

@@ -1,0 +1,72 @@
+    1: """NLTK text splitter."""
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Any
+       
+    1: from typing_extensions import override
+       
+    1: from langchain_text_splitters.base import TextSplitter
+       
+    1: try:
+    1:     import nltk
+       
+           _HAS_NLTK = True
+    1: except ImportError:
+    1:     _HAS_NLTK = False
+       
+       
+    2: class NLTKTextSplitter(TextSplitter):
+    1:     """Splitting text using NLTK package."""
+       
+    2:     def __init__(
+               self,
+    1:         separator: str = "\n\n",
+    1:         language: str = "english",
+               *,
+    1:         use_span_tokenize: bool = False,
+               **kwargs: Any,
+           ) -> None:
+               """Initialize the NLTK splitter.
+       
+               Args:
+                   separator: The separator to use when combining splits.
+                   language: The language to use.
+                   use_span_tokenize: Whether to use `span_tokenize` instead of
+                       `sent_tokenize`.
+       
+               Raises:
+                   ImportError: If NLTK is not installed.
+                   ValueError: If `use_span_tokenize` is `True` and separator is not `''`.
+               """
+               super().__init__(**kwargs)
+               self._separator = separator
+               self._language = language
+               self._use_span_tokenize = use_span_tokenize
+               if self._use_span_tokenize and self._separator:
+                   msg = "When use_span_tokenize is True, separator should be ''"
+                   raise ValueError(msg)
+               if not _HAS_NLTK:
+                   msg = "NLTK is not installed, please install it with `pip install nltk`."
+                   raise ImportError(msg)
+               if self._use_span_tokenize:
+                   self._tokenizer = nltk.tokenize._get_punkt_tokenizer(self._language)  # noqa: SLF001
+               else:
+                   self._tokenizer = nltk.tokenize.sent_tokenize
+       
+    2:     @override
+    2:     def split_text(self, text: str) -> list[str]:
+               # First we naively split the large input into a bunch of smaller ones.
+               if self._use_span_tokenize:
+                   spans = list(self._tokenizer.span_tokenize(text))
+                   splits = []
+                   for i, (start, end) in enumerate(spans):
+                       if i > 0:
+                           prev_end = spans[i - 1][1]
+                           sentence = text[prev_end:start] + text[start:end]
+                       else:
+                           sentence = text[start:end]
+                       splits.append(sentence)
+               else:
+                   splits = self._tokenizer(text, language=self._language)
+               return self._merge_splits(splits, self._separator)

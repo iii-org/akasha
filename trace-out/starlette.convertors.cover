@@ -1,0 +1,89 @@
+    1: from __future__ import annotations
+       
+    1: import math
+    1: import uuid
+    1: from typing import Any, ClassVar, Generic, TypeVar
+       
+    1: T = TypeVar("T")
+       
+       
+    2: class Convertor(Generic[T]):
+    1:     regex: ClassVar[str] = ""
+       
+    1:     def convert(self, value: str) -> T:
+               raise NotImplementedError()  # pragma: no cover
+       
+    1:     def to_string(self, value: T) -> str:
+               raise NotImplementedError()  # pragma: no cover
+       
+       
+    2: class StringConvertor(Convertor[str]):
+    1:     regex = "[^/]+"
+       
+    1:     def convert(self, value: str) -> str:
+               return value
+       
+    1:     def to_string(self, value: str) -> str:
+               value = str(value)
+               assert "/" not in value, "May not contain path separators"
+               assert value, "Must not be empty"
+               return value
+       
+       
+    2: class PathConvertor(Convertor[str]):
+    1:     regex = ".*"
+       
+    1:     def convert(self, value: str) -> str:
+               return str(value)
+       
+    1:     def to_string(self, value: str) -> str:
+               return str(value)
+       
+       
+    2: class IntegerConvertor(Convertor[int]):
+    1:     regex = "[0-9]+"
+       
+    1:     def convert(self, value: str) -> int:
+               return int(value)
+       
+    1:     def to_string(self, value: int) -> str:
+               value = int(value)
+               assert value >= 0, "Negative integers are not supported"
+               return str(value)
+       
+       
+    2: class FloatConvertor(Convertor[float]):
+    1:     regex = r"[0-9]+(\.[0-9]+)?"
+       
+    1:     def convert(self, value: str) -> float:
+               return float(value)
+       
+    1:     def to_string(self, value: float) -> str:
+               value = float(value)
+               assert value >= 0.0, "Negative floats are not supported"
+               assert not math.isnan(value), "NaN values are not supported"
+               assert not math.isinf(value), "Infinite values are not supported"
+               return ("%0.20f" % value).rstrip("0").rstrip(".")
+       
+       
+    2: class UUIDConvertor(Convertor[uuid.UUID]):
+    1:     regex = "[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}"
+       
+    1:     def convert(self, value: str) -> uuid.UUID:
+               return uuid.UUID(value)
+       
+    1:     def to_string(self, value: uuid.UUID) -> str:
+               return str(value)
+       
+       
+    1: CONVERTOR_TYPES: dict[str, Convertor[Any]] = {
+    1:     "str": StringConvertor(),
+    1:     "path": PathConvertor(),
+    1:     "int": IntegerConvertor(),
+    1:     "float": FloatConvertor(),
+    1:     "uuid": UUIDConvertor(),
+       }
+       
+       
+    1: def register_url_convertor(key: str, convertor: Convertor[Any]) -> None:
+           CONVERTOR_TYPES[key] = convertor

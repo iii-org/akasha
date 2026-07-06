@@ -1,0 +1,30 @@
+    1: from pydantic import AnyHttpUrl, BaseModel, Field
+       
+       
+    2: class ClientRegistrationOptions(BaseModel):
+    1:     enabled: bool = False
+    1:     client_secret_expiry_seconds: int | None = None
+    1:     valid_scopes: list[str] | None = None
+    1:     default_scopes: list[str] | None = None
+       
+       
+    2: class RevocationOptions(BaseModel):
+    1:     enabled: bool = False
+       
+       
+    2: class AuthSettings(BaseModel):
+    2:     issuer_url: AnyHttpUrl = Field(
+    1:         ...,
+    1:         description="OAuth authorization server URL that issues tokens for this resource server.",
+           )
+    1:     service_documentation_url: AnyHttpUrl | None = None
+    1:     client_registration_options: ClientRegistrationOptions | None = None
+    1:     revocation_options: RevocationOptions | None = None
+    1:     required_scopes: list[str] | None = None
+       
+           # Resource Server settings (when operating as RS only)
+    2:     resource_server_url: AnyHttpUrl | None = Field(
+    1:         ...,
+    1:         description="The URL of the MCP server to be used as the resource identifier "
+               "and base route to look up OAuth Protected Resource Metadata.",
+           )

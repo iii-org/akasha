@@ -1,0 +1,286 @@
+       # # header
+       # coding: utf-8
+       
+    1: from __future__ import unicode_literals
+       
+    1: if False:  # MYPY
+           from typing import Text, Any, Dict, Optional, List  # NOQA
+           from .error import StreamMark  # NOQA
+       
+    1: SHOWLINES = True
+       
+       
+    2: class Token(object):
+    1:     __slots__ = 'start_mark', 'end_mark', '_comment'
+       
+    1:     def __init__(self, start_mark, end_mark):
+               # type: (StreamMark, StreamMark) -> None
+ 1244:         self.start_mark = start_mark
+ 1244:         self.end_mark = end_mark
+       
+    1:     def __repr__(self):
+               # type: () -> Any
+               # attributes = [key for key in self.__slots__ if not key.endswith('_mark') and
+               #               hasattr('self', key)]
+               attributes = [key for key in self.__slots__ if not key.endswith('_mark')]
+               attributes.sort()
+               arguments = ', '.join(['%s=%r' % (key, getattr(self, key)) for key in attributes])
+               if SHOWLINES:
+                   try:
+                       arguments += ', line: ' + str(self.start_mark.line)
+                   except:  # NOQA
+                       pass
+               try:
+                   arguments += ', comment: ' + str(self._comment)
+               except:  # NOQA
+                   pass
+               return '{}({})'.format(self.__class__.__name__, arguments)
+       
+    1:     def add_post_comment(self, comment):
+               # type: (Any) -> None
+               if not hasattr(self, '_comment'):
+                   self._comment = [None, None]
+               self._comment[0] = comment
+       
+    1:     def add_pre_comments(self, comments):
+               # type: (Any) -> None
+               if not hasattr(self, '_comment'):
+                   self._comment = [None, None]
+               assert self._comment[1] is None
+               self._comment[1] = comments
+       
+    1:     def get_comment(self):
+               # type: () -> Any
+               return getattr(self, '_comment', None)
+       
+    2:     @property
+    2:     def comment(self):
+               # type: () -> Any
+ 1367:         return getattr(self, '_comment', None)
+       
+    1:     def move_comment(self, target, empty=False):
+               # type: (Any, bool) -> Any
+               """move a comment from this token to target (normally next token)
+               used to combine e.g. comments before a BlockEntryToken to the
+               ScalarToken that follows it
+               empty is a special for empty values -> comment after key
+               """
+  683:         c = self.comment
+  683:         if c is None:
+  683:             return
+               # don't push beyond last element
+               if isinstance(target, (StreamEndToken, DocumentStartToken)):
+                   return
+               delattr(self, '_comment')
+               tc = target.comment
+               if not tc:  # target comment, just insert
+                   # special for empty value in key: value issue 25
+                   if empty:
+                       c = [c[0], c[1], None, None, c[0]]
+                   target._comment = c
+                   # nprint('mco2:', self, target, target.comment, empty)
+                   return self
+               if c[0] and tc[0] or c[1] and tc[1]:
+                   raise NotImplementedError('overlap in comment %r %r' % (c, tc))
+               if c[0]:
+                   tc[0] = c[0]
+               if c[1]:
+                   tc[1] = c[1]
+               return self
+       
+    1:     def split_comment(self):
+               # type: () -> Any
+               """ split the post part of a comment, and return it
+               as comment to be added. Delete second part if [None, None]
+                abc:  # this goes to sequence
+                  # this goes to first element
+                  - first element
+               """
+               comment = self.comment
+               if comment is None or comment[0] is None:
+                   return None  # nothing to do
+               ret_val = [comment[0], None]
+               if comment[1] is None:
+                   delattr(self, '_comment')
+               return ret_val
+       
+       
+       # class BOMToken(Token):
+       #     id = '<byte order mark>'
+       
+       
+    2: class DirectiveToken(Token):
+    1:     __slots__ = 'name', 'value'
+    1:     id = '<directive>'
+       
+    1:     def __init__(self, name, value, start_mark, end_mark):
+               # type: (Any, Any, Any, Any) -> None
+               Token.__init__(self, start_mark, end_mark)
+               self.name = name
+               self.value = value
+       
+       
+    2: class DocumentStartToken(Token):
+    1:     __slots__ = ()
+    1:     id = '<document start>'
+       
+       
+    2: class DocumentEndToken(Token):
+    1:     __slots__ = ()
+    1:     id = '<document end>'
+       
+       
+    2: class StreamStartToken(Token):
+    1:     __slots__ = ('encoding',)
+    1:     id = '<stream start>'
+       
+    1:     def __init__(self, start_mark=None, end_mark=None, encoding=None):
+               # type: (Any, Any, Any) -> None
+    2:         Token.__init__(self, start_mark, end_mark)
+    2:         self.encoding = encoding
+       
+       
+    2: class StreamEndToken(Token):
+    1:     __slots__ = ()
+    1:     id = '<stream end>'
+       
+       
+    2: class BlockSequenceStartToken(Token):
+    1:     __slots__ = ()
+    1:     id = '<block sequence start>'
+       
+       
+    2: class BlockMappingStartToken(Token):
+    1:     __slots__ = ()
+    1:     id = '<block mapping start>'
+       
+       
+    2: class BlockEndToken(Token):
+    1:     __slots__ = ()
+    1:     id = '<block end>'
+       
+       
+    2: class FlowSequenceStartToken(Token):
+    1:     __slots__ = ()
+    1:     id = '['
+       
+       
+    2: class FlowMappingStartToken(Token):
+    1:     __slots__ = ()
+    1:     id = '{'
+       
+       
+    2: class FlowSequenceEndToken(Token):
+    1:     __slots__ = ()
+    1:     id = ']'
+       
+       
+    2: class FlowMappingEndToken(Token):
+    1:     __slots__ = ()
+    1:     id = '}'
+       
+       
+    2: class KeyToken(Token):
+    1:     __slots__ = ()
+    1:     id = '?'
+       
+           # def x__repr__(self):
+           #     return 'KeyToken({})'.format(
+           #         self.start_mark.buffer[self.start_mark.index:].split(None, 1)[0])
+       
+       
+    2: class ValueToken(Token):
+    1:     __slots__ = ()
+    1:     id = ':'
+       
+       
+    2: class BlockEntryToken(Token):
+    1:     __slots__ = ()
+    1:     id = '-'
+       
+       
+    2: class FlowEntryToken(Token):
+    1:     __slots__ = ()
+    1:     id = ','
+       
+       
+    2: class AliasToken(Token):
+    1:     __slots__ = ('value',)
+    1:     id = '<alias>'
+       
+    1:     def __init__(self, value, start_mark, end_mark):
+               # type: (Any, Any, Any) -> None
+               Token.__init__(self, start_mark, end_mark)
+               self.value = value
+       
+       
+    2: class AnchorToken(Token):
+    1:     __slots__ = ('value',)
+    1:     id = '<anchor>'
+       
+    1:     def __init__(self, value, start_mark, end_mark):
+               # type: (Any, Any, Any) -> None
+               Token.__init__(self, start_mark, end_mark)
+               self.value = value
+       
+       
+    2: class TagToken(Token):
+    1:     __slots__ = ('value',)
+    1:     id = '<tag>'
+       
+    1:     def __init__(self, value, start_mark, end_mark):
+               # type: (Any, Any, Any) -> None
+               Token.__init__(self, start_mark, end_mark)
+               self.value = value
+       
+       
+    2: class ScalarToken(Token):
+    1:     __slots__ = 'value', 'plain', 'style'
+    1:     id = '<scalar>'
+       
+    1:     def __init__(self, value, plain, start_mark, end_mark, style=None):
+               # type: (Any, Any, Any, Any, Any) -> None
+  435:         Token.__init__(self, start_mark, end_mark)
+  435:         self.value = value
+  435:         self.plain = plain
+  435:         self.style = style
+       
+       
+    2: class CommentToken(Token):
+    1:     __slots__ = 'value', 'pre_done'
+    1:     id = '<comment>'
+       
+    1:     def __init__(self, value, start_mark, end_mark):
+               # type: (Any, Any, Any) -> None
+               Token.__init__(self, start_mark, end_mark)
+               self.value = value
+       
+    1:     def reset(self):
+               # type: () -> None
+               if hasattr(self, 'pre_done'):
+                   delattr(self, 'pre_done')
+       
+    1:     def __repr__(self):
+               # type: () -> Any
+               v = '{!r}'.format(self.value)
+               if SHOWLINES:
+                   try:
+                       v += ', line: ' + str(self.start_mark.line)
+                       v += ', col: ' + str(self.start_mark.column)
+                   except:  # NOQA
+                       pass
+               return 'CommentToken({})'.format(v)
+       
+    1:     def __eq__(self, other):
+               # type: (Any) -> bool
+               if self.start_mark != other.start_mark:
+                   return False
+               if self.end_mark != other.end_mark:
+                   return False
+               if self.value != other.value:
+                   return False
+               return True
+       
+    1:     def __ne__(self, other):
+               # type: (Any) -> bool
+               return not self.__eq__(other)

@@ -1,0 +1,875 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+       # pylint: disable=too-many-lines
+       
+    1: from enum import Enum
+       
+    1: from typing_extensions import deprecated
+       
+       
+    4: @deprecated(
+    1:     "Use attributes defined in the :py:const:`opentelemetry.semconv.attributes` and :py:const:`opentelemetry.semconv._incubating.attributes` modules instead. Deprecated since version 1.25.0.",
+       )
+    2: class ResourceAttributes:
+    1:     SCHEMA_URL = "https://opentelemetry.io/schemas/1.21.0"
+    1:     """
+           The URL of the OpenTelemetry schema for these keys and values.
+           """
+    1:     BROWSER_BRANDS = "browser.brands"
+    1:     """
+           Array of brand name and version separated by a space.
+           Note: This value is intended to be taken from the [UA client hints API](https://wicg.github.io/ua-client-hints/#interface) (`navigator.userAgentData.brands`).
+           """
+       
+    1:     BROWSER_PLATFORM = "browser.platform"
+    1:     """
+           The platform on which the browser is running.
+           Note: This value is intended to be taken from the [UA client hints API](https://wicg.github.io/ua-client-hints/#interface) (`navigator.userAgentData.platform`). If unavailable, the legacy `navigator.platform` API SHOULD NOT be used instead and this attribute SHOULD be left unset in order for the values to be consistent.
+           The list of possible values is defined in the [W3C User-Agent Client Hints specification](https://wicg.github.io/ua-client-hints/#sec-ch-ua-platform). Note that some (but not all) of these values can overlap with values in the [`os.type` and `os.name` attributes](./os.md). However, for consistency, the values in the `browser.platform` attribute should capture the exact value that the user agent provides.
+           """
+       
+    1:     BROWSER_MOBILE = "browser.mobile"
+    1:     """
+           A boolean that is true if the browser is running on a mobile device.
+           Note: This value is intended to be taken from the [UA client hints API](https://wicg.github.io/ua-client-hints/#interface) (`navigator.userAgentData.mobile`). If unavailable, this attribute SHOULD be left unset.
+           """
+       
+    1:     BROWSER_LANGUAGE = "browser.language"
+    1:     """
+           Preferred language of the user using the browser.
+           Note: This value is intended to be taken from the Navigator API `navigator.language`.
+           """
+       
+    1:     USER_AGENT_ORIGINAL = "user_agent.original"
+    1:     """
+           Full user-agent string provided by the browser.
+           Note: The user-agent value SHOULD be provided only from browsers that do not have a mechanism to retrieve brands and platform individually from the User-Agent Client Hints API. To retrieve the value, the legacy `navigator.userAgent` API can be used.
+           """
+       
+    1:     CLOUD_PROVIDER = "cloud.provider"
+    1:     """
+           Name of the cloud provider.
+           """
+       
+    1:     CLOUD_ACCOUNT_ID = "cloud.account.id"
+    1:     """
+           The cloud account ID the resource is assigned to.
+           """
+       
+    1:     CLOUD_REGION = "cloud.region"
+    1:     """
+           The geographical region the resource is running.
+           Note: Refer to your provider's docs to see the available regions, for example [Alibaba Cloud regions](https://www.alibabacloud.com/help/doc-detail/40654.htm), [AWS regions](https://aws.amazon.com/about-aws/global-infrastructure/regions_az/), [Azure regions](https://azure.microsoft.com/en-us/global-infrastructure/geographies/), [Google Cloud regions](https://cloud.google.com/about/locations), or [Tencent Cloud regions](https://www.tencentcloud.com/document/product/213/6091).
+           """
+       
+    1:     CLOUD_RESOURCE_ID = "cloud.resource_id"
+    1:     """
+           Cloud provider-specific native identifier of the monitored cloud resource (e.g. an [ARN](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html) on AWS, a [fully qualified resource ID](https://learn.microsoft.com/en-us/rest/api/resources/resources/get-by-id) on Azure, a [full resource name](https://cloud.google.com/apis/design/resource_names#full_resource_name) on GCP).
+           Note: On some cloud providers, it may not be possible to determine the full ID at startup,
+           so it may be necessary to set `cloud.resource_id` as a span attribute instead.
+       
+           The exact value to use for `cloud.resource_id` depends on the cloud provider.
+           The following well-known definitions MUST be used if you set this attribute and they apply:
+       
+           * **AWS Lambda:** The function [ARN](https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html).
+             Take care not to use the "invoked ARN" directly but replace any
+             [alias suffix](https://docs.aws.amazon.com/lambda/latest/dg/configuration-aliases.html)
+             with the resolved function version, as the same runtime instance may be invokable with
+             multiple different aliases.
+           * **GCP:** The [URI of the resource](https://cloud.google.com/iam/docs/full-resource-names)
+           * **Azure:** The [Fully Qualified Resource ID](https://docs.microsoft.com/en-us/rest/api/resources/resources/get-by-id) of the invoked function,
+             *not* the function app, having the form
+             `/subscriptions/<SUBSCIPTION_GUID>/resourceGroups/<RG>/providers/Microsoft.Web/sites/<FUNCAPP>/functions/<FUNC>`.
+             This means that a span attribute MUST be used, as an Azure function app can host multiple functions that would usually share
+             a TracerProvider.
+           """
+       
+    1:     CLOUD_AVAILABILITY_ZONE = "cloud.availability_zone"
+    1:     """
+           Cloud regions often have multiple, isolated locations known as zones to increase availability. Availability zone represents the zone where the resource is running.
+           Note: Availability zones are called "zones" on Alibaba Cloud and Google Cloud.
+           """
+       
+    1:     CLOUD_PLATFORM = "cloud.platform"
+    1:     """
+           The cloud platform in use.
+           Note: The prefix of the service SHOULD match the one specified in `cloud.provider`.
+           """
+       
+    1:     AWS_ECS_CONTAINER_ARN = "aws.ecs.container.arn"
+    1:     """
+           The Amazon Resource Name (ARN) of an [ECS container instance](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_instances.html).
+           """
+       
+    1:     AWS_ECS_CLUSTER_ARN = "aws.ecs.cluster.arn"
+    1:     """
+           The ARN of an [ECS cluster](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/clusters.html).
+           """
+       
+    1:     AWS_ECS_LAUNCHTYPE = "aws.ecs.launchtype"
+    1:     """
+           The [launch type](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/launch_types.html) for an ECS task.
+           """
+       
+    1:     AWS_ECS_TASK_ARN = "aws.ecs.task.arn"
+    1:     """
+           The ARN of an [ECS task definition](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definitions.html).
+           """
+       
+    1:     AWS_ECS_TASK_FAMILY = "aws.ecs.task.family"
+    1:     """
+           The task definition family this task definition is a member of.
+           """
+       
+    1:     AWS_ECS_TASK_REVISION = "aws.ecs.task.revision"
+    1:     """
+           The revision for this task definition.
+           """
+       
+    1:     AWS_EKS_CLUSTER_ARN = "aws.eks.cluster.arn"
+    1:     """
+           The ARN of an EKS cluster.
+           """
+       
+    1:     AWS_LOG_GROUP_NAMES = "aws.log.group.names"
+    1:     """
+           The name(s) of the AWS log group(s) an application is writing to.
+           Note: Multiple log groups must be supported for cases like multi-container applications, where a single application has sidecar containers, and each write to their own log group.
+           """
+       
+    1:     AWS_LOG_GROUP_ARNS = "aws.log.group.arns"
+    1:     """
+           The Amazon Resource Name(s) (ARN) of the AWS log group(s).
+           Note: See the [log group ARN format documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/iam-access-control-overview-cwl.html#CWL_ARN_Format).
+           """
+       
+    1:     AWS_LOG_STREAM_NAMES = "aws.log.stream.names"
+    1:     """
+           The name(s) of the AWS log stream(s) an application is writing to.
+           """
+       
+    1:     AWS_LOG_STREAM_ARNS = "aws.log.stream.arns"
+    1:     """
+           The ARN(s) of the AWS log stream(s).
+           Note: See the [log stream ARN format documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/iam-access-control-overview-cwl.html#CWL_ARN_Format). One log group can contain several log streams, so these ARNs necessarily identify both a log group and a log stream.
+           """
+       
+    1:     GCP_CLOUD_RUN_JOB_EXECUTION = "gcp.cloud_run.job.execution"
+    1:     """
+           The name of the Cloud Run [execution](https://cloud.google.com/run/docs/managing/job-executions) being run for the Job, as set by the [`CLOUD_RUN_EXECUTION`](https://cloud.google.com/run/docs/container-contract#jobs-env-vars) environment variable.
+           """
+       
+    1:     GCP_CLOUD_RUN_JOB_TASK_INDEX = "gcp.cloud_run.job.task_index"
+    1:     """
+           The index for a task within an execution as provided by the [`CLOUD_RUN_TASK_INDEX`](https://cloud.google.com/run/docs/container-contract#jobs-env-vars) environment variable.
+           """
+       
+    1:     GCP_GCE_INSTANCE_NAME = "gcp.gce.instance.name"
+    1:     """
+           The instance name of a GCE instance. This is the value provided by `host.name`, the visible name of the instance in the Cloud Console UI, and the prefix for the default hostname of the instance as defined by the [default internal DNS name](https://cloud.google.com/compute/docs/internal-dns#instance-fully-qualified-domain-names).
+           """
+       
+    1:     GCP_GCE_INSTANCE_HOSTNAME = "gcp.gce.instance.hostname"
+    1:     """
+           The hostname of a GCE instance. This is the full value of the default or [custom hostname](https://cloud.google.com/compute/docs/instances/custom-hostname-vm).
+           """
+       
+    1:     HEROKU_RELEASE_CREATION_TIMESTAMP = "heroku.release.creation_timestamp"
+    1:     """
+           Time and date the release was created.
+           """
+       
+    1:     HEROKU_RELEASE_COMMIT = "heroku.release.commit"
+    1:     """
+           Commit hash for the current release.
+           """
+       
+    1:     HEROKU_APP_ID = "heroku.app.id"
+    1:     """
+           Unique identifier for the application.
+           """
+       
+    1:     CONTAINER_NAME = "container.name"
+    1:     """
+           Container name used by container runtime.
+           """
+       
+    1:     CONTAINER_ID = "container.id"
+    1:     """
+           Container ID. Usually a UUID, as for example used to [identify Docker containers](https://docs.docker.com/engine/reference/run/#container-identification). The UUID might be abbreviated.
+           """
+       
+    1:     CONTAINER_RUNTIME = "container.runtime"
+    1:     """
+           The container runtime managing this container.
+           """
+       
+    1:     CONTAINER_IMAGE_NAME = "container.image.name"
+    1:     """
+           Name of the image the container was built on.
+           """
+       
+    1:     CONTAINER_IMAGE_TAG = "container.image.tag"
+    1:     """
+           Container image tag.
+           """
+       
+    1:     CONTAINER_IMAGE_ID = "container.image.id"
+    1:     """
+           Runtime specific image identifier. Usually a hash algorithm followed by a UUID.
+           Note: Docker defines a sha256 of the image id; `container.image.id` corresponds to the `Image` field from the Docker container inspect [API](https://docs.docker.com/engine/api/v1.43/#tag/Container/operation/ContainerInspect) endpoint.
+           K8s defines a link to the container registry repository with digest `"imageID": "registry.azurecr.io /namespace/service/dockerfile@sha256:bdeabd40c3a8a492eaf9e8e44d0ebbb84bac7ee25ac0cf8a7159d25f62555625"`.
+           OCI defines a digest of manifest.
+           """
+       
+    1:     CONTAINER_COMMAND = "container.command"
+    1:     """
+           The command used to run the container (i.e. the command name).
+           Note: If using embedded credentials or sensitive data, it is recommended to remove them to prevent potential leakage.
+           """
+       
+    1:     CONTAINER_COMMAND_LINE = "container.command_line"
+    1:     """
+           The full command run by the container as a single string representing the full command. [2].
+           """
+       
+    1:     CONTAINER_COMMAND_ARGS = "container.command_args"
+    1:     """
+           All the command arguments (including the command/executable itself) run by the container. [2].
+           """
+       
+    1:     DEPLOYMENT_ENVIRONMENT = "deployment.environment"
+    1:     """
+           Name of the [deployment environment](https://en.wikipedia.org/wiki/Deployment_environment) (aka deployment tier).
+           """
+       
+    1:     DEVICE_ID = "device.id"
+    1:     """
+           A unique identifier representing the device.
+           Note: The device identifier MUST only be defined using the values outlined below. This value is not an advertising identifier and MUST NOT be used as such. On iOS (Swift or Objective-C), this value MUST be equal to the [vendor identifier](https://developer.apple.com/documentation/uikit/uidevice/1620059-identifierforvendor). On Android (Java or Kotlin), this value MUST be equal to the Firebase Installation ID or a globally unique UUID which is persisted across sessions in your application. More information can be found [here](https://developer.android.com/training/articles/user-data-ids) on best practices and exact implementation details. Caution should be taken when storing personal data or anything which can identify a user. GDPR and data protection laws may apply, ensure you do your own due diligence.
+           """
+       
+    1:     DEVICE_MODEL_IDENTIFIER = "device.model.identifier"
+    1:     """
+           The model identifier for the device.
+           Note: It's recommended this value represents a machine readable version of the model identifier rather than the market or consumer-friendly name of the device.
+           """
+       
+    1:     DEVICE_MODEL_NAME = "device.model.name"
+    1:     """
+           The marketing name for the device model.
+           Note: It's recommended this value represents a human readable version of the device model rather than a machine readable alternative.
+           """
+       
+    1:     DEVICE_MANUFACTURER = "device.manufacturer"
+    1:     """
+           The name of the device manufacturer.
+           Note: The Android OS provides this field via [Build](https://developer.android.com/reference/android/os/Build#MANUFACTURER). iOS apps SHOULD hardcode the value `Apple`.
+           """
+       
+    1:     FAAS_NAME = "faas.name"
+    1:     """
+           The name of the single function that this runtime instance executes.
+           Note: This is the name of the function as configured/deployed on the FaaS
+           platform and is usually different from the name of the callback
+           function (which may be stored in the
+           [`code.namespace`/`code.function`](/docs/general/general-attributes.md#source-code-attributes)
+           span attributes).
+       
+           For some cloud providers, the above definition is ambiguous. The following
+           definition of function name MUST be used for this attribute
+           (and consequently the span name) for the listed cloud providers/products:
+       
+           * **Azure:**  The full name `<FUNCAPP>/<FUNC>`, i.e., function app name
+             followed by a forward slash followed by the function name (this form
+             can also be seen in the resource JSON for the function).
+             This means that a span attribute MUST be used, as an Azure function
+             app can host multiple functions that would usually share
+             a TracerProvider (see also the `cloud.resource_id` attribute).
+           """
+       
+    1:     FAAS_VERSION = "faas.version"
+    1:     """
+           The immutable version of the function being executed.
+           Note: Depending on the cloud provider and platform, use:
+       
+           * **AWS Lambda:** The [function version](https://docs.aws.amazon.com/lambda/latest/dg/configuration-versions.html)
+             (an integer represented as a decimal string).
+           * **Google Cloud Run (Services):** The [revision](https://cloud.google.com/run/docs/managing/revisions)
+             (i.e., the function name plus the revision suffix).
+           * **Google Cloud Functions:** The value of the
+             [`K_REVISION` environment variable](https://cloud.google.com/functions/docs/env-var#runtime_environment_variables_set_automatically).
+           * **Azure Functions:** Not applicable. Do not set this attribute.
+           """
+       
+    1:     FAAS_INSTANCE = "faas.instance"
+    1:     """
+           The execution environment ID as a string, that will be potentially reused for other invocations to the same function/function version.
+           Note: * **AWS Lambda:** Use the (full) log stream name.
+           """
+       
+    1:     FAAS_MAX_MEMORY = "faas.max_memory"
+    1:     """
+           The amount of memory available to the serverless function converted to Bytes.
+           Note: It's recommended to set this attribute since e.g. too little memory can easily stop a Java AWS Lambda function from working correctly. On AWS Lambda, the environment variable `AWS_LAMBDA_FUNCTION_MEMORY_SIZE` provides this information (which must be multiplied by 1,048,576).
+           """
+       
+    1:     HOST_ID = "host.id"
+    1:     """
+           Unique host ID. For Cloud, this must be the instance_id assigned by the cloud provider. For non-containerized systems, this should be the `machine-id`. See the table below for the sources to use to determine the `machine-id` based on operating system.
+           """
+       
+    1:     HOST_NAME = "host.name"
+    1:     """
+           Name of the host. On Unix systems, it may contain what the hostname command returns, or the fully qualified hostname, or another name specified by the user.
+           """
+       
+    1:     HOST_TYPE = "host.type"
+    1:     """
+           Type of host. For Cloud, this must be the machine type.
+           """
+       
+    1:     HOST_ARCH = "host.arch"
+    1:     """
+           The CPU architecture the host system is running on.
+           """
+       
+    1:     HOST_IMAGE_NAME = "host.image.name"
+    1:     """
+           Name of the VM image or OS install the host was instantiated from.
+           """
+       
+    1:     HOST_IMAGE_ID = "host.image.id"
+    1:     """
+           VM image ID or host OS image ID. For Cloud, this value is from the provider.
+           """
+       
+    1:     HOST_IMAGE_VERSION = "host.image.version"
+    1:     """
+           The version string of the VM image or host OS as defined in [Version Attributes](README.md#version-attributes).
+           """
+       
+    1:     K8S_CLUSTER_NAME = "k8s.cluster.name"
+    1:     """
+           The name of the cluster.
+           """
+       
+    1:     K8S_CLUSTER_UID = "k8s.cluster.uid"
+    1:     """
+           A pseudo-ID for the cluster, set to the UID of the `kube-system` namespace.
+           Note: K8s does not have support for obtaining a cluster ID. If this is ever
+           added, we will recommend collecting the `k8s.cluster.uid` through the
+           official APIs. In the meantime, we are able to use the `uid` of the
+           `kube-system` namespace as a proxy for cluster ID. Read on for the
+           rationale.
+       
+           Every object created in a K8s cluster is assigned a distinct UID. The
+           `kube-system` namespace is used by Kubernetes itself and will exist
+           for the lifetime of the cluster. Using the `uid` of the `kube-system`
+           namespace is a reasonable proxy for the K8s ClusterID as it will only
+           change if the cluster is rebuilt. Furthermore, Kubernetes UIDs are
+           UUIDs as standardized by
+           [ISO/IEC 9834-8 and ITU-T X.667](https://www.itu.int/ITU-T/studygroups/com17/oid.html).
+           Which states:
+       
+           > If generated according to one of the mechanisms defined in Rec.
+             ITU-T X.667 | ISO/IEC 9834-8, a UUID is either guaranteed to be
+             different from all other UUIDs generated before 3603 A.D., or is
+             extremely likely to be different (depending on the mechanism chosen).
+       
+           Therefore, UIDs between clusters should be extremely unlikely to
+           conflict.
+           """
+       
+    1:     K8S_NODE_NAME = "k8s.node.name"
+    1:     """
+           The name of the Node.
+           """
+       
+    1:     K8S_NODE_UID = "k8s.node.uid"
+    1:     """
+           The UID of the Node.
+           """
+       
+    1:     K8S_NAMESPACE_NAME = "k8s.namespace.name"
+    1:     """
+           The name of the namespace that the pod is running in.
+           """
+       
+    1:     K8S_POD_UID = "k8s.pod.uid"
+    1:     """
+           The UID of the Pod.
+           """
+       
+    1:     K8S_POD_NAME = "k8s.pod.name"
+    1:     """
+           The name of the Pod.
+           """
+       
+    1:     K8S_CONTAINER_NAME = "k8s.container.name"
+    1:     """
+           The name of the Container from Pod specification, must be unique within a Pod. Container runtime usually uses different globally unique name (`container.name`).
+           """
+       
+    1:     K8S_CONTAINER_RESTART_COUNT = "k8s.container.restart_count"
+    1:     """
+           Number of times the container was restarted. This attribute can be used to identify a particular container (running or stopped) within a container spec.
+           """
+       
+    1:     K8S_REPLICASET_UID = "k8s.replicaset.uid"
+    1:     """
+           The UID of the ReplicaSet.
+           """
+       
+    1:     K8S_REPLICASET_NAME = "k8s.replicaset.name"
+    1:     """
+           The name of the ReplicaSet.
+           """
+       
+    1:     K8S_DEPLOYMENT_UID = "k8s.deployment.uid"
+    1:     """
+           The UID of the Deployment.
+           """
+       
+    1:     K8S_DEPLOYMENT_NAME = "k8s.deployment.name"
+    1:     """
+           The name of the Deployment.
+           """
+       
+    1:     K8S_STATEFULSET_UID = "k8s.statefulset.uid"
+    1:     """
+           The UID of the StatefulSet.
+           """
+       
+    1:     K8S_STATEFULSET_NAME = "k8s.statefulset.name"
+    1:     """
+           The name of the StatefulSet.
+           """
+       
+    1:     K8S_DAEMONSET_UID = "k8s.daemonset.uid"
+    1:     """
+           The UID of the DaemonSet.
+           """
+       
+    1:     K8S_DAEMONSET_NAME = "k8s.daemonset.name"
+    1:     """
+           The name of the DaemonSet.
+           """
+       
+    1:     K8S_JOB_UID = "k8s.job.uid"
+    1:     """
+           The UID of the Job.
+           """
+       
+    1:     K8S_JOB_NAME = "k8s.job.name"
+    1:     """
+           The name of the Job.
+           """
+       
+    1:     K8S_CRONJOB_UID = "k8s.cronjob.uid"
+    1:     """
+           The UID of the CronJob.
+           """
+       
+    1:     K8S_CRONJOB_NAME = "k8s.cronjob.name"
+    1:     """
+           The name of the CronJob.
+           """
+       
+    1:     OS_TYPE = "os.type"
+    1:     """
+           The operating system type.
+           """
+       
+    1:     OS_DESCRIPTION = "os.description"
+    1:     """
+           Human readable (not intended to be parsed) OS version information, like e.g. reported by `ver` or `lsb_release -a` commands.
+           """
+       
+    1:     OS_NAME = "os.name"
+    1:     """
+           Human readable operating system name.
+           """
+       
+    1:     OS_VERSION = "os.version"
+    1:     """
+           The version string of the operating system as defined in [Version Attributes](/docs/resource/README.md#version-attributes).
+           """
+       
+    1:     PROCESS_PID = "process.pid"
+    1:     """
+           Process identifier (PID).
+           """
+       
+    1:     PROCESS_PARENT_PID = "process.parent_pid"
+    1:     """
+           Parent Process identifier (PID).
+           """
+       
+    1:     PROCESS_EXECUTABLE_NAME = "process.executable.name"
+    1:     """
+           The name of the process executable. On Linux based systems, can be set to the `Name` in `proc/[pid]/status`. On Windows, can be set to the base name of `GetProcessImageFileNameW`.
+           """
+       
+    1:     PROCESS_EXECUTABLE_PATH = "process.executable.path"
+    1:     """
+           The full path to the process executable. On Linux based systems, can be set to the target of `proc/[pid]/exe`. On Windows, can be set to the result of `GetProcessImageFileNameW`.
+           """
+       
+    1:     PROCESS_COMMAND = "process.command"
+    1:     """
+           The command used to launch the process (i.e. the command name). On Linux based systems, can be set to the zeroth string in `proc/[pid]/cmdline`. On Windows, can be set to the first parameter extracted from `GetCommandLineW`.
+           """
+       
+    1:     PROCESS_COMMAND_LINE = "process.command_line"
+    1:     """
+           The full command used to launch the process as a single string representing the full command. On Windows, can be set to the result of `GetCommandLineW`. Do not set this if you have to assemble it just for monitoring; use `process.command_args` instead.
+           """
+       
+    1:     PROCESS_COMMAND_ARGS = "process.command_args"
+    1:     """
+           All the command arguments (including the command/executable itself) as received by the process. On Linux-based systems (and some other Unixoid systems supporting procfs), can be set according to the list of null-delimited strings extracted from `proc/[pid]/cmdline`. For libc-based executables, this would be the full argv vector passed to `main`.
+           """
+       
+    1:     PROCESS_OWNER = "process.owner"
+    1:     """
+           The username of the user that owns the process.
+           """
+       
+    1:     PROCESS_RUNTIME_NAME = "process.runtime.name"
+    1:     """
+           The name of the runtime of this process. For compiled native binaries, this SHOULD be the name of the compiler.
+           """
+       
+    1:     PROCESS_RUNTIME_VERSION = "process.runtime.version"
+    1:     """
+           The version of the runtime of this process, as returned by the runtime without modification.
+           """
+       
+    1:     PROCESS_RUNTIME_DESCRIPTION = "process.runtime.description"
+    1:     """
+           An additional description about the runtime of the process, for example a specific vendor customization of the runtime environment.
+           """
+       
+    1:     SERVICE_NAME = "service.name"
+    1:     """
+           Logical name of the service.
+           Note: MUST be the same for all instances of horizontally scaled services. If the value was not specified, SDKs MUST fallback to `unknown_service:` concatenated with [`process.executable.name`](process.md#process), e.g. `unknown_service:bash`. If `process.executable.name` is not available, the value MUST be set to `unknown_service`.
+           """
+       
+    1:     SERVICE_VERSION = "service.version"
+    1:     """
+           The version string of the service API or implementation. The format is not defined by these conventions.
+           """
+       
+    1:     SERVICE_NAMESPACE = "service.namespace"
+    1:     """
+           A namespace for `service.name`.
+           Note: A string value having a meaning that helps to distinguish a group of services, for example the team name that owns a group of services. `service.name` is expected to be unique within the same namespace. If `service.namespace` is not specified in the Resource then `service.name` is expected to be unique for all services that have no explicit namespace defined (so the empty/unspecified namespace is simply one more valid namespace). Zero-length namespace string is assumed equal to unspecified namespace.
+           """
+       
+    1:     SERVICE_INSTANCE_ID = "service.instance.id"
+    1:     """
+           The string ID of the service instance.
+           Note: MUST be unique for each instance of the same `service.namespace,service.name` pair (in other words `service.namespace,service.name,service.instance.id` triplet MUST be globally unique). The ID helps to distinguish instances of the same service that exist at the same time (e.g. instances of a horizontally scaled service). It is preferable for the ID to be persistent and stay the same for the lifetime of the service instance, however it is acceptable that the ID is ephemeral and changes during important lifetime events for the service (e.g. service restarts). If the service has no inherent unique ID that can be used as the value of this attribute it is recommended to generate a random Version 1 or Version 4 RFC 4122 UUID (services aiming for reproducible UUIDs may also use Version 5, see RFC 4122 for more recommendations).
+           """
+       
+    1:     TELEMETRY_SDK_NAME = "telemetry.sdk.name"
+    1:     """
+           The name of the telemetry SDK as defined above.
+           Note: The OpenTelemetry SDK MUST set the `telemetry.sdk.name` attribute to `opentelemetry`.
+           If another SDK, like a fork or a vendor-provided implementation, is used, this SDK MUST set the
+           `telemetry.sdk.name` attribute to the fully-qualified class or module name of this SDK's main entry point
+           or another suitable identifier depending on the language.
+           The identifier `opentelemetry` is reserved and MUST NOT be used in this case.
+           All custom identifiers SHOULD be stable across different versions of an implementation.
+           """
+       
+    1:     TELEMETRY_SDK_LANGUAGE = "telemetry.sdk.language"
+    1:     """
+           The language of the telemetry SDK.
+           """
+       
+    1:     TELEMETRY_SDK_VERSION = "telemetry.sdk.version"
+    1:     """
+           The version string of the telemetry SDK.
+           """
+       
+    1:     TELEMETRY_AUTO_VERSION = "telemetry.auto.version"
+    1:     """
+           The version string of the auto instrumentation agent, if used.
+           """
+       
+    1:     WEBENGINE_NAME = "webengine.name"
+    1:     """
+           The name of the web engine.
+           """
+       
+    1:     WEBENGINE_VERSION = "webengine.version"
+    1:     """
+           The version of the web engine.
+           """
+       
+    1:     WEBENGINE_DESCRIPTION = "webengine.description"
+    1:     """
+           Additional description of the web engine (e.g. detailed version and edition information).
+           """
+       
+    1:     OTEL_SCOPE_NAME = "otel.scope.name"
+    1:     """
+           The name of the instrumentation scope - (`InstrumentationScope.Name` in OTLP).
+           """
+       
+    1:     OTEL_SCOPE_VERSION = "otel.scope.version"
+    1:     """
+           The version of the instrumentation scope - (`InstrumentationScope.Version` in OTLP).
+           """
+       
+    1:     OTEL_LIBRARY_NAME = "otel.library.name"
+    1:     """
+           Deprecated, use the `otel.scope.name` attribute.
+           """
+       
+    1:     OTEL_LIBRARY_VERSION = "otel.library.version"
+    1:     """
+           Deprecated, use the `otel.scope.version` attribute.
+           """
+       
+           # Manually defined deprecated attributes
+       
+    1:     FAAS_ID = "faas.id"
+    1:     """
+           Deprecated, use the `cloud.resource.id` attribute.
+           """
+       
+       
+    4: @deprecated(
+    1:     "Use :py:const:`opentelemetry.semconv._incubating.attributes.CloudProviderValues` instead. Deprecated since version 1.25.0.",
+       )
+    2: class CloudProviderValues(Enum):
+    1:     ALIBABA_CLOUD = "alibaba_cloud"
+    1:     """Alibaba Cloud."""
+       
+    1:     AWS = "aws"
+    1:     """Amazon Web Services."""
+       
+    1:     AZURE = "azure"
+    1:     """Microsoft Azure."""
+       
+    1:     GCP = "gcp"
+    1:     """Google Cloud Platform."""
+       
+    1:     HEROKU = "heroku"
+    1:     """Heroku Platform as a Service."""
+       
+    1:     IBM_CLOUD = "ibm_cloud"
+    1:     """IBM Cloud."""
+       
+    1:     TENCENT_CLOUD = "tencent_cloud"
+    1:     """Tencent Cloud."""
+       
+       
+    4: @deprecated(
+    1:     "Use :py:const:`opentelemetry.semconv._incubating.attributes.CloudPlatformValues` instead. Deprecated since version 1.25.0.",
+       )
+    2: class CloudPlatformValues(Enum):
+    1:     ALIBABA_CLOUD_ECS = "alibaba_cloud_ecs"
+    1:     """Alibaba Cloud Elastic Compute Service."""
+       
+    1:     ALIBABA_CLOUD_FC = "alibaba_cloud_fc"
+    1:     """Alibaba Cloud Function Compute."""
+       
+    1:     ALIBABA_CLOUD_OPENSHIFT = "alibaba_cloud_openshift"
+    1:     """Red Hat OpenShift on Alibaba Cloud."""
+       
+    1:     AWS_EC2 = "aws_ec2"
+    1:     """AWS Elastic Compute Cloud."""
+       
+    1:     AWS_ECS = "aws_ecs"
+    1:     """AWS Elastic Container Service."""
+       
+    1:     AWS_EKS = "aws_eks"
+    1:     """AWS Elastic Kubernetes Service."""
+       
+    1:     AWS_LAMBDA = "aws_lambda"
+    1:     """AWS Lambda."""
+       
+    1:     AWS_ELASTIC_BEANSTALK = "aws_elastic_beanstalk"
+    1:     """AWS Elastic Beanstalk."""
+       
+    1:     AWS_APP_RUNNER = "aws_app_runner"
+    1:     """AWS App Runner."""
+       
+    1:     AWS_OPENSHIFT = "aws_openshift"
+    1:     """Red Hat OpenShift on AWS (ROSA)."""
+       
+    1:     AZURE_VM = "azure_vm"
+    1:     """Azure Virtual Machines."""
+       
+    1:     AZURE_CONTAINER_INSTANCES = "azure_container_instances"
+    1:     """Azure Container Instances."""
+       
+    1:     AZURE_AKS = "azure_aks"
+    1:     """Azure Kubernetes Service."""
+       
+    1:     AZURE_FUNCTIONS = "azure_functions"
+    1:     """Azure Functions."""
+       
+    1:     AZURE_APP_SERVICE = "azure_app_service"
+    1:     """Azure App Service."""
+       
+    1:     AZURE_OPENSHIFT = "azure_openshift"
+    1:     """Azure Red Hat OpenShift."""
+       
+    1:     GCP_BARE_METAL_SOLUTION = "gcp_bare_metal_solution"
+    1:     """Google Bare Metal Solution (BMS)."""
+       
+    1:     GCP_COMPUTE_ENGINE = "gcp_compute_engine"
+    1:     """Google Cloud Compute Engine (GCE)."""
+       
+    1:     GCP_CLOUD_RUN = "gcp_cloud_run"
+    1:     """Google Cloud Run."""
+       
+    1:     GCP_KUBERNETES_ENGINE = "gcp_kubernetes_engine"
+    1:     """Google Cloud Kubernetes Engine (GKE)."""
+       
+    1:     GCP_CLOUD_FUNCTIONS = "gcp_cloud_functions"
+    1:     """Google Cloud Functions (GCF)."""
+       
+    1:     GCP_APP_ENGINE = "gcp_app_engine"
+    1:     """Google Cloud App Engine (GAE)."""
+       
+    1:     GCP_OPENSHIFT = "gcp_openshift"
+    1:     """Red Hat OpenShift on Google Cloud."""
+       
+    1:     IBM_CLOUD_OPENSHIFT = "ibm_cloud_openshift"
+    1:     """Red Hat OpenShift on IBM Cloud."""
+       
+    1:     TENCENT_CLOUD_CVM = "tencent_cloud_cvm"
+    1:     """Tencent Cloud Cloud Virtual Machine (CVM)."""
+       
+    1:     TENCENT_CLOUD_EKS = "tencent_cloud_eks"
+    1:     """Tencent Cloud Elastic Kubernetes Service (EKS)."""
+       
+    1:     TENCENT_CLOUD_SCF = "tencent_cloud_scf"
+    1:     """Tencent Cloud Serverless Cloud Function (SCF)."""
+       
+       
+    4: @deprecated(
+    1:     "Use :py:const:`opentelemetry.semconv._incubating.attributes.AwsEcsLaunchtypeValues` instead. Deprecated since version 1.25.0.",
+       )
+    2: class AwsEcsLaunchtypeValues(Enum):
+    1:     EC2 = "ec2"
+    1:     """ec2."""
+       
+    1:     FARGATE = "fargate"
+    1:     """fargate."""
+       
+       
+    4: @deprecated(
+    1:     "Use :py:const:`opentelemetry.semconv._incubating.attributes.HostArchValues` instead. Deprecated since version 1.25.0.",
+       )
+    2: class HostArchValues(Enum):
+    1:     AMD64 = "amd64"
+    1:     """AMD64."""
+       
+    1:     ARM32 = "arm32"
+    1:     """ARM32."""
+       
+    1:     ARM64 = "arm64"
+    1:     """ARM64."""
+       
+    1:     IA64 = "ia64"
+    1:     """Itanium."""
+       
+    1:     PPC32 = "ppc32"
+    1:     """32-bit PowerPC."""
+       
+    1:     PPC64 = "ppc64"
+    1:     """64-bit PowerPC."""
+       
+    1:     S390X = "s390x"
+    1:     """IBM z/Architecture."""
+       
+    1:     X86 = "x86"
+    1:     """32-bit x86."""
+       
+       
+    4: @deprecated(
+    1:     "Use :py:const:`opentelemetry.semconv._incubating.attributes.OsTypeValues` instead. Deprecated since version 1.25.0.",
+       )
+    2: class OsTypeValues(Enum):
+    1:     WINDOWS = "windows"
+    1:     """Microsoft Windows."""
+       
+    1:     LINUX = "linux"
+    1:     """Linux."""
+       
+    1:     DARWIN = "darwin"
+    1:     """Apple Darwin."""
+       
+    1:     FREEBSD = "freebsd"
+    1:     """FreeBSD."""
+       
+    1:     NETBSD = "netbsd"
+    1:     """NetBSD."""
+       
+    1:     OPENBSD = "openbsd"
+    1:     """OpenBSD."""
+       
+    1:     DRAGONFLYBSD = "dragonflybsd"
+    1:     """DragonFly BSD."""
+       
+    1:     HPUX = "hpux"
+    1:     """HP-UX (Hewlett Packard Unix)."""
+       
+    1:     AIX = "aix"
+    1:     """AIX (Advanced Interactive eXecutive)."""
+       
+    1:     SOLARIS = "solaris"
+    1:     """SunOS, Oracle Solaris."""
+       
+    1:     Z_OS = "z_os"
+    1:     """IBM z/OS."""
+       
+       
+    4: @deprecated(
+    1:     "Use :py:const:`opentelemetry.semconv.attributes.TelemetrySdkLanguageValues` instead. Deprecated since version 1.25.0.",
+       )
+    2: class TelemetrySdkLanguageValues(Enum):
+    1:     CPP = "cpp"
+    1:     """cpp."""
+       
+    1:     DOTNET = "dotnet"
+    1:     """dotnet."""
+       
+    1:     ERLANG = "erlang"
+    1:     """erlang."""
+       
+    1:     GO = "go"
+    1:     """go."""
+       
+    1:     JAVA = "java"
+    1:     """java."""
+       
+    1:     NODEJS = "nodejs"
+    1:     """nodejs."""
+       
+    1:     PHP = "php"
+    1:     """php."""
+       
+    1:     PYTHON = "python"
+    1:     """python."""
+       
+    1:     RUBY = "ruby"
+    1:     """ruby."""
+       
+    1:     RUST = "rust"
+    1:     """rust."""
+       
+    1:     SWIFT = "swift"
+    1:     """swift."""
+       
+    1:     WEBJS = "webjs"
+    1:     """webjs."""

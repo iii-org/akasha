@@ -1,0 +1,62 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Iterable, Optional
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ResponseReasoningItemParam", "Summary", "Content"]
+       
+       
+    2: class Summary(TypedDict, total=False):
+    1:     """A summary text from the model."""
+       
+    1:     text: Required[str]
+    1:     """A summary of the reasoning output from the model so far."""
+       
+    1:     type: Required[Literal["summary_text"]]
+    1:     """The type of the object. Always `summary_text`."""
+       
+       
+    2: class Content(TypedDict, total=False):
+    1:     """Reasoning text from the model."""
+       
+    1:     text: Required[str]
+    1:     """The reasoning text from the model."""
+       
+    1:     type: Required[Literal["reasoning_text"]]
+    1:     """The type of the reasoning text. Always `reasoning_text`."""
+       
+       
+    2: class ResponseReasoningItemParam(TypedDict, total=False):
+    1:     """
+           A description of the chain of thought used by a reasoning model while generating
+           a response. Be sure to include these items in your `input` to the Responses API
+           for subsequent turns of a conversation if you are manually
+           [managing context](https://platform.openai.com/docs/guides/conversation-state).
+           """
+       
+    1:     id: Required[str]
+    1:     """The unique identifier of the reasoning content."""
+       
+    1:     summary: Required[Iterable[Summary]]
+    1:     """Reasoning summary content."""
+       
+    1:     type: Required[Literal["reasoning"]]
+    1:     """The type of the object. Always `reasoning`."""
+       
+    1:     content: Iterable[Content]
+    1:     """Reasoning text content."""
+       
+    1:     encrypted_content: Optional[str]
+    1:     """
+           The encrypted content of the reasoning item - populated when a response is
+           generated with `reasoning.encrypted_content` in the `include` parameter.
+           """
+       
+    1:     status: Literal["in_progress", "completed", "incomplete"]
+    1:     """The status of the item.
+       
+           One of `in_progress`, `completed`, or `incomplete`. Populated when items are
+           returned via API.
+           """

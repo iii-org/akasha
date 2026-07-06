@@ -9,7 +9,12 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: ghcr.io/astral-sh/uv:0.6.13-python3.10-bookworm-slim
+    strategy:
+      matrix:
+        python-image:
+          - ghcr.io/astral-sh/uv:0.6.13-python3.11-bookworm-slim
+          - ghcr.io/astral-sh/uv:0.6.13-python3.12-bookworm-slim
+    container: ${{ matrix.python-image }}
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

@@ -1,0 +1,24 @@
+       # mypy: allow-untyped-decorators
+       # mypy: allow-untyped-defs
+    1: from collections.abc import Callable
+    1: from typing import Any
+       
+    1: from torch._higher_order_ops.base_hop import BaseHOP, FunctionWithNoFreeVars
+       
+       
+    2: class ForeachMap(BaseHOP):
+    1:     def __init__(self):
+    1:         super().__init__("foreach_map")
+       
+    1:     def __call__(self, fn, *operands, **kwargs):  # type: ignore[override]
+               fn = FunctionWithNoFreeVars(fn)
+               return super().__call__(fn, *operands, **kwargs)
+       
+       
+    1: _foreach_map = ForeachMap()
+       
+       
+    1: def foreach_map(op: Callable, *operands: Any, **kwargs: dict[str, Any]):
+           from torch._dynamo.polyfills import foreach_map_fn
+       
+           return _foreach_map(foreach_map_fn, op, *operands, **kwargs)

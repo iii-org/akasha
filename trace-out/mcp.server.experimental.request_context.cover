@@ -1,0 +1,285 @@
+    1: """
+       Experimental request context features.
+       
+       This module provides the Experimental class which gives access to experimental
+       features within a request context, such as task-augmented request handling.
+       
+       WARNING: These APIs are experimental and may change without notice.
+       """
+       
+    1: import warnings
+    1: from collections.abc import Awaitable, Callable
+    1: from dataclasses import dataclass, field
+    1: from typing import Any, overload
+       
+    1: from typing_extensions import deprecated
+       
+    1: from mcp.server.experimental.task_context import ServerTaskContext
+    1: from mcp.server.experimental.task_scope import scoped_task_id
+    1: from mcp.server.experimental.task_support import TaskSupport
+    1: from mcp.server.session import ServerSession
+    1: from mcp.shared.exceptions import McpError
+    1: from mcp.shared.experimental.tasks.helpers import MODEL_IMMEDIATE_RESPONSE_KEY, is_terminal
+    1: from mcp.types import (
+           METHOD_NOT_FOUND,
+           TASK_FORBIDDEN,
+           TASK_REQUIRED,
+           ClientCapabilities,
+           CreateTaskResult,
+           ErrorData,
+           Result,
+           TaskExecutionMode,
+           TaskMetadata,
+           Tool,
+       )
+       
+    1: EXPLICIT_TASK_ID_DEPRECATION = (
+    1:     "Passing an explicit task_id to run_task is deprecated. A task created with an "
+           "explicit ID is not associated with the session that created it: any requestor "
+           "that presents the ID can read its status and result or cancel it, and it never "
+           "appears in tasks/list. Omit task_id to let the SDK generate an ID associated "
+           "with the creating session."
+       )
+       
+       
+    3: @dataclass
+    2: class Experimental:
+    1:     """
+           Experimental features context for task-augmented requests.
+       
+           Provides helpers for validating task execution compatibility and
+           running tasks with automatic lifecycle management.
+       
+           WARNING: This API is experimental and may change without notice.
+           """
+       
+    1:     task_metadata: TaskMetadata | None = None
+    1:     _client_capabilities: ClientCapabilities | None = field(default=None, repr=False)
+    1:     _session: ServerSession | None = field(default=None, repr=False)
+    1:     _task_support: TaskSupport | None = field(default=None, repr=False)
+       
+    2:     @property
+    2:     def is_task(self) -> bool:
+               """Check if this request is task-augmented."""
+               return self.task_metadata is not None
+       
+    2:     @property
+    2:     def client_supports_tasks(self) -> bool:
+               """Check if the client declared task support."""
+               if self._client_capabilities is None:
+                   return False
+               return self._client_capabilities.tasks is not None
+       
+    4:     def validate_task_mode(
+               self,
+    1:         tool_task_mode: TaskExecutionMode | None,
+               *,
+    2:         raise_error: bool = True,
+    1:     ) -> ErrorData | None:
+               """
+               Validate that the request is compatible with the tool's task execution mode.
+       
+               Per MCP spec:
+               - "required": Clients MUST invoke as task. Server returns -32601 if not.
+               - "forbidden" (or None): Clients MUST NOT invoke as task. Server returns -32601 if they do.
+               - "optional": Either is acceptable.
+       
+               Args:
+                   tool_task_mode: The tool's execution.taskSupport value
+                       ("forbidden", "optional", "required", or None)
+                   raise_error: If True, raises McpError on validation failure. If False, returns ErrorData.
+       
+               Returns:
+                   None if valid, ErrorData if invalid and raise_error=False
+       
+               Raises:
+                   McpError: If invalid and raise_error=True
+               """
+       
+               mode = tool_task_mode or TASK_FORBIDDEN
+       
+               error: ErrorData | None = None
+       
+               if mode == TASK_REQUIRED and not self.is_task:
+                   error = ErrorData(
+                       code=METHOD_NOT_FOUND,
+                       message="This tool requires task-augmented invocation",
+                   )
+               elif mode == TASK_FORBIDDEN and self.is_task:
+                   error = ErrorData(
+                       code=METHOD_NOT_FOUND,
+                       message="This tool does not support task-augmented invocation",
+                   )
+       
+               if error is not None and raise_error:
+                   raise McpError(error)
+       
+               return error
+       
+    4:     def validate_for_tool(
+               self,
+    1:         tool: Tool,
+               *,
+    2:         raise_error: bool = True,
+    1:     ) -> ErrorData | None:
+               """
+               Validate that the request is compatible with the given tool.
+       
+               Convenience wrapper around validate_task_mode that extracts the mode from a Tool.
+       
+               Args:
+                   tool: The Tool definition
+                   raise_error: If True, raises McpError on validation failure.
+       
+               Returns:
+                   None if valid, ErrorData if invalid and raise_error=False
+               """
+               mode = tool.execution.taskSupport if tool.execution else None
+               return self.validate_task_mode(mode, raise_error=raise_error)
+       
+    1:     def can_use_tool(self, tool_task_mode: TaskExecutionMode | None) -> bool:
+               """
+               Check if this client can use a tool with the given task mode.
+       
+               Useful for filtering tool lists or providing warnings.
+               Returns False if tool requires "required" but client doesn't support tasks.
+       
+               Args:
+                   tool_task_mode: The tool's execution.taskSupport value
+       
+               Returns:
+                   True if the client can use this tool, False otherwise
+               """
+               mode = tool_task_mode or TASK_FORBIDDEN
+               if mode == TASK_REQUIRED and not self.client_supports_tasks:
+                   return False
+               return True
+       
+    2:     @overload
+    6:     async def run_task(
+               self,
+    1:         work: Callable[[ServerTaskContext], Awaitable[Result]],
+               *,
+    2:         task_id: None = None,
+    2:         model_immediate_response: str | None = None,
+    1:     ) -> CreateTaskResult: ...
+       
+    2:     @overload
+    2:     @deprecated(EXPLICIT_TASK_ID_DEPRECATION)
+    6:     async def run_task(
+               self,
+    1:         work: Callable[[ServerTaskContext], Awaitable[Result]],
+               *,
+    1:         task_id: str,
+    2:         model_immediate_response: str | None = None,
+    1:     ) -> CreateTaskResult: ...
+       
+    5:     async def run_task(
+               self,
+    1:         work: Callable[[ServerTaskContext], Awaitable[Result]],
+               *,
+    2:         task_id: str | None = None,
+    2:         model_immediate_response: str | None = None,
+    1:     ) -> CreateTaskResult:
+               """
+               Create a task, spawn background work, and return CreateTaskResult immediately.
+       
+               This is the recommended way to handle task-augmented tool calls. It:
+               1. Creates a task in the store
+               2. Spawns the work function in a background task
+               3. Returns CreateTaskResult immediately
+       
+               The work function receives a ServerTaskContext with:
+               - elicit() for sending elicitation requests
+               - create_message() for sampling requests
+               - update_status() for progress updates
+               - complete()/fail() for finishing the task
+       
+               When work() returns a Result, the task is auto-completed with that result.
+               If work() raises an exception, the task is auto-failed.
+       
+               Generated task IDs embed the session's task scope so that the default
+               task handlers only serve the task to the session that created it. An
+               explicitly provided `task_id` is used verbatim and is not associated
+               with the session, so any session can access it through the default
+               handlers; passing one is deprecated for that reason.
+       
+               Args:
+                   work: Async function that does the actual work
+                   task_id: Deprecated. Optional task ID, used verbatim and not
+                       associated with the creating session. Omit it to let the SDK
+                       generate one.
+                   model_immediate_response: Optional string to include in _meta as
+                       io.modelcontextprotocol/model-immediate-response
+       
+               Returns:
+                   CreateTaskResult to return to the client
+       
+               Raises:
+                   RuntimeError: If task support is not enabled or task_metadata is missing
+       
+               Example:
+                   @server.call_tool()
+                   async def handle_tool(name: str, args: dict):
+                       ctx = server.request_context
+       
+                       async def work(task: ServerTaskContext) -> CallToolResult:
+                           result = await task.elicit(
+                               message="Are you sure?",
+                               requestedSchema={"type": "object", ...}
+                           )
+                           confirmed = result.content.get("confirm", False)
+                           return CallToolResult(content=[TextContent(text="Done" if confirmed else "Cancelled")])
+       
+                       return await ctx.experimental.run_task(work)
+       
+               WARNING: This API is experimental and may change without notice.
+               """
+               if task_id is not None:
+                   warnings.warn(EXPLICIT_TASK_ID_DEPRECATION, DeprecationWarning, stacklevel=2)
+               if self._task_support is None:
+                   raise RuntimeError("Task support not enabled. Call server.experimental.enable_tasks() first.")
+               if self._session is None:
+                   raise RuntimeError("Session not available.")
+               if self.task_metadata is None:
+                   raise RuntimeError(
+                       "Request is not task-augmented (no task field in params). "
+                       "The client must send a task-augmented request."
+                   )
+       
+               support = self._task_support
+               # Access task_group via TaskSupport - raises if not in run() context
+               task_group = support.task_group
+       
+               if task_id is None:
+                   features = self._session._experimental  # pyright: ignore[reportPrivateUsage]
+                   session_scope = features.task_session_scope
+                   if session_scope is not None:
+                       task_id = scoped_task_id(session_scope)
+       
+               task = await support.store.create_task(self.task_metadata, task_id)
+       
+               task_ctx = ServerTaskContext(
+                   task=task,
+                   store=support.store,
+                   session=self._session,
+                   queue=support.queue,
+                   handler=support.handler,
+               )
+       
+               async def execute() -> None:
+                   try:
+                       result = await work(task_ctx)
+                       if not is_terminal(task_ctx.task.status):
+                           await task_ctx.complete(result)
+                   except Exception as e:
+                       if not is_terminal(task_ctx.task.status):
+                           await task_ctx.fail(str(e))
+       
+               task_group.start_soon(execute)
+       
+               meta: dict[str, Any] | None = None
+               if model_immediate_response is not None:
+                   meta = {MODEL_IMMEDIATE_RESPONSE_KEY: model_immediate_response}
+       
+               return CreateTaskResult(task=task, **{"_meta": meta} if meta else {})

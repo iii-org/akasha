@@ -1,0 +1,68 @@
+    1: import re
+    1: import textwrap
+    1: import email.message
+       
+    1: from ._text import FoldedCase
+       
+       
+    2: class Message(email.message.Message):
+    2:     multiple_use_keys = set(
+    2:         map(
+    1:             FoldedCase,
+    1:             [
+                       'Classifier',
+                       'Obsoletes-Dist',
+                       'Platform',
+                       'Project-URL',
+                       'Provides-Dist',
+                       'Provides-Extra',
+                       'Requires-Dist',
+                       'Requires-External',
+                       'Supported-Platform',
+                       'Dynamic',
+                   ],
+               )
+           )
+    1:     """
+           Keys that may be indicated multiple times per PEP 566.
+           """
+       
+    1:     def __new__(cls, orig: email.message.Message):
+  449:         res = super().__new__(cls)
+  449:         vars(res).update(vars(orig))
+  449:         return res
+       
+    1:     def __init__(self, *args, **kwargs):
+  449:         self._headers = self._repair_headers()
+       
+           # suppress spurious error from mypy
+    1:     def __iter__(self):
+               return super().__iter__()
+       
+    1:     def _repair_headers(self):
+  449:         def redent(value):
+                   "Correct for RFC822 indentation"
+18016:             if not value or '\n' not in value:
+17997:                 return value
+   19:             return textwrap.dedent(' ' * 8 + value)
+       
+18914:         headers = [(key, redent(value)) for key, value in vars(self)['_headers']]
+  449:         if self._payload:
+  446:             headers.append(('Description', self.get_payload()))
+  449:         return headers
+       
+    2:     @property
+    2:     def json(self):
+               """
+               Convert PackageMetadata to a JSON-compatible format
+               per PEP 0566.
+               """
+       
+               def transform(key):
+                   value = self.get_all(key) if key in self.multiple_use_keys else self[key]
+                   if key == 'Keywords':
+                       value = re.split(r'\s+', value)
+                   tk = key.lower().replace('-', '_')
+                   return tk, value
+       
+               return dict(map(transform, map(FoldedCase, self)))

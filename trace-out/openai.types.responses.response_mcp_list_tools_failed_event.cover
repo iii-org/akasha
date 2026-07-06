@@ -1,0 +1,23 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseMcpListToolsFailedEvent"]
+       
+       
+    2: class ResponseMcpListToolsFailedEvent(BaseModel):
+    1:     """Emitted when the attempt to list available MCP tools has failed."""
+       
+    1:     item_id: str
+    1:     """The ID of the MCP tool call item that failed."""
+       
+    1:     output_index: int
+    1:     """The index of the output item that failed."""
+       
+    1:     sequence_number: int
+    1:     """The sequence number of this event."""
+       
+    1:     type: Literal["response.mcp_list_tools.failed"]
+    1:     """The type of the event. Always 'response.mcp_list_tools.failed'."""

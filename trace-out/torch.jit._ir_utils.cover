@@ -1,0 +1,33 @@
+    1: from types import TracebackType
+    1: from typing import Optional, Union
+       
+    1: import torch
+       
+       
+    2: class _InsertPoint:
+    4:     def __init__(
+               self,
+    1:         insert_point_graph: torch._C.Graph,
+    1:         insert_point: Union[torch._C.Node, torch._C.Block],
+    1:     ) -> None:
+               self.insert_point = insert_point
+               self.g = insert_point_graph
+               self.guard = None
+       
+    1:     def __enter__(self) -> None:
+               self.prev_insert_point = self.g.insertPoint()
+               self.g.setInsertPoint(self.insert_point)
+       
+    5:     def __exit__(
+               self,
+    1:         exc_type: Optional[type[BaseException]],
+    1:         exc_val: Optional[BaseException],
+    1:         exc_tb: Optional[TracebackType],
+    1:     ) -> None:
+               self.g.setInsertPoint(self.prev_insert_point)
+       
+       
+    4: def insert_point_guard(
+    2:     self: torch._C.Graph, insert_point: Union[torch._C.Node, torch._C.Block]
+    1: ) -> _InsertPoint:
+           return _InsertPoint(self, insert_point)

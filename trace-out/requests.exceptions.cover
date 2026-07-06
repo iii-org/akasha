@@ -1,0 +1,162 @@
+    1: """
+       requests.exceptions
+       ~~~~~~~~~~~~~~~~~~~
+       
+       This module contains the set of Requests' exceptions.
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from typing import TYPE_CHECKING, Any
+       
+    1: from urllib3.exceptions import HTTPError as BaseHTTPError
+       
+    1: from .compat import JSONDecodeError as CompatJSONDecodeError
+       
+    1: if TYPE_CHECKING:
+           from .models import PreparedRequest, Request, Response
+       
+       
+    2: class RequestException(IOError):
+    1:     """There was an ambiguous exception that occurred while handling your
+           request.
+           """
+       
+    1:     response: Response | None
+    1:     request: Request | PreparedRequest | None
+       
+    1:     def __init__(self, *args: Any, **kwargs: Any) -> None:
+               """Initialize RequestException with `request` and `response` objects."""
+               response: Response | None = kwargs.pop("response", None)
+               self.response = response
+               self.request = kwargs.pop("request", None)
+               if response is not None and not self.request and hasattr(response, "request"):
+                   self.request = response.request
+               super().__init__(*args, **kwargs)
+       
+       
+    2: class InvalidJSONError(RequestException):
+    1:     """A JSON error occurred."""
+       
+       
+    2: class JSONDecodeError(InvalidJSONError, CompatJSONDecodeError):
+    1:     """Couldn't decode the text into json"""
+       
+    1:     def __init__(self, *args: Any, **kwargs: Any) -> None:
+               """
+               Construct the JSONDecodeError instance first with all
+               args. Then use it's args to construct the IOError so that
+               the json specific args aren't used as IOError specific args
+               and the error message from JSONDecodeError is preserved.
+               """
+               CompatJSONDecodeError.__init__(self, *args)
+               InvalidJSONError.__init__(self, *self.args, **kwargs)
+       
+    1:     def __reduce__(self) -> tuple[Any, ...] | str:
+               """
+               The __reduce__ method called when pickling the object must
+               be the one from the JSONDecodeError (be it json/simplejson)
+               as it expects all the arguments for instantiation, not just
+               one like the IOError, and the MRO would by default call the
+               __reduce__ method from the IOError due to the inheritance order.
+               """
+               return CompatJSONDecodeError.__reduce__(self)
+       
+       
+    2: class HTTPError(RequestException):
+    1:     """An HTTP error occurred."""
+       
+       
+    2: class ConnectionError(RequestException):
+    1:     """A Connection error occurred."""
+       
+       
+    2: class ProxyError(ConnectionError):
+    1:     """A proxy error occurred."""
+       
+       
+    2: class SSLError(ConnectionError):
+    1:     """An SSL error occurred."""
+       
+       
+    2: class Timeout(RequestException):
+    1:     """The request timed out.
+       
+           Catching this error will catch both
+           :exc:`~requests.exceptions.ConnectTimeout` and
+           :exc:`~requests.exceptions.ReadTimeout` errors.
+           """
+       
+       
+    2: class ConnectTimeout(ConnectionError, Timeout):
+    1:     """The request timed out while trying to connect to the remote server.
+       
+           Requests that produced this error are safe to retry.
+           """
+       
+       
+    2: class ReadTimeout(Timeout):
+    1:     """The server did not send any data in the allotted amount of time."""
+       
+       
+    2: class URLRequired(RequestException):
+    1:     """A valid URL is required to make a request."""
+       
+       
+    2: class TooManyRedirects(RequestException):
+    1:     """Too many redirects."""
+       
+       
+    2: class MissingSchema(RequestException, ValueError):
+    1:     """The URL scheme (e.g. http or https) is missing."""
+       
+       
+    2: class InvalidSchema(RequestException, ValueError):
+    1:     """The URL scheme provided is either invalid or unsupported."""
+       
+       
+    2: class InvalidURL(RequestException, ValueError):
+    1:     """The URL provided was somehow invalid."""
+       
+       
+    2: class InvalidHeader(RequestException, ValueError):
+    1:     """The header value provided was somehow invalid."""
+       
+       
+    2: class InvalidProxyURL(InvalidURL):
+    1:     """The proxy URL provided is invalid."""
+       
+       
+    2: class ChunkedEncodingError(RequestException):
+    1:     """The server declared chunked encoding but sent an invalid chunk."""
+       
+       
+    2: class ContentDecodingError(RequestException, BaseHTTPError):
+    1:     """Failed to decode response content."""
+       
+       
+    2: class StreamConsumedError(RequestException, TypeError):
+    1:     """The content for this response was already consumed."""
+       
+       
+    2: class RetryError(RequestException):
+    1:     """Custom retries logic failed"""
+       
+       
+    2: class UnrewindableBodyError(RequestException):
+    1:     """Requests encountered an error when trying to rewind a body."""
+       
+       
+       # Warnings
+       
+       
+    2: class RequestsWarning(Warning):
+    1:     """Base warning for Requests."""
+       
+       
+    2: class FileModeWarning(RequestsWarning, DeprecationWarning):
+    1:     """A file was opened in text mode, but Requests determined its binary length."""
+       
+       
+    2: class RequestsDependencyWarning(RequestsWarning):
+    1:     """An imported dependency doesn't match the expected version range."""

@@ -1,0 +1,127 @@
+    1: """
+           pygments.formatters.terminal
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       
+           Formatter for terminal output with ANSI sequences.
+       
+           :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+           :license: BSD, see LICENSE for details.
+       """
+       
+    1: from pygments.formatter import Formatter
+    1: from pygments.token import Keyword, Name, Comment, String, Error, \
+           Number, Operator, Generic, Token, Whitespace
+    1: from pygments.console import ansiformat
+    1: from pygments.util import get_choice_opt
+       
+       
+    1: __all__ = ['TerminalFormatter']
+       
+       
+       #: Map token types to a tuple of color values for light and dark
+       #: backgrounds.
+   19: TERMINAL_COLORS = {
+    1:     Token:              ('',            ''),
+       
+    1:     Whitespace:         ('gray',   'brightblack'),
+    1:     Comment:            ('gray',   'brightblack'),
+    1:     Comment.Preproc:    ('cyan',        'brightcyan'),
+    1:     Keyword:            ('blue',    'brightblue'),
+    1:     Keyword.Type:       ('cyan',        'brightcyan'),
+    1:     Operator.Word:      ('magenta',      'brightmagenta'),
+    1:     Name.Builtin:       ('cyan',        'brightcyan'),
+    1:     Name.Function:      ('green',   'brightgreen'),
+    1:     Name.Namespace:     ('_cyan_',      '_brightcyan_'),
+    1:     Name.Class:         ('_green_', '_brightgreen_'),
+    1:     Name.Exception:     ('cyan',        'brightcyan'),
+    1:     Name.Decorator:     ('brightblack',    'gray'),
+    1:     Name.Variable:      ('red',     'brightred'),
+    1:     Name.Constant:      ('red',     'brightred'),
+    1:     Name.Attribute:     ('cyan',        'brightcyan'),
+    1:     Name.Tag:           ('brightblue',        'brightblue'),
+    1:     String:             ('yellow',       'yellow'),
+    1:     Number:             ('blue',    'brightblue'),
+       
+    1:     Generic.Deleted:    ('brightred',        'brightred'),
+    1:     Generic.Inserted:   ('green',  'brightgreen'),
+    1:     Generic.Heading:    ('**',         '**'),
+    1:     Generic.Subheading: ('*magenta*',   '*brightmagenta*'),
+    1:     Generic.Prompt:     ('**',         '**'),
+    1:     Generic.Error:      ('brightred',        'brightred'),
+       
+    1:     Error:              ('_brightred_',      '_brightred_'),
+       }
+       
+       
+    2: class TerminalFormatter(Formatter):
+    1:     r"""
+           Format tokens with ANSI color sequences, for output in a text console.
+           Color sequences are terminated at newlines, so that paging the output
+           works correctly.
+       
+           The `get_style_defs()` method doesn't do anything special since there is
+           no support for common styles.
+       
+           Options accepted:
+       
+           `bg`
+               Set to ``"light"`` or ``"dark"`` depending on the terminal's background
+               (default: ``"light"``).
+       
+           `colorscheme`
+               A dictionary mapping token types to (lightbg, darkbg) color names or
+               ``None`` (default: ``None`` = use builtin colorscheme).
+       
+           `linenos`
+               Set to ``True`` to have line numbers on the terminal output as well
+               (default: ``False`` = no line numbers).
+           """
+    1:     name = 'Terminal'
+    1:     aliases = ['terminal', 'console']
+    1:     filenames = []
+       
+    1:     def __init__(self, **options):
+               Formatter.__init__(self, **options)
+               self.darkbg = get_choice_opt(options, 'bg',
+                                            ['light', 'dark'], 'light') == 'dark'
+               self.colorscheme = options.get('colorscheme', None) or TERMINAL_COLORS
+               self.linenos = options.get('linenos', False)
+               self._lineno = 0
+       
+    1:     def format(self, tokensource, outfile):
+               return Formatter.format(self, tokensource, outfile)
+       
+    1:     def _write_lineno(self, outfile):
+               self._lineno += 1
+               outfile.write("%s%04d: " % (self._lineno != 1 and '\n' or '', self._lineno))
+       
+    1:     def _get_color(self, ttype):
+               # self.colorscheme is a dict containing usually generic types, so we
+               # have to walk the tree of dots.  The base Token type must be a key,
+               # even if it's empty string, as in the default above.
+               colors = self.colorscheme.get(ttype)
+               while colors is None:
+                   ttype = ttype.parent
+                   colors = self.colorscheme.get(ttype)
+               return colors[self.darkbg]
+       
+    1:     def format_unencoded(self, tokensource, outfile):
+               if self.linenos:
+                   self._write_lineno(outfile)
+       
+               for ttype, value in tokensource:
+                   color = self._get_color(ttype)
+       
+                   for line in value.splitlines(True):
+                       if color:
+                           outfile.write(ansiformat(color, line.rstrip('\n')))
+                       else:
+                           outfile.write(line.rstrip('\n'))
+                       if line.endswith('\n'):
+                           if self.linenos:
+                               self._write_lineno(outfile)
+                           else:
+                               outfile.write('\n')
+       
+               if self.linenos:
+                   outfile.write("\n")

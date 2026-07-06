@@ -1,0 +1,27 @@
+       # mypy: allow-untyped-defs
+    1: from torch._C import (
+           _get_backcompat_broadcast_warn,
+           _get_backcompat_keepdim_warn,
+           _set_backcompat_broadcast_warn,
+           _set_backcompat_keepdim_warn,
+       )
+       
+       
+    2: class Warning:
+    1:     def __init__(self, setter, getter) -> None:
+    2:         self.setter = setter
+    2:         self.getter = getter
+       
+    1:     def set_enabled(self, value) -> None:
+               self.setter(value)
+       
+    1:     def get_enabled(self):
+               return self.getter()
+       
+    1:     enabled = property(get_enabled, set_enabled)
+       
+       
+    2: broadcast_warning = Warning(
+    1:     _set_backcompat_broadcast_warn, _get_backcompat_broadcast_warn
+       )
+    1: keepdim_warning = Warning(_set_backcompat_keepdim_warn, _get_backcompat_keepdim_warn)

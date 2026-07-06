@@ -1,0 +1,17 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseAudioDoneEvent"]
+       
+       
+    2: class ResponseAudioDoneEvent(BaseModel):
+    1:     """Emitted when the audio response is complete."""
+       
+    1:     sequence_number: int
+    1:     """The sequence number of the delta."""
+       
+    1:     type: Literal["response.audio.done"]
+    1:     """The type of the event. Always `response.audio.done`."""

@@ -1,0 +1,21 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+    1: from .assistant_tool_choice_function import AssistantToolChoiceFunction
+       
+    1: __all__ = ["AssistantToolChoice"]
+       
+       
+    2: class AssistantToolChoice(BaseModel):
+    1:     """Specifies a tool the model should use.
+       
+           Use to force the model to call a specific tool.
+           """
+       
+    1:     type: Literal["function", "code_interpreter", "file_search"]
+    1:     """The type of the tool. If type is `function`, the function name must be set"""
+       
+    1:     function: Optional[AssistantToolChoiceFunction] = None

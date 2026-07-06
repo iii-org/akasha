@@ -1,0 +1,351 @@
+       # mypy: allow-untyped-defs
+    1: """Support for providing temporary directories to test functions."""
+       
+    1: from __future__ import annotations
+       
+    1: import atexit
+    1: from collections.abc import Generator
+    1: from contextlib import ExitStack
+    1: import dataclasses
+    1: import os
+    1: from pathlib import Path
+    1: import re
+    1: from shutil import rmtree
+    1: import stat
+    1: import tempfile
+    1: from typing import Any
+    1: from typing import final
+    1: from typing import Literal
+       
+    1: from .pathlib import cleanup_dead_symlinks
+    1: from .pathlib import LOCK_TIMEOUT
+    1: from .pathlib import make_numbered_dir
+    1: from .pathlib import make_numbered_dir_with_cleanup
+    1: from .pathlib import rm_rf
+    1: from _pytest.compat import get_user_id
+    1: from _pytest.config import Config
+    1: from _pytest.config import ExitCode
+    1: from _pytest.config import hookimpl
+    1: from _pytest.config.argparsing import Parser
+    1: from _pytest.deprecated import check_ispytest
+    1: from _pytest.fixtures import fixture
+    1: from _pytest.fixtures import FixtureRequest
+    1: from _pytest.monkeypatch import MonkeyPatch
+    1: from _pytest.nodes import Item
+    1: from _pytest.reports import TestReport
+    1: from _pytest.stash import StashKey
+       
+       
+    1: tmppath_result_key = StashKey[dict[str, bool]]()
+    1: RetentionType = Literal["all", "failed", "none"]
+       
+       
+    3: @final
+    2: @dataclasses.dataclass
+    2: class TempPathFactory:
+    1:     """Factory for temporary directories under the common base temp directory,
+           as discussed at :ref:`temporary directory location and retention`.
+           """
+       
+    1:     _given_basetemp: Path | None
+           # pluggy TagTracerSub, not currently exposed, so Any.
+    1:     _trace: Any
+    1:     _basetemp: Path | None
+    1:     _retention_count: int
+    1:     _retention_policy: RetentionType
+       
+    2:     def __init__(
+               self,
+               given_basetemp: Path | None,
+               retention_count: int,
+               retention_policy: RetentionType,
+               trace,
+    1:         basetemp: Path | None = None,
+               *,
+    1:         _ispytest: bool = False,
+           ) -> None:
+    1:         check_ispytest(_ispytest)
+    1:         if given_basetemp is None:
+    1:             self._given_basetemp = None
+               else:
+                   # Use os.path.abspath() to get absolute path instead of resolve() as it
+                   # does not work the same in all platforms (see #4427).
+                   # Path.absolute() exists, but it is not public (see https://bugs.python.org/issue25012).
+                   self._given_basetemp = Path(os.path.abspath(str(given_basetemp)))
+    1:         self._trace = trace
+    1:         self._retention_count = retention_count
+    1:         self._retention_policy = retention_policy
+    1:         self._basetemp = basetemp
+               # Register cleanups for session finish. Also called atexit as a last
+               # resort if sessionfinish for some reason doesn't happen.
+    1:         self._exit_stack = ExitStack()
+       
+    2:     @classmethod
+    2:     def from_config(
+               cls,
+               config: Config,
+               *,
+    1:         _ispytest: bool = False,
+           ) -> TempPathFactory:
+               """Create a factory according to pytest configuration.
+       
+               :meta private:
+               """
+    1:         check_ispytest(_ispytest)
+    1:         count = int(config.getini("tmp_path_retention_count"))
+    1:         if count < 0:
+                   raise ValueError(
+                       f"tmp_path_retention_count must be >= 0. Current input: {count}."
+                   )
+       
+    1:         policy = config.getini("tmp_path_retention_policy")
+    1:         if policy not in ("all", "failed", "none"):
+                   raise ValueError(
+                       f"tmp_path_retention_policy must be either all, failed, none. Current input: {policy}."
+                   )
+       
+    2:         return cls(
+    1:             given_basetemp=config.option.basetemp,
+    1:             trace=config.trace.get("tmpdir"),
+    1:             retention_count=count,
+    1:             retention_policy=policy,
+    1:             _ispytest=True,
+               )
+       
+    1:     def _ensure_relative_to_basetemp(self, basename: str) -> str:
+               basename = os.path.normpath(basename)
+               if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+                   raise ValueError(f"{basename} is not a normalized and relative path")
+               return basename
+       
+    1:     def mktemp(self, basename: str, numbered: bool = True) -> Path:
+               """Create a new temporary directory managed by the factory.
+       
+               :param basename:
+                   Directory base name, must be a relative path.
+       
+               :param numbered:
+                   If ``True``, ensure the directory is unique by adding a numbered
+                   suffix greater than any existing one: ``basename="foo-"`` and ``numbered=True``
+                   means that this function will create directories named ``"foo-0"``,
+                   ``"foo-1"``, ``"foo-2"`` and so on.
+       
+               :returns:
+                   The path to the new directory.
+               """
+               basename = self._ensure_relative_to_basetemp(basename)
+               if not numbered:
+                   p = self.getbasetemp().joinpath(basename)
+                   p.mkdir(mode=0o700)
+               else:
+                   p = make_numbered_dir(root=self.getbasetemp(), prefix=basename, mode=0o700)
+                   self._trace("mktemp", p)
+               return p
+       
+    1:     def getbasetemp(self) -> Path:
+               """Return the base temporary directory, creating it if needed.
+       
+               :returns:
+                   The base temporary directory.
+               """
+               if self._basetemp is not None:
+                   return self._basetemp
+       
+               if self._given_basetemp is not None:
+                   basetemp = self._given_basetemp
+                   if basetemp.exists():
+                       rm_rf(basetemp)
+                   basetemp.mkdir(mode=0o700)
+                   basetemp = basetemp.resolve()
+               else:
+                   from_env = os.environ.get("PYTEST_DEBUG_TEMPROOT")
+                   temproot = Path(from_env or tempfile.gettempdir()).resolve()
+                   user = get_user() or "unknown"
+                   # use a sub-directory in the temproot to speed-up
+                   # make_numbered_dir() call
+                   rootdir = temproot.joinpath(f"pytest-of-{user}")
+                   try:
+                       rootdir.mkdir(mode=0o700, exist_ok=True)
+                   except OSError:
+                       # getuser() likely returned illegal characters for the platform, use unknown back off mechanism
+                       rootdir = temproot.joinpath("pytest-of-unknown")
+                       rootdir.mkdir(mode=0o700, exist_ok=True)
+                   # Because we use exist_ok=True with a predictable name, make sure
+                   # we are the owners, to prevent any funny business (on unix, where
+                   # temproot is usually shared).
+                   # Also, to keep things private, fixup any world-readable temp
+                   # rootdir's permissions. Historically 0o755 was used, so we can't
+                   # just error out on this, at least for a while.
+                   # Don't follow symlinks, otherwise we're open to symlink-swapping
+                   # TOCTOU vulnerability.
+                   # This check makes us vulnerable to a DoS - a user can `mkdir
+                   # /tmp/pytest-of-otheruser` and then `otheruser` will fail this
+                   # check. For now we don't consider it a real problem. otheruser can
+                   # change their TMPDIR or --basetemp, and maybe give the prankster a
+                   # good scolding.
+                   uid = get_user_id()
+                   if uid is not None:
+                       stat_follow_symlinks = (
+                           False if os.stat in os.supports_follow_symlinks else True
+                       )
+                       rootdir_stat = rootdir.stat(follow_symlinks=stat_follow_symlinks)
+                       if stat.S_ISLNK(rootdir_stat.st_mode):
+                           raise OSError(
+                               f"The temporary directory {rootdir} is a symbolic link. "
+                               "Fix this and try again."
+                           )
+                       if rootdir_stat.st_uid != uid:
+                           raise OSError(
+                               f"The temporary directory {rootdir} is not owned by the current user. "
+                               "Fix this and try again."
+                           )
+                       if (rootdir_stat.st_mode & 0o077) != 0:
+                           chmod_follow_symlinks = (
+                               False if os.chmod in os.supports_follow_symlinks else True
+                           )
+                           rootdir.chmod(
+                               rootdir_stat.st_mode & ~0o077,
+                               follow_symlinks=chmod_follow_symlinks,
+                           )
+                   keep = self._retention_count
+                   if self._retention_policy == "none":
+                       keep = 0
+                   basetemp = make_numbered_dir_with_cleanup(
+                       prefix="pytest-",
+                       root=rootdir,
+                       keep=keep,
+                       lock_timeout=LOCK_TIMEOUT,
+                       mode=0o700,
+                       register=self._exit_stack.callback,
+                   )
+                   # Ensure that the cleanup is called on exit (#1120 possibly?).
+                   # But if the exit stack is closed manually (as it normally should),
+                   # unregister the atexit to avoid pile up.
+                   atexit.register(self._exit_stack.close)
+                   self._exit_stack.callback(atexit.unregister, self._exit_stack.close)
+               assert basetemp is not None, basetemp
+               self._basetemp = basetemp
+               self._trace("new basetemp", basetemp)
+               return basetemp
+       
+       
+    1: def get_user() -> str | None:
+           """Return the current user name, or None if getuser() does not work
+           in the current environment (see #1010)."""
+           try:
+               # In some exotic environments, getpass may not be importable.
+               import getpass
+       
+               return getpass.getuser()
+           except (ImportError, OSError, KeyError):
+               return None
+       
+       
+    1: def pytest_configure(config: Config) -> None:
+           """Create a TempPathFactory and attach it to the config object.
+       
+           This is to comply with existing plugins which expect the handler to be
+           available at pytest_configure time, but ideally should be moved entirely
+           to the tmp_path_factory session fixture.
+           """
+    1:     mp = MonkeyPatch()
+    1:     config.add_cleanup(mp.undo)
+    1:     _tmp_path_factory = TempPathFactory.from_config(config, _ispytest=True)
+    1:     mp.setattr(config, "_tmp_path_factory", _tmp_path_factory, raising=False)
+       
+       
+    1: def pytest_addoption(parser: Parser) -> None:
+    2:     parser.addini(
+    1:         "tmp_path_retention_count",
+    1:         help="How many sessions should we keep the `tmp_path` directories, according to `tmp_path_retention_policy`.",
+    1:         default="3",
+               # NOTE: Would have been better as an `int` but can't change it now.
+    1:         type="string",
+           )
+       
+    2:     parser.addini(
+    1:         "tmp_path_retention_policy",
+    1:         help="Controls which directories created by the `tmp_path` fixture are kept around, based on test outcome. "
+               "(all/failed/none)",
+    1:         type="string",
+    1:         default="all",
+           )
+       
+       
+    2: @fixture(scope="session")
+    2: def tmp_path_factory(request: FixtureRequest) -> TempPathFactory:
+           """Return a :class:`pytest.TempPathFactory` instance for the test session."""
+           # Set dynamically by pytest_configure() above.
+           return request.config._tmp_path_factory  # type: ignore
+       
+       
+    1: def _mk_tmp(request: FixtureRequest, factory: TempPathFactory) -> Path:
+           name = request.node.name
+           name = re.sub(r"[\W]", "_", name)
+           MAXVAL = 30
+           name = name[:MAXVAL]
+           return factory.mktemp(name, numbered=True)
+       
+       
+    2: @fixture
+    2: def tmp_path(
+           request: FixtureRequest, tmp_path_factory: TempPathFactory
+       ) -> Generator[Path]:
+           """Return a temporary directory (as :class:`pathlib.Path` object)
+           which is unique to each test function invocation.
+           The temporary directory is created as a subdirectory
+           of the base temporary directory, with configurable retention,
+           as discussed in :ref:`temporary directory location and retention`.
+           """
+           path = _mk_tmp(request, tmp_path_factory)
+           yield path
+       
+           # Remove the tmpdir if the policy is "failed" and the test passed.
+           policy = tmp_path_factory._retention_policy
+           result_dict = request.node.stash[tmppath_result_key]
+       
+           if policy == "failed" and result_dict.get("call", True):
+               # We do a "best effort" to remove files, but it might not be possible due to some leaked resource,
+               # permissions, etc, in which case we ignore it.
+               rmtree(path, ignore_errors=True)
+       
+           del request.node.stash[tmppath_result_key]
+       
+       
+    1: def pytest_sessionfinish(session, exitstatus: int | ExitCode):
+           """After each session, remove base directory if all the tests passed,
+           the policy is "failed", and the basetemp is not specified by a user.
+           """
+    1:     tmp_path_factory: TempPathFactory = session.config._tmp_path_factory
+    1:     basetemp = tmp_path_factory._basetemp
+    1:     if basetemp is None:
+    1:         return
+       
+           policy = tmp_path_factory._retention_policy
+           if (
+               exitstatus == 0
+               and policy == "failed"
+               and tmp_path_factory._given_basetemp is None
+           ):
+               if basetemp.is_dir():
+                   # We do a "best effort" to remove files, but it might not be possible due to some leaked resource,
+                   # permissions, etc, in which case we ignore it.
+                   rmtree(basetemp, ignore_errors=True)
+       
+           # Remove dead symlinks.
+           if basetemp.is_dir():
+               cleanup_dead_symlinks(basetemp)
+       
+           # Run the numbered dirs and lock file cleanups registered on the ExitStack.
+           tmp_path_factory._exit_stack.close()
+       
+       
+    2: @hookimpl(wrapper=True, tryfirst=True)
+    2: def pytest_runtest_makereport(
+           item: Item, call
+       ) -> Generator[None, TestReport, TestReport]:
+   18:     rep = yield
+   18:     assert rep.when is not None
+   18:     empty: dict[str, bool] = {}
+   18:     item.stash.setdefault(tmppath_result_key, empty)[rep.when] = rep.passed
+   18:     return rep

@@ -1,0 +1,98 @@
+    1: import socket
+       
+       
+    2: class TransportSocket:
+       
+    1:     """A socket-like wrapper for exposing real transport sockets.
+       
+           These objects can be safely returned by APIs like
+           `transport.get_extra_info('socket')`.  All potentially disruptive
+           operations (like "socket.close()") are banned.
+           """
+       
+    1:     __slots__ = ('_sock',)
+       
+    1:     def __init__(self, sock: socket.socket):
+               self._sock = sock
+       
+    2:     @property
+    2:     def family(self):
+               return self._sock.family
+       
+    2:     @property
+    2:     def type(self):
+               return self._sock.type
+       
+    2:     @property
+    2:     def proto(self):
+               return self._sock.proto
+       
+    1:     def __repr__(self):
+               s = (
+                   f"<asyncio.TransportSocket fd={self.fileno()}, "
+                   f"family={self.family!s}, type={self.type!s}, "
+                   f"proto={self.proto}"
+               )
+       
+               if self.fileno() != -1:
+                   try:
+                       laddr = self.getsockname()
+                       if laddr:
+                           s = f"{s}, laddr={laddr}"
+                   except socket.error:
+                       pass
+                   try:
+                       raddr = self.getpeername()
+                       if raddr:
+                           s = f"{s}, raddr={raddr}"
+                   except socket.error:
+                       pass
+       
+               return f"{s}>"
+       
+    1:     def __getstate__(self):
+               raise TypeError("Cannot serialize asyncio.TransportSocket object")
+       
+    1:     def fileno(self):
+               return self._sock.fileno()
+       
+    1:     def dup(self):
+               return self._sock.dup()
+       
+    1:     def get_inheritable(self):
+               return self._sock.get_inheritable()
+       
+    1:     def shutdown(self, how):
+               # asyncio doesn't currently provide a high-level transport API
+               # to shutdown the connection.
+               self._sock.shutdown(how)
+       
+    1:     def getsockopt(self, *args, **kwargs):
+               return self._sock.getsockopt(*args, **kwargs)
+       
+    1:     def setsockopt(self, *args, **kwargs):
+               self._sock.setsockopt(*args, **kwargs)
+       
+    1:     def getpeername(self):
+               return self._sock.getpeername()
+       
+    1:     def getsockname(self):
+               return self._sock.getsockname()
+       
+    1:     def getsockbyname(self):
+               return self._sock.getsockbyname()
+       
+    1:     def settimeout(self, value):
+               if value == 0:
+                   return
+               raise ValueError(
+                   'settimeout(): only 0 timeout is allowed on transport sockets')
+       
+    1:     def gettimeout(self):
+               return 0
+       
+    1:     def setblocking(self, flag):
+               if not flag:
+                   return
+               raise ValueError(
+                   'setblocking(): transport sockets cannot be blocking')

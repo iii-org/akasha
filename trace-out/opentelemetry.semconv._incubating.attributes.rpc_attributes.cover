@@ -1,0 +1,276 @@
+       # Copyright The OpenTelemetry Authors
+       # SPDX-License-Identifier: Apache-2.0
+       
+    1: from enum import Enum
+    1: from typing import Final
+       
+    1: from typing_extensions import deprecated
+       
+    1: RPC_CONNECT_RPC_ERROR_CODE: Final = "rpc.connect_rpc.error_code"
+    1: """
+       Deprecated: Replaced by `rpc.response.status_code`.
+       """
+       
+    1: RPC_CONNECT_RPC_REQUEST_METADATA_TEMPLATE: Final = (
+    1:     "rpc.connect_rpc.request.metadata"
+       )
+    1: """
+       Deprecated: Replaced by `rpc.request.metadata`.
+       """
+       
+    1: RPC_CONNECT_RPC_RESPONSE_METADATA_TEMPLATE: Final = (
+    1:     "rpc.connect_rpc.response.metadata"
+       )
+    1: """
+       Deprecated: Replaced by `rpc.response.metadata`.
+       """
+       
+    1: RPC_GRPC_REQUEST_METADATA_TEMPLATE: Final = "rpc.grpc.request.metadata"
+    1: """
+       Deprecated: Replaced by `rpc.request.metadata`.
+       """
+       
+    1: RPC_GRPC_RESPONSE_METADATA_TEMPLATE: Final = "rpc.grpc.response.metadata"
+    1: """
+       Deprecated: Replaced by `rpc.response.metadata`.
+       """
+       
+    1: RPC_GRPC_STATUS_CODE: Final = "rpc.grpc.status_code"
+    1: """
+       Deprecated: Use string representation of the gRPC status code on the `rpc.response.status_code` attribute.
+       """
+       
+    1: RPC_JSONRPC_ERROR_CODE: Final = "rpc.jsonrpc.error_code"
+    1: """
+       Deprecated: Use string representation of the error code on the `rpc.response.status_code` attribute.
+       """
+       
+    1: RPC_JSONRPC_ERROR_MESSAGE: Final = "rpc.jsonrpc.error_message"
+    1: """
+       Deprecated: Use the span status description when reporting JSON-RPC spans.
+       """
+       
+    1: RPC_JSONRPC_REQUEST_ID: Final = "rpc.jsonrpc.request_id"
+    1: """
+       Deprecated: Replaced by `jsonrpc.request.id`.
+       """
+       
+    1: RPC_JSONRPC_VERSION: Final = "rpc.jsonrpc.version"
+    1: """
+       Deprecated: Replaced by `jsonrpc.protocol.version`.
+       """
+       
+    1: RPC_MESSAGE_COMPRESSED_SIZE: Final = "rpc.message.compressed_size"
+    1: """
+       Deprecated: Deprecated, no replacement at this time.
+       """
+       
+    1: RPC_MESSAGE_ID: Final = "rpc.message.id"
+    1: """
+       Deprecated: Deprecated, no replacement at this time.
+       """
+       
+    1: RPC_MESSAGE_TYPE: Final = "rpc.message.type"
+    1: """
+       Deprecated: Deprecated, no replacement at this time.
+       """
+       
+    1: RPC_MESSAGE_UNCOMPRESSED_SIZE: Final = "rpc.message.uncompressed_size"
+    1: """
+       Deprecated: Deprecated, no replacement at this time.
+       """
+       
+    1: RPC_METHOD: Final = "rpc.method"
+    1: """
+       The fully-qualified logical name of the method from the RPC interface perspective.
+       Note: The method name MAY have unbounded cardinality in edge or error cases.
+       
+       Some RPC frameworks or libraries provide a fixed set of recognized methods
+       for client stubs and server implementations. Instrumentations for such
+       frameworks MUST set this attribute to the original method name only
+       when the method is recognized by the framework or library.
+       
+       When the method is not recognized, for example, when the server receives
+       a request for a method that is not predefined on the server, or when
+       instrumentation is not able to reliably detect if the method is predefined,
+       the attribute MUST be set to `_OTHER`. In such cases, tracing
+       instrumentations MUST also set `rpc.method_original` attribute to
+       the original method value.
+       
+       If the RPC instrumentation could end up converting valid RPC methods to
+       `_OTHER`, then it SHOULD provide a way to configure the list of recognized
+       RPC methods.
+       
+       The `rpc.method` can be different from the name of any implementing
+       method/function.
+       The `code.function.name` attribute may be used to record the fully-qualified
+       method actually executing the call on the server side, or the
+       RPC client stub method on the client side.
+       """
+       
+    1: RPC_METHOD_ORIGINAL: Final = "rpc.method_original"
+    1: """
+       The original name of the method used by the client.
+       """
+       
+    1: RPC_REQUEST_METADATA_TEMPLATE: Final = "rpc.request.metadata"
+    1: """
+       RPC request metadata, `<key>` being the normalized RPC metadata key (lowercase), the value being the metadata values.
+       Note: Instrumentations SHOULD require an explicit configuration of which metadata values are to be captured.
+       Including all request metadata values can be a security risk - explicit configuration helps avoid leaking sensitive information.
+       
+       For example, a property `my-custom-key` with value `["1.2.3.4", "1.2.3.5"]` SHOULD be recorded as
+       `rpc.request.metadata.my-custom-key` attribute with value `["1.2.3.4", "1.2.3.5"]`.
+       """
+       
+    1: RPC_RESPONSE_METADATA_TEMPLATE: Final = "rpc.response.metadata"
+    1: """
+       RPC response metadata, `<key>` being the normalized RPC metadata key (lowercase), the value being the metadata values.
+       Note: Instrumentations SHOULD require an explicit configuration of which metadata values are to be captured.
+       Including all response metadata values can be a security risk - explicit configuration helps avoid leaking sensitive information.
+       
+       For example, a property `my-custom-key` with value `["attribute_value"]` SHOULD be recorded as
+       the `rpc.response.metadata.my-custom-key` attribute with value `["attribute_value"]`.
+       """
+       
+    1: RPC_RESPONSE_STATUS_CODE: Final = "rpc.response.status_code"
+    1: """
+       Status code of the RPC returned by the RPC server or generated by the client.
+       Note: Usually it represents an error code, but may also represent partial success, warning, or differentiate between various types of successful outcomes.
+       Semantic conventions for individual RPC frameworks SHOULD document what `rpc.response.status_code` means in the context of that system and which values are considered to represent errors.
+       """
+       
+    1: RPC_SERVICE: Final = "rpc.service"
+    1: """
+       Deprecated: Value should be included in `rpc.method` which is expected to be a fully-qualified name.
+       """
+       
+    1: RPC_SYSTEM: Final = "rpc.system"
+    1: """
+       Deprecated: Replaced by `rpc.system.name`.
+       """
+       
+    1: RPC_SYSTEM_NAME: Final = "rpc.system.name"
+    1: """
+       The Remote Procedure Call (RPC) system.
+       Note: The client and server RPC systems may differ for the same RPC interaction. For example, a client may use Apache Dubbo or Connect RPC to communicate with a server that uses gRPC since both protocols provide compatibility with gRPC.
+       """
+       
+       
+    4: @deprecated(
+    1:     "The attribute rpc.connect_rpc.error_code is deprecated - Replaced by `rpc.response.status_code`"
+       )
+    2: class RpcConnectRpcErrorCodeValues(Enum):
+    1:     CANCELLED = "cancelled"
+    1:     """cancelled."""
+    1:     UNKNOWN = "unknown"
+    1:     """unknown."""
+    1:     INVALID_ARGUMENT = "invalid_argument"
+    1:     """invalid_argument."""
+    1:     DEADLINE_EXCEEDED = "deadline_exceeded"
+    1:     """deadline_exceeded."""
+    1:     NOT_FOUND = "not_found"
+    1:     """not_found."""
+    1:     ALREADY_EXISTS = "already_exists"
+    1:     """already_exists."""
+    1:     PERMISSION_DENIED = "permission_denied"
+    1:     """permission_denied."""
+    1:     RESOURCE_EXHAUSTED = "resource_exhausted"
+    1:     """resource_exhausted."""
+    1:     FAILED_PRECONDITION = "failed_precondition"
+    1:     """failed_precondition."""
+    1:     ABORTED = "aborted"
+    1:     """aborted."""
+    1:     OUT_OF_RANGE = "out_of_range"
+    1:     """out_of_range."""
+    1:     UNIMPLEMENTED = "unimplemented"
+    1:     """unimplemented."""
+    1:     INTERNAL = "internal"
+    1:     """internal."""
+    1:     UNAVAILABLE = "unavailable"
+    1:     """unavailable."""
+    1:     DATA_LOSS = "data_loss"
+    1:     """data_loss."""
+    1:     UNAUTHENTICATED = "unauthenticated"
+    1:     """unauthenticated."""
+       
+       
+    4: @deprecated(
+    1:     "The attribute rpc.grpc.status_code is deprecated - Use string representation of the gRPC status code on the `rpc.response.status_code` attribute"
+       )
+    2: class RpcGrpcStatusCodeValues(Enum):
+    1:     OK = 0
+    1:     """OK."""
+    1:     CANCELLED = 1
+    1:     """CANCELLED."""
+    1:     UNKNOWN = 2
+    1:     """UNKNOWN."""
+    1:     INVALID_ARGUMENT = 3
+    1:     """INVALID_ARGUMENT."""
+    1:     DEADLINE_EXCEEDED = 4
+    1:     """DEADLINE_EXCEEDED."""
+    1:     NOT_FOUND = 5
+    1:     """NOT_FOUND."""
+    1:     ALREADY_EXISTS = 6
+    1:     """ALREADY_EXISTS."""
+    1:     PERMISSION_DENIED = 7
+    1:     """PERMISSION_DENIED."""
+    1:     RESOURCE_EXHAUSTED = 8
+    1:     """RESOURCE_EXHAUSTED."""
+    1:     FAILED_PRECONDITION = 9
+    1:     """FAILED_PRECONDITION."""
+    1:     ABORTED = 10
+    1:     """ABORTED."""
+    1:     OUT_OF_RANGE = 11
+    1:     """OUT_OF_RANGE."""
+    1:     UNIMPLEMENTED = 12
+    1:     """UNIMPLEMENTED."""
+    1:     INTERNAL = 13
+    1:     """INTERNAL."""
+    1:     UNAVAILABLE = 14
+    1:     """UNAVAILABLE."""
+    1:     DATA_LOSS = 15
+    1:     """DATA_LOSS."""
+    1:     UNAUTHENTICATED = 16
+    1:     """UNAUTHENTICATED."""
+       
+       
+    4: @deprecated(
+    1:     "The attribute rpc.message.type is deprecated - Deprecated, no replacement at this time"
+       )
+    2: class RpcMessageTypeValues(Enum):
+    1:     SENT = "SENT"
+    1:     """sent."""
+    1:     RECEIVED = "RECEIVED"
+    1:     """received."""
+       
+       
+    4: @deprecated(
+    1:     "The attribute rpc.system is deprecated - Replaced by `rpc.system.name`"
+       )
+    2: class RpcSystemValues(Enum):
+    1:     GRPC = "grpc"
+    1:     """gRPC."""
+    1:     JAVA_RMI = "java_rmi"
+    1:     """Java RMI."""
+    1:     DOTNET_WCF = "dotnet_wcf"
+    1:     """.NET WCF."""
+    1:     APACHE_DUBBO = "apache_dubbo"
+    1:     """Apache Dubbo."""
+    1:     CONNECT_RPC = "connect_rpc"
+    1:     """Connect RPC."""
+    1:     ONC_RPC = "onc_rpc"
+    1:     """[ONC RPC (Sun RPC)](https://datatracker.ietf.org/doc/html/rfc5531)."""
+    1:     JSONRPC = "jsonrpc"
+    1:     """JSON-RPC."""
+       
+       
+    2: class RpcSystemNameValues(Enum):
+    1:     GRPC = "grpc"
+    1:     """[gRPC](https://grpc.io/)."""
+    1:     DUBBO = "dubbo"
+    1:     """[Apache Dubbo](https://dubbo.apache.org/)."""
+    1:     CONNECTRPC = "connectrpc"
+    1:     """[Connect RPC](https://connectrpc.com/)."""
+    1:     JSONRPC = "jsonrpc"
+    1:     """[JSON-RPC](https://www.jsonrpc.org/)."""

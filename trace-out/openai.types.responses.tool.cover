@@ -1,0 +1,366 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Dict, List, Union, Optional
+    1: from typing_extensions import Literal, Annotated, TypeAlias
+       
+    1: from . import web_search_tool
+    1: from ..._utils import PropertyInfo
+    1: from ..._models import BaseModel
+    1: from .custom_tool import CustomTool
+    1: from .computer_tool import ComputerTool
+    1: from .function_tool import FunctionTool
+    1: from .namespace_tool import NamespaceTool
+    1: from .web_search_tool import WebSearchTool
+    1: from .apply_patch_tool import ApplyPatchTool
+    1: from .file_search_tool import FileSearchTool
+    1: from .tool_search_tool import ToolSearchTool
+    1: from .function_shell_tool import FunctionShellTool
+    1: from .web_search_preview_tool import WebSearchPreviewTool
+    1: from .computer_use_preview_tool import ComputerUsePreviewTool
+    1: from .container_network_policy_disabled import ContainerNetworkPolicyDisabled
+    1: from .container_network_policy_allowlist import ContainerNetworkPolicyAllowlist
+       
+    1: __all__ = [
+           "Tool",
+           "WebSearchTool",
+           "Mcp",
+           "McpAllowedTools",
+           "McpAllowedToolsMcpToolFilter",
+           "McpRequireApproval",
+           "McpRequireApprovalMcpToolApprovalFilter",
+           "McpRequireApprovalMcpToolApprovalFilterAlways",
+           "McpRequireApprovalMcpToolApprovalFilterNever",
+           "CodeInterpreter",
+           "CodeInterpreterContainer",
+           "CodeInterpreterContainerCodeInterpreterToolAuto",
+           "CodeInterpreterContainerCodeInterpreterToolAutoNetworkPolicy",
+           "ImageGeneration",
+           "ImageGenerationInputImageMask",
+           "LocalShell",
+       ]
+       
+    1: WebSearchToolFilters = web_search_tool.Filters
+    1: WebSearchToolUserLocation = web_search_tool.UserLocation
+       
+       
+    2: class McpAllowedToolsMcpToolFilter(BaseModel):
+    1:     """A filter object to specify which tools are allowed."""
+       
+    1:     read_only: Optional[bool] = None
+    1:     """Indicates whether or not a tool modifies data or is read-only.
+       
+           If an MCP server is
+           [annotated with `readOnlyHint`](https://modelcontextprotocol.io/specification/2025-06-18/schema#toolannotations-readonlyhint),
+           it will match this filter.
+           """
+       
+    1:     tool_names: Optional[List[str]] = None
+    1:     """List of allowed tool names."""
+       
+       
+    1: McpAllowedTools: TypeAlias = Union[List[str], McpAllowedToolsMcpToolFilter, None]
+       
+       
+    2: class McpRequireApprovalMcpToolApprovalFilterAlways(BaseModel):
+    1:     """A filter object to specify which tools are allowed."""
+       
+    1:     read_only: Optional[bool] = None
+    1:     """Indicates whether or not a tool modifies data or is read-only.
+       
+           If an MCP server is
+           [annotated with `readOnlyHint`](https://modelcontextprotocol.io/specification/2025-06-18/schema#toolannotations-readonlyhint),
+           it will match this filter.
+           """
+       
+    1:     tool_names: Optional[List[str]] = None
+    1:     """List of allowed tool names."""
+       
+       
+    2: class McpRequireApprovalMcpToolApprovalFilterNever(BaseModel):
+    1:     """A filter object to specify which tools are allowed."""
+       
+    1:     read_only: Optional[bool] = None
+    1:     """Indicates whether or not a tool modifies data or is read-only.
+       
+           If an MCP server is
+           [annotated with `readOnlyHint`](https://modelcontextprotocol.io/specification/2025-06-18/schema#toolannotations-readonlyhint),
+           it will match this filter.
+           """
+       
+    1:     tool_names: Optional[List[str]] = None
+    1:     """List of allowed tool names."""
+       
+       
+    2: class McpRequireApprovalMcpToolApprovalFilter(BaseModel):
+    1:     """Specify which of the MCP server's tools require approval.
+       
+           Can be
+           `always`, `never`, or a filter object associated with tools
+           that require approval.
+           """
+       
+    1:     always: Optional[McpRequireApprovalMcpToolApprovalFilterAlways] = None
+    1:     """A filter object to specify which tools are allowed."""
+       
+    1:     never: Optional[McpRequireApprovalMcpToolApprovalFilterNever] = None
+    1:     """A filter object to specify which tools are allowed."""
+       
+       
+    1: McpRequireApproval: TypeAlias = Union[McpRequireApprovalMcpToolApprovalFilter, Literal["always", "never"], None]
+       
+       
+    2: class Mcp(BaseModel):
+    1:     """
+           Give the model access to additional tools via remote Model Context Protocol
+           (MCP) servers. [Learn more about MCP](https://platform.openai.com/docs/guides/tools-remote-mcp).
+           """
+       
+    1:     server_label: str
+    1:     """A label for this MCP server, used to identify it in tool calls."""
+       
+    1:     type: Literal["mcp"]
+    1:     """The type of the MCP tool. Always `mcp`."""
+       
+    1:     allowed_tools: Optional[McpAllowedTools] = None
+    1:     """List of allowed tool names or a filter object."""
+       
+    1:     authorization: Optional[str] = None
+    1:     """
+           An OAuth access token that can be used with a remote MCP server, either with a
+           custom MCP server URL or a service connector. Your application must handle the
+           OAuth authorization flow and provide the token here.
+           """
+       
+    2:     connector_id: Optional[
+    2:         Literal[
+    1:             "connector_dropbox",
+                   "connector_gmail",
+                   "connector_googlecalendar",
+                   "connector_googledrive",
+                   "connector_microsoftteams",
+                   "connector_outlookcalendar",
+                   "connector_outlookemail",
+                   "connector_sharepoint",
+               ]
+    1:     ] = None
+    1:     """Identifier for service connectors, like those available in ChatGPT.
+       
+           One of `server_url`, `connector_id`, or `tunnel_id` must be provided. Learn more
+           about service connectors
+           [here](https://platform.openai.com/docs/guides/tools-remote-mcp#connectors).
+       
+           Currently supported `connector_id` values are:
+       
+           - Dropbox: `connector_dropbox`
+           - Gmail: `connector_gmail`
+           - Google Calendar: `connector_googlecalendar`
+           - Google Drive: `connector_googledrive`
+           - Microsoft Teams: `connector_microsoftteams`
+           - Outlook Calendar: `connector_outlookcalendar`
+           - Outlook Email: `connector_outlookemail`
+           - SharePoint: `connector_sharepoint`
+           """
+       
+    1:     defer_loading: Optional[bool] = None
+    1:     """Whether this MCP tool is deferred and discovered via tool search."""
+       
+    1:     headers: Optional[Dict[str, str]] = None
+    1:     """Optional HTTP headers to send to the MCP server.
+       
+           Use for authentication or other purposes.
+           """
+       
+    1:     require_approval: Optional[McpRequireApproval] = None
+    1:     """Specify which of the MCP server's tools require approval."""
+       
+    1:     server_description: Optional[str] = None
+    1:     """Optional description of the MCP server, used to provide more context."""
+       
+    1:     server_url: Optional[str] = None
+    1:     """The URL for the MCP server.
+       
+           One of `server_url`, `connector_id`, or `tunnel_id` must be provided.
+           """
+       
+    1:     tunnel_id: Optional[str] = None
+    1:     """The Secure MCP Tunnel ID to use instead of a direct server URL.
+       
+           One of `server_url`, `connector_id`, or `tunnel_id` must be provided.
+           """
+       
+       
+    2: CodeInterpreterContainerCodeInterpreterToolAutoNetworkPolicy: TypeAlias = Annotated[
+    1:     Union[ContainerNetworkPolicyDisabled, ContainerNetworkPolicyAllowlist], PropertyInfo(discriminator="type")
+       ]
+       
+       
+    2: class CodeInterpreterContainerCodeInterpreterToolAuto(BaseModel):
+    1:     """Configuration for a code interpreter container.
+       
+           Optionally specify the IDs of the files to run the code on.
+           """
+       
+    1:     type: Literal["auto"]
+    1:     """Always `auto`."""
+       
+    1:     file_ids: Optional[List[str]] = None
+    1:     """An optional list of uploaded files to make available to your code."""
+       
+    1:     memory_limit: Optional[Literal["1g", "4g", "16g", "64g"]] = None
+    1:     """The memory limit for the code interpreter container."""
+       
+    1:     network_policy: Optional[CodeInterpreterContainerCodeInterpreterToolAutoNetworkPolicy] = None
+    1:     """Network access policy for the container."""
+       
+       
+    1: CodeInterpreterContainer: TypeAlias = Union[str, CodeInterpreterContainerCodeInterpreterToolAuto]
+       
+       
+    2: class CodeInterpreter(BaseModel):
+    1:     """A tool that runs Python code to help generate a response to a prompt."""
+       
+    1:     container: CodeInterpreterContainer
+    1:     """The code interpreter container.
+       
+           Can be a container ID or an object that specifies uploaded file IDs to make
+           available to your code, along with an optional `memory_limit` setting.
+           """
+       
+    1:     type: Literal["code_interpreter"]
+    1:     """The type of the code interpreter tool. Always `code_interpreter`."""
+       
+       
+    2: class ImageGenerationInputImageMask(BaseModel):
+    1:     """Optional mask for inpainting.
+       
+           Contains `image_url`
+           (string, optional) and `file_id` (string, optional).
+           """
+       
+    1:     file_id: Optional[str] = None
+    1:     """File ID for the mask image."""
+       
+    1:     image_url: Optional[str] = None
+    1:     """Base64-encoded mask image."""
+       
+       
+    2: class ImageGeneration(BaseModel):
+    1:     """A tool that generates images using the GPT image models."""
+       
+    1:     type: Literal["image_generation"]
+    1:     """The type of the image generation tool. Always `image_generation`."""
+       
+    1:     action: Optional[Literal["generate", "edit", "auto"]] = None
+    1:     """Whether to generate a new image or edit an existing image. Default: `auto`."""
+       
+    1:     background: Optional[Literal["transparent", "opaque", "auto"]] = None
+    1:     """
+           Allows to set transparency for the background of the generated image(s). This
+           parameter is only supported for GPT image models that support transparent
+           backgrounds. Must be one of `transparent`, `opaque`, or `auto` (default value).
+           When `auto` is used, the model will automatically determine the best background
+           for the image.
+       
+           `gpt-image-2` and `gpt-image-2-2026-04-21` do not support transparent
+           backgrounds. Requests with `background` set to `transparent` will return an
+           error for these models; use `opaque` or `auto` instead.
+       
+           If `transparent`, the output format needs to support transparency, so it should
+           be set to either `png` (default value) or `webp`.
+           """
+       
+    1:     input_fidelity: Optional[Literal["high", "low"]] = None
+    1:     """
+           Control how much effort the model will exert to match the style and features,
+           especially facial features, of input images. This parameter is only supported
+           for `gpt-image-1` and `gpt-image-1.5` and later models, unsupported for
+           `gpt-image-1-mini`. Supports `high` and `low`. Defaults to `low`.
+           """
+       
+    1:     input_image_mask: Optional[ImageGenerationInputImageMask] = None
+    1:     """Optional mask for inpainting.
+       
+           Contains `image_url` (string, optional) and `file_id` (string, optional).
+           """
+       
+    2:     model: Union[
+    2:         str,
+    2:         Literal[
+    1:             "gpt-image-1",
+                   "gpt-image-1-mini",
+                   "gpt-image-2",
+                   "gpt-image-2-2026-04-21",
+                   "gpt-image-1.5",
+                   "chatgpt-image-latest",
+               ],
+    1:         None,
+    1:     ] = None
+    1:     """The image generation model to use. Default: `gpt-image-1`."""
+       
+    1:     moderation: Optional[Literal["auto", "low"]] = None
+    1:     """Moderation level for the generated image. Default: `auto`."""
+       
+    1:     output_compression: Optional[int] = None
+    1:     """Compression level for the output image. Default: 100."""
+       
+    1:     output_format: Optional[Literal["png", "webp", "jpeg"]] = None
+    1:     """The output format of the generated image.
+       
+           One of `png`, `webp`, or `jpeg`. Default: `png`.
+           """
+       
+    1:     partial_images: Optional[int] = None
+    1:     """
+           Number of partial images to generate in streaming mode, from 0 (default value)
+           to 3.
+           """
+       
+    1:     quality: Optional[Literal["low", "medium", "high", "auto"]] = None
+    1:     """The quality of the generated image.
+       
+           One of `low`, `medium`, `high`, or `auto`. Default: `auto`.
+           """
+       
+    1:     size: Union[str, Literal["1024x1024", "1024x1536", "1536x1024", "auto"], None] = None
+    1:     """The size of the generated images.
+       
+           For `gpt-image-2` and `gpt-image-2-2026-04-21`, arbitrary resolutions are
+           supported as `WIDTHxHEIGHT` strings, for example `1536x864`. Width and height
+           must both be divisible by 16 and the requested aspect ratio must be between 1:3
+           and 3:1. Resolutions above `2560x1440` are experimental, and the maximum
+           supported resolution is `3840x2160`. The requested size must also satisfy the
+           model's current pixel and edge limits. The standard sizes `1024x1024`,
+           `1536x1024`, and `1024x1536` are supported by the GPT image models; `auto` is
+           supported for models that allow automatic sizing. For `dall-e-2`, use one of
+           `256x256`, `512x512`, or `1024x1024`. For `dall-e-3`, use one of `1024x1024`,
+           `1792x1024`, or `1024x1792`.
+           """
+       
+       
+    2: class LocalShell(BaseModel):
+    1:     """A tool that allows the model to execute shell commands in a local environment."""
+       
+    1:     type: Literal["local_shell"]
+    1:     """The type of the local shell tool. Always `local_shell`."""
+       
+       
+    2: Tool: TypeAlias = Annotated[
+    3:     Union[
+    2:         FunctionTool,
+    1:         FileSearchTool,
+    1:         ComputerTool,
+    1:         ComputerUsePreviewTool,
+    1:         WebSearchTool,
+    1:         Mcp,
+    1:         CodeInterpreter,
+    1:         ImageGeneration,
+    1:         LocalShell,
+    1:         FunctionShellTool,
+    1:         CustomTool,
+    1:         NamespaceTool,
+    1:         ToolSearchTool,
+    1:         WebSearchPreviewTool,
+    1:         ApplyPatchTool,
+           ],
+    1:     PropertyInfo(discriminator="type"),
+       ]

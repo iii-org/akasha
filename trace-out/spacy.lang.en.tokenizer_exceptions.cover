@@ -1,0 +1,526 @@
+    1: from typing import Dict, List
+       
+    1: from ...symbols import NORM, ORTH
+    1: from ...util import update_exc
+    1: from ..tokenizer_exceptions import BASE_EXCEPTIONS
+       
+    1: _exc: Dict[str, List[Dict]] = {}
+    1: _exclude = [
+           "Ill",
+           "ill",
+           "Its",
+           "its",
+           "Hell",
+           "hell",
+           "Shell",
+           "shell",
+           "Shed",
+           "shed",
+           "were",
+           "Were",
+           "Well",
+           "well",
+           "Whore",
+           "whore",
+       ]
+       
+       
+       # Pronouns
+    2: for pron in ["i"]:
+    3:     for orth in [pron, pron.title()]:
+    2:         _exc[orth + "'m"] = [
+    2:             {ORTH: orth, NORM: pron},
+    2:             {ORTH: "'m", NORM: "am"},
+               ]
+       
+    2:         _exc[orth + "m"] = [
+    2:             {ORTH: orth, NORM: pron},
+    2:             {ORTH: "m"},
+               ]
+       
+    2:         _exc[orth + "'ma"] = [
+    2:             {ORTH: orth, NORM: pron},
+    2:             {ORTH: "'m", NORM: "am"},
+    2:             {ORTH: "a", NORM: "gonna"},
+               ]
+       
+    2:         _exc[orth + "ma"] = [
+    2:             {ORTH: orth, NORM: pron},
+    2:             {ORTH: "m", NORM: "am"},
+    2:             {ORTH: "a", NORM: "gonna"},
+               ]
+       
+       
+    8: for pron in ["i", "you", "he", "she", "it", "we", "they"]:
+   21:     for orth in [pron, pron.title()]:
+   14:         _exc[orth + "'ll"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "'ll", NORM: "will"},
+               ]
+       
+   14:         _exc[orth + "ll"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "ll", NORM: "will"},
+               ]
+       
+   14:         _exc[orth + "'ll've"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "'ll", NORM: "will"},
+   14:             {ORTH: "'ve", NORM: "have"},
+               ]
+       
+   14:         _exc[orth + "llve"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "ll", NORM: "will"},
+   14:             {ORTH: "ve", NORM: "have"},
+               ]
+       
+   14:         _exc[orth + "'d"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "'d", NORM: "'d"},
+               ]
+       
+   14:         _exc[orth + "d"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "d", NORM: "'d"},
+               ]
+       
+   14:         _exc[orth + "'d've"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "'d", NORM: "would"},
+   14:             {ORTH: "'ve", NORM: "have"},
+               ]
+       
+   14:         _exc[orth + "dve"] = [
+   14:             {ORTH: orth, NORM: pron},
+   14:             {ORTH: "d", NORM: "would"},
+   14:             {ORTH: "ve", NORM: "have"},
+               ]
+       
+       
+    5: for pron in ["i", "you", "we", "they"]:
+   12:     for orth in [pron, pron.title()]:
+    8:         _exc[orth + "'ve"] = [
+    8:             {ORTH: orth, NORM: pron},
+    8:             {ORTH: "'ve", NORM: "have"},
+               ]
+       
+    8:         _exc[orth + "ve"] = [
+    8:             {ORTH: orth, NORM: pron},
+    8:             {ORTH: "ve", NORM: "have"},
+               ]
+       
+       
+    4: for pron in ["you", "we", "they"]:
+    9:     for orth in [pron, pron.title()]:
+    6:         _exc[orth + "'re"] = [
+    6:             {ORTH: orth, NORM: pron},
+    6:             {ORTH: "'re", NORM: "are"},
+               ]
+       
+    6:         _exc[orth + "re"] = [
+    6:             {ORTH: orth, NORM: pron},
+    6:             {ORTH: "re", NORM: "are"},
+               ]
+       
+       
+    4: for pron in ["he", "she", "it"]:
+    9:     for orth in [pron, pron.title()]:
+    6:         _exc[orth + "'s"] = [
+    6:             {ORTH: orth, NORM: pron},
+    6:             {ORTH: "'s", NORM: "'s"},
+               ]
+       
+    6:         _exc[orth + "s"] = [
+    6:             {ORTH: orth, NORM: pron},
+    6:             {ORTH: "s"},
+               ]
+       
+       
+       # W-words, relative pronouns, prepositions etc.
+       
+   12: for word, morph in [
+           ("who", None),
+           ("what", None),
+           ("when", None),
+           ("where", None),
+           ("why", None),
+           ("how", None),
+           ("there", None),
+           ("that", "Number=Sing|Person=3"),
+           ("this", "Number=Sing|Person=3"),
+           ("these", "Number=Plur|Person=3"),
+           ("those", "Number=Plur|Person=3"),
+       ]:
+   33:     for orth in [word, word.title()]:
+   22:         if morph != "Number=Plur|Person=3":
+   18:             _exc[orth + "'s"] = [
+   18:                 {ORTH: orth, NORM: word},
+   18:                 {ORTH: "'s", NORM: "'s"},
+                   ]
+       
+   18:             _exc[orth + "s"] = [{ORTH: orth, NORM: word}, {ORTH: "s"}]
+       
+   22:         _exc[orth + "'ll"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "'ll", NORM: "will"},
+               ]
+       
+   22:         _exc[orth + "ll"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "ll", NORM: "will"},
+               ]
+       
+   22:         _exc[orth + "'ll've"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "'ll", NORM: "will"},
+   22:             {ORTH: "'ve", NORM: "have"},
+               ]
+       
+   22:         _exc[orth + "llve"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "ll", NORM: "will"},
+   22:             {ORTH: "ve", NORM: "have"},
+               ]
+       
+   22:         if morph != "Number=Sing|Person=3":
+   18:             _exc[orth + "'re"] = [
+   18:                 {ORTH: orth, NORM: word},
+   18:                 {ORTH: "'re", NORM: "are"},
+                   ]
+       
+   18:             _exc[orth + "re"] = [
+   18:                 {ORTH: orth, NORM: word},
+   18:                 {ORTH: "re", NORM: "are"},
+                   ]
+       
+   18:             _exc[orth + "'ve"] = [
+   18:                 {ORTH: orth, NORM: word},
+   18:                 {ORTH: "'ve"},
+                   ]
+       
+   18:             _exc[orth + "ve"] = [
+   18:                 {ORTH: orth},
+   18:                 {ORTH: "ve", NORM: "have"},
+                   ]
+       
+   22:         _exc[orth + "'d"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "'d", NORM: "'d"},
+               ]
+       
+   22:         _exc[orth + "d"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "d", NORM: "'d"},
+               ]
+       
+   22:         _exc[orth + "'d've"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "'d", NORM: "would"},
+   22:             {ORTH: "'ve", NORM: "have"},
+               ]
+       
+   22:         _exc[orth + "dve"] = [
+   22:             {ORTH: orth, NORM: word},
+   22:             {ORTH: "d", NORM: "would"},
+   22:             {ORTH: "ve", NORM: "have"},
+               ]
+       
+       
+       # Verbs
+       
+   16: for verb_data in [
+    1:     {ORTH: "ca", NORM: "can"},
+    1:     {ORTH: "could", NORM: "could"},
+    1:     {ORTH: "do", NORM: "do"},
+    1:     {ORTH: "does", NORM: "does"},
+    1:     {ORTH: "did", NORM: "do"},
+    1:     {ORTH: "had", NORM: "have"},
+    1:     {ORTH: "may", NORM: "may"},
+    1:     {ORTH: "might", NORM: "might"},
+    1:     {ORTH: "must", NORM: "must"},
+    1:     {ORTH: "need", NORM: "need"},
+    1:     {ORTH: "ought", NORM: "ought"},
+    1:     {ORTH: "sha", NORM: "shall"},
+    1:     {ORTH: "should", NORM: "should"},
+    1:     {ORTH: "wo", NORM: "will"},
+    1:     {ORTH: "would", NORM: "would"},
+       ]:
+   15:     verb_data_tc = dict(verb_data)
+   15:     verb_data_tc[ORTH] = verb_data_tc[ORTH].title()
+   45:     for data in [verb_data, verb_data_tc]:
+   30:         _exc[data[ORTH] + "n't"] = [
+   30:             dict(data),
+   30:             {ORTH: "n't", NORM: "not"},
+               ]
+       
+   30:         _exc[data[ORTH] + "nt"] = [
+   30:             dict(data),
+   30:             {ORTH: "nt", NORM: "not"},
+               ]
+       
+   30:         _exc[data[ORTH] + "n't've"] = [
+   30:             dict(data),
+   30:             {ORTH: "n't", NORM: "not"},
+   30:             {ORTH: "'ve", NORM: "have"},
+               ]
+       
+   30:         _exc[data[ORTH] + "ntve"] = [
+   30:             dict(data),
+   30:             {ORTH: "nt", NORM: "not"},
+   30:             {ORTH: "ve", NORM: "have"},
+               ]
+       
+       
+    6: for verb_data in [
+    1:     {ORTH: "could", NORM: "could"},
+    1:     {ORTH: "might", NORM: "might"},
+    1:     {ORTH: "must", NORM: "must"},
+    1:     {ORTH: "should", NORM: "should"},
+    1:     {ORTH: "would", NORM: "would"},
+       ]:
+    5:     verb_data_tc = dict(verb_data)
+    5:     verb_data_tc[ORTH] = verb_data_tc[ORTH].title()
+   15:     for data in [verb_data, verb_data_tc]:
+   10:         _exc[data[ORTH] + "'ve"] = [dict(data), {ORTH: "'ve"}]
+       
+   10:         _exc[data[ORTH] + "ve"] = [dict(data), {ORTH: "ve"}]
+       
+       
+    9: for verb_data in [
+    1:     {ORTH: "ai", "number": 2},
+    1:     {ORTH: "are", NORM: "are", "number": 2},
+    1:     {ORTH: "is", NORM: "is"},
+    1:     {ORTH: "was", NORM: "was"},
+    1:     {ORTH: "were", NORM: "were"},
+    1:     {ORTH: "have", NORM: "have"},
+    1:     {ORTH: "has", NORM: "has"},
+    1:     {ORTH: "dare", NORM: "dare"},
+       ]:
+    8:     verb_data_tc = dict(verb_data)  # type: ignore[call-overload]
+    8:     verb_data_tc[ORTH] = verb_data_tc[ORTH].title()
+   24:     for data in [verb_data, verb_data_tc]:  # type: ignore[assignment]
+   16:         _exc[data[ORTH] + "n't"] = [
+   16:             dict(data),
+   16:             {ORTH: "n't", NORM: "not"},
+               ]
+       
+   16:         _exc[data[ORTH] + "nt"] = [
+   16:             dict(data),
+   16:             {ORTH: "nt", NORM: "not"},
+               ]
+       
+       
+       # Other contractions with trailing apostrophe
+       
+    7: for exc_data in [
+    1:     {ORTH: "doin", NORM: "doing"},
+    1:     {ORTH: "goin", NORM: "going"},
+    1:     {ORTH: "nothin", NORM: "nothing"},
+    1:     {ORTH: "nuthin", NORM: "nothing"},
+    1:     {ORTH: "ol", NORM: "old"},
+    1:     {ORTH: "somethin", NORM: "something"},
+       ]:
+    6:     exc_data_tc = dict(exc_data)
+    6:     exc_data_tc[ORTH] = exc_data_tc[ORTH].title()
+   18:     for data in [exc_data, exc_data_tc]:
+   12:         data_apos = dict(data)
+   12:         data_apos[ORTH] = data_apos[ORTH] + "'"
+   12:         _exc[data[ORTH]] = [dict(data)]
+   12:         _exc[data_apos[ORTH]] = [dict(data_apos)]
+       
+       
+       # Other contractions with leading apostrophe
+       
+    4: for exc_data in [
+    1:     {ORTH: "em", NORM: "them"},
+    1:     {ORTH: "ll", NORM: "will"},
+    1:     {ORTH: "nuff", NORM: "enough"},
+       ]:
+    3:     exc_data_apos = dict(exc_data)
+    3:     exc_data_apos[ORTH] = "'" + exc_data_apos[ORTH]
+    9:     for data in [exc_data, exc_data_apos]:
+    6:         _exc[data[ORTH]] = [data]
+       
+       
+       # Times
+       
+   13: for h in range(1, 12 + 1):
+   36:     for period in ["a.m.", "am"]:
+   24:         _exc[f"{h}{period}"] = [
+   24:             {ORTH: f"{h}"},
+   24:             {ORTH: period, NORM: "a.m."},
+               ]
+   36:     for period in ["p.m.", "pm"]:
+   24:         _exc[f"{h}{period}"] = [
+   24:             {ORTH: f"{h}"},
+   24:             {ORTH: period, NORM: "p.m."},
+               ]
+       
+       
+       # Rest
+       
+   19: _other_exc = {
+    1:     "y'all": [{ORTH: "y'", NORM: "you"}, {ORTH: "all"}],
+    1:     "yall": [{ORTH: "y", NORM: "you"}, {ORTH: "all"}],
+    1:     "how'd'y": [{ORTH: "how"}, {ORTH: "'d"}, {ORTH: "'y", NORM: "you"}],
+    1:     "How'd'y": [{ORTH: "How", NORM: "how"}, {ORTH: "'d"}, {ORTH: "'y", NORM: "you"}],
+    1:     "not've": [{ORTH: "not"}, {ORTH: "'ve", NORM: "have"}],
+    1:     "notve": [{ORTH: "not"}, {ORTH: "ve", NORM: "have"}],
+    1:     "Not've": [{ORTH: "Not", NORM: "not"}, {ORTH: "'ve", NORM: "have"}],
+    1:     "Notve": [{ORTH: "Not", NORM: "not"}, {ORTH: "ve", NORM: "have"}],
+    1:     "cannot": [{ORTH: "can"}, {ORTH: "not"}],
+    1:     "Cannot": [{ORTH: "Can", NORM: "can"}, {ORTH: "not"}],
+    1:     "gonna": [{ORTH: "gon", NORM: "going"}, {ORTH: "na", NORM: "to"}],
+    1:     "Gonna": [{ORTH: "Gon", NORM: "going"}, {ORTH: "na", NORM: "to"}],
+    1:     "gotta": [{ORTH: "got"}, {ORTH: "ta", NORM: "to"}],
+    1:     "Gotta": [{ORTH: "Got", NORM: "got"}, {ORTH: "ta", NORM: "to"}],
+    1:     "let's": [{ORTH: "let"}, {ORTH: "'s", NORM: "us"}],
+    1:     "Let's": [{ORTH: "Let", NORM: "let"}, {ORTH: "'s", NORM: "us"}],
+    1:     "c'mon": [{ORTH: "c'm", NORM: "come"}, {ORTH: "on"}],
+    1:     "C'mon": [{ORTH: "C'm", NORM: "come"}, {ORTH: "on"}],
+       }
+       
+    1: _exc.update(_other_exc)
+       
+       
+  177: for exc_data in [
+    1:     {ORTH: "'S", NORM: "'s"},
+    1:     {ORTH: "'s", NORM: "'s"},
+    1:     {ORTH: "\u2018S", NORM: "'s"},
+    1:     {ORTH: "\u2018s", NORM: "'s"},
+    1:     {ORTH: "and/or", NORM: "and/or"},
+    1:     {ORTH: "w/o", NORM: "without"},
+    1:     {ORTH: "'re", NORM: "are"},
+    1:     {ORTH: "'Cause", NORM: "because"},
+    1:     {ORTH: "'cause", NORM: "because"},
+    1:     {ORTH: "'cos", NORM: "because"},
+    1:     {ORTH: "'Cos", NORM: "because"},
+    1:     {ORTH: "'coz", NORM: "because"},
+    1:     {ORTH: "'Coz", NORM: "because"},
+    1:     {ORTH: "'cuz", NORM: "because"},
+    1:     {ORTH: "'Cuz", NORM: "because"},
+    1:     {ORTH: "'bout", NORM: "about"},
+    1:     {ORTH: "ma'am", NORM: "madam"},
+    1:     {ORTH: "Ma'am", NORM: "madam"},
+    1:     {ORTH: "o'clock", NORM: "o'clock"},
+    1:     {ORTH: "O'clock", NORM: "o'clock"},
+    1:     {ORTH: "lovin'", NORM: "loving"},
+    1:     {ORTH: "Lovin'", NORM: "loving"},
+    1:     {ORTH: "lovin", NORM: "loving"},
+    1:     {ORTH: "Lovin", NORM: "loving"},
+    1:     {ORTH: "havin'", NORM: "having"},
+    1:     {ORTH: "Havin'", NORM: "having"},
+    1:     {ORTH: "havin", NORM: "having"},
+    1:     {ORTH: "Havin", NORM: "having"},
+    1:     {ORTH: "doin'", NORM: "doing"},
+    1:     {ORTH: "Doin'", NORM: "doing"},
+    1:     {ORTH: "doin", NORM: "doing"},
+    1:     {ORTH: "Doin", NORM: "doing"},
+    1:     {ORTH: "goin'", NORM: "going"},
+    1:     {ORTH: "Goin'", NORM: "going"},
+    1:     {ORTH: "goin", NORM: "going"},
+    1:     {ORTH: "Goin", NORM: "going"},
+    1:     {ORTH: "Mt.", NORM: "Mount"},
+    1:     {ORTH: "Ak.", NORM: "Alaska"},
+    1:     {ORTH: "Ala.", NORM: "Alabama"},
+    1:     {ORTH: "Apr.", NORM: "April"},
+    1:     {ORTH: "Ariz.", NORM: "Arizona"},
+    1:     {ORTH: "Ark.", NORM: "Arkansas"},
+    1:     {ORTH: "Aug.", NORM: "August"},
+    1:     {ORTH: "Calif.", NORM: "California"},
+    1:     {ORTH: "Colo.", NORM: "Colorado"},
+    1:     {ORTH: "Conn.", NORM: "Connecticut"},
+    1:     {ORTH: "Dec.", NORM: "December"},
+    1:     {ORTH: "Del.", NORM: "Delaware"},
+    1:     {ORTH: "Feb.", NORM: "February"},
+    1:     {ORTH: "Fla.", NORM: "Florida"},
+    1:     {ORTH: "Ga.", NORM: "Georgia"},
+    1:     {ORTH: "Ia.", NORM: "Iowa"},
+    1:     {ORTH: "Id.", NORM: "Idaho"},
+    1:     {ORTH: "Ill.", NORM: "Illinois"},
+    1:     {ORTH: "Ind.", NORM: "Indiana"},
+    1:     {ORTH: "Jan.", NORM: "January"},
+    1:     {ORTH: "Jul.", NORM: "July"},
+    1:     {ORTH: "Jun.", NORM: "June"},
+    1:     {ORTH: "Kan.", NORM: "Kansas"},
+    1:     {ORTH: "Kans.", NORM: "Kansas"},
+    1:     {ORTH: "Ky.", NORM: "Kentucky"},
+    1:     {ORTH: "La.", NORM: "Louisiana"},
+    1:     {ORTH: "Mar.", NORM: "March"},
+    1:     {ORTH: "Mass.", NORM: "Massachusetts"},
+    1:     {ORTH: "Mich.", NORM: "Michigan"},
+    1:     {ORTH: "Minn.", NORM: "Minnesota"},
+    1:     {ORTH: "Miss.", NORM: "Mississippi"},
+    1:     {ORTH: "N.C.", NORM: "North Carolina"},
+    1:     {ORTH: "N.D.", NORM: "North Dakota"},
+    1:     {ORTH: "N.H.", NORM: "New Hampshire"},
+    1:     {ORTH: "N.J.", NORM: "New Jersey"},
+    1:     {ORTH: "N.M.", NORM: "New Mexico"},
+    1:     {ORTH: "N.Y.", NORM: "New York"},
+    1:     {ORTH: "Neb.", NORM: "Nebraska"},
+    1:     {ORTH: "Nebr.", NORM: "Nebraska"},
+    1:     {ORTH: "Nev.", NORM: "Nevada"},
+    1:     {ORTH: "Nov.", NORM: "November"},
+    1:     {ORTH: "Oct.", NORM: "October"},
+    1:     {ORTH: "Okla.", NORM: "Oklahoma"},
+    1:     {ORTH: "Ore.", NORM: "Oregon"},
+    1:     {ORTH: "Pa.", NORM: "Pennsylvania"},
+    1:     {ORTH: "S.C.", NORM: "South Carolina"},
+    1:     {ORTH: "Sep.", NORM: "September"},
+    1:     {ORTH: "Sept.", NORM: "September"},
+    1:     {ORTH: "Tenn.", NORM: "Tennessee"},
+    1:     {ORTH: "Va.", NORM: "Virginia"},
+    1:     {ORTH: "Wash.", NORM: "Washington"},
+    1:     {ORTH: "Wis.", NORM: "Wisconsin"},
+       ]:
+   88:     _exc[exc_data[ORTH]] = [exc_data]
+       
+       
+   37: for orth in [
+           "'d",
+           "a.m.",
+           "Adm.",
+           "Bros.",
+           "co.",
+           "Co.",
+           "Corp.",
+           "D.C.",
+           "Dr.",
+           "e.g.",
+           "E.g.",
+           "E.G.",
+           "Gen.",
+           "Gov.",
+           "i.e.",
+           "I.e.",
+           "I.E.",
+           "Inc.",
+           "Jr.",
+           "Ltd.",
+           "Md.",
+           "Messrs.",
+           "Mo.",
+           "Mont.",
+           "Mr.",
+           "Mrs.",
+           "Ms.",
+           "p.m.",
+           "Ph.D.",
+           "Prof.",
+           "Rep.",
+           "Rev.",
+           "Sen.",
+           "St.",
+           "vs.",
+           "v.s.",
+       ]:
+   36:     _exc[orth] = [{ORTH: orth}]
+       
+       
+   17: for string in _exclude:
+   16:     if string in _exc:
+   16:         _exc.pop(string)
+       
+       
+    1: TOKENIZER_EXCEPTIONS = update_exc(BASE_EXCEPTIONS, _exc)

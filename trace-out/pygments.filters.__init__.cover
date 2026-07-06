@@ -1,0 +1,942 @@
+    1: """
+           pygments.filters
+           ~~~~~~~~~~~~~~~~
+       
+           Module containing filter lookup functions and default
+           filters.
+       
+           :copyright: Copyright 2006-present by the Pygments team, see AUTHORS.
+           :license: BSD, see LICENSE for details.
+       """
+       
+    1: import re
+       
+    1: from pygments.token import String, Comment, Keyword, Name, Error, Whitespace, \
+           string_to_tokentype
+    1: from pygments.filter import Filter
+    1: from pygments.util import get_list_opt, get_int_opt, get_bool_opt, \
+           get_choice_opt, ClassNotFound, OptionError
+    1: from pygments.plugin import find_plugin_filters
+       
+       
+    1: def find_filter_class(filtername):
+           """Lookup a filter by name. Return None if not found."""
+           if filtername in FILTERS:
+               return FILTERS[filtername]
+           for name, cls in find_plugin_filters():
+               if name == filtername:
+                   return cls
+           return None
+       
+       
+    1: def get_filter_by_name(filtername, **options):
+           """Return an instantiated filter.
+       
+           Options are passed to the filter initializer if wanted.
+           Raise a ClassNotFound if not found.
+           """
+           cls = find_filter_class(filtername)
+           if cls:
+               return cls(**options)
+           else:
+               raise ClassNotFound(f'filter {filtername!r} not found')
+       
+       
+    1: def get_all_filters():
+           """Return a generator of all filter names."""
+           yield from FILTERS
+           for name, _ in find_plugin_filters():
+               yield name
+       
+       
+    1: def _replace_special(ttype, value, regex, specialttype,
+    1:                      replacefunc=lambda x: x):
+           last = 0
+           for match in regex.finditer(value):
+               start, end = match.start(), match.end()
+               if start != last:
+                   yield ttype, value[last:start]
+               yield specialttype, replacefunc(value[start:end])
+               last = end
+           if last != len(value):
+               yield ttype, value[last:]
+       
+       
+    2: class CodeTagFilter(Filter):
+    1:     """Highlight special code tags in comments and docstrings.
+       
+           Options accepted:
+       
+           `codetags` : list of strings
+              A list of strings that are flagged as code tags.  The default is to
+              highlight ``XXX``, ``TODO``, ``FIXME``, ``BUG`` and ``NOTE``.
+       
+           .. versionchanged:: 2.13
+              Now recognizes ``FIXME`` by default.
+           """
+       
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               tags = get_list_opt(options, 'codetags',
+                                   ['XXX', 'TODO', 'FIXME', 'BUG', 'NOTE'])
+               self.tag_re = re.compile(r'\b({})\b'.format('|'.join([
+                   re.escape(tag) for tag in tags if tag
+               ])))
+       
+    1:     def filter(self, lexer, stream):
+               regex = self.tag_re
+               for ttype, value in stream:
+                   if ttype in String.Doc or \
+                      ttype in Comment and \
+                      ttype not in Comment.Preproc:
+                       yield from _replace_special(ttype, value, regex, Comment.Special)
+                   else:
+                       yield ttype, value
+       
+       
+    2: class SymbolFilter(Filter):
+    1:     """Convert mathematical symbols into Unicode characters.
+       
+           Examples are ``\\<longrightarrow>`` in Isabelle or
+           ``\\longrightarrow`` in LaTeX.
+       
+           This is mostly useful for HTML or console output when you want to
+           approximate the source rendering you'd see in an IDE.
+       
+           Options accepted:
+       
+           `lang` : string
+              The symbol language. Must be one of ``'isabelle'`` or
+              ``'latex'``.  The default is ``'isabelle'``.
+           """
+       
+  189:     latex_symbols = {
+    1:         '\\alpha'                : '\U000003b1',
+    1:         '\\beta'                 : '\U000003b2',
+    1:         '\\gamma'                : '\U000003b3',
+    1:         '\\delta'                : '\U000003b4',
+    1:         '\\varepsilon'           : '\U000003b5',
+    1:         '\\zeta'                 : '\U000003b6',
+    1:         '\\eta'                  : '\U000003b7',
+    1:         '\\vartheta'             : '\U000003b8',
+    1:         '\\iota'                 : '\U000003b9',
+    1:         '\\kappa'                : '\U000003ba',
+    1:         '\\lambda'               : '\U000003bb',
+    1:         '\\mu'                   : '\U000003bc',
+    1:         '\\nu'                   : '\U000003bd',
+    1:         '\\xi'                   : '\U000003be',
+    1:         '\\pi'                   : '\U000003c0',
+    1:         '\\varrho'               : '\U000003c1',
+    1:         '\\sigma'                : '\U000003c3',
+    1:         '\\tau'                  : '\U000003c4',
+    1:         '\\upsilon'              : '\U000003c5',
+    1:         '\\varphi'               : '\U000003c6',
+    1:         '\\chi'                  : '\U000003c7',
+    1:         '\\psi'                  : '\U000003c8',
+    1:         '\\omega'                : '\U000003c9',
+    1:         '\\Gamma'                : '\U00000393',
+    1:         '\\Delta'                : '\U00000394',
+    1:         '\\Theta'                : '\U00000398',
+    1:         '\\Lambda'               : '\U0000039b',
+    1:         '\\Xi'                   : '\U0000039e',
+    1:         '\\Pi'                   : '\U000003a0',
+    1:         '\\Sigma'                : '\U000003a3',
+    1:         '\\Upsilon'              : '\U000003a5',
+    1:         '\\Phi'                  : '\U000003a6',
+    1:         '\\Psi'                  : '\U000003a8',
+    1:         '\\Omega'                : '\U000003a9',
+    1:         '\\leftarrow'            : '\U00002190',
+    1:         '\\longleftarrow'        : '\U000027f5',
+    1:         '\\rightarrow'           : '\U00002192',
+    1:         '\\longrightarrow'       : '\U000027f6',
+    1:         '\\Leftarrow'            : '\U000021d0',
+    1:         '\\Longleftarrow'        : '\U000027f8',
+    1:         '\\Rightarrow'           : '\U000021d2',
+    1:         '\\Longrightarrow'       : '\U000027f9',
+    1:         '\\leftrightarrow'       : '\U00002194',
+    1:         '\\longleftrightarrow'   : '\U000027f7',
+    1:         '\\Leftrightarrow'       : '\U000021d4',
+    1:         '\\Longleftrightarrow'   : '\U000027fa',
+    1:         '\\mapsto'               : '\U000021a6',
+    1:         '\\longmapsto'           : '\U000027fc',
+    1:         '\\relbar'               : '\U00002500',
+    1:         '\\Relbar'               : '\U00002550',
+    1:         '\\hookleftarrow'        : '\U000021a9',
+    1:         '\\hookrightarrow'       : '\U000021aa',
+    1:         '\\leftharpoondown'      : '\U000021bd',
+    1:         '\\rightharpoondown'     : '\U000021c1',
+    1:         '\\leftharpoonup'        : '\U000021bc',
+    1:         '\\rightharpoonup'       : '\U000021c0',
+    1:         '\\rightleftharpoons'    : '\U000021cc',
+    1:         '\\leadsto'              : '\U0000219d',
+    1:         '\\downharpoonleft'      : '\U000021c3',
+    1:         '\\downharpoonright'     : '\U000021c2',
+    1:         '\\upharpoonleft'        : '\U000021bf',
+    1:         '\\upharpoonright'       : '\U000021be',
+    1:         '\\restriction'          : '\U000021be',
+    1:         '\\uparrow'              : '\U00002191',
+    1:         '\\Uparrow'              : '\U000021d1',
+    1:         '\\downarrow'            : '\U00002193',
+    1:         '\\Downarrow'            : '\U000021d3',
+    1:         '\\updownarrow'          : '\U00002195',
+    1:         '\\Updownarrow'          : '\U000021d5',
+    1:         '\\langle'               : '\U000027e8',
+    1:         '\\rangle'               : '\U000027e9',
+    1:         '\\lceil'                : '\U00002308',
+    1:         '\\rceil'                : '\U00002309',
+    1:         '\\lfloor'               : '\U0000230a',
+    1:         '\\rfloor'               : '\U0000230b',
+    1:         '\\flqq'                 : '\U000000ab',
+    1:         '\\frqq'                 : '\U000000bb',
+    1:         '\\bot'                  : '\U000022a5',
+    1:         '\\top'                  : '\U000022a4',
+    1:         '\\wedge'                : '\U00002227',
+    1:         '\\bigwedge'             : '\U000022c0',
+    1:         '\\vee'                  : '\U00002228',
+    1:         '\\bigvee'               : '\U000022c1',
+    1:         '\\forall'               : '\U00002200',
+    1:         '\\exists'               : '\U00002203',
+    1:         '\\nexists'              : '\U00002204',
+    1:         '\\neg'                  : '\U000000ac',
+    1:         '\\Box'                  : '\U000025a1',
+    1:         '\\Diamond'              : '\U000025c7',
+    1:         '\\vdash'                : '\U000022a2',
+    1:         '\\models'               : '\U000022a8',
+    1:         '\\dashv'                : '\U000022a3',
+    1:         '\\surd'                 : '\U0000221a',
+    1:         '\\le'                   : '\U00002264',
+    1:         '\\ge'                   : '\U00002265',
+    1:         '\\ll'                   : '\U0000226a',
+    1:         '\\gg'                   : '\U0000226b',
+    1:         '\\lesssim'              : '\U00002272',
+    1:         '\\gtrsim'               : '\U00002273',
+    1:         '\\lessapprox'           : '\U00002a85',
+    1:         '\\gtrapprox'            : '\U00002a86',
+    1:         '\\in'                   : '\U00002208',
+    1:         '\\notin'                : '\U00002209',
+    1:         '\\subset'               : '\U00002282',
+    1:         '\\supset'               : '\U00002283',
+    1:         '\\subseteq'             : '\U00002286',
+    1:         '\\supseteq'             : '\U00002287',
+    1:         '\\sqsubset'             : '\U0000228f',
+    1:         '\\sqsupset'             : '\U00002290',
+    1:         '\\sqsubseteq'           : '\U00002291',
+    1:         '\\sqsupseteq'           : '\U00002292',
+    1:         '\\cap'                  : '\U00002229',
+    1:         '\\bigcap'               : '\U000022c2',
+    1:         '\\cup'                  : '\U0000222a',
+    1:         '\\bigcup'               : '\U000022c3',
+    1:         '\\sqcup'                : '\U00002294',
+    1:         '\\bigsqcup'             : '\U00002a06',
+    1:         '\\sqcap'                : '\U00002293',
+    1:         '\\Bigsqcap'             : '\U00002a05',
+    1:         '\\setminus'             : '\U00002216',
+    1:         '\\propto'               : '\U0000221d',
+    1:         '\\uplus'                : '\U0000228e',
+    1:         '\\bigplus'              : '\U00002a04',
+    1:         '\\sim'                  : '\U0000223c',
+    1:         '\\doteq'                : '\U00002250',
+    1:         '\\simeq'                : '\U00002243',
+    1:         '\\approx'               : '\U00002248',
+    1:         '\\asymp'                : '\U0000224d',
+    1:         '\\cong'                 : '\U00002245',
+    1:         '\\equiv'                : '\U00002261',
+    1:         '\\Join'                 : '\U000022c8',
+    1:         '\\bowtie'               : '\U00002a1d',
+    1:         '\\prec'                 : '\U0000227a',
+    1:         '\\succ'                 : '\U0000227b',
+    1:         '\\preceq'               : '\U0000227c',
+    1:         '\\succeq'               : '\U0000227d',
+    1:         '\\parallel'             : '\U00002225',
+    1:         '\\mid'                  : '\U000000a6',
+    1:         '\\pm'                   : '\U000000b1',
+    1:         '\\mp'                   : '\U00002213',
+    1:         '\\times'                : '\U000000d7',
+    1:         '\\div'                  : '\U000000f7',
+    1:         '\\cdot'                 : '\U000022c5',
+    1:         '\\star'                 : '\U000022c6',
+    1:         '\\circ'                 : '\U00002218',
+    1:         '\\dagger'               : '\U00002020',
+    1:         '\\ddagger'              : '\U00002021',
+    1:         '\\lhd'                  : '\U000022b2',
+    1:         '\\rhd'                  : '\U000022b3',
+    1:         '\\unlhd'                : '\U000022b4',
+    1:         '\\unrhd'                : '\U000022b5',
+    1:         '\\triangleleft'         : '\U000025c3',
+    1:         '\\triangleright'        : '\U000025b9',
+    1:         '\\triangle'             : '\U000025b3',
+    1:         '\\triangleq'            : '\U0000225c',
+    1:         '\\oplus'                : '\U00002295',
+    1:         '\\bigoplus'             : '\U00002a01',
+    1:         '\\otimes'               : '\U00002297',
+    1:         '\\bigotimes'            : '\U00002a02',
+    1:         '\\odot'                 : '\U00002299',
+    1:         '\\bigodot'              : '\U00002a00',
+    1:         '\\ominus'               : '\U00002296',
+    1:         '\\oslash'               : '\U00002298',
+    1:         '\\dots'                 : '\U00002026',
+    1:         '\\cdots'                : '\U000022ef',
+    1:         '\\sum'                  : '\U00002211',
+    1:         '\\prod'                 : '\U0000220f',
+    1:         '\\coprod'               : '\U00002210',
+    1:         '\\infty'                : '\U0000221e',
+    1:         '\\int'                  : '\U0000222b',
+    1:         '\\oint'                 : '\U0000222e',
+    1:         '\\clubsuit'             : '\U00002663',
+    1:         '\\diamondsuit'          : '\U00002662',
+    1:         '\\heartsuit'            : '\U00002661',
+    1:         '\\spadesuit'            : '\U00002660',
+    1:         '\\aleph'                : '\U00002135',
+    1:         '\\emptyset'             : '\U00002205',
+    1:         '\\nabla'                : '\U00002207',
+    1:         '\\partial'              : '\U00002202',
+    1:         '\\flat'                 : '\U0000266d',
+    1:         '\\natural'              : '\U0000266e',
+    1:         '\\sharp'                : '\U0000266f',
+    1:         '\\angle'                : '\U00002220',
+    1:         '\\copyright'            : '\U000000a9',
+    1:         '\\textregistered'       : '\U000000ae',
+    1:         '\\textonequarter'       : '\U000000bc',
+    1:         '\\textonehalf'          : '\U000000bd',
+    1:         '\\textthreequarters'    : '\U000000be',
+    1:         '\\textordfeminine'      : '\U000000aa',
+    1:         '\\textordmasculine'     : '\U000000ba',
+    1:         '\\euro'                 : '\U000020ac',
+    1:         '\\pounds'               : '\U000000a3',
+    1:         '\\yen'                  : '\U000000a5',
+    1:         '\\textcent'             : '\U000000a2',
+    1:         '\\textcurrency'         : '\U000000a4',
+    1:         '\\textdegree'           : '\U000000b0',
+           }
+       
+  359:     isabelle_symbols = {
+    1:         '\\<zero>'                 : '\U0001d7ec',
+    1:         '\\<one>'                  : '\U0001d7ed',
+    1:         '\\<two>'                  : '\U0001d7ee',
+    1:         '\\<three>'                : '\U0001d7ef',
+    1:         '\\<four>'                 : '\U0001d7f0',
+    1:         '\\<five>'                 : '\U0001d7f1',
+    1:         '\\<six>'                  : '\U0001d7f2',
+    1:         '\\<seven>'                : '\U0001d7f3',
+    1:         '\\<eight>'                : '\U0001d7f4',
+    1:         '\\<nine>'                 : '\U0001d7f5',
+    1:         '\\<A>'                    : '\U0001d49c',
+    1:         '\\<B>'                    : '\U0000212c',
+    1:         '\\<C>'                    : '\U0001d49e',
+    1:         '\\<D>'                    : '\U0001d49f',
+    1:         '\\<E>'                    : '\U00002130',
+    1:         '\\<F>'                    : '\U00002131',
+    1:         '\\<G>'                    : '\U0001d4a2',
+    1:         '\\<H>'                    : '\U0000210b',
+    1:         '\\<I>'                    : '\U00002110',
+    1:         '\\<J>'                    : '\U0001d4a5',
+    1:         '\\<K>'                    : '\U0001d4a6',
+    1:         '\\<L>'                    : '\U00002112',
+    1:         '\\<M>'                    : '\U00002133',
+    1:         '\\<N>'                    : '\U0001d4a9',
+    1:         '\\<O>'                    : '\U0001d4aa',
+    1:         '\\<P>'                    : '\U0001d4ab',
+    1:         '\\<Q>'                    : '\U0001d4ac',
+    1:         '\\<R>'                    : '\U0000211b',
+    1:         '\\<S>'                    : '\U0001d4ae',
+    1:         '\\<T>'                    : '\U0001d4af',
+    1:         '\\<U>'                    : '\U0001d4b0',
+    1:         '\\<V>'                    : '\U0001d4b1',
+    1:         '\\<W>'                    : '\U0001d4b2',
+    1:         '\\<X>'                    : '\U0001d4b3',
+    1:         '\\<Y>'                    : '\U0001d4b4',
+    1:         '\\<Z>'                    : '\U0001d4b5',
+    1:         '\\<a>'                    : '\U0001d5ba',
+    1:         '\\<b>'                    : '\U0001d5bb',
+    1:         '\\<c>'                    : '\U0001d5bc',
+    1:         '\\<d>'                    : '\U0001d5bd',
+    1:         '\\<e>'                    : '\U0001d5be',
+    1:         '\\<f>'                    : '\U0001d5bf',
+    1:         '\\<g>'                    : '\U0001d5c0',
+    1:         '\\<h>'                    : '\U0001d5c1',
+    1:         '\\<i>'                    : '\U0001d5c2',
+    1:         '\\<j>'                    : '\U0001d5c3',
+    1:         '\\<k>'                    : '\U0001d5c4',
+    1:         '\\<l>'                    : '\U0001d5c5',
+    1:         '\\<m>'                    : '\U0001d5c6',
+    1:         '\\<n>'                    : '\U0001d5c7',
+    1:         '\\<o>'                    : '\U0001d5c8',
+    1:         '\\<p>'                    : '\U0001d5c9',
+    1:         '\\<q>'                    : '\U0001d5ca',
+    1:         '\\<r>'                    : '\U0001d5cb',
+    1:         '\\<s>'                    : '\U0001d5cc',
+    1:         '\\<t>'                    : '\U0001d5cd',
+    1:         '\\<u>'                    : '\U0001d5ce',
+    1:         '\\<v>'                    : '\U0001d5cf',
+    1:         '\\<w>'                    : '\U0001d5d0',
+    1:         '\\<x>'                    : '\U0001d5d1',
+    1:         '\\<y>'                    : '\U0001d5d2',
+    1:         '\\<z>'                    : '\U0001d5d3',
+    1:         '\\<AA>'                   : '\U0001d504',
+    1:         '\\<BB>'                   : '\U0001d505',
+    1:         '\\<CC>'                   : '\U0000212d',
+    1:         '\\<DD>'                   : '\U0001d507',
+    1:         '\\<EE>'                   : '\U0001d508',
+    1:         '\\<FF>'                   : '\U0001d509',
+    1:         '\\<GG>'                   : '\U0001d50a',
+    1:         '\\<HH>'                   : '\U0000210c',
+    1:         '\\<II>'                   : '\U00002111',
+    1:         '\\<JJ>'                   : '\U0001d50d',
+    1:         '\\<KK>'                   : '\U0001d50e',
+    1:         '\\<LL>'                   : '\U0001d50f',
+    1:         '\\<MM>'                   : '\U0001d510',
+    1:         '\\<NN>'                   : '\U0001d511',
+    1:         '\\<OO>'                   : '\U0001d512',
+    1:         '\\<PP>'                   : '\U0001d513',
+    1:         '\\<QQ>'                   : '\U0001d514',
+    1:         '\\<RR>'                   : '\U0000211c',
+    1:         '\\<SS>'                   : '\U0001d516',
+    1:         '\\<TT>'                   : '\U0001d517',
+    1:         '\\<UU>'                   : '\U0001d518',
+    1:         '\\<VV>'                   : '\U0001d519',
+    1:         '\\<WW>'                   : '\U0001d51a',
+    1:         '\\<XX>'                   : '\U0001d51b',
+    1:         '\\<YY>'                   : '\U0001d51c',
+    1:         '\\<ZZ>'                   : '\U00002128',
+    1:         '\\<aa>'                   : '\U0001d51e',
+    1:         '\\<bb>'                   : '\U0001d51f',
+    1:         '\\<cc>'                   : '\U0001d520',
+    1:         '\\<dd>'                   : '\U0001d521',
+    1:         '\\<ee>'                   : '\U0001d522',
+    1:         '\\<ff>'                   : '\U0001d523',
+    1:         '\\<gg>'                   : '\U0001d524',
+    1:         '\\<hh>'                   : '\U0001d525',
+    1:         '\\<ii>'                   : '\U0001d526',
+    1:         '\\<jj>'                   : '\U0001d527',
+    1:         '\\<kk>'                   : '\U0001d528',
+    1:         '\\<ll>'                   : '\U0001d529',
+    1:         '\\<mm>'                   : '\U0001d52a',
+    1:         '\\<nn>'                   : '\U0001d52b',
+    1:         '\\<oo>'                   : '\U0001d52c',
+    1:         '\\<pp>'                   : '\U0001d52d',
+    1:         '\\<qq>'                   : '\U0001d52e',
+    1:         '\\<rr>'                   : '\U0001d52f',
+    1:         '\\<ss>'                   : '\U0001d530',
+    1:         '\\<tt>'                   : '\U0001d531',
+    1:         '\\<uu>'                   : '\U0001d532',
+    1:         '\\<vv>'                   : '\U0001d533',
+    1:         '\\<ww>'                   : '\U0001d534',
+    1:         '\\<xx>'                   : '\U0001d535',
+    1:         '\\<yy>'                   : '\U0001d536',
+    1:         '\\<zz>'                   : '\U0001d537',
+    1:         '\\<alpha>'                : '\U000003b1',
+    1:         '\\<beta>'                 : '\U000003b2',
+    1:         '\\<gamma>'                : '\U000003b3',
+    1:         '\\<delta>'                : '\U000003b4',
+    1:         '\\<epsilon>'              : '\U000003b5',
+    1:         '\\<zeta>'                 : '\U000003b6',
+    1:         '\\<eta>'                  : '\U000003b7',
+    1:         '\\<theta>'                : '\U000003b8',
+    1:         '\\<iota>'                 : '\U000003b9',
+    1:         '\\<kappa>'                : '\U000003ba',
+    1:         '\\<lambda>'               : '\U000003bb',
+    1:         '\\<mu>'                   : '\U000003bc',
+    1:         '\\<nu>'                   : '\U000003bd',
+    1:         '\\<xi>'                   : '\U000003be',
+    1:         '\\<pi>'                   : '\U000003c0',
+    1:         '\\<rho>'                  : '\U000003c1',
+    1:         '\\<sigma>'                : '\U000003c3',
+    1:         '\\<tau>'                  : '\U000003c4',
+    1:         '\\<upsilon>'              : '\U000003c5',
+    1:         '\\<phi>'                  : '\U000003c6',
+    1:         '\\<chi>'                  : '\U000003c7',
+    1:         '\\<psi>'                  : '\U000003c8',
+    1:         '\\<omega>'                : '\U000003c9',
+    1:         '\\<Gamma>'                : '\U00000393',
+    1:         '\\<Delta>'                : '\U00000394',
+    1:         '\\<Theta>'                : '\U00000398',
+    1:         '\\<Lambda>'               : '\U0000039b',
+    1:         '\\<Xi>'                   : '\U0000039e',
+    1:         '\\<Pi>'                   : '\U000003a0',
+    1:         '\\<Sigma>'                : '\U000003a3',
+    1:         '\\<Upsilon>'              : '\U000003a5',
+    1:         '\\<Phi>'                  : '\U000003a6',
+    1:         '\\<Psi>'                  : '\U000003a8',
+    1:         '\\<Omega>'                : '\U000003a9',
+    1:         '\\<bool>'                 : '\U0001d539',
+    1:         '\\<complex>'              : '\U00002102',
+    1:         '\\<nat>'                  : '\U00002115',
+    1:         '\\<rat>'                  : '\U0000211a',
+    1:         '\\<real>'                 : '\U0000211d',
+    1:         '\\<int>'                  : '\U00002124',
+    1:         '\\<leftarrow>'            : '\U00002190',
+    1:         '\\<longleftarrow>'        : '\U000027f5',
+    1:         '\\<rightarrow>'           : '\U00002192',
+    1:         '\\<longrightarrow>'       : '\U000027f6',
+    1:         '\\<Leftarrow>'            : '\U000021d0',
+    1:         '\\<Longleftarrow>'        : '\U000027f8',
+    1:         '\\<Rightarrow>'           : '\U000021d2',
+    1:         '\\<Longrightarrow>'       : '\U000027f9',
+    1:         '\\<leftrightarrow>'       : '\U00002194',
+    1:         '\\<longleftrightarrow>'   : '\U000027f7',
+    1:         '\\<Leftrightarrow>'       : '\U000021d4',
+    1:         '\\<Longleftrightarrow>'   : '\U000027fa',
+    1:         '\\<mapsto>'               : '\U000021a6',
+    1:         '\\<longmapsto>'           : '\U000027fc',
+    1:         '\\<midarrow>'             : '\U00002500',
+    1:         '\\<Midarrow>'             : '\U00002550',
+    1:         '\\<hookleftarrow>'        : '\U000021a9',
+    1:         '\\<hookrightarrow>'       : '\U000021aa',
+    1:         '\\<leftharpoondown>'      : '\U000021bd',
+    1:         '\\<rightharpoondown>'     : '\U000021c1',
+    1:         '\\<leftharpoonup>'        : '\U000021bc',
+    1:         '\\<rightharpoonup>'       : '\U000021c0',
+    1:         '\\<rightleftharpoons>'    : '\U000021cc',
+    1:         '\\<leadsto>'              : '\U0000219d',
+    1:         '\\<downharpoonleft>'      : '\U000021c3',
+    1:         '\\<downharpoonright>'     : '\U000021c2',
+    1:         '\\<upharpoonleft>'        : '\U000021bf',
+    1:         '\\<upharpoonright>'       : '\U000021be',
+    1:         '\\<restriction>'          : '\U000021be',
+    1:         '\\<Colon>'                : '\U00002237',
+    1:         '\\<up>'                   : '\U00002191',
+    1:         '\\<Up>'                   : '\U000021d1',
+    1:         '\\<down>'                 : '\U00002193',
+    1:         '\\<Down>'                 : '\U000021d3',
+    1:         '\\<updown>'               : '\U00002195',
+    1:         '\\<Updown>'               : '\U000021d5',
+    1:         '\\<langle>'               : '\U000027e8',
+    1:         '\\<rangle>'               : '\U000027e9',
+    1:         '\\<lceil>'                : '\U00002308',
+    1:         '\\<rceil>'                : '\U00002309',
+    1:         '\\<lfloor>'               : '\U0000230a',
+    1:         '\\<rfloor>'               : '\U0000230b',
+    1:         '\\<lparr>'                : '\U00002987',
+    1:         '\\<rparr>'                : '\U00002988',
+    1:         '\\<lbrakk>'               : '\U000027e6',
+    1:         '\\<rbrakk>'               : '\U000027e7',
+    1:         '\\<lbrace>'               : '\U00002983',
+    1:         '\\<rbrace>'               : '\U00002984',
+    1:         '\\<guillemotleft>'        : '\U000000ab',
+    1:         '\\<guillemotright>'       : '\U000000bb',
+    1:         '\\<bottom>'               : '\U000022a5',
+    1:         '\\<top>'                  : '\U000022a4',
+    1:         '\\<and>'                  : '\U00002227',
+    1:         '\\<And>'                  : '\U000022c0',
+    1:         '\\<or>'                   : '\U00002228',
+    1:         '\\<Or>'                   : '\U000022c1',
+    1:         '\\<forall>'               : '\U00002200',
+    1:         '\\<exists>'               : '\U00002203',
+    1:         '\\<nexists>'              : '\U00002204',
+    1:         '\\<not>'                  : '\U000000ac',
+    1:         '\\<box>'                  : '\U000025a1',
+    1:         '\\<diamond>'              : '\U000025c7',
+    1:         '\\<turnstile>'            : '\U000022a2',
+    1:         '\\<Turnstile>'            : '\U000022a8',
+    1:         '\\<tturnstile>'           : '\U000022a9',
+    1:         '\\<TTurnstile>'           : '\U000022ab',
+    1:         '\\<stileturn>'            : '\U000022a3',
+    1:         '\\<surd>'                 : '\U0000221a',
+    1:         '\\<le>'                   : '\U00002264',
+    1:         '\\<ge>'                   : '\U00002265',
+    1:         '\\<lless>'                : '\U0000226a',
+    1:         '\\<ggreater>'             : '\U0000226b',
+    1:         '\\<lesssim>'              : '\U00002272',
+    1:         '\\<greatersim>'           : '\U00002273',
+    1:         '\\<lessapprox>'           : '\U00002a85',
+    1:         '\\<greaterapprox>'        : '\U00002a86',
+    1:         '\\<in>'                   : '\U00002208',
+    1:         '\\<notin>'                : '\U00002209',
+    1:         '\\<subset>'               : '\U00002282',
+    1:         '\\<supset>'               : '\U00002283',
+    1:         '\\<subseteq>'             : '\U00002286',
+    1:         '\\<supseteq>'             : '\U00002287',
+    1:         '\\<sqsubset>'             : '\U0000228f',
+    1:         '\\<sqsupset>'             : '\U00002290',
+    1:         '\\<sqsubseteq>'           : '\U00002291',
+    1:         '\\<sqsupseteq>'           : '\U00002292',
+    1:         '\\<inter>'                : '\U00002229',
+    1:         '\\<Inter>'                : '\U000022c2',
+    1:         '\\<union>'                : '\U0000222a',
+    1:         '\\<Union>'                : '\U000022c3',
+    1:         '\\<squnion>'              : '\U00002294',
+    1:         '\\<Squnion>'              : '\U00002a06',
+    1:         '\\<sqinter>'              : '\U00002293',
+    1:         '\\<Sqinter>'              : '\U00002a05',
+    1:         '\\<setminus>'             : '\U00002216',
+    1:         '\\<propto>'               : '\U0000221d',
+    1:         '\\<uplus>'                : '\U0000228e',
+    1:         '\\<Uplus>'                : '\U00002a04',
+    1:         '\\<noteq>'                : '\U00002260',
+    1:         '\\<sim>'                  : '\U0000223c',
+    1:         '\\<doteq>'                : '\U00002250',
+    1:         '\\<simeq>'                : '\U00002243',
+    1:         '\\<approx>'               : '\U00002248',
+    1:         '\\<asymp>'                : '\U0000224d',
+    1:         '\\<cong>'                 : '\U00002245',
+    1:         '\\<smile>'                : '\U00002323',
+    1:         '\\<equiv>'                : '\U00002261',
+    1:         '\\<frown>'                : '\U00002322',
+    1:         '\\<Join>'                 : '\U000022c8',
+    1:         '\\<bowtie>'               : '\U00002a1d',
+    1:         '\\<prec>'                 : '\U0000227a',
+    1:         '\\<succ>'                 : '\U0000227b',
+    1:         '\\<preceq>'               : '\U0000227c',
+    1:         '\\<succeq>'               : '\U0000227d',
+    1:         '\\<parallel>'             : '\U00002225',
+    1:         '\\<bar>'                  : '\U000000a6',
+    1:         '\\<plusminus>'            : '\U000000b1',
+    1:         '\\<minusplus>'            : '\U00002213',
+    1:         '\\<times>'                : '\U000000d7',
+    1:         '\\<div>'                  : '\U000000f7',
+    1:         '\\<cdot>'                 : '\U000022c5',
+    1:         '\\<star>'                 : '\U000022c6',
+    1:         '\\<bullet>'               : '\U00002219',
+    1:         '\\<circ>'                 : '\U00002218',
+    1:         '\\<dagger>'               : '\U00002020',
+    1:         '\\<ddagger>'              : '\U00002021',
+    1:         '\\<lhd>'                  : '\U000022b2',
+    1:         '\\<rhd>'                  : '\U000022b3',
+    1:         '\\<unlhd>'                : '\U000022b4',
+    1:         '\\<unrhd>'                : '\U000022b5',
+    1:         '\\<triangleleft>'         : '\U000025c3',
+    1:         '\\<triangleright>'        : '\U000025b9',
+    1:         '\\<triangle>'             : '\U000025b3',
+    1:         '\\<triangleq>'            : '\U0000225c',
+    1:         '\\<oplus>'                : '\U00002295',
+    1:         '\\<Oplus>'                : '\U00002a01',
+    1:         '\\<otimes>'               : '\U00002297',
+    1:         '\\<Otimes>'               : '\U00002a02',
+    1:         '\\<odot>'                 : '\U00002299',
+    1:         '\\<Odot>'                 : '\U00002a00',
+    1:         '\\<ominus>'               : '\U00002296',
+    1:         '\\<oslash>'               : '\U00002298',
+    1:         '\\<dots>'                 : '\U00002026',
+    1:         '\\<cdots>'                : '\U000022ef',
+    1:         '\\<Sum>'                  : '\U00002211',
+    1:         '\\<Prod>'                 : '\U0000220f',
+    1:         '\\<Coprod>'               : '\U00002210',
+    1:         '\\<infinity>'             : '\U0000221e',
+    1:         '\\<integral>'             : '\U0000222b',
+    1:         '\\<ointegral>'            : '\U0000222e',
+    1:         '\\<clubsuit>'             : '\U00002663',
+    1:         '\\<diamondsuit>'          : '\U00002662',
+    1:         '\\<heartsuit>'            : '\U00002661',
+    1:         '\\<spadesuit>'            : '\U00002660',
+    1:         '\\<aleph>'                : '\U00002135',
+    1:         '\\<emptyset>'             : '\U00002205',
+    1:         '\\<nabla>'                : '\U00002207',
+    1:         '\\<partial>'              : '\U00002202',
+    1:         '\\<flat>'                 : '\U0000266d',
+    1:         '\\<natural>'              : '\U0000266e',
+    1:         '\\<sharp>'                : '\U0000266f',
+    1:         '\\<angle>'                : '\U00002220',
+    1:         '\\<copyright>'            : '\U000000a9',
+    1:         '\\<registered>'           : '\U000000ae',
+    1:         '\\<hyphen>'               : '\U000000ad',
+    1:         '\\<inverse>'              : '\U000000af',
+    1:         '\\<onequarter>'           : '\U000000bc',
+    1:         '\\<onehalf>'              : '\U000000bd',
+    1:         '\\<threequarters>'        : '\U000000be',
+    1:         '\\<ordfeminine>'          : '\U000000aa',
+    1:         '\\<ordmasculine>'         : '\U000000ba',
+    1:         '\\<section>'              : '\U000000a7',
+    1:         '\\<paragraph>'            : '\U000000b6',
+    1:         '\\<exclamdown>'           : '\U000000a1',
+    1:         '\\<questiondown>'         : '\U000000bf',
+    1:         '\\<euro>'                 : '\U000020ac',
+    1:         '\\<pounds>'               : '\U000000a3',
+    1:         '\\<yen>'                  : '\U000000a5',
+    1:         '\\<cent>'                 : '\U000000a2',
+    1:         '\\<currency>'             : '\U000000a4',
+    1:         '\\<degree>'               : '\U000000b0',
+    1:         '\\<amalg>'                : '\U00002a3f',
+    1:         '\\<mho>'                  : '\U00002127',
+    1:         '\\<lozenge>'              : '\U000025ca',
+    1:         '\\<wp>'                   : '\U00002118',
+    1:         '\\<wrong>'                : '\U00002240',
+    1:         '\\<struct>'               : '\U000022c4',
+    1:         '\\<acute>'                : '\U000000b4',
+    1:         '\\<index>'                : '\U00000131',
+    1:         '\\<dieresis>'             : '\U000000a8',
+    1:         '\\<cedilla>'              : '\U000000b8',
+    1:         '\\<hungarumlaut>'         : '\U000002dd',
+    1:         '\\<some>'                 : '\U000003f5',
+    1:         '\\<newline>'              : '\U000023ce',
+    1:         '\\<open>'                 : '\U00002039',
+    1:         '\\<close>'                : '\U0000203a',
+    1:         '\\<here>'                 : '\U00002302',
+    1:         '\\<^sub>'                 : '\U000021e9',
+    1:         '\\<^sup>'                 : '\U000021e7',
+    1:         '\\<^bold>'                : '\U00002759',
+    1:         '\\<^bsub>'                : '\U000021d8',
+    1:         '\\<^esub>'                : '\U000021d9',
+    1:         '\\<^bsup>'                : '\U000021d7',
+    1:         '\\<^esup>'                : '\U000021d6',
+           }
+       
+    1:     lang_map = {'isabelle' : isabelle_symbols, 'latex' : latex_symbols}
+       
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               lang = get_choice_opt(options, 'lang',
+                                     ['isabelle', 'latex'], 'isabelle')
+               self.symbols = self.lang_map[lang]
+       
+    1:     def filter(self, lexer, stream):
+               for ttype, value in stream:
+                   if value in self.symbols:
+                       yield ttype, self.symbols[value]
+                   else:
+                       yield ttype, value
+       
+       
+    2: class KeywordCaseFilter(Filter):
+    1:     """Convert keywords to lowercase or uppercase or capitalize them.
+       
+           This means first letter uppercase, rest lowercase.
+       
+           This can be useful e.g. if you highlight Pascal code and want to adapt the
+           code to your styleguide.
+       
+           Options accepted:
+       
+           `case` : string
+              The casing to convert keywords to. Must be one of ``'lower'``,
+              ``'upper'`` or ``'capitalize'``.  The default is ``'lower'``.
+           """
+       
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               case = get_choice_opt(options, 'case',
+                                     ['lower', 'upper', 'capitalize'], 'lower')
+               self.convert = getattr(str, case)
+       
+    1:     def filter(self, lexer, stream):
+               for ttype, value in stream:
+                   if ttype in Keyword:
+                       yield ttype, self.convert(value)
+                   else:
+                       yield ttype, value
+       
+       
+    2: class NameHighlightFilter(Filter):
+    1:     """Highlight a normal Name (and Name.*) token with a different token type.
+       
+           Example::
+       
+               filter = NameHighlightFilter(
+                   names=['foo', 'bar', 'baz'],
+                   tokentype=Name.Function,
+               )
+       
+           This would highlight the names "foo", "bar" and "baz"
+           as functions. `Name.Function` is the default token type.
+       
+           Options accepted:
+       
+           `names` : list of strings
+             A list of names that should be given the different token type.
+             There is no default.
+           `tokentype` : TokenType or string
+             A token type or a string containing a token type name that is
+             used for highlighting the strings in `names`.  The default is
+             `Name.Function`.
+           """
+       
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               self.names = set(get_list_opt(options, 'names', []))
+               tokentype = options.get('tokentype')
+               if tokentype:
+                   self.tokentype = string_to_tokentype(tokentype)
+               else:
+                   self.tokentype = Name.Function
+       
+    1:     def filter(self, lexer, stream):
+               for ttype, value in stream:
+                   if ttype in Name and value in self.names:
+                       yield self.tokentype, value
+                   else:
+                       yield ttype, value
+       
+       
+    2: class ErrorToken(Exception):
+    1:     pass
+       
+       
+    2: class RaiseOnErrorTokenFilter(Filter):
+    1:     """Raise an exception when the lexer generates an error token.
+       
+           Options accepted:
+       
+           `excclass` : Exception class
+             The exception class to raise.
+             The default is `pygments.filters.ErrorToken`.
+       
+           .. versionadded:: 0.8
+           """
+       
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               self.exception = options.get('excclass', ErrorToken)
+               try:
+                   # issubclass() will raise TypeError if first argument is not a class
+                   if not issubclass(self.exception, Exception):
+                       raise TypeError
+               except TypeError:
+                   raise OptionError('excclass option is not an exception class')
+       
+    1:     def filter(self, lexer, stream):
+               for ttype, value in stream:
+                   if ttype is Error:
+                       raise self.exception(value)
+                   yield ttype, value
+       
+       
+    2: class VisibleWhitespaceFilter(Filter):
+    1:     """Convert tabs, newlines and/or spaces to visible characters.
+       
+           Options accepted:
+       
+           `spaces` : string or bool
+             If this is a one-character string, spaces will be replaces by this string.
+             If it is another true value, spaces will be replaced by ``·`` (unicode
+             MIDDLE DOT).  If it is a false value, spaces will not be replaced.  The
+             default is ``False``.
+           `tabs` : string or bool
+             The same as for `spaces`, but the default replacement character is ``»``
+             (unicode RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK).  The default value
+             is ``False``.  Note: this will not work if the `tabsize` option for the
+             lexer is nonzero, as tabs will already have been expanded then.
+           `tabsize` : int
+             If tabs are to be replaced by this filter (see the `tabs` option), this
+             is the total number of characters that a tab should be expanded to.
+             The default is ``8``.
+           `newlines` : string or bool
+             The same as for `spaces`, but the default replacement character is ``¶``
+             (unicode PILCROW SIGN).  The default value is ``False``.
+           `wstokentype` : bool
+             If true, give whitespace the special `Whitespace` token type.  This allows
+             styling the visible whitespace differently (e.g. greyed out), but it can
+             disrupt background colors.  The default is ``True``.
+       
+           .. versionadded:: 0.8
+           """
+       
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               for name, default in [('spaces',   '·'),
+                                     ('tabs',     '»'),
+                                     ('newlines', '¶')]:
+                   opt = options.get(name, False)
+                   if isinstance(opt, str) and len(opt) == 1:
+                       setattr(self, name, opt)
+                   else:
+                       setattr(self, name, (opt and default or ''))
+               tabsize = get_int_opt(options, 'tabsize', 8)
+               if self.tabs:
+                   self.tabs += ' ' * (tabsize - 1)
+               if self.newlines:
+                   self.newlines += '\n'
+               self.wstt = get_bool_opt(options, 'wstokentype', True)
+       
+    1:     def filter(self, lexer, stream):
+               if self.wstt:
+                   spaces = self.spaces or ' '
+                   tabs = self.tabs or '\t'
+                   newlines = self.newlines or '\n'
+                   regex = re.compile(r'\s')
+       
+                   def replacefunc(wschar):
+                       if wschar == ' ':
+                           return spaces
+                       elif wschar == '\t':
+                           return tabs
+                       elif wschar == '\n':
+                           return newlines
+                       return wschar
+       
+                   for ttype, value in stream:
+                       yield from _replace_special(ttype, value, regex, Whitespace,
+                                                   replacefunc)
+               else:
+                   spaces, tabs, newlines = self.spaces, self.tabs, self.newlines
+                   # simpler processing
+                   for ttype, value in stream:
+                       if spaces:
+                           value = value.replace(' ', spaces)
+                       if tabs:
+                           value = value.replace('\t', tabs)
+                       if newlines:
+                           value = value.replace('\n', newlines)
+                       yield ttype, value
+       
+       
+    2: class GobbleFilter(Filter):
+    1:     """Gobble source code lines (eats initial characters).
+       
+           This filter drops the first ``n`` characters off every line of code.  This
+           may be useful when the source code fed to the lexer is indented by a fixed
+           amount of space that isn't desired in the output.
+       
+           Options accepted:
+       
+           `n` : int
+              The number of characters to gobble.
+       
+           .. versionadded:: 1.2
+           """
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+               self.n = get_int_opt(options, 'n', 0)
+       
+    1:     def gobble(self, value, left):
+               if left < len(value):
+                   return value[left:], 0
+               else:
+                   return '', left - len(value)
+       
+    1:     def filter(self, lexer, stream):
+               n = self.n
+               left = n  # How many characters left to gobble.
+               for ttype, value in stream:
+                   # Remove ``left`` tokens from first line, ``n`` from all others.
+                   parts = value.split('\n')
+                   (parts[0], left) = self.gobble(parts[0], left)
+                   for i in range(1, len(parts)):
+                       (parts[i], left) = self.gobble(parts[i], n)
+                   value = '\n'.join(parts)
+       
+                   if value != '':
+                       yield ttype, value
+       
+       
+    2: class TokenMergeFilter(Filter):
+    1:     """Merge consecutive tokens with the same token type in the output stream.
+       
+           .. versionadded:: 1.2
+           """
+    1:     def __init__(self, **options):
+               Filter.__init__(self, **options)
+       
+    1:     def filter(self, lexer, stream):
+               current_type = None
+               current_value = None
+               for ttype, value in stream:
+                   if ttype is current_type:
+                       current_value += value
+                   else:
+                       if current_type is not None:
+                           yield current_type, current_value
+                       current_type = ttype
+                       current_value = value
+               if current_type is not None:
+                   yield current_type, current_value
+       
+       
+    1: FILTERS = {
+    1:     'codetagify':     CodeTagFilter,
+    1:     'keywordcase':    KeywordCaseFilter,
+    1:     'highlight':      NameHighlightFilter,
+    1:     'raiseonerror':   RaiseOnErrorTokenFilter,
+    1:     'whitespace':     VisibleWhitespaceFilter,
+    1:     'gobble':         GobbleFilter,
+    1:     'tokenmerge':     TokenMergeFilter,
+    1:     'symbols':        SymbolFilter,
+       }

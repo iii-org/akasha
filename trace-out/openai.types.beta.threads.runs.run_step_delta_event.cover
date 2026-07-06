@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing_extensions import Literal
+       
+    1: from ....._models import BaseModel
+    1: from .run_step_delta import RunStepDelta
+       
+    1: __all__ = ["RunStepDeltaEvent"]
+       
+       
+    2: class RunStepDeltaEvent(BaseModel):
+    1:     """Represents a run step delta i.e.
+       
+           any changed fields on a run step during streaming.
+           """
+       
+    1:     id: str
+    1:     """The identifier of the run step, which can be referenced in API endpoints."""
+       
+    1:     delta: RunStepDelta
+    1:     """The delta containing the fields that have changed on the run step."""
+       
+    1:     object: Literal["thread.run.step.delta"]
+    1:     """The object type, which is always `thread.run.step.delta`."""

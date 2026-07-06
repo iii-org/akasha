@@ -1,0 +1,114 @@
+    1: """
+       Type definitions for type checking purposes.
+       """
+       
+    1: from http.cookiejar import CookieJar
+    1: from typing import (
+           IO,
+           TYPE_CHECKING,
+           Any,
+           AsyncIterable,
+           AsyncIterator,
+           Callable,
+           Dict,
+           Iterable,
+           Iterator,
+           List,
+           Mapping,
+           Optional,
+           Sequence,
+           Tuple,
+           Union,
+       )
+       
+    1: if TYPE_CHECKING:  # pragma: no cover
+           from ._auth import Auth  # noqa: F401
+           from ._config import Proxy, Timeout  # noqa: F401
+           from ._models import Cookies, Headers, Request  # noqa: F401
+           from ._urls import URL, QueryParams  # noqa: F401
+       
+       
+    1: PrimitiveData = Optional[Union[str, int, float, bool]]
+       
+    1: URLTypes = Union["URL", str]
+       
+    2: QueryParamTypes = Union[
+    2:     "QueryParams",
+    1:     Mapping[str, Union[PrimitiveData, Sequence[PrimitiveData]]],
+    1:     List[Tuple[str, PrimitiveData]],
+    1:     Tuple[Tuple[str, PrimitiveData], ...],
+    1:     str,
+    1:     bytes,
+       ]
+       
+    2: HeaderTypes = Union[
+    2:     "Headers",
+    1:     Mapping[str, str],
+    1:     Mapping[bytes, bytes],
+    1:     Sequence[Tuple[str, str]],
+    1:     Sequence[Tuple[bytes, bytes]],
+       ]
+       
+    1: CookieTypes = Union["Cookies", CookieJar, Dict[str, str], List[Tuple[str, str]]]
+       
+    2: TimeoutTypes = Union[
+    2:     Optional[float],
+    1:     Tuple[Optional[float], Optional[float], Optional[float], Optional[float]],
+    1:     "Timeout",
+       ]
+    1: ProxyTypes = Union["URL", str, "Proxy"]
+    1: CertTypes = Union[str, Tuple[str, str], Tuple[str, str, str]]
+       
+    2: AuthTypes = Union[
+    2:     Tuple[Union[str, bytes], Union[str, bytes]],
+    1:     Callable[["Request"], "Request"],
+    1:     "Auth",
+       ]
+       
+    1: RequestContent = Union[str, bytes, Iterable[bytes], AsyncIterable[bytes]]
+    1: ResponseContent = Union[str, bytes, Iterable[bytes], AsyncIterable[bytes]]
+    1: ResponseExtensions = Mapping[str, Any]
+       
+    1: RequestData = Mapping[str, Any]
+       
+    1: FileContent = Union[IO[bytes], bytes, str]
+    2: FileTypes = Union[
+           # file (or bytes)
+    2:     FileContent,
+           # (filename, file (or bytes))
+    1:     Tuple[Optional[str], FileContent],
+           # (filename, file (or bytes), content_type)
+    1:     Tuple[Optional[str], FileContent, Optional[str]],
+           # (filename, file (or bytes), content_type, headers)
+    1:     Tuple[Optional[str], FileContent, Optional[str], Mapping[str, str]],
+       ]
+    1: RequestFiles = Union[Mapping[str, FileTypes], Sequence[Tuple[str, FileTypes]]]
+       
+    1: RequestExtensions = Mapping[str, Any]
+       
+    1: __all__ = ["AsyncByteStream", "SyncByteStream"]
+       
+       
+    2: class SyncByteStream:
+    1:     def __iter__(self) -> Iterator[bytes]:
+               raise NotImplementedError(
+                   "The '__iter__' method must be implemented."
+               )  # pragma: no cover
+               yield b""  # pragma: no cover
+       
+    1:     def close(self) -> None:
+               """
+               Subclasses can override this method to release any network resources
+               after a request/response cycle is complete.
+               """
+       
+       
+    2: class AsyncByteStream:
+    1:     async def __aiter__(self) -> AsyncIterator[bytes]:
+               raise NotImplementedError(
+                   "The '__aiter__' method must be implemented."
+               )  # pragma: no cover
+               yield b""  # pragma: no cover
+       
+    1:     async def aclose(self) -> None:
+               pass

@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![pypi package](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
 [![downloads](https://img.shields.io/pypi/dm/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
-[![python version : 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/release/python-3109/)
+[![python version : 3.11%2B](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
 ![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
 akasha simplifies document-based Question Answering (QA) and Retrieval Augmented Generation(RAG) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
 
@@ -17,7 +17,7 @@ If you are developing in this repository (instead of only installing from PyPI),
 
 ```bash
 cd akasha
-uv venv --python 3.10
+uv venv --python 3.11
 source .venv/bin/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
 uv pip install -e .
 ```
@@ -59,13 +59,13 @@ python examples/ex_agent.py
 
 # Installation
 
-We recommend using Python 3.10 to run our akasha package. You can use uv or Anaconda to create virtual environment.
+We recommend using Python 3.11 to run our akasha package. Supported versions are Python 3.11 and 3.12.
 
 ### Standard Installation
 
 ```shell!
 ###create environment
-$ uv venv --python 3.10
+$ uv venv --python 3.11
 
 ###install akasha
 $ uv pip install akasha-terminal
@@ -75,23 +75,68 @@ $ uv pip install akasha-terminal
 
 ```bash
 ### create environment
-uv venv --python 3.10
+uv venv --python 3.11
 source .venv/bin/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
 
 ### install lightweight mode (API-call-only)
 uv pip install "akasha-terminal[light]"
 ```
 
-If you are developing in this repository:
+`light` keeps Chroma-backed `RAG` and `MemoryManager`, but uses remote embedding APIs instead of the local HuggingFace/Torch stack.
+
+### Editable Install Commands
+
+If you are developing in this repository, use one of the following commands.
+
+Base editable install:
 
 ```bash
 uv pip install -e .
 ```
 
-or only install the lightweight (API-call-only) extras:
+Editable install with `light` extras:
 
 ```bash
 uv pip install -e ".[light]"
+```
+
+Editable install with `light` + development tools:
+
+```bash
+uv pip install -e ".[light,dev]"
+```
+
+Editable install with `full` extras:
+
+```bash
+uv pip install -e ".[full]"
+```
+
+Editable install with `full` + development tools:
+
+```bash
+uv pip install -e ".[full,dev]"
+```
+
+If you prefer `uv` extras syntax instead of bracket notation, these are equivalent:
+
+```bash
+uv pip install -e . --extra light
+uv pip install -e . --extra full
+uv pip install -e . --extra light --extra dev
+uv pip install -e . --extra full --extra dev
+```
+
+Note:
+
+- Use `".[light]"`, not `". [light]"`.
+- `light` = remote-model / remote-embedding path with Chroma retained.
+- `full` = local embedding / rerank / HuggingFace / Torch stack included.
+
+If you need synchronized plain requirements files, regenerate them from `pyproject.toml`:
+
+```bash
+python scripts/sync_requirements.py
 ```
 
 ## API Keys
@@ -144,7 +189,7 @@ AZURE_API_VERSION=2023-05-15
 And now we can run akasha in python
 
 ```python
-#PYTHON3.10+
+#PYTHON3.11+
 import akasha
 
 # simple QA
@@ -159,7 +204,7 @@ response = ak(
 And then run a RAG example:
 
 ```python
-#PYTHON3.10+
+#PYTHON3.11+
 import akasha
 data_source = "doc/mic"
 prompt = "五軸是什麼?"

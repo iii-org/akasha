@@ -1,0 +1,347 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Dict, List, Optional
+    1: from datetime import datetime
+    1: from typing_extensions import Literal
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = [
+           "Run",
+           "CompletionCostDetails",
+           "CompletionTokenDetails",
+           "Event",
+           "FeedbackStats",
+           "PromptCostDetails",
+           "PromptTokenDetails",
+       ]
+       
+       
+    2: class CompletionCostDetails(BaseModel):
+    1:     """`completion_cost_details` is the per-category USD breakdown of `completion_cost`.
+       
+           Categories mirror `completion_token_details`. Returned only when the `COMPLETION_COST_DETAILS` field is requested.
+           """
+       
+    1:     raw: Optional[Dict[str, float]] = None
+    1:     """`raw` maps each category name to its estimated USD cost."""
+       
+       
+    2: class CompletionTokenDetails(BaseModel):
+    1:     """`completion_token_details` is the per-category breakdown of `completion_tokens`.
+       
+           Category names are model-specific (for example `reasoning`, `audio`). Returned only when the `COMPLETION_TOKEN_DETAILS` field is requested.
+           """
+       
+    1:     raw: Optional[Dict[str, int]] = None
+    1:     """`raw` maps each category name to its completion-token count."""
+       
+       
+    2: class Event(BaseModel):
+    1:     kwargs: Optional[object] = None
+    1:     """
+           `kwargs` is the event payload — an opaque JSON object whose shape depends on
+           `name` and on the emitting SDK. For example LangChain emits `{"token": {...}}`
+           for `new_token` events, tool-call start/end details for tool events, and
+           arbitrary user-defined payloads for custom events. Clients should treat `kwargs`
+           as untyped JSON: do not assume specific keys exist for a given `name`, and
+           tolerate additional unknown keys appearing over time.
+           """
+       
+    1:     name: Optional[str] = None
+    1:     """`name` is the event kind.
+       
+           Common values emitted by the LangChain/LangSmith tracer SDKs include `"start"`,
+           `"end"`, and `"new_token"`, but applications may emit arbitrary strings for
+           their own instrumentation.
+           """
+       
+    1:     time: Optional[datetime] = None
+    1:     """
+           `time` is when the event occurred (RFC3339 date-time with millisecond
+           precision).
+           """
+       
+       
+    2: class FeedbackStats(BaseModel):
+    1:     avg: Optional[float] = None
+    1:     """
+           `avg` is the arithmetic mean of numeric feedback scores for this key on the run,
+           or `null` when no numeric score has been recorded (for example purely
+           categorical feedback).
+           """
+       
+    1:     comments: Optional[List[str]] = None
+    1:     """
+           `comments` is a sample of human-readable comments attached to feedback points
+           for this key, in no particular order. May be empty; is not exhaustive when many
+           comments exist.
+           """
+       
+    1:     contains_thread_feedback: Optional[bool] = None
+    1:     """
+           `contains_thread_feedback` is true when at least one feedback point for this key
+           was submitted at the thread level (rather than at an individual run). Always
+           false on responses that already describe a single run in isolation.
+           """
+       
+    1:     errors: Optional[int] = None
+    1:     """
+           `errors` is the number of feedback points recorded as errors rather than
+           successful scores (for example an automated evaluator that raised an exception).
+           Defaults to 0 when no errors occurred.
+           """
+       
+    1:     max: Optional[float] = None
+    1:     """
+           `max` is the largest numeric feedback score recorded for this key on the run, or
+           `null` when no numeric score has been recorded.
+           """
+       
+    1:     min: Optional[float] = None
+    1:     """
+           `min` is the smallest numeric feedback score recorded for this key on the run,
+           or `null` when no numeric score has been recorded.
+           """
+       
+    1:     n: Optional[int] = None
+    1:     """`n` is the number of feedback points recorded for this key on the run.
+       
+           For numeric feedback this is the sample size behind `avg`, `min`, `max`, and
+           `stdev`; for categorical feedback it is the sum of the `values` counts.
+           """
+       
+    1:     sources: Optional[List[object]] = None
+    1:     """`sources` is a sample of feedback sources for this key.
+       
+           Each entry is either a plain string identifier (for example `"api"`, `"app"`,
+           `"model"`) or a JSON object describing a synthetic source (for example
+           `{"type": "__ls_composite_feedback"}` for a computed aggregate). Clients must
+           tolerate both shapes.
+           """
+       
+    1:     stdev: Optional[float] = None
+    1:     """
+           `stdev` is the sample standard deviation of numeric feedback scores for this key
+           on the run, or `null` when it cannot be computed (for example fewer than two
+           numeric scores, or purely categorical feedback).
+           """
+       
+    1:     values: Optional[Dict[str, int]] = None
+    1:     """
+           `values` is the distribution of categorical feedback labels for this key,
+           mapping each label to its occurrence count. Empty (`{}`) for purely numeric
+           feedback.
+           """
+       
+       
+    2: class PromptCostDetails(BaseModel):
+    1:     """`prompt_cost_details` is the per-category USD breakdown of `prompt_cost`.
+       
+           Categories mirror `prompt_token_details`. Returned only when the `PROMPT_COST_DETAILS` field is requested.
+           """
+       
+    1:     raw: Optional[Dict[str, float]] = None
+    1:     """`raw` maps each category name to its estimated USD cost."""
+       
+       
+    2: class PromptTokenDetails(BaseModel):
+    1:     """`prompt_token_details` is the per-category breakdown of `prompt_tokens`.
+       
+           Category names are model-specific (for example `cache_read`, `cache_write`). Returned only when the `PROMPT_TOKEN_DETAILS` field is requested.
+           """
+       
+    1:     raw: Optional[Dict[str, int]] = None
+    1:     """`raw` maps each category name to its prompt-token count."""
+       
+       
+    2: class Run(BaseModel):
+    1:     id: Optional[str] = None
+    1:     """`id` is this run's UUID."""
+       
+    1:     app_path: Optional[str] = None
+    1:     """
+           `app_path` identifies the application code location that produced this run, if
+           recorded.
+           """
+       
+    1:     attachments: Optional[Dict[str, str]] = None
+    1:     """
+           `attachments` maps each attachment file name to a pre-signed HTTPS download URL.
+           """
+       
+    1:     completion_cost: Optional[float] = None
+    1:     """`completion_cost` is estimated USD cost for the completion."""
+       
+    1:     completion_cost_details: Optional[CompletionCostDetails] = None
+    1:     """`completion_cost_details` is the per-category USD breakdown of
+           `completion_cost`.
+       
+           Categories mirror `completion_token_details`. Returned only when the
+           `COMPLETION_COST_DETAILS` field is requested.
+           """
+       
+    1:     completion_token_details: Optional[CompletionTokenDetails] = None
+    1:     """`completion_token_details` is the per-category breakdown of `completion_tokens`.
+       
+           Category names are model-specific (for example `reasoning`, `audio`). Returned
+           only when the `COMPLETION_TOKEN_DETAILS` field is requested.
+           """
+       
+    1:     completion_tokens: Optional[int] = None
+    1:     """`completion_tokens` is the completion-side token count."""
+       
+    1:     dotted_order: Optional[str] = None
+    1:     """`dotted_order` is the hierarchical ordering key for trace trees."""
+       
+    1:     end_time: Optional[datetime] = None
+    1:     """`end_time` is when the run ended (RFC3339 date-time).
+       
+           JSON null if the run has not finished yet.
+           """
+       
+    1:     error: Optional[str] = None
+    1:     """`error` is the error message when `status` indicates failure."""
+       
+    1:     error_preview: Optional[str] = None
+    1:     """`error_preview` is a truncated plain-text error snippet."""
+       
+    1:     events: Optional[List[Event]] = None
+    1:     """`events` is the ordered list of run events (for example streaming tokens)."""
+       
+    1:     extra: Optional[object] = None
+    1:     """`extra` is additional runtime JSON attached to the run."""
+       
+    1:     feedback_stats: Optional[Dict[str, FeedbackStats]] = None
+    1:     """`feedback_stats` aggregates feedback scores keyed by feedback key."""
+       
+    1:     first_token_time: Optional[datetime] = None
+    1:     """
+           `first_token_time` is when the first output token was produced (RFC3339
+           date-time), when recorded for streamed runs.
+           """
+       
+    1:     inputs: Optional[object] = None
+    1:     """`inputs` is the run input payload (arbitrary JSON object)."""
+       
+    1:     inputs_preview: Optional[str] = None
+    1:     """`inputs_preview` is a truncated plain-text preview of inputs."""
+       
+    1:     is_in_dataset: Optional[bool] = None
+    1:     """`is_in_dataset` is true when this run is linked to a dataset example."""
+       
+    1:     is_root: Optional[bool] = None
+    1:     """`is_root` is true when this run has no parent (it is the trace root)."""
+       
+    1:     latency_seconds: Optional[float] = None
+    1:     """`latency_seconds` is wall-clock duration from start to end in seconds."""
+       
+    1:     manifest: Optional[object] = None
+    1:     """
+           `manifest` is the serialized configuration of the traced component (for example
+           the model parameters, prompt template, or pipeline definition), when recorded.
+           """
+       
+    1:     metadata: Optional[object] = None
+    1:     """`metadata` is arbitrary user-defined JSON metadata."""
+       
+    1:     name: Optional[str] = None
+    1:     """
+           `name` is a human-readable label for the run (for example the model name,
+           function name, or step name chosen when the run was traced).
+           """
+       
+    1:     outputs: Optional[object] = None
+    1:     """`outputs` is the run output payload (arbitrary JSON object)."""
+       
+    1:     outputs_preview: Optional[str] = None
+    1:     """`outputs_preview` is a truncated plain-text preview of outputs."""
+       
+    1:     parent_run_ids: Optional[List[str]] = None
+    1:     """
+           `parent_run_ids` lists ancestor run UUIDs from the trace root down to the direct
+           parent.
+           """
+       
+    1:     price_model_id: Optional[str] = None
+    1:     """
+           `price_model_id` identifies the pricing model UUID used for cost estimates, when
+           recorded.
+           """
+       
+    1:     project_id: Optional[str] = None
+    1:     """`project_id` is the tracing project UUID this run was logged to."""
+       
+    1:     prompt_cost: Optional[float] = None
+    1:     """`prompt_cost` is estimated USD cost for the prompt."""
+       
+    1:     prompt_cost_details: Optional[PromptCostDetails] = None
+    1:     """`prompt_cost_details` is the per-category USD breakdown of `prompt_cost`.
+       
+           Categories mirror `prompt_token_details`. Returned only when the
+           `PROMPT_COST_DETAILS` field is requested.
+           """
+       
+    1:     prompt_token_details: Optional[PromptTokenDetails] = None
+    1:     """`prompt_token_details` is the per-category breakdown of `prompt_tokens`.
+       
+           Category names are model-specific (for example `cache_read`, `cache_write`).
+           Returned only when the `PROMPT_TOKEN_DETAILS` field is requested.
+           """
+       
+    1:     prompt_tokens: Optional[int] = None
+    1:     """`prompt_tokens` is the prompt-side token count."""
+       
+    1:     reference_dataset_id: Optional[str] = None
+    1:     """`reference_dataset_id` is the dataset UUID for the reference example, if any."""
+       
+    1:     reference_example_id: Optional[str] = None
+    1:     """
+           `reference_example_id` is the dataset example UUID this run was compared
+           against, if any.
+           """
+       
+    1:     run_type: Optional[Literal["TOOL", "CHAIN", "LLM", "RETRIEVER", "EMBEDDING", "PROMPT", "PARSER"]] = None
+    1:     """
+           `run_type` identifies what kind of operation this run represents (for example an
+           LLM call, a tool invocation, or a chain step). See the `RunType` enum for
+           allowed values.
+           """
+       
+    1:     share_url: Optional[str] = None
+    1:     """
+           `share_url` is the fully-qualified URL of this run's public view, rooted at the
+           deployment's LangSmith app origin (for example
+           `https://smith.langchain.com/public/4f7a1b2c-8d9e-4a0b-9c1d-2e3f4a5b6c7d/r`). It
+           is returned only when `SHARE_URL` is included in `selects`, and only when the
+           run has been explicitly shared; the URL remains stable until the run is
+           unshared. Anyone with this URL can view the run anonymously, so treat it as a
+           secret and do not log it.
+           """
+       
+    1:     start_time: Optional[datetime] = None
+    1:     """`start_time` is when the run started (RFC3339 date-time)."""
+       
+    1:     status: Optional[Literal["SUCCESS", "ERROR", "PENDING"]] = None
+    1:     """`status` is the completion status of the run."""
+       
+    1:     tags: Optional[List[str]] = None
+    1:     """`tags` lists user-defined tags on this run."""
+       
+    1:     thread_evaluation_time: Optional[datetime] = None
+    1:     """
+           `thread_evaluation_time` is thread-level evaluation timing (RFC3339 date-time),
+           when recorded.
+           """
+       
+    1:     thread_id: Optional[str] = None
+    1:     """`thread_id` is the conversation thread UUID this run belongs to, if any."""
+       
+    1:     total_cost: Optional[float] = None
+    1:     """`total_cost` is total estimated USD cost (prompt plus completion)."""
+       
+    1:     total_tokens: Optional[int] = None
+    1:     """`total_tokens` is prompt plus completion tokens."""
+       
+    1:     trace_id: Optional[str] = None
+    1:     """`trace_id` is the root trace UUID; for a root run it matches `id`."""

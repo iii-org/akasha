@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ChatCompletionContentPartInputAudioParam", "InputAudio"]
+       
+       
+    2: class InputAudio(TypedDict, total=False):
+    1:     data: Required[str]
+    1:     """Base64 encoded audio data."""
+       
+    1:     format: Required[Literal["wav", "mp3"]]
+    1:     """The format of the encoded audio data. Currently supports "wav" and "mp3"."""
+       
+       
+    2: class ChatCompletionContentPartInputAudioParam(TypedDict, total=False):
+    1:     """Learn about [audio inputs](https://platform.openai.com/docs/guides/audio)."""
+       
+    1:     input_audio: Required[InputAudio]
+       
+    1:     type: Required[Literal["input_audio"]]
+    1:     """The type of the content part. Always `input_audio`."""

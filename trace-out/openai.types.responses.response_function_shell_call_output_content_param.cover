@@ -1,0 +1,41 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing import Union
+    1: from typing_extensions import Literal, Required, TypeAlias, TypedDict
+       
+    1: __all__ = ["ResponseFunctionShellCallOutputContentParam", "Outcome", "OutcomeTimeout", "OutcomeExit"]
+       
+       
+    2: class OutcomeTimeout(TypedDict, total=False):
+    1:     """Indicates that the shell call exceeded its configured time limit."""
+       
+    1:     type: Required[Literal["timeout"]]
+    1:     """The outcome type. Always `timeout`."""
+       
+       
+    2: class OutcomeExit(TypedDict, total=False):
+    1:     """Indicates that the shell commands finished and returned an exit code."""
+       
+    1:     exit_code: Required[int]
+    1:     """The exit code returned by the shell process."""
+       
+    1:     type: Required[Literal["exit"]]
+    1:     """The outcome type. Always `exit`."""
+       
+       
+    1: Outcome: TypeAlias = Union[OutcomeTimeout, OutcomeExit]
+       
+       
+    2: class ResponseFunctionShellCallOutputContentParam(TypedDict, total=False):
+    1:     """Captured stdout and stderr for a portion of a shell tool call output."""
+       
+    1:     outcome: Required[Outcome]
+    1:     """The exit or timeout outcome associated with this shell call."""
+       
+    1:     stderr: Required[str]
+    1:     """Captured stderr output for the shell call."""
+       
+    1:     stdout: Required[str]
+    1:     """Captured stdout output for the shell call."""

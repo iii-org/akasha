@@ -1,0 +1,131 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List, Union, Optional
+    1: from typing_extensions import Literal, Annotated, TypeAlias
+       
+    1: from ..._utils import PropertyInfo
+    1: from ..._models import BaseModel
+       
+    1: __all__ = [
+           "ResponseOutputText",
+           "Annotation",
+           "AnnotationFileCitation",
+           "AnnotationURLCitation",
+           "AnnotationContainerFileCitation",
+           "AnnotationFilePath",
+           "Logprob",
+           "LogprobTopLogprob",
+       ]
+       
+       
+    2: class AnnotationFileCitation(BaseModel):
+    1:     """A citation to a file."""
+       
+    1:     file_id: str
+    1:     """The ID of the file."""
+       
+    1:     filename: str
+    1:     """The filename of the file cited."""
+       
+    1:     index: int
+    1:     """The index of the file in the list of files."""
+       
+    1:     type: Literal["file_citation"]
+    1:     """The type of the file citation. Always `file_citation`."""
+       
+       
+    2: class AnnotationURLCitation(BaseModel):
+    1:     """A citation for a web resource used to generate a model response."""
+       
+    1:     end_index: int
+    1:     """The index of the last character of the URL citation in the message."""
+       
+    1:     start_index: int
+    1:     """The index of the first character of the URL citation in the message."""
+       
+    1:     title: str
+    1:     """The title of the web resource."""
+       
+    1:     type: Literal["url_citation"]
+    1:     """The type of the URL citation. Always `url_citation`."""
+       
+    1:     url: str
+    1:     """The URL of the web resource."""
+       
+       
+    2: class AnnotationContainerFileCitation(BaseModel):
+    1:     """A citation for a container file used to generate a model response."""
+       
+    1:     container_id: str
+    1:     """The ID of the container file."""
+       
+    1:     end_index: int
+    1:     """The index of the last character of the container file citation in the message."""
+       
+    1:     file_id: str
+    1:     """The ID of the file."""
+       
+    1:     filename: str
+    1:     """The filename of the container file cited."""
+       
+    1:     start_index: int
+    1:     """The index of the first character of the container file citation in the message."""
+       
+    1:     type: Literal["container_file_citation"]
+    1:     """The type of the container file citation. Always `container_file_citation`."""
+       
+       
+    2: class AnnotationFilePath(BaseModel):
+    1:     """A path to a file."""
+       
+    1:     file_id: str
+    1:     """The ID of the file."""
+       
+    1:     index: int
+    1:     """The index of the file in the list of files."""
+       
+    1:     type: Literal["file_path"]
+    1:     """The type of the file path. Always `file_path`."""
+       
+       
+    2: Annotation: TypeAlias = Annotated[
+    2:     Union[AnnotationFileCitation, AnnotationURLCitation, AnnotationContainerFileCitation, AnnotationFilePath],
+    1:     PropertyInfo(discriminator="type"),
+       ]
+       
+       
+    2: class LogprobTopLogprob(BaseModel):
+    1:     """The top log probability of a token."""
+       
+    1:     token: str
+       
+    1:     bytes: List[int]
+       
+    1:     logprob: float
+       
+       
+    2: class Logprob(BaseModel):
+    1:     """The log probability of a token."""
+       
+    1:     token: str
+       
+    1:     bytes: List[int]
+       
+    1:     logprob: float
+       
+    1:     top_logprobs: List[LogprobTopLogprob]
+       
+       
+    2: class ResponseOutputText(BaseModel):
+    1:     """A text output from the model."""
+       
+    1:     annotations: List[Annotation]
+    1:     """The annotations of the text output."""
+       
+    1:     text: str
+    1:     """The text output from the model."""
+       
+    1:     type: Literal["output_text"]
+    1:     """The type of the output text. Always `output_text`."""
+       
+    1:     logprobs: Optional[List[Logprob]] = None

@@ -1,0 +1,174 @@
+    1: r"""
+       The ``distributions`` package contains parameterizable probability distributions
+       and sampling functions. This allows the construction of stochastic computation
+       graphs and stochastic gradient estimators for optimization. This package
+       generally follows the design of the `TensorFlow Distributions`_ package.
+       
+       .. _`TensorFlow Distributions`:
+           https://arxiv.org/abs/1711.10604
+       
+       It is not possible to directly backpropagate through random samples. However,
+       there are two main methods for creating surrogate functions that can be
+       backpropagated through. These are the score function estimator/likelihood ratio
+       estimator/REINFORCE and the pathwise derivative estimator. REINFORCE is commonly
+       seen as the basis for policy gradient methods in reinforcement learning, and the
+       pathwise derivative estimator is commonly seen in the reparameterization trick
+       in variational autoencoders. Whilst the score function only requires the value
+       of samples :math:`f(x)`, the pathwise derivative requires the derivative
+       :math:`f'(x)`. The next sections discuss these two in a reinforcement learning
+       example. For more details see
+       `Gradient Estimation Using Stochastic Computation Graphs`_ .
+       
+       .. _`Gradient Estimation Using Stochastic Computation Graphs`:
+            https://arxiv.org/abs/1506.05254
+       
+       Score function
+       ^^^^^^^^^^^^^^
+       
+       When the probability density function is differentiable with respect to its
+       parameters, we only need :meth:`~torch.distributions.Distribution.sample` and
+       :meth:`~torch.distributions.Distribution.log_prob` to implement REINFORCE:
+       
+       .. math::
+       
+           \Delta\theta  = \alpha r \frac{\partial\log p(a|\pi^\theta(s))}{\partial\theta}
+       
+       where :math:`\theta` are the parameters, :math:`\alpha` is the learning rate,
+       :math:`r` is the reward and :math:`p(a|\pi^\theta(s))` is the probability of
+       taking action :math:`a` in state :math:`s` given policy :math:`\pi^\theta`.
+       
+       In practice we would sample an action from the output of a network, apply this
+       action in an environment, and then use ``log_prob`` to construct an equivalent
+       loss function. Note that we use a negative because optimizers use gradient
+       descent, whilst the rule above assumes gradient ascent. With a categorical
+       policy, the code for implementing REINFORCE would be as follows::
+       
+           probs = policy_network(state)
+           # Note that this is equivalent to what used to be called multinomial
+           m = Categorical(probs)
+           action = m.sample()
+           next_state, reward = env.step(action)
+           loss = -m.log_prob(action) * reward
+           loss.backward()
+       
+       Pathwise derivative
+       ^^^^^^^^^^^^^^^^^^^
+       
+       The other way to implement these stochastic/policy gradients would be to use the
+       reparameterization trick from the
+       :meth:`~torch.distributions.Distribution.rsample` method, where the
+       parameterized random variable can be constructed via a parameterized
+       deterministic function of a parameter-free random variable. The reparameterized
+       sample therefore becomes differentiable. The code for implementing the pathwise
+       derivative would be as follows::
+       
+           params = policy_network(state)
+           m = Normal(*params)
+           # Any distribution with .has_rsample == True could work based on the application
+           action = m.rsample()
+           next_state, reward = env.step(action)  # Assuming that reward is differentiable
+           loss = -reward
+           loss.backward()
+       """
+       
+    1: from . import transforms
+    1: from .bernoulli import Bernoulli
+    1: from .beta import Beta
+    1: from .binomial import Binomial
+    1: from .categorical import Categorical
+    1: from .cauchy import Cauchy
+    1: from .chi2 import Chi2
+    1: from .constraint_registry import biject_to, transform_to
+    1: from .continuous_bernoulli import ContinuousBernoulli
+    1: from .dirichlet import Dirichlet
+    1: from .distribution import Distribution
+    1: from .exp_family import ExponentialFamily
+    1: from .exponential import Exponential
+    1: from .fishersnedecor import FisherSnedecor
+    1: from .gamma import Gamma
+    1: from .generalized_pareto import GeneralizedPareto
+    1: from .geometric import Geometric
+    1: from .gumbel import Gumbel
+    1: from .half_cauchy import HalfCauchy
+    1: from .half_normal import HalfNormal
+    1: from .independent import Independent
+    1: from .inverse_gamma import InverseGamma
+    1: from .kl import _add_kl_info, kl_divergence, register_kl
+    1: from .kumaraswamy import Kumaraswamy
+    1: from .laplace import Laplace
+    1: from .lkj_cholesky import LKJCholesky
+    1: from .log_normal import LogNormal
+    1: from .logistic_normal import LogisticNormal
+    1: from .lowrank_multivariate_normal import LowRankMultivariateNormal
+    1: from .mixture_same_family import MixtureSameFamily
+    1: from .multinomial import Multinomial
+    1: from .multivariate_normal import MultivariateNormal
+    1: from .negative_binomial import NegativeBinomial
+    1: from .normal import Normal
+    1: from .one_hot_categorical import OneHotCategorical, OneHotCategoricalStraightThrough
+    1: from .pareto import Pareto
+    1: from .poisson import Poisson
+    1: from .relaxed_bernoulli import RelaxedBernoulli
+    1: from .relaxed_categorical import RelaxedOneHotCategorical
+    1: from .studentT import StudentT
+    1: from .transformed_distribution import TransformedDistribution
+    1: from .transforms import *  # noqa: F403
+    1: from .uniform import Uniform
+    1: from .von_mises import VonMises
+    1: from .weibull import Weibull
+    1: from .wishart import Wishart
+       
+       
+    1: _add_kl_info()
+    1: del _add_kl_info
+       
+    1: __all__ = [
+           "Bernoulli",
+           "Beta",
+           "Binomial",
+           "Categorical",
+           "Cauchy",
+           "Chi2",
+           "ContinuousBernoulli",
+           "Dirichlet",
+           "Distribution",
+           "Exponential",
+           "ExponentialFamily",
+           "FisherSnedecor",
+           "Gamma",
+           "GeneralizedPareto",
+           "Geometric",
+           "Gumbel",
+           "HalfCauchy",
+           "HalfNormal",
+           "Independent",
+           "InverseGamma",
+           "Kumaraswamy",
+           "LKJCholesky",
+           "Laplace",
+           "LogNormal",
+           "LogisticNormal",
+           "LowRankMultivariateNormal",
+           "MixtureSameFamily",
+           "Multinomial",
+           "MultivariateNormal",
+           "NegativeBinomial",
+           "Normal",
+           "OneHotCategorical",
+           "OneHotCategoricalStraightThrough",
+           "Pareto",
+           "RelaxedBernoulli",
+           "RelaxedOneHotCategorical",
+           "StudentT",
+           "Poisson",
+           "Uniform",
+           "VonMises",
+           "Weibull",
+           "Wishart",
+           "TransformedDistribution",
+           "biject_to",
+           "kl_divergence",
+           "register_kl",
+           "transform_to",
+       ]
+    1: __all__.extend(transforms.__all__)

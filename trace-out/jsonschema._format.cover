@@ -1,0 +1,546 @@
+    1: from __future__ import annotations
+       
+    1: from contextlib import suppress
+    1: from datetime import date, datetime
+    1: from uuid import UUID
+    1: import ipaddress
+    1: import re
+    1: import typing
+    1: import warnings
+       
+    1: from jsonschema.exceptions import FormatError
+       
+    1: _FormatCheckCallable = typing.Callable[[object], bool]
+       #: A format checker callable.
+    1: _F = typing.TypeVar("_F", bound=_FormatCheckCallable)
+    1: _RaisesType = type[Exception] | tuple[type[Exception], ...]
+       
+    1: _RE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$", re.ASCII)
+       
+       
+    2: class FormatChecker:
+    1:     """
+           A ``format`` property checker.
+       
+           JSON Schema does not mandate that the ``format`` property actually do any
+           validation. If validation is desired however, instances of this class can
+           be hooked into validators to enable format validation.
+       
+           `FormatChecker` objects always return ``True`` when asked about
+           formats that they do not know how to validate.
+       
+           To add a check for a custom format use the `FormatChecker.checks`
+           decorator.
+       
+           Arguments:
+       
+               formats:
+       
+                   The known formats to validate. This argument can be used to
+                   limit which formats will be used during validation.
+       
+           """
+       
+    1:     checkers: dict[
+               str,
+               tuple[_FormatCheckCallable, _RaisesType],
+    1:     ] = {}  # noqa: RUF012
+       
+    1:     def __init__(self, formats: typing.Iterable[str] | None = None):
+    6:         if formats is None:
+    6:             formats = self.checkers.keys()
+   12:         self.checkers = {k: self.checkers[k] for k in formats}
+       
+    1:     def __repr__(self):
+               return f"<FormatChecker checkers={sorted(self.checkers)}>"
+       
+    1:     def checks(
+    1:         self, format: str, raises: _RaisesType = (),
+           ) -> typing.Callable[[_F], _F]:
+               """
+               Register a decorated function as validating a new format.
+       
+               Arguments:
+       
+                   format:
+       
+                       The format that the decorated function will check.
+       
+                   raises:
+       
+                       The exception(s) raised by the decorated function when an
+                       invalid instance is found.
+       
+                       The exception object will be accessible as the
+                       `jsonschema.exceptions.ValidationError.cause` attribute of the
+                       resulting validation error.
+       
+               """
+       
+   47:         def _checks(func: _F) -> _F:
+   47:             self.checkers[format] = (func, raises)
+   47:             return func
+       
+   47:         return _checks
+       
+    2:     @classmethod
+    2:     def cls_checks(
+    1:         cls, format: str, raises: _RaisesType = (),
+           ) -> typing.Callable[[_F], _F]:
+               warnings.warn(
+                   (
+                       "FormatChecker.cls_checks is deprecated. Call "
+                       "FormatChecker.checks on a specific FormatChecker instance "
+                       "instead."
+                   ),
+                   DeprecationWarning,
+                   stacklevel=2,
+               )
+               return cls._cls_checks(format=format, raises=raises)
+       
+    2:     @classmethod
+    2:     def _cls_checks(
+    1:         cls, format: str, raises: _RaisesType = (),
+           ) -> typing.Callable[[_F], _F]:
+   11:         def _checks(func: _F) -> _F:
+   11:             cls.checkers[format] = (func, raises)
+   11:             return func
+       
+   11:         return _checks
+       
+    1:     def check(self, instance: object, format: str) -> None:
+               """
+               Check whether the instance conforms to the given format.
+       
+               Arguments:
+       
+                   instance (*any primitive type*, i.e. str, number, bool):
+       
+                       The instance to check
+       
+                   format:
+       
+                       The format that instance should conform to
+       
+               Raises:
+       
+                   FormatError:
+       
+                       if the instance does not conform to ``format``
+       
+               """
+               if format not in self.checkers:
+                   return
+       
+               func, raises = self.checkers[format]
+               result, cause = None, None
+               try:
+                   result = func(instance)
+               except raises as e:
+                   cause = e
+               if not result:
+                   raise FormatError(f"{instance!r} is not a {format!r}", cause=cause)
+       
+    1:     def conforms(self, instance: object, format: str) -> bool:
+               """
+               Check whether the instance conforms to the given format.
+       
+               Arguments:
+       
+                   instance (*any primitive type*, i.e. str, number, bool):
+       
+                       The instance to check
+       
+                   format:
+       
+                       The format that instance should conform to
+       
+               Returns:
+       
+                   bool: whether it conformed
+       
+               """
+               try:
+                   self.check(instance, format)
+               except FormatError:
+                   return False
+               else:
+                   return True
+       
+       
+    1: draft3_format_checker = FormatChecker()
+    1: draft4_format_checker = FormatChecker()
+    1: draft6_format_checker = FormatChecker()
+    1: draft7_format_checker = FormatChecker()
+    1: draft201909_format_checker = FormatChecker()
+    1: draft202012_format_checker = FormatChecker()
+       
+    2: _draft_checkers: dict[str, FormatChecker] = dict(
+    1:     draft3=draft3_format_checker,
+    1:     draft4=draft4_format_checker,
+    1:     draft6=draft6_format_checker,
+    1:     draft7=draft7_format_checker,
+    1:     draft201909=draft201909_format_checker,
+    1:     draft202012=draft202012_format_checker,
+       )
+       
+       
+    1: def _checks_drafts(
+    1:     name=None,
+    1:     draft3=None,
+    1:     draft4=None,
+    1:     draft6=None,
+    1:     draft7=None,
+    1:     draft201909=None,
+    1:     draft202012=None,
+    1:     raises=(),
+       ) -> typing.Callable[[_F], _F]:
+   11:     draft3 = draft3 or name
+   11:     draft4 = draft4 or name
+   11:     draft6 = draft6 or name
+   11:     draft7 = draft7 or name
+   11:     draft201909 = draft201909 or name
+   11:     draft202012 = draft202012 or name
+       
+   11:     def wrap(func: _F) -> _F:
+   11:         if draft3:
+    7:             func = _draft_checkers["draft3"].checks(draft3, raises)(func)
+   11:         if draft4:
+    5:             func = _draft_checkers["draft4"].checks(draft4, raises)(func)
+   11:         if draft6:
+    6:             func = _draft_checkers["draft6"].checks(draft6, raises)(func)
+   11:         if draft7:
+    9:             func = _draft_checkers["draft7"].checks(draft7, raises)(func)
+   11:         if draft201909:
+   20:             func = _draft_checkers["draft201909"].checks(draft201909, raises)(
+   10:                 func,
+                   )
+   11:         if draft202012:
+   20:             func = _draft_checkers["draft202012"].checks(draft202012, raises)(
+   10:                 func,
+                   )
+       
+               # Oy. This is bad global state, but relied upon for now, until
+               # deprecation. See #519 and test_format_checkers_come_with_defaults
+   33:         FormatChecker._cls_checks(
+   11:             draft202012 or draft201909 or draft7 or draft6 or draft4 or draft3,
+   11:             raises,
+   11:         )(func)
+   11:         return func
+       
+   11:     return wrap
+       
+       
+    2: @_checks_drafts(name="idn-email")
+    2: @_checks_drafts(name="email")
+    2: def is_email(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           return "@" in instance
+       
+       
+    3: @_checks_drafts(
+    1:     draft3="ip-address",
+    1:     draft4="ipv4",
+    1:     draft6="ipv4",
+    1:     draft7="ipv4",
+    1:     draft201909="ipv4",
+    1:     draft202012="ipv4",
+    1:     raises=ipaddress.AddressValueError,
+       )
+    2: def is_ipv4(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           return bool(ipaddress.IPv4Address(instance))
+       
+       
+    2: @_checks_drafts(name="ipv6", raises=ipaddress.AddressValueError)
+    2: def is_ipv6(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           address = ipaddress.IPv6Address(instance)
+           return not getattr(address, "scope_id", "")
+       
+       
+    2: with suppress(ImportError):
+    1:     from fqdn import FQDN
+       
+           @_checks_drafts(
+               draft3="host-name",
+               draft4="hostname",
+               draft6="hostname",
+               draft7="hostname",
+               draft201909="hostname",
+               draft202012="hostname",
+               # fqdn.FQDN("") raises a ValueError due to a bug
+               # however, it's not clear when or if that will be fixed, so catch it
+               # here for now
+               raises=ValueError,
+           )
+           def is_host_name(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return FQDN(instance, min_labels=1).is_valid
+       
+       
+    2: with suppress(ImportError):
+           # The built-in `idna` codec only implements RFC 3890, so we go elsewhere.
+    1:     import idna
+       
+    3:     @_checks_drafts(
+    1:         draft7="idn-hostname",
+    1:         draft201909="idn-hostname",
+    1:         draft202012="idn-hostname",
+    1:         raises=(idna.IDNAError, UnicodeError),
+           )
+    2:     def is_idn_host_name(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               idna.encode(instance)
+               return True
+       
+       
+    1: try:
+    1:     import rfc3987
+    1: except ImportError:
+    2:     with suppress(ImportError):
+    1:         from rfc3986_validator import validate_rfc3986
+       
+               @_checks_drafts(name="uri")
+               def is_uri(instance: object) -> bool:
+                   if not isinstance(instance, str):
+                       return True
+                   return validate_rfc3986(instance, rule="URI")
+       
+               @_checks_drafts(
+                   draft6="uri-reference",
+                   draft7="uri-reference",
+                   draft201909="uri-reference",
+                   draft202012="uri-reference",
+                   raises=ValueError,
+               )
+               def is_uri_reference(instance: object) -> bool:
+                   if not isinstance(instance, str):
+                       return True
+                   return validate_rfc3986(instance, rule="URI_reference")
+       
+    2:     with suppress(ImportError):
+    1:         from rfc3987_syntax import is_valid_syntax as _rfc3987_is_valid_syntax
+       
+               @_checks_drafts(
+                   draft7="iri",
+                   draft201909="iri",
+                   draft202012="iri",
+                   raises=ValueError,
+               )
+               def is_iri(instance: object) -> bool:
+                   if not isinstance(instance, str):
+                       return True
+                   return _rfc3987_is_valid_syntax("iri", instance)
+       
+               @_checks_drafts(
+                   draft7="iri-reference",
+                   draft201909="iri-reference",
+                   draft202012="iri-reference",
+                   raises=ValueError,
+               )
+               def is_iri_reference(instance: object) -> bool:
+                   if not isinstance(instance, str):
+                       return True
+                   return _rfc3987_is_valid_syntax("iri_reference", instance)
+       
+       else:
+       
+           @_checks_drafts(
+               draft7="iri",
+               draft201909="iri",
+               draft202012="iri",
+               raises=ValueError,
+           )
+           def is_iri(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return rfc3987.parse(instance, rule="IRI")
+       
+           @_checks_drafts(
+               draft7="iri-reference",
+               draft201909="iri-reference",
+               draft202012="iri-reference",
+               raises=ValueError,
+           )
+           def is_iri_reference(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return rfc3987.parse(instance, rule="IRI_reference")
+       
+           @_checks_drafts(name="uri", raises=ValueError)
+           def is_uri(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return rfc3987.parse(instance, rule="URI")
+       
+           @_checks_drafts(
+               draft6="uri-reference",
+               draft7="uri-reference",
+               draft201909="uri-reference",
+               draft202012="uri-reference",
+               raises=ValueError,
+           )
+           def is_uri_reference(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return rfc3987.parse(instance, rule="URI_reference")
+       
+       
+    2: with suppress(ImportError):
+    1:     from rfc3339_validator import validate_rfc3339
+       
+           @_checks_drafts(name="date-time")
+           def is_datetime(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return validate_rfc3339(instance.upper())
+       
+           @_checks_drafts(
+               draft7="time",
+               draft201909="time",
+               draft202012="time",
+           )
+           def is_time(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return is_datetime("1970-01-01T" + instance)
+       
+       
+    2: @_checks_drafts(name="regex", raises=re.error)
+    2: def is_regex(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           return bool(re.compile(instance))
+       
+       
+    3: @_checks_drafts(
+    1:     draft3="date",
+    1:     draft7="date",
+    1:     draft201909="date",
+    1:     draft202012="date",
+    1:     raises=ValueError,
+       )
+    2: def is_date(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           return bool(_RE_DATE.fullmatch(instance) and date.fromisoformat(instance))
+       
+       
+    2: @_checks_drafts(draft3="time", raises=ValueError)
+    2: def is_draft3_time(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           return bool(datetime.strptime(instance, "%H:%M:%S"))  # noqa: DTZ007
+       
+       
+    2: with suppress(ImportError):
+    1:     import webcolors
+       
+           @_checks_drafts(draft3="color", raises=(ValueError, TypeError))
+           def is_css21_color(instance: object) -> bool:
+               if isinstance(instance, str):
+                   try:
+                       webcolors.name_to_hex(instance)
+                   except ValueError:
+                       webcolors.normalize_hex(instance.lower())
+               return True
+       
+       
+    2: with suppress(ImportError):
+    1:     import jsonpointer
+       
+    3:     @_checks_drafts(
+    1:         draft6="json-pointer",
+    1:         draft7="json-pointer",
+    1:         draft201909="json-pointer",
+    1:         draft202012="json-pointer",
+    1:         raises=jsonpointer.JsonPointerException,
+           )
+    2:     def is_json_pointer(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return bool(jsonpointer.JsonPointer(instance))
+       
+           # TODO: I don't want to maintain this, so it
+           #       needs to go either into jsonpointer (pending
+           #       https://github.com/stefankoegl/python-json-pointer/issues/34) or
+           #       into a new external library.
+    3:     @_checks_drafts(
+    1:         draft7="relative-json-pointer",
+    1:         draft201909="relative-json-pointer",
+    1:         draft202012="relative-json-pointer",
+    1:         raises=jsonpointer.JsonPointerException,
+           )
+    2:     def is_relative_json_pointer(instance: object) -> bool:
+               # Definition taken from:
+               # https://tools.ietf.org/html/draft-handrews-relative-json-pointer-01#section-3
+               if not isinstance(instance, str):
+                   return True
+               if not instance:
+                   return False
+       
+               non_negative_integer, rest = [], ""
+               for i, character in enumerate(instance):
+                   if character.isdigit():
+                       # digits with a leading "0" are not allowed
+                       if i > 0 and int(instance[i - 1]) == 0:
+                           return False
+       
+                       non_negative_integer.append(character)
+                       continue
+       
+                   if not non_negative_integer:
+                       return False
+       
+                   rest = instance[i:]
+                   break
+               return (rest == "#") or bool(jsonpointer.JsonPointer(rest))
+       
+       
+    2: with suppress(ImportError):
+    1:     import uri_template
+       
+           @_checks_drafts(
+               draft6="uri-template",
+               draft7="uri-template",
+               draft201909="uri-template",
+               draft202012="uri-template",
+           )
+           def is_uri_template(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               return uri_template.validate(instance)
+       
+       
+    2: with suppress(ImportError):
+    1:     import isoduration
+       
+           @_checks_drafts(
+               draft201909="duration",
+               draft202012="duration",
+               raises=isoduration.DurationParsingException,
+           )
+           def is_duration(instance: object) -> bool:
+               if not isinstance(instance, str):
+                   return True
+               isoduration.parse_duration(instance)
+               # FIXME: See bolsote/isoduration#25 and bolsote/isoduration#21
+               return instance.endswith(tuple("DMYWHMS"))
+       
+       
+    3: @_checks_drafts(
+    1:     draft201909="uuid",
+    1:     draft202012="uuid",
+    1:     raises=ValueError,
+       )
+    2: def is_uuid(instance: object) -> bool:
+           if not isinstance(instance, str):
+               return True
+           UUID(instance)
+           return all(instance[position] == "-" for position in (8, 13, 18, 23))

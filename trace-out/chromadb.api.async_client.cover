@@ -1,0 +1,569 @@
+    1: import httpx
+    1: from typing import Optional, Sequence
+    1: from uuid import UUID
+    1: from overrides import override
+       
+    1: from chromadb.auth import UserIdentity
+    1: from chromadb.auth.utils import maybe_set_tenant_and_database
+    1: from chromadb.api import AsyncAdminAPI, AsyncClientAPI, AsyncServerAPI
+    1: from chromadb.api.collection_configuration import (
+           CreateCollectionConfiguration,
+           UpdateCollectionConfiguration,
+           validate_embedding_function_conflict_on_create,
+           validate_embedding_function_conflict_on_get,
+       )
+    1: from chromadb.api.models.AsyncCollection import AsyncCollection
+    1: from chromadb.api.shared_system_client import SharedSystemClient
+    1: from chromadb.api.types import (
+           CollectionMetadata,
+           DataLoader,
+           Documents,
+           Embeddable,
+           EmbeddingFunction,
+           Embeddings,
+           GetResult,
+           IDs,
+           Include,
+           IncludeMetadataDocuments,
+           IncludeMetadataDocumentsDistances,
+           Loadable,
+           Metadatas,
+           QueryResult,
+           Schema,
+           URIs,
+           DefaultEmbeddingFunction,
+           DeleteResult,
+       )
+    1: from chromadb.config import DEFAULT_DATABASE, DEFAULT_TENANT, Settings, System
+    1: from chromadb.errors import ChromaError
+    1: from chromadb.types import Database, Tenant, Where, WhereDocument
+       
+       
+    2: class AsyncClient(SharedSystemClient, AsyncClientAPI):
+    1:     """A client for Chroma. This is the main entrypoint for interacting with Chroma.
+           A client internally stores its tenant and database and proxies calls to a
+           Server API instance of Chroma. It treats the Server API and corresponding System
+           as a singleton, so multiple clients connecting to the same resource will share the
+           same API instance.
+       
+           Client implementations should be implement their own API-caching strategies.
+           """
+       
+           # An internal admin client for verifying that databases and tenants exist
+    1:     _admin_client: AsyncAdminAPI
+       
+    1:     tenant: str = DEFAULT_TENANT
+    1:     database: str = DEFAULT_DATABASE
+       
+    1:     _server: AsyncServerAPI
+       
+    2:     @classmethod
+    6:     async def create(
+               cls,
+    2:         tenant: str = DEFAULT_TENANT,
+    2:         database: str = DEFAULT_DATABASE,
+    2:         settings: Settings = Settings(),
+    1:     ) -> "AsyncClient":
+               # Create an admin client for verifying that databases and tenants exist
+               self = cls(settings=settings)
+               SharedSystemClient._populate_data_from_system(self._system)
+       
+               self.tenant = tenant
+               self.database = database
+       
+               # Get the root system component we want to interact with
+               self._server = self._system.instance(AsyncServerAPI)
+       
+               user_identity = await self.get_user_identity()
+       
+               maybe_tenant, maybe_database = maybe_set_tenant_and_database(
+                   user_identity,
+                   overwrite_singleton_tenant_database_access_from_auth=settings.chroma_overwrite_singleton_tenant_database_access_from_auth,
+                   user_provided_tenant=tenant,
+                   user_provided_database=database,
+               )
+               if maybe_tenant:
+                   self.tenant = maybe_tenant
+               if maybe_database:
+                   self.database = maybe_database
+       
+               self._admin_client = AsyncAdminClient.from_system(self._system)
+               await self._validate_tenant_database(tenant=self.tenant, database=self.database)
+       
+               self._submit_client_start_event()
+       
+               return self
+       
+    2:     @classmethod
+           # (we can't override and use from_system() because it's synchronous)
+    6:     async def from_system_async(
+               cls,
+    1:         system: System,
+    2:         tenant: str = DEFAULT_TENANT,
+    2:         database: str = DEFAULT_DATABASE,
+    1:     ) -> "AsyncClient":
+               """Create a client from an existing system. This is useful for testing and debugging."""
+               return await AsyncClient.create(tenant, database, system.settings)
+       
+    2:     @classmethod
+    2:     @override
+    4:     def from_system(
+               cls,
+    1:         system: System,
+    1:     ) -> "SharedSystemClient":
+               """AsyncClient cannot be created synchronously. Use .from_system_async() instead."""
+               raise NotImplementedError(
+                   "AsyncClient cannot be created synchronously. Use .from_system_async() instead."
+               )
+       
+    2:     @override
+    2:     async def get_user_identity(self) -> UserIdentity:
+               return await self._server.get_user_identity()
+       
+    2:     @override
+    2:     async def set_tenant(self, tenant: str, database: str = DEFAULT_DATABASE) -> None:
+               await self._validate_tenant_database(tenant=tenant, database=database)
+               self.tenant = tenant
+               self.database = database
+       
+    2:     @override
+    2:     async def set_database(self, database: str) -> None:
+               await self._validate_tenant_database(tenant=self.tenant, database=database)
+               self.database = database
+       
+    1:     async def _validate_tenant_database(self, tenant: str, database: str) -> None:
+               try:
+                   await self._admin_client.get_tenant(name=tenant)
+               except httpx.ConnectError:
+                   raise ValueError(
+                       "Could not connect to a Chroma server. Are you sure it is running?"
+                   )
+               # Propagate ChromaErrors
+               except ChromaError as e:
+                   raise e
+               except Exception:
+                   raise ValueError(
+                       f"Could not connect to tenant {tenant}. Are you sure it exists?"
+                   )
+       
+               try:
+                   await self._admin_client.get_database(name=database, tenant=tenant)
+               except httpx.ConnectError:
+                   raise ValueError(
+                       "Could not connect to a Chroma server. Are you sure it is running?"
+                   )
+       
+           # region BaseAPI Methods
+           # Note - we could do this in less verbose ways, but they break type checking
+    2:     @override
+    2:     async def heartbeat(self) -> int:
+               return await self._server.heartbeat()
+       
+    2:     @override
+    5:     async def list_collections(
+    3:         self, limit: Optional[int] = None, offset: Optional[int] = None
+    1:     ) -> Sequence[AsyncCollection]:
+               models = await self._server.list_collections(
+                   limit, offset, tenant=self.tenant, database=self.database
+               )
+               return [AsyncCollection(client=self._server, model=model) for model in models]
+       
+    2:     @override
+    2:     async def count_collections(self) -> int:
+               return await self._server.count_collections(
+                   tenant=self.tenant, database=self.database
+               )
+       
+    2:     @override
+   10:     async def create_collection(
+               self,
+    1:         name: str,
+    2:         schema: Optional[Schema] = None,
+    2:         configuration: Optional[CreateCollectionConfiguration] = None,
+    2:         metadata: Optional[CollectionMetadata] = None,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    2:         get_or_create: bool = False,
+    1:     ) -> AsyncCollection:
+               if configuration is None:
+                   configuration = {}
+       
+               configuration_ef = configuration.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_create(
+                   embedding_function, configuration_ef
+               )
+       
+               # If ef provided in function params and collection config ef is None,
+               # set the collection config ef to the function params
+               if embedding_function is not None and configuration_ef is None:
+                   configuration["embedding_function"] = embedding_function
+       
+               model = await self._server.create_collection(
+                   name=name,
+                   schema=schema,
+                   configuration=configuration,
+                   metadata=metadata,
+                   tenant=self.tenant,
+                   database=self.database,
+                   get_or_create=get_or_create,
+               )
+               return AsyncCollection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    6:     async def get_collection(
+               self,
+    1:         name: str,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    1:     ) -> AsyncCollection:
+               model = await self._server.get_collection(
+                   name=name,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+               persisted_ef_config = model.configuration_json.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_get(
+                   embedding_function, persisted_ef_config
+               )
+       
+               return AsyncCollection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    6:     async def get_collection_by_id(
+               self,
+    1:         id: UUID,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    1:     ) -> AsyncCollection:
+               """Get a collection by its ID.
+       
+               Args:
+                   id: The UUID of the collection.
+                   embedding_function: Optional embedding function for the collection.
+                   data_loader: Optional data loader for documents with URIs.
+       
+               Returns:
+                   AsyncCollection: The requested collection.
+       
+               Raises:
+                   ValueError: If the embedding function conflicts with configuration.
+               """
+               model = await self._server.get_collection_by_id(
+                   collection_id=id,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+               persisted_ef_config = model.configuration_json.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_get(
+                   embedding_function, persisted_ef_config
+               )
+       
+               return AsyncCollection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    9:     async def get_or_create_collection(
+               self,
+    1:         name: str,
+    2:         schema: Optional[Schema] = None,
+    2:         configuration: Optional[CreateCollectionConfiguration] = None,
+    2:         metadata: Optional[CollectionMetadata] = None,
+    2:         embedding_function: Optional[
+    1:             EmbeddingFunction[Embeddable]
+    1:         ] = DefaultEmbeddingFunction(),  # type: ignore
+    2:         data_loader: Optional[DataLoader[Loadable]] = None,
+    1:     ) -> AsyncCollection:
+               if configuration is None:
+                   configuration = {}
+       
+               configuration_ef = configuration.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_create(
+                   embedding_function, configuration_ef
+               )
+       
+               if embedding_function is not None and configuration_ef is None:
+                   configuration["embedding_function"] = embedding_function
+               model = await self._server.get_or_create_collection(
+                   name=name,
+                   schema=schema,
+                   configuration=configuration,
+                   metadata=metadata,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+               persisted_ef_config = model.configuration_json.get("embedding_function")
+       
+               validate_embedding_function_conflict_on_get(
+                   embedding_function, persisted_ef_config
+               )
+       
+               return AsyncCollection(
+                   client=self._server,
+                   model=model,
+                   embedding_function=embedding_function,
+                   data_loader=data_loader,
+               )
+       
+    2:     @override
+    7:     async def _modify(
+               self,
+    1:         id: UUID,
+    2:         new_name: Optional[str] = None,
+    2:         new_metadata: Optional[CollectionMetadata] = None,
+    2:         new_configuration: Optional[UpdateCollectionConfiguration] = None,
+    1:     ) -> None:
+               return await self._server._modify(
+                   id=id,
+                   new_name=new_name,
+                   new_metadata=new_metadata,
+                   new_configuration=new_configuration,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+    4:     async def delete_collection(
+               self,
+    1:         name: str,
+    1:     ) -> None:
+               return await self._server.delete_collection(
+                   name=name,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+           #
+           # ITEM METHODS
+           #
+       
+    2:     @override
+    9:     async def _add(
+               self,
+    1:         ids: IDs,
+    1:         collection_id: UUID,
+    1:         embeddings: Embeddings,
+    2:         metadatas: Optional[Metadatas] = None,
+    2:         documents: Optional[Documents] = None,
+    2:         uris: Optional[URIs] = None,
+    1:     ) -> bool:
+               return await self._server._add(
+                   ids=ids,
+                   collection_id=collection_id,
+                   embeddings=embeddings,
+                   metadatas=metadatas,
+                   documents=documents,
+                   uris=uris,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+    9:     async def _update(
+               self,
+    1:         collection_id: UUID,
+    1:         ids: IDs,
+    2:         embeddings: Optional[Embeddings] = None,
+    2:         metadatas: Optional[Metadatas] = None,
+    2:         documents: Optional[Documents] = None,
+    2:         uris: Optional[URIs] = None,
+    1:     ) -> bool:
+               return await self._server._update(
+                   collection_id=collection_id,
+                   ids=ids,
+                   embeddings=embeddings,
+                   metadatas=metadatas,
+                   documents=documents,
+                   uris=uris,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+    9:     async def _upsert(
+               self,
+    1:         collection_id: UUID,
+    1:         ids: IDs,
+    1:         embeddings: Embeddings,
+    2:         metadatas: Optional[Metadatas] = None,
+    2:         documents: Optional[Documents] = None,
+    2:         uris: Optional[URIs] = None,
+    1:     ) -> bool:
+               return await self._server._upsert(
+                   collection_id=collection_id,
+                   ids=ids,
+                   embeddings=embeddings,
+                   metadatas=metadatas,
+                   documents=documents,
+                   uris=uris,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+    2:     async def _count(self, collection_id: UUID) -> int:
+               return await self._server._count(
+                   collection_id=collection_id,
+               )
+       
+    2:     @override
+    2:     async def _peek(self, collection_id: UUID, n: int = 10) -> GetResult:
+               return await self._server._peek(
+                   collection_id=collection_id,
+                   n=n,
+               )
+       
+    2:     @override
+   10:     async def _get(
+               self,
+    1:         collection_id: UUID,
+    2:         ids: Optional[IDs] = None,
+    2:         where: Optional[Where] = None,
+    2:         limit: Optional[int] = None,
+    2:         offset: Optional[int] = None,
+    2:         where_document: Optional[WhereDocument] = None,
+    2:         include: Include = IncludeMetadataDocuments,
+    1:     ) -> GetResult:
+               return await self._server._get(
+                   collection_id=collection_id,
+                   ids=ids,
+                   where=where,
+                   limit=limit,
+                   offset=offset,
+                   where_document=where_document,
+                   include=include,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    7:     async def _delete(
+               self,
+    1:         collection_id: UUID,
+    1:         ids: Optional[IDs],
+    2:         where: Optional[Where] = None,
+    2:         where_document: Optional[WhereDocument] = None,
+    2:         limit: Optional[int] = None,
+    1:     ) -> DeleteResult:
+               return await self._server._delete(
+                   collection_id=collection_id,
+                   ids=ids,
+                   where=where,
+                   where_document=where_document,
+                   limit=limit,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+   10:     async def _query(
+               self,
+    1:         collection_id: UUID,
+    1:         query_embeddings: Embeddings,
+    2:         ids: Optional[IDs] = None,
+    2:         n_results: int = 10,
+    2:         where: Optional[Where] = None,
+    2:         where_document: Optional[WhereDocument] = None,
+    2:         include: Include = IncludeMetadataDocumentsDistances,
+    1:     ) -> QueryResult:
+               return await self._server._query(
+                   collection_id=collection_id,
+                   query_embeddings=query_embeddings,
+                   ids=ids,
+                   n_results=n_results,
+                   where=where,
+                   where_document=where_document,
+                   include=include,
+                   tenant=self.tenant,
+                   database=self.database,
+               )
+       
+    2:     @override
+    2:     async def reset(self) -> bool:
+               return await self._server.reset()
+       
+    2:     @override
+    2:     async def get_version(self) -> str:
+               return await self._server.get_version()
+       
+    2:     @override
+    2:     def get_settings(self) -> Settings:
+               return self._server.get_settings()
+       
+    2:     @override
+    2:     async def get_max_batch_size(self) -> int:
+               return await self._server.get_max_batch_size()
+       
+           # endregion
+       
+       
+    2: class AsyncAdminClient(SharedSystemClient, AsyncAdminAPI):
+    1:     _server: AsyncServerAPI
+       
+    1:     def __init__(self, settings: Settings = Settings()) -> None:
+               super().__init__(settings)
+               self._server = self._system.instance(AsyncServerAPI)
+       
+    2:     @override
+    2:     async def create_database(self, name: str, tenant: str = DEFAULT_TENANT) -> None:
+               return await self._server.create_database(name=name, tenant=tenant)
+       
+    2:     @override
+    2:     async def get_database(self, name: str, tenant: str = DEFAULT_TENANT) -> Database:
+               return await self._server.get_database(name=name, tenant=tenant)
+       
+    2:     @override
+    2:     async def delete_database(self, name: str, tenant: str = DEFAULT_TENANT) -> None:
+               return await self._server.delete_database(name=name, tenant=tenant)
+       
+    2:     @override
+    6:     async def list_databases(
+               self,
+    2:         limit: Optional[int] = None,
+    2:         offset: Optional[int] = None,
+    2:         tenant: str = DEFAULT_TENANT,
+    1:     ) -> Sequence[Database]:
+               return await self._server.list_databases(
+                   limit=limit, offset=offset, tenant=tenant
+               )
+       
+    2:     @override
+    2:     async def create_tenant(self, name: str) -> None:
+               return await self._server.create_tenant(name=name)
+       
+    2:     @override
+    2:     async def get_tenant(self, name: str) -> Tenant:
+               return await self._server.get_tenant(name=name)
+       
+    2:     @classmethod
+    2:     @override
+    4:     def from_system(
+               cls,
+    1:         system: System,
+    1:     ) -> "AsyncAdminClient":
+               SharedSystemClient._populate_data_from_system(system)
+               instance = cls(settings=system.settings)
+               return instance

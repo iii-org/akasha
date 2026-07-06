@@ -1,0 +1,37 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ...._models import BaseModel
+       
+    1: __all__ = ["FileCitationDeltaAnnotation", "FileCitation"]
+       
+       
+    2: class FileCitation(BaseModel):
+    1:     file_id: Optional[str] = None
+    1:     """The ID of the specific File the citation is from."""
+       
+    1:     quote: Optional[str] = None
+    1:     """The specific quote in the file."""
+       
+       
+    2: class FileCitationDeltaAnnotation(BaseModel):
+    1:     """
+           A citation within the message that points to a specific quote from a specific File associated with the assistant or the message. Generated when the assistant uses the "file_search" tool to search files.
+           """
+       
+    1:     index: int
+    1:     """The index of the annotation in the text content part."""
+       
+    1:     type: Literal["file_citation"]
+    1:     """Always `file_citation`."""
+       
+    1:     end_index: Optional[int] = None
+       
+    1:     file_citation: Optional[FileCitation] = None
+       
+    1:     start_index: Optional[int] = None
+       
+    1:     text: Optional[str] = None
+    1:     """The text in the message content that needs to be replaced."""

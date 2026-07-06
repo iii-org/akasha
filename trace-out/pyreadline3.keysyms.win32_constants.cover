@@ -1,0 +1,263 @@
+       # -*- coding: utf-8 -*-
+       # *****************************************************************************
+       #     Copyright (C) 2006-2020 Jorgen Stenarson. <jorgen.stenarson@bostream.nu>
+       #     Copyright (C) 2020 Bassem Girgis. <brgirgis@gmail.com>
+       #
+       #  Distributed under the terms of the BSD License.  The full license is in
+       #  the file COPYING, distributed as part of this software.
+       # *****************************************************************************
+       
+       # This file contains constants that are normally found in win32all
+       # But included here to avoid the dependency
+       
+       
+    1: VK_LBUTTON = 1
+    1: VK_RBUTTON = 2
+    1: VK_CANCEL = 3
+    1: VK_MBUTTON = 4
+    1: VK_XBUTTON1 = 5
+    1: VK_XBUTTON2 = 6
+    1: VK_BACK = 8
+    1: VK_TAB = 9
+    1: VK_CLEAR = 12
+    1: VK_RETURN = 13
+    1: VK_SHIFT = 16
+    1: VK_CONTROL = 17
+    1: VK_MENU = 18
+    1: VK_PAUSE = 19
+    1: VK_CAPITAL = 20
+    1: VK_KANA = 0x15
+    1: VK_HANGEUL = 0x15
+    1: VK_HANGUL = 0x15
+    1: VK_JUNJA = 0x17
+    1: VK_FINAL = 0x18
+    1: VK_HANJA = 0x19
+    1: VK_KANJI = 0x19
+    1: VK_ESCAPE = 0x1B
+    1: VK_CONVERT = 0x1C
+    1: VK_NONCONVERT = 0x1D
+    1: VK_ACCEPT = 0x1E
+    1: VK_MODECHANGE = 0x1F
+    1: VK_SPACE = 32
+    1: VK_PRIOR = 33
+    1: VK_NEXT = 34
+    1: VK_END = 35
+    1: VK_HOME = 36
+    1: VK_LEFT = 37
+    1: VK_UP = 38
+    1: VK_RIGHT = 39
+    1: VK_DOWN = 40
+    1: VK_SELECT = 41
+    1: VK_PRINT = 42
+    1: VK_EXECUTE = 43
+    1: VK_SNAPSHOT = 44
+    1: VK_INSERT = 45
+    1: VK_DELETE = 46
+    1: VK_HELP = 47
+    1: VK_LWIN = 0x5B
+    1: VK_RWIN = 0x5C
+    1: VK_APPS = 0x5D
+    1: VK_SLEEP = 0x5F
+    1: VK_NUMPAD0 = 0x60
+    1: VK_NUMPAD1 = 0x61
+    1: VK_NUMPAD2 = 0x62
+    1: VK_NUMPAD3 = 0x63
+    1: VK_NUMPAD4 = 0x64
+    1: VK_NUMPAD5 = 0x65
+    1: VK_NUMPAD6 = 0x66
+    1: VK_NUMPAD7 = 0x67
+    1: VK_NUMPAD8 = 0x68
+    1: VK_NUMPAD9 = 0x69
+    1: VK_MULTIPLY = 0x6A
+    1: VK_ADD = 0x6B
+    1: VK_SEPARATOR = 0x6C
+    1: VK_SUBTRACT = 0x6D
+    1: VK_DECIMAL = 0x6E
+    1: VK_DIVIDE = 0x6F
+    1: VK_F1 = 0x70
+    1: VK_F2 = 0x71
+    1: VK_F3 = 0x72
+    1: VK_F4 = 0x73
+    1: VK_F5 = 0x74
+    1: VK_F6 = 0x75
+    1: VK_F7 = 0x76
+    1: VK_F8 = 0x77
+    1: VK_F9 = 0x78
+    1: VK_F10 = 0x79
+    1: VK_F11 = 0x7A
+    1: VK_F12 = 0x7B
+    1: VK_F13 = 0x7C
+    1: VK_F14 = 0x7D
+    1: VK_F15 = 0x7E
+    1: VK_F16 = 0x7F
+    1: VK_F17 = 0x80
+    1: VK_F18 = 0x81
+    1: VK_F19 = 0x82
+    1: VK_F20 = 0x83
+    1: VK_F21 = 0x84
+    1: VK_F22 = 0x85
+    1: VK_F23 = 0x86
+    1: VK_F24 = 0x87
+    1: VK_NUMLOCK = 0x90
+    1: VK_SCROLL = 0x91
+    1: VK_LSHIFT = 0xA0
+    1: VK_RSHIFT = 0xA1
+    1: VK_LCONTROL = 0xA2
+    1: VK_RCONTROL = 0xA3
+    1: VK_LMENU = 0xA4
+    1: VK_RMENU = 0xA5
+    1: VK_BROWSER_BACK = 0xA6
+    1: VK_BROWSER_FORWARD = 0xA7
+    1: VK_BROWSER_REFRESH = 0xA8
+    1: VK_BROWSER_STOP = 0xA9
+    1: VK_BROWSER_SEARCH = 0xAA
+    1: VK_BROWSER_FAVORITES = 0xAB
+    1: VK_BROWSER_HOME = 0xAC
+    1: VK_VOLUME_MUTE = 0xAD
+    1: VK_VOLUME_DOWN = 0xAE
+    1: VK_VOLUME_UP = 0xAF
+    1: VK_MEDIA_NEXT_TRACK = 0xB0
+    1: VK_MEDIA_PREV_TRACK = 0xB1
+    1: VK_MEDIA_STOP = 0xB2
+    1: VK_MEDIA_PLAY_PAUSE = 0xB3
+    1: VK_LAUNCH_MAIL = 0xB4
+    1: VK_LAUNCH_MEDIA_SELECT = 0xB5
+    1: VK_LAUNCH_APP1 = 0xB6
+    1: VK_LAUNCH_APP2 = 0xB7
+    1: VK_OEM_1 = 0xBA
+    1: VK_OEM_PLUS = 0xBB
+    1: VK_OEM_COMMA = 0xBC
+    1: VK_OEM_MINUS = 0xBD
+    1: VK_OEM_PERIOD = 0xBE
+    1: VK_OEM_2 = 0xBF
+    1: VK_OEM_3 = 0xC0
+    1: VK_OEM_4 = 0xDB
+    1: VK_OEM_5 = 0xDC
+    1: VK_OEM_6 = 0xDD
+    1: VK_OEM_7 = 0xDE
+    1: VK_OEM_8 = 0xDF
+    1: VK_OEM_102 = 0xE2
+    1: VK_PROCESSKEY = 0xE5
+    1: VK_PACKET = 0xE7
+    1: VK_ATTN = 0xF6
+    1: VK_CRSEL = 0xF7
+    1: VK_EXSEL = 0xF8
+    1: VK_EREOF = 0xF9
+    1: VK_PLAY = 0xFA
+    1: VK_ZOOM = 0xFB
+    1: VK_NONAME = 0xFC
+    1: VK_PA1 = 0xFD
+    1: VK_OEM_CLEAR = 0xFE
+       
+    1: CF_TEXT = 1
+    1: CF_BITMAP = 2
+    1: CF_METAFILEPICT = 3
+    1: CF_SYLK = 4
+    1: CF_DIF = 5
+    1: CF_TIFF = 6
+    1: CF_OEMTEXT = 7
+    1: CF_DIB = 8
+    1: CF_PALETTE = 9
+    1: CF_PENDATA = 10
+    1: CF_RIFF = 11
+    1: CF_WAVE = 12
+    1: CF_UNICODETEXT = 13
+    1: CF_ENHMETAFILE = 14
+    1: CF_HDROP = 15
+    1: CF_LOCALE = 16
+    1: CF_MAX = 17
+    1: CF_OWNERDISPLAY = 128
+    1: CF_DSPTEXT = 129
+    1: CF_DSPBITMAP = 130
+    1: CF_DSPMETAFILEPICT = 131
+    1: CF_DSPENHMETAFILE = 142
+    1: CF_PRIVATEFIRST = 512
+    1: CF_PRIVATELAST = 767
+    1: CF_GDIOBJFIRST = 768
+    1: CF_GDIOBJLAST = 1023
+       
+       
+    1: GPTR = 64
+    1: GHND = 66
+       
+   70: CODE_TO_SYM_MAP = {
+    1:     VK_CANCEL: "cancel",
+    1:     VK_BACK: "backspace",
+    1:     VK_TAB: "tab",
+    1:     VK_CLEAR: "clear",
+    1:     VK_RETURN: "return",
+    1:     VK_SHIFT: "shift_l",
+    1:     VK_CONTROL: "control_l",
+    1:     VK_MENU: "alt_l",
+    1:     VK_PAUSE: "pause",
+    1:     VK_CAPITAL: "caps_lock",
+    1:     VK_ESCAPE: "escape",
+    1:     VK_SPACE: "space",
+    1:     VK_PRIOR: "prior",
+    1:     VK_NEXT: "next",
+    1:     VK_END: "end",
+    1:     VK_HOME: "home",
+    1:     VK_LEFT: "left",
+    1:     VK_UP: "up",
+    1:     VK_RIGHT: "right",
+    1:     VK_DOWN: "down",
+    1:     VK_SELECT: "select",
+    1:     VK_PRINT: "print",
+    1:     VK_EXECUTE: "execute",
+    1:     VK_SNAPSHOT: "snapshot",
+    1:     VK_INSERT: "insert",
+    1:     VK_DELETE: "delete",
+    1:     VK_HELP: "help",
+    1:     VK_F1: "f1",
+    1:     VK_F2: "f2",
+    1:     VK_F3: "f3",
+    1:     VK_F4: "f4",
+    1:     VK_F5: "f5",
+    1:     VK_F6: "f6",
+    1:     VK_F7: "f7",
+    1:     VK_F8: "f8",
+    1:     VK_F9: "f9",
+    1:     VK_F10: "f10",
+    1:     VK_F11: "f11",
+    1:     VK_F12: "f12",
+    1:     VK_F13: "f13",
+    1:     VK_F14: "f14",
+    1:     VK_F15: "f15",
+    1:     VK_F16: "f16",
+    1:     VK_F17: "f17",
+    1:     VK_F18: "f18",
+    1:     VK_F19: "f19",
+    1:     VK_F20: "f20",
+    1:     VK_F21: "f21",
+    1:     VK_F22: "f22",
+    1:     VK_F23: "f23",
+    1:     VK_F24: "f24",
+    1:     VK_NUMLOCK: "num_lock,",
+    1:     VK_SCROLL: "scroll_lock",
+    1:     VK_APPS: "vk_apps",
+    1:     VK_PROCESSKEY: "vk_processkey",
+    1:     VK_ATTN: "vk_attn",
+    1:     VK_CRSEL: "vk_crsel",
+    1:     VK_EXSEL: "vk_exsel",
+    1:     VK_EREOF: "vk_ereof",
+    1:     VK_PLAY: "vk_play",
+    1:     VK_ZOOM: "vk_zoom",
+    1:     VK_NONAME: "vk_noname",
+    1:     VK_PA1: "vk_pa1",
+    1:     VK_OEM_CLEAR: "vk_oem_clear",
+    1:     VK_NUMPAD0: "numpad0",
+    1:     VK_NUMPAD1: "numpad1",
+    1:     VK_NUMPAD2: "numpad2",
+    1:     VK_NUMPAD3: "numpad3",
+    1:     VK_NUMPAD4: "numpad4",
+    1:     VK_NUMPAD5: "numpad5",
+    1:     VK_NUMPAD6: "numpad6",
+    1:     VK_NUMPAD7: "numpad7",
+    1:     VK_NUMPAD8: "numpad8",
+    1:     VK_NUMPAD9: "numpad9",
+    1:     VK_DIVIDE: "divide",
+    1:     VK_MULTIPLY: "multiply",
+    1:     VK_ADD: "add",
+    1:     VK_SUBTRACT: "subtract",
+    1:     VK_DECIMAL: "vk_decimal",
+       }

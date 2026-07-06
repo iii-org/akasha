@@ -1,0 +1,6 @@
+    1: from numpy.core import _multiarray_umath
+       
+    1: _globals = globals()
+       
+  242: for item in _multiarray_umath.__dir__():
+  241:     _globals[item] = getattr(_multiarray_umath, item)

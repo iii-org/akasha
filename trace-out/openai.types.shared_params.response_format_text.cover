@@ -1,0 +1,14 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ResponseFormatText"]
+       
+       
+    2: class ResponseFormatText(TypedDict, total=False):
+    1:     """Default response format. Used to generate text responses."""
+       
+    1:     type: Required[Literal["text"]]
+    1:     """The type of response format being defined. Always `text`."""

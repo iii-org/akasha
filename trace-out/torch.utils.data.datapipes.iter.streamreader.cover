@@ -1,0 +1,45 @@
+    1: from collections.abc import Iterator
+    1: from io import IOBase
+       
+    1: from torch.utils.data.datapipes._decorator import functional_datapipe
+    1: from torch.utils.data.datapipes.datapipe import IterDataPipe
+       
+       
+    1: __all__ = ["StreamReaderIterDataPipe"]
+       
+       
+    3: @functional_datapipe("read_from_stream")
+    2: class StreamReaderIterDataPipe(IterDataPipe[tuple[str, bytes]]):
+    1:     r"""
+           Given IO streams and their label names, yield bytes with label name as tuple.
+       
+           (functional name: ``read_from_stream``).
+       
+           Args:
+               datapipe: Iterable DataPipe provides label/URL and byte stream
+               chunk: Number of bytes to be read from stream per iteration.
+                   If ``None``, all bytes will be read until the EOF.
+       
+           Example:
+               >>> # xdoctest: +SKIP
+               >>> from torchdata.datapipes.iter import IterableWrapper, StreamReader
+               >>> from io import StringIO
+               >>> dp = IterableWrapper([("alphabet", StringIO("abcde"))])
+               >>> list(StreamReader(dp, chunk=1))
+               [('alphabet', 'a'), ('alphabet', 'b'), ('alphabet', 'c'), ('alphabet', 'd'), ('alphabet', 'e')]
+           """
+       
+    4:     def __init__(
+    3:         self, datapipe: IterDataPipe[tuple[str, IOBase]], chunk: int | None = None
+    1:     ) -> None:
+               self.datapipe = datapipe
+               self.chunk = chunk
+       
+    1:     def __iter__(self) -> Iterator[tuple[str, bytes]]:
+               for furl, stream in self.datapipe:
+                   while True:
+                       d = stream.read(self.chunk)
+                       if not d:
+                           stream.close()
+                           break
+                       yield (furl, d)

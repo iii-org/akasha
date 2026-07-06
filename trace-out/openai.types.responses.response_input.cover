@@ -1,0 +1,10 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import List
+    1: from typing_extensions import TypeAlias
+       
+    1: from .response_input_item import ResponseInputItem
+       
+    1: __all__ = ["ResponseInput"]
+       
+    1: ResponseInput: TypeAlias = List[ResponseInputItem]

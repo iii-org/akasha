@@ -1,0 +1,18 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from .._models import BaseModel
+       
+    1: __all__ = ["BatchRequestCounts"]
+       
+       
+    2: class BatchRequestCounts(BaseModel):
+    1:     """The request counts for different statuses within the batch."""
+       
+    1:     completed: int
+    1:     """Number of requests that have been completed successfully."""
+       
+    1:     failed: int
+    1:     """Number of requests that have failed."""
+       
+    1:     total: int
+    1:     """Total number of requests in the batch."""

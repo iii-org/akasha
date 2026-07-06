@@ -1,0 +1,12 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+       
+    1: from .._models import BaseModel
+    1: from .online_evaluator import OnlineEvaluator
+       
+    1: __all__ = ["CreateOnlineEvaluatorResponse"]
+       
+       
+    2: class CreateOnlineEvaluatorResponse(BaseModel):
+    1:     evaluator: Optional[OnlineEvaluator] = None

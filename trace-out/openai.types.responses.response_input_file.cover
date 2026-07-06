@@ -1,0 +1,34 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from typing import Optional
+    1: from typing_extensions import Literal
+       
+    1: from ..._models import BaseModel
+       
+    1: __all__ = ["ResponseInputFile"]
+       
+       
+    2: class ResponseInputFile(BaseModel):
+    1:     """A file input to the model."""
+       
+    1:     type: Literal["input_file"]
+    1:     """The type of the input item. Always `input_file`."""
+       
+    1:     detail: Optional[Literal["low", "high"]] = None
+    1:     """The detail level of the file to be sent to the model.
+       
+           Use `low` for the default rendering behavior, or `high` to render the file at
+           higher quality. Defaults to `low`.
+           """
+       
+    1:     file_data: Optional[str] = None
+    1:     """The content of the file to be sent to the model."""
+       
+    1:     file_id: Optional[str] = None
+    1:     """The ID of the file to be sent to the model."""
+       
+    1:     file_url: Optional[str] = None
+    1:     """The URL of the file to be sent to the model."""
+       
+    1:     filename: Optional[str] = None
+    1:     """The name of the file to be sent to the model."""

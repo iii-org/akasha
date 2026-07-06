@@ -1,0 +1,62 @@
+       # mypy: allow-untyped-defs
+       # need to fix prim_hop_base type annotations first
+       
+    1: import dataclasses
+    1: from typing import Optional
+       
+    1: import torch
+    1: from torch._higher_order_ops.base_hop import BaseHOP, FunctionWithNoFreeVars
+       
+       
+    2: class InvokeQuantTracer(BaseHOP):
+    1:     def __init__(self) -> None:
+    1:         super().__init__("invoke_quant_packed")
+       
+    1:     def __call__(self, subgraph, *operands, scheme=None, quant_options=None):
+               subgraph = FunctionWithNoFreeVars(subgraph)
+               return super().__call__(
+                   subgraph, *operands, scheme=scheme, quant_options=quant_options
+               )
+       
+       
+    1: invoke_quant_packed = InvokeQuantTracer()
+       
+       
+    2: class InvokeQuantUnpacked(BaseHOP):
+    1:     def __init__(self) -> None:
+    1:         super().__init__("invoke_quant")
+       
+       
+    1: invoke_quant = InvokeQuantUnpacked()
+       
+       
+    3: @dataclasses.dataclass(frozen=True, repr=True)
+    2: class InvokeQuant:
+    1:     """
+           Invoke a quantization function that will be preserved as a single operator. Preservation
+           as a single operator aids in pattern matching and custom lowerings.
+       
+           The operation appears as:
+               torch.ops.higher_order.invoke_quant(subgraph, *args, scheme=scheme)
+       
+           Args:
+               codegen_low_precision: Use observed subgraph dtypes for codegen instead of
+                   upcasting to fp32. Can improve performance for prologue fusion but
+                   requires careful testing of numerics.
+           """
+       
+    1:     codegen_low_precision: bool = True
+       
+    2:     def __call__(
+               self,
+               *args,
+    2:         scheme: Optional[str] = None,
+               **kwargs,
+           ):
+               if not torch.compiler.is_compiling():
+                   return args[0](*args[1:], **kwargs)
+       
+               if scheme is not None:
+                   kwargs["scheme"] = scheme
+       
+               return invoke_quant_packed(*args, **kwargs, quant_options=self)  # type: ignore[call-arg]

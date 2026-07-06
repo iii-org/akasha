@@ -1,0 +1,139 @@
+       # mypy: allow-untyped-defs
+    1: import sys
+    1: import types
+    1: from contextlib import contextmanager
+       
+    1: import torch
+       
+       
+       # The idea for this parameter is that we forbid bare assignment
+       # to torch.backends.<cudnn|mkldnn>.enabled and friends when running our
+       # test suite, where it's very easy to forget to undo the change
+       # later.
+    1: __allow_nonbracketed_mutation_flag = True
+       
+       
+    1: def disable_global_flags():
+           global __allow_nonbracketed_mutation_flag
+           __allow_nonbracketed_mutation_flag = False
+       
+       
+    1: def flags_frozen():
+           return not __allow_nonbracketed_mutation_flag
+       
+       
+    2: @contextmanager
+    2: def __allow_nonbracketed_mutation():
+           global __allow_nonbracketed_mutation_flag
+           old = __allow_nonbracketed_mutation_flag
+           __allow_nonbracketed_mutation_flag = True
+           try:
+               yield
+           finally:
+               __allow_nonbracketed_mutation_flag = old
+       
+       
+    2: class ContextProp:
+    1:     def __init__(self, getter, setter):
+   12:         self.getter = getter
+   12:         self.setter = setter
+       
+    1:     def __get__(self, obj, objtype):
+               return self.getter()
+       
+    1:     def __set__(self, obj, val):
+               if not flags_frozen():
+                   self.setter(val)
+               else:
+                   raise RuntimeError(
+                       f"not allowed to set {obj.__name__} flags "
+                       "after disable_global_flags; please use flags() context manager instead"
+                   )
+       
+       
+    2: class PropModule(types.ModuleType):
+    1:     def __init__(self, m, name):
+    5:         super().__init__(name)
+    5:         self.m = m
+       
+    1:     def __getattr__(self, attr):
+   98:         return self.m.__getattribute__(attr)
+       
+       
+    2: class _FP32Precision:
+    1:     def __init__(self, backend, op):
+    5:         self.backend = backend
+    5:         self.op = op
+       
+    1:     def __setattr__(self, name, value):
+   10:         if name == "fp32_precision":
+                   torch._C._set_fp32_precision_setter(self.backend, self.op, value)
+   10:         elif name in ("backend", "op"):
+   10:             super().__setattr__(name, value)
+               else:
+                   raise AttributeError("Unknown attribute " + name)
+       
+    1:     def __getattr__(self, name):
+               if name == "fp32_precision":
+                   return torch._C._get_fp32_precision_getter(self.backend, self.op)
+               else:
+                   raise AttributeError("Unknown attribute " + name)
+       
+       
+    1: def set_flags(_fp32_precision="none"):
+           orig_flags = (torch._C._get_fp32_precision_getter("generic", "all"),)
+           if _fp32_precision is not None:
+               torch._C._set_fp32_precision_setter("generic", "all", _fp32_precision)
+           return orig_flags
+       
+       
+    2: @contextmanager
+    2: def flags(fp32_precision="none"):
+           with __allow_nonbracketed_mutation():
+               orig_flags = set_flags(fp32_precision)
+           try:
+               yield
+           finally:
+               with __allow_nonbracketed_mutation():
+                   set_flags(*orig_flags)
+       
+       
+    1: def _get_fp32_precision_getter(backend, op):
+    3:     def inner():
+               return torch._C._get_fp32_precision_getter(backend, op)
+       
+    3:     return inner
+       
+       
+    1: def _set_fp32_precision_setter(backend, op):
+    3:     def inner(precision):
+               return torch._C._set_fp32_precision_setter(backend, op, precision)
+       
+    3:     return inner
+       
+       
+    2: class GenericModule(PropModule):
+    2:     fp32_precision = ContextProp(
+    1:         _get_fp32_precision_getter("generic", "all"),
+    1:         _set_fp32_precision_setter("generic", "all"),
+           )
+       
+       
+    1: sys.modules[__name__] = GenericModule(sys.modules[__name__], __name__)
+       
+    1: from torch.backends import (
+           cpu as cpu,
+           cuda as cuda,
+           cudnn as cudnn,
+           cusparselt as cusparselt,
+           kleidiai as kleidiai,
+           mha as mha,
+           miopen as miopen,
+           mkl as mkl,
+           mkldnn as mkldnn,
+           mps as mps,
+           nnpack as nnpack,
+           openmp as openmp,
+           opt_einsum as opt_einsum,
+           quantized as quantized,
+       )

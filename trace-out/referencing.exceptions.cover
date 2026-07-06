@@ -1,0 +1,165 @@
+    1: """
+       Errors, oh no!
+       """
+       
+    1: from __future__ import annotations
+       
+    1: from typing import TYPE_CHECKING, Any
+       
+    1: import attrs
+       
+    1: from referencing._attrs import frozen
+       
+    1: if TYPE_CHECKING:
+           from referencing import Resource
+           from referencing.typing import URI
+       
+       
+    3: @frozen
+    2: class NoSuchResource(KeyError):
+    1:     """
+           The given URI is not present in a registry.
+       
+           Unlike most exceptions, this class *is* intended to be publicly
+           instantiable and *is* part of the public API of the package.
+           """
+       
+    1:     ref: URI
+       
+    1:     def __eq__(self, other: object) -> bool:
+               if self.__class__ is not other.__class__:
+                   return NotImplemented
+               return attrs.astuple(self) == attrs.astuple(other)
+       
+    1:     def __hash__(self) -> int:
+               return hash(attrs.astuple(self))
+       
+       
+    3: @frozen
+    2: class NoInternalID(Exception):
+    1:     """
+           A resource has no internal ID, but one is needed.
+       
+           E.g. in modern JSON Schema drafts, this is the :kw:`$id` keyword.
+       
+           One might be needed if a resource was to-be added to a registry but no
+           other URI is available, and the resource doesn't declare its canonical URI.
+           """
+       
+    1:     resource: Resource[Any]
+       
+    1:     def __eq__(self, other: object) -> bool:
+               if self.__class__ is not other.__class__:
+                   return NotImplemented
+               return attrs.astuple(self) == attrs.astuple(other)
+       
+    1:     def __hash__(self) -> int:
+               return hash(attrs.astuple(self))
+       
+       
+    3: @frozen
+    2: class Unretrievable(KeyError):
+    1:     """
+           The given URI is not present in a registry, and retrieving it failed.
+           """
+       
+    1:     ref: URI
+       
+    1:     def __eq__(self, other: object) -> bool:
+               if self.__class__ is not other.__class__:
+                   return NotImplemented
+               return attrs.astuple(self) == attrs.astuple(other)
+       
+    1:     def __hash__(self) -> int:
+               return hash(attrs.astuple(self))
+       
+       
+    3: @frozen
+    2: class CannotDetermineSpecification(Exception):
+    1:     """
+           Attempting to detect the appropriate `Specification` failed.
+       
+           This happens if no discernible information is found in the contents of the
+           new resource which would help identify it.
+           """
+       
+    1:     contents: Any
+       
+    1:     def __eq__(self, other: object) -> bool:
+               if self.__class__ is not other.__class__:
+                   return NotImplemented
+               return attrs.astuple(self) == attrs.astuple(other)
+       
+    1:     def __hash__(self) -> int:
+               return hash(attrs.astuple(self))
+       
+       
+    3: @attrs.frozen  # Because here we allow subclassing below.
+    2: class Unresolvable(Exception):
+    1:     """
+           A reference was unresolvable.
+           """
+       
+    1:     ref: URI
+       
+    1:     def __eq__(self, other: object) -> bool:
+               if self.__class__ is not other.__class__:
+                   return NotImplemented
+               return attrs.astuple(self) == attrs.astuple(other)
+       
+    1:     def __hash__(self) -> int:
+               return hash(attrs.astuple(self))
+       
+       
+    3: @frozen
+    2: class PointerToNowhere(Unresolvable):
+    1:     """
+           A JSON Pointer leads to a part of a document that does not exist.
+           """
+       
+    1:     resource: Resource[Any]
+       
+    1:     def __str__(self) -> str:
+               msg = f"{self.ref!r} does not exist within {self.resource.contents!r}"
+               if self.ref == "/":
+                   msg += (
+                       ". The pointer '/' is a valid JSON Pointer but it points to "
+                       "an empty string property ''. If you intended to point "
+                       "to the entire resource, you should use '#'."
+                   )
+               return msg
+       
+       
+    3: @frozen
+    2: class NoSuchAnchor(Unresolvable):
+    1:     """
+           An anchor does not exist within a particular resource.
+           """
+       
+    1:     resource: Resource[Any]
+    1:     anchor: str
+       
+    1:     def __str__(self) -> str:
+               return (
+                   f"{self.anchor!r} does not exist within {self.resource.contents!r}"
+               )
+       
+       
+    3: @frozen
+    2: class InvalidAnchor(Unresolvable):
+    1:     """
+           An anchor which could never exist in a resource was dereferenced.
+       
+           It is somehow syntactically invalid.
+           """
+       
+    1:     resource: Resource[Any]
+    1:     anchor: str
+       
+    1:     def __str__(self) -> str:
+               return (
+                   f"'#{self.anchor}' is not a valid anchor, neither as a "
+                   "plain name anchor nor as a JSON Pointer. You may have intended "
+                   f"to use '#/{self.anchor}', as the slash is required *before each "
+                   "segment* of a JSON pointer."
+               )

@@ -1,0 +1,613 @@
+    1: from __future__ import annotations
+       
+    1: import os
+    1: import sys
+    1: import tempfile
+    1: from collections.abc import Iterable
+    1: from io import BytesIO, TextIOWrapper
+    1: from types import TracebackType
+    1: from typing import (
+           TYPE_CHECKING,
+           Any,
+           AnyStr,
+           Generic,
+           overload,
+       )
+       
+    1: from .. import to_thread
+    1: from .._core._fileio import AsyncFile
+    1: from ..lowlevel import checkpoint_if_cancelled
+       
+    1: if TYPE_CHECKING:
+           from _typeshed import OpenBinaryMode, OpenTextMode, ReadableBuffer, WriteableBuffer
+       
+       
+    2: class TemporaryFile(Generic[AnyStr]):
+    1:     """
+           An asynchronous temporary file that is automatically created and cleaned up.
+       
+           This class provides an asynchronous context manager interface to a temporary file.
+           The file is created using Python's standard `tempfile.TemporaryFile` function in a
+           background thread, and is wrapped as an asynchronous file using `AsyncFile`.
+       
+           :param mode: The mode in which the file is opened. Defaults to "w+b".
+           :param buffering: The buffering policy (-1 means the default buffering).
+           :param encoding: The encoding used to decode or encode the file. Only applicable in
+               text mode.
+           :param newline: Controls how universal newlines mode works (only applicable in text
+               mode).
+           :param suffix: The suffix for the temporary file name.
+           :param prefix: The prefix for the temporary file name.
+           :param dir: The directory in which the temporary file is created.
+           :param errors: The error handling scheme used for encoding/decoding errors.
+           """
+       
+    1:     _async_file: AsyncFile[AnyStr]
+       
+    2:     @overload
+    3:     def __init__(
+               self: TemporaryFile[bytes],
+    1:         mode: OpenBinaryMode = ...,
+    1:         buffering: int = ...,
+    1:         encoding: str | None = ...,
+    1:         newline: str | None = ...,
+    1:         suffix: str | None = ...,
+    1:         prefix: str | None = ...,
+    1:         dir: str | None = ...,
+               *,
+    1:         errors: str | None = ...,
+           ): ...
+    2:     @overload
+    3:     def __init__(
+               self: TemporaryFile[str],
+               mode: OpenTextMode,
+    1:         buffering: int = ...,
+    1:         encoding: str | None = ...,
+    1:         newline: str | None = ...,
+    1:         suffix: str | None = ...,
+    1:         prefix: str | None = ...,
+    1:         dir: str | None = ...,
+               *,
+    1:         errors: str | None = ...,
+           ): ...
+       
+    2:     def __init__(
+               self,
+    1:         mode: OpenTextMode | OpenBinaryMode = "w+b",
+    1:         buffering: int = -1,
+    1:         encoding: str | None = None,
+    1:         newline: str | None = None,
+    1:         suffix: str | None = None,
+    1:         prefix: str | None = None,
+    1:         dir: str | None = None,
+               *,
+    1:         errors: str | None = None,
+           ) -> None:
+               self.mode = mode
+               self.buffering = buffering
+               self.encoding = encoding
+               self.newline = newline
+               self.suffix: str | None = suffix
+               self.prefix: str | None = prefix
+               self.dir: str | None = dir
+               self.errors = errors
+       
+    1:     async def __aenter__(self) -> AsyncFile[AnyStr]:
+               fp = await to_thread.run_sync(
+                   lambda: tempfile.TemporaryFile(
+                       self.mode,
+                       self.buffering,
+                       self.encoding,
+                       self.newline,
+                       self.suffix,
+                       self.prefix,
+                       self.dir,
+                       errors=self.errors,
+                   )
+               )
+               self._async_file = AsyncFile(fp)
+               return self._async_file
+       
+    1:     async def __aexit__(
+               self,
+               exc_type: type[BaseException] | None,
+               exc_value: BaseException | None,
+               traceback: TracebackType | None,
+           ) -> None:
+               await self._async_file.aclose()
+       
+       
+    2: class NamedTemporaryFile(Generic[AnyStr]):
+    1:     """
+           An asynchronous named temporary file that is automatically created and cleaned up.
+       
+           This class provides an asynchronous context manager for a temporary file with a
+           visible name in the file system. It uses Python's standard
+           :func:`~tempfile.NamedTemporaryFile` function and wraps the file object with
+           :class:`AsyncFile` for asynchronous operations.
+       
+           :param mode: The mode in which the file is opened. Defaults to "w+b".
+           :param buffering: The buffering policy (-1 means the default buffering).
+           :param encoding: The encoding used to decode or encode the file. Only applicable in
+               text mode.
+           :param newline: Controls how universal newlines mode works (only applicable in text
+               mode).
+           :param suffix: The suffix for the temporary file name.
+           :param prefix: The prefix for the temporary file name.
+           :param dir: The directory in which the temporary file is created.
+           :param delete: Whether to delete the file when it is closed.
+           :param errors: The error handling scheme used for encoding/decoding errors.
+           :param delete_on_close: (Python 3.12+) Whether to delete the file on close.
+           """
+       
+    1:     _async_file: AsyncFile[AnyStr]
+       
+    2:     @overload
+    3:     def __init__(
+               self: NamedTemporaryFile[bytes],
+    1:         mode: OpenBinaryMode = ...,
+    1:         buffering: int = ...,
+    1:         encoding: str | None = ...,
+    1:         newline: str | None = ...,
+    1:         suffix: str | None = ...,
+    1:         prefix: str | None = ...,
+    1:         dir: str | None = ...,
+    1:         delete: bool = ...,
+               *,
+    1:         errors: str | None = ...,
+    1:         delete_on_close: bool = ...,
+           ): ...
+    2:     @overload
+    3:     def __init__(
+               self: NamedTemporaryFile[str],
+               mode: OpenTextMode,
+    1:         buffering: int = ...,
+    1:         encoding: str | None = ...,
+    1:         newline: str | None = ...,
+    1:         suffix: str | None = ...,
+    1:         prefix: str | None = ...,
+    1:         dir: str | None = ...,
+    1:         delete: bool = ...,
+               *,
+    1:         errors: str | None = ...,
+    1:         delete_on_close: bool = ...,
+           ): ...
+       
+    2:     def __init__(
+               self,
+    1:         mode: OpenBinaryMode | OpenTextMode = "w+b",
+    1:         buffering: int = -1,
+    1:         encoding: str | None = None,
+    1:         newline: str | None = None,
+    1:         suffix: str | None = None,
+    1:         prefix: str | None = None,
+    1:         dir: str | None = None,
+    1:         delete: bool = True,
+               *,
+    1:         errors: str | None = None,
+    1:         delete_on_close: bool = True,
+           ) -> None:
+               self._params: dict[str, Any] = {
+                   "mode": mode,
+                   "buffering": buffering,
+                   "encoding": encoding,
+                   "newline": newline,
+                   "suffix": suffix,
+                   "prefix": prefix,
+                   "dir": dir,
+                   "delete": delete,
+                   "errors": errors,
+               }
+               if sys.version_info >= (3, 12):
+                   self._params["delete_on_close"] = delete_on_close
+       
+    1:     async def __aenter__(self) -> AsyncFile[AnyStr]:
+               fp = await to_thread.run_sync(
+                   lambda: tempfile.NamedTemporaryFile(**self._params)
+               )
+               self._async_file = AsyncFile(fp)
+               return self._async_file
+       
+    1:     async def __aexit__(
+               self,
+               exc_type: type[BaseException] | None,
+               exc_value: BaseException | None,
+               traceback: TracebackType | None,
+           ) -> None:
+               await self._async_file.aclose()
+       
+       
+    2: class SpooledTemporaryFile(AsyncFile[AnyStr]):
+    1:     """
+           An asynchronous spooled temporary file that starts in memory and is spooled to disk.
+       
+           This class provides an asynchronous interface to a spooled temporary file, much like
+           Python's standard :class:`~tempfile.SpooledTemporaryFile`. It supports asynchronous
+           write operations and provides a method to force a rollover to disk.
+       
+           :param max_size: Maximum size in bytes before the file is rolled over to disk.
+           :param mode: The mode in which the file is opened. Defaults to "w+b".
+           :param buffering: The buffering policy (-1 means the default buffering).
+           :param encoding: The encoding used to decode or encode the file (text mode only).
+           :param newline: Controls how universal newlines mode works (text mode only).
+           :param suffix: The suffix for the temporary file name.
+           :param prefix: The prefix for the temporary file name.
+           :param dir: The directory in which the temporary file is created.
+           :param errors: The error handling scheme used for encoding/decoding errors.
+           """
+       
+    1:     _rolled: bool = False
+       
+    2:     @overload
+    3:     def __init__(
+               self: SpooledTemporaryFile[bytes],
+    1:         max_size: int = ...,
+    1:         mode: OpenBinaryMode = ...,
+    1:         buffering: int = ...,
+    1:         encoding: str | None = ...,
+    1:         newline: str | None = ...,
+    1:         suffix: str | None = ...,
+    1:         prefix: str | None = ...,
+    1:         dir: str | None = ...,
+               *,
+    1:         errors: str | None = ...,
+           ): ...
+    2:     @overload
+    3:     def __init__(
+               self: SpooledTemporaryFile[str],
+    1:         max_size: int = ...,
+    1:         mode: OpenTextMode = ...,
+    1:         buffering: int = ...,
+    1:         encoding: str | None = ...,
+    1:         newline: str | None = ...,
+    1:         suffix: str | None = ...,
+    1:         prefix: str | None = ...,
+    1:         dir: str | None = ...,
+               *,
+    1:         errors: str | None = ...,
+           ): ...
+       
+    2:     def __init__(
+               self,
+    1:         max_size: int = 0,
+    1:         mode: OpenBinaryMode | OpenTextMode = "w+b",
+    1:         buffering: int = -1,
+    1:         encoding: str | None = None,
+    1:         newline: str | None = None,
+    1:         suffix: str | None = None,
+    1:         prefix: str | None = None,
+    1:         dir: str | None = None,
+               *,
+    1:         errors: str | None = None,
+           ) -> None:
+               self._tempfile_params: dict[str, Any] = {
+                   "mode": mode,
+                   "buffering": buffering,
+                   "encoding": encoding,
+                   "newline": newline,
+                   "suffix": suffix,
+                   "prefix": prefix,
+                   "dir": dir,
+                   "errors": errors,
+               }
+               self._max_size = max_size
+               if "b" in mode:
+                   super().__init__(BytesIO())  # type: ignore[arg-type]
+               else:
+                   super().__init__(
+                       TextIOWrapper(  # type: ignore[arg-type]
+                           BytesIO(),
+                           encoding=encoding,
+                           errors=errors,
+                           newline=newline,
+                           write_through=True,
+                       )
+                   )
+       
+    1:     async def aclose(self) -> None:
+               if not self._rolled:
+                   self._fp.close()
+                   return
+       
+               await super().aclose()
+       
+    1:     async def _check(self) -> None:
+               if self._rolled or self._fp.tell() <= self._max_size:
+                   return
+       
+               await self.rollover()
+       
+    1:     async def rollover(self) -> None:
+               if self._rolled:
+                   return
+       
+               self._rolled = True
+               buffer = self._fp
+               buffer.seek(0)
+               self._fp = await to_thread.run_sync(
+                   lambda: tempfile.TemporaryFile(**self._tempfile_params)
+               )
+               await self.write(buffer.read())
+               buffer.close()
+       
+    2:     @property
+    2:     def closed(self) -> bool:
+               return self._fp.closed
+       
+    1:     async def read(self, size: int = -1) -> AnyStr:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.read(size)
+       
+               return await super().read(size)  # type: ignore[return-value]
+       
+    1:     async def read1(self: SpooledTemporaryFile[bytes], size: int = -1) -> bytes:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.read1(size)
+       
+               return await super().read1(size)
+       
+    1:     async def readline(self) -> AnyStr:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.readline()
+       
+               return await super().readline()  # type: ignore[return-value]
+       
+    1:     async def readlines(self) -> list[AnyStr]:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.readlines()
+       
+               return await super().readlines()  # type: ignore[return-value]
+       
+    1:     async def readinto(self: SpooledTemporaryFile[bytes], b: WriteableBuffer) -> int:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   self._fp.readinto(b)
+       
+               return await super().readinto(b)
+       
+    1:     async def readinto1(self: SpooledTemporaryFile[bytes], b: WriteableBuffer) -> int:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   self._fp.readinto(b)
+       
+               return await super().readinto1(b)
+       
+    1:     async def seek(self, offset: int, whence: int | None = os.SEEK_SET) -> int:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.seek(offset, whence)
+       
+               return await super().seek(offset, whence)
+       
+    1:     async def tell(self) -> int:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.tell()
+       
+               return await super().tell()
+       
+    1:     async def truncate(self, size: int | None = None) -> int:
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   return self._fp.truncate(size)
+       
+               return await super().truncate(size)
+       
+    2:     @overload
+    2:     async def write(self: SpooledTemporaryFile[bytes], b: ReadableBuffer) -> int: ...
+    2:     @overload
+    2:     async def write(self: SpooledTemporaryFile[str], b: str) -> int: ...
+       
+    1:     async def write(self, b: ReadableBuffer | str) -> int:
+               """
+               Asynchronously write data to the spooled temporary file.
+       
+               If the file has not yet been rolled over, the data is written synchronously,
+               and a rollover is triggered if the size exceeds the maximum size.
+       
+               :param s: The data to write.
+               :return: The number of bytes written.
+               :raises RuntimeError: If the underlying file is not initialized.
+       
+               """
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   result = self._fp.write(b)
+                   await self._check()
+                   return result
+       
+               return await super().write(b)  # type: ignore[misc]
+       
+    2:     @overload
+    2:     async def writelines(
+               self: SpooledTemporaryFile[bytes], lines: Iterable[ReadableBuffer]
+           ) -> None: ...
+    2:     @overload
+    2:     async def writelines(
+               self: SpooledTemporaryFile[str], lines: Iterable[str]
+           ) -> None: ...
+       
+    1:     async def writelines(self, lines: Iterable[str] | Iterable[ReadableBuffer]) -> None:
+               """
+               Asynchronously write a list of lines to the spooled temporary file.
+       
+               If the file has not yet been rolled over, the lines are written synchronously,
+               and a rollover is triggered if the size exceeds the maximum size.
+       
+               :param lines: An iterable of lines to write.
+               :raises RuntimeError: If the underlying file is not initialized.
+       
+               """
+               if not self._rolled:
+                   await checkpoint_if_cancelled()
+                   result = self._fp.writelines(lines)
+                   await self._check()
+                   return result
+       
+               return await super().writelines(lines)  # type: ignore[misc]
+       
+       
+    2: class TemporaryDirectory(Generic[AnyStr]):
+    1:     """
+           An asynchronous temporary directory that is created and cleaned up automatically.
+       
+           This class provides an asynchronous context manager for creating a temporary
+           directory. It wraps Python's standard :class:`~tempfile.TemporaryDirectory` to
+           perform directory creation and cleanup operations in a background thread.
+       
+           :param suffix: Suffix to be added to the temporary directory name.
+           :param prefix: Prefix to be added to the temporary directory name.
+           :param dir: The parent directory where the temporary directory is created.
+           :param ignore_cleanup_errors: Whether to ignore errors during cleanup
+           :param delete: Whether to delete the directory upon closing (Python 3.12+).
+           """
+       
+    2:     def __init__(
+               self,
+    1:         suffix: AnyStr | None = None,
+    1:         prefix: AnyStr | None = None,
+    1:         dir: AnyStr | None = None,
+               *,
+    1:         ignore_cleanup_errors: bool = False,
+    1:         delete: bool = True,
+           ) -> None:
+               self.suffix: AnyStr | None = suffix
+               self.prefix: AnyStr | None = prefix
+               self.dir: AnyStr | None = dir
+               self.ignore_cleanup_errors = ignore_cleanup_errors
+               self.delete = delete
+       
+               self._tempdir: tempfile.TemporaryDirectory | None = None
+       
+    1:     async def __aenter__(self) -> str:
+               params: dict[str, Any] = {
+                   "suffix": self.suffix,
+                   "prefix": self.prefix,
+                   "dir": self.dir,
+                   "ignore_cleanup_errors": self.ignore_cleanup_errors,
+               }
+               if sys.version_info >= (3, 12):
+                   params["delete"] = self.delete
+       
+               self._tempdir = await to_thread.run_sync(
+                   lambda: tempfile.TemporaryDirectory(**params)
+               )
+               return await to_thread.run_sync(self._tempdir.__enter__)
+       
+    1:     async def __aexit__(
+               self,
+               exc_type: type[BaseException] | None,
+               exc_value: BaseException | None,
+               traceback: TracebackType | None,
+           ) -> None:
+               if self._tempdir is not None:
+                   await to_thread.run_sync(
+                       self._tempdir.__exit__, exc_type, exc_value, traceback
+                   )
+       
+    1:     async def cleanup(self) -> None:
+               if self._tempdir is not None:
+                   await to_thread.run_sync(self._tempdir.cleanup)
+       
+       
+    2: @overload
+    2: async def mkstemp(
+    1:     suffix: str | None = None,
+    1:     prefix: str | None = None,
+    1:     dir: str | None = None,
+    1:     text: bool = False,
+       ) -> tuple[int, str]: ...
+       
+       
+    2: @overload
+    2: async def mkstemp(
+    1:     suffix: bytes | None = None,
+    1:     prefix: bytes | None = None,
+    1:     dir: bytes | None = None,
+    1:     text: bool = False,
+       ) -> tuple[int, bytes]: ...
+       
+       
+    1: async def mkstemp(
+    1:     suffix: AnyStr | None = None,
+    1:     prefix: AnyStr | None = None,
+    1:     dir: AnyStr | None = None,
+    1:     text: bool = False,
+       ) -> tuple[int, str | bytes]:
+           """
+           Asynchronously create a temporary file and return an OS-level handle and the file
+           name.
+       
+           This function wraps `tempfile.mkstemp` and executes it in a background thread.
+       
+           :param suffix: Suffix to be added to the file name.
+           :param prefix: Prefix to be added to the file name.
+           :param dir: Directory in which the temporary file is created.
+           :param text: Whether the file is opened in text mode.
+           :return: A tuple containing the file descriptor and the file name.
+       
+           """
+           return await to_thread.run_sync(tempfile.mkstemp, suffix, prefix, dir, text)
+       
+       
+    2: @overload
+    2: async def mkdtemp(
+    1:     suffix: str | None = None,
+    1:     prefix: str | None = None,
+    1:     dir: str | None = None,
+       ) -> str: ...
+       
+       
+    2: @overload
+    2: async def mkdtemp(
+    1:     suffix: bytes | None = None,
+    1:     prefix: bytes | None = None,
+    1:     dir: bytes | None = None,
+       ) -> bytes: ...
+       
+       
+    1: async def mkdtemp(
+    1:     suffix: AnyStr | None = None,
+    1:     prefix: AnyStr | None = None,
+    1:     dir: AnyStr | None = None,
+       ) -> str | bytes:
+           """
+           Asynchronously create a temporary directory and return its path.
+       
+           This function wraps `tempfile.mkdtemp` and executes it in a background thread.
+       
+           :param suffix: Suffix to be added to the directory name.
+           :param prefix: Prefix to be added to the directory name.
+           :param dir: Parent directory where the temporary directory is created.
+           :return: The path of the created temporary directory.
+       
+           """
+           return await to_thread.run_sync(tempfile.mkdtemp, suffix, prefix, dir)
+       
+       
+    1: async def gettempdir() -> str:
+           """
+           Asynchronously return the name of the directory used for temporary files.
+       
+           This function wraps `tempfile.gettempdir` and executes it in a background thread.
+       
+           :return: The path of the temporary directory as a string.
+       
+           """
+           return await to_thread.run_sync(tempfile.gettempdir)
+       
+       
+    1: async def gettempdirb() -> bytes:
+           """
+           Asynchronously return the name of the directory used for temporary files in bytes.
+       
+           This function wraps `tempfile.gettempdirb` and executes it in a background thread.
+       
+           :return: The path of the temporary directory as bytes.
+       
+           """
+           return await to_thread.run_sync(tempfile.gettempdirb)

@@ -1,0 +1,24 @@
+       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
+       
+    1: from __future__ import annotations
+       
+    1: from typing_extensions import Literal, Required, TypedDict
+       
+    1: __all__ = ["ResponseInputAudioParam", "InputAudio"]
+       
+       
+    2: class InputAudio(TypedDict, total=False):
+    1:     data: Required[str]
+    1:     """Base64-encoded audio data."""
+       
+    1:     format: Required[Literal["mp3", "wav"]]
+    1:     """The format of the audio data. Currently supported formats are `mp3` and `wav`."""
+       
+       
+    2: class ResponseInputAudioParam(TypedDict, total=False):
+    1:     """An audio input to the model."""
+       
+    1:     input_audio: Required[InputAudio]
+       
+    1:     type: Required[Literal["input_audio"]]
+    1:     """The type of the input item. Always `input_audio`."""
