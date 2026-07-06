@@ -2,7 +2,11 @@ import io
 import logging
 from datetime import datetime
 
+import pytest
+
 from akasha.utils.logging_config import configure_logging
+
+pytestmark = pytest.mark.unit
 
 
 def _get_console_handler():

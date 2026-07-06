@@ -23,6 +23,9 @@ today_tool = akasha.create_tool(
 
 
 @pytest.mark.agent
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_agent():
     agent = akasha.agents(
         model="gemini:gemini-2.5-flash",

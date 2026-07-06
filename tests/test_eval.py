@@ -27,6 +27,8 @@ def base_line():
 
 
 @pytest.mark.eval
+@pytest.mark.integration
+@pytest.mark.requires_api
 def test_Model_Eval(base_line: Tuple[akasha.eval, str]):
     if importlib.util.find_spec("bert_score") is None:
         pytest.skip("bert_score not installed")

@@ -101,3 +101,43 @@ Homepage = "https://github.com/iii-org/akasha"
 
 [tool.setuptools.packages.find]
 include = ["akasha", "akasha.*", "cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "unit: fast unit tests without network or provider dependencies",
+  "integration: broader tests that may touch real package integrations",
+  "upgrade: smoke tests used before and after dependency upgrades",
+  "requires_api: tests that require external provider API keys",
+  "full_only: tests that require full local-model dependencies",
+  "smoke: minimal end-to-end validation for critical paths",
+  "agent: agent-related tests",
+  "akasha: legacy top-level Akasha integration tests",
+  "db: database and persistence tests",
+  "eval: evaluation tests",
+  "summary: summary tests",
+]
+
+[tool.coverage.run]
+source = [
+  "akasha.helper",
+  "akasha.utils.db",
+  "akasha.utils.search",
+  "akasha.tools.ask",
+  "akasha.tools.summary",
+  "akasha.agent",
+  "akasha.RAG",
+]
+omit = [
+  "akasha/ui.py",
+  "akasha/interface/*",
+  "akasha/api.py",
+  "akasha/utils/models/*",
+  "akasha/tools/gen_img.py",
+  "tests/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = false

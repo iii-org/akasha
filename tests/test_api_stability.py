@@ -33,6 +33,9 @@ def check_env():
     if missing_keys:
         pytest.skip(f"缺少必要的 API Key: {', '.join(missing_keys)}")
 
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
 @pytest.mark.parametrize("model_name", MODELS)
 def test_api_basic_ask(check_env, model_name):
     """測試最基本的 API 問答是否通暢"""
@@ -42,6 +45,9 @@ def test_api_basic_ask(check_env, model_name):
     assert len(response) > 0
     print(f"\n[Model: {model_name}] Basic Ask Response: {response}")
 
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
 @pytest.mark.parametrize("model_name", MODELS)
 @pytest.mark.parametrize("embed_name", EMBEDDINGS)
 def test_rag_smoke(check_env, model_name, embed_name):
@@ -57,6 +63,9 @@ def test_rag_smoke(check_env, model_name, embed_name):
     assert len(response) > 0
     print(f"\n[Model: {model_name}, Embed: {embed_name}] RAG Response: {response}")
 
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
 @pytest.mark.parametrize("model_name", MODELS)
 def test_agent_json_processing(check_env, model_name):
     """測試 Agent 讀取 JSON 並處理資訊的能力"""
@@ -86,6 +95,9 @@ def test_agent_json_processing(check_env, model_name):
     assert len(response) > 0
     print(f"\n[Model: {model_name}] Agent JSON Task Response: {response}")
 
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
 @pytest.mark.parametrize("model_name", MODELS)
 def test_vision_card_recognition(check_env, model_name):
     """測試多模態影像辨識（名片辨識）"""
@@ -109,6 +121,9 @@ def test_vision_card_recognition(check_env, model_name):
     assert len(response) > 0
     print(f"\n[Model: {model_name}] Vision Response: {response}")
 
+@pytest.mark.integration
+@pytest.mark.upgrade
+@pytest.mark.requires_api
 @pytest.mark.parametrize("model_name", MODELS)
 @pytest.mark.parametrize("embed_name", EMBEDDINGS)
 def test_memory_stability(check_env, model_name, embed_name):

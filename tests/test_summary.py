@@ -8,6 +8,9 @@ load_dotenv(ENV_FILE, override=True)
 
 
 @pytest.mark.summary
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_Summary():
     summ = akasha.summary(
         "gemini:gemini-2.5-flash",

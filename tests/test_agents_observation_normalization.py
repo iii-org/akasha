@@ -4,6 +4,7 @@ import importlib
 import pytest
 
 agents_module = importlib.import_module("akasha.agent.agents")
+pytestmark = pytest.mark.unit
 
 
 class _DummyModel:

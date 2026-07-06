@@ -13,6 +13,9 @@ CERTAIN_FILE = "docs/mic/20230224_製造業機廠鏈智慧應用發展態勢.pdf
 
 
 @pytest.mark.db
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_create_db():
     from akasha.utils.db.create_db import create_directory_db, create_single_file_db
 
@@ -29,6 +32,9 @@ def test_create_db():
 
 
 @pytest.mark.db
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_load_extract_db():
     from akasha.utils.db import process_db, extract_db_by_file
 
@@ -46,6 +52,9 @@ def test_load_extract_db():
 
 
 @pytest.mark.db
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_delete_file_db():
     from akasha.utils.db import delete_documents_by_file
 

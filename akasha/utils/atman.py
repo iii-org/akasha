@@ -119,6 +119,7 @@ class basic_llm:
         ### check input argument is valid or not ###
         prev_verbose = getattr(self, "verbose", None)
         prev_keep_logs = getattr(self, "keep_logs", None)
+        ignored_kwargs = {"dbs", "env_config"}
         for key, value in kwargs.items():
             if (key == "model" or key == "embeddings") and key in self.__dict__:
                 self.__dict__[key] = handle_model_type(value)
@@ -134,7 +135,7 @@ class basic_llm:
                 ):  # check if variable value is different
                     self.__dict__[key] = value
             else:
-                if key != "dbs":
+                if key not in ignored_kwargs and (self.verbose or self.keep_logs):
                     logging.warning(f"argument {key} not exist")
 
         if prev_verbose != self.verbose or prev_keep_logs != self.keep_logs:

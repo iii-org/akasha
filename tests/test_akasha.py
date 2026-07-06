@@ -77,6 +77,9 @@ def base_line():
 
 
 @pytest.mark.akasha
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_RAG(base_line: akasha.RAG):
     ak = base_line
     query = "五軸是甚麼?"
@@ -96,6 +99,9 @@ def test_RAG(base_line: akasha.RAG):
 
 
 @pytest.mark.akasha
+@pytest.mark.integration
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_ask():
     ak = akasha.ask(
         model="gemini:gemini-2.5-flash",
