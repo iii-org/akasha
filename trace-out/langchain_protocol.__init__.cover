@@ -1,3 +1,0 @@
-    1: """Python bindings for the LangChain agent streaming protocol."""
-       
-    1: from langchain_protocol.protocol import *  # noqa: F403

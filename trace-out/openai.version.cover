@@ -1,3 +1,0 @@
-    1: from ._version import __version__
-       
-    1: VERSION: str = __version__

@@ -1,5 +1,0 @@
-    1: from .rpds import *
-       
-    1: __doc__ = rpds.__doc__
-    1: if hasattr(rpds, "__all__"):
-    1:     __all__ = rpds.__all__

@@ -1,9 +1,0 @@
-       # Generated content DO NOT EDIT
-    1: from .. import processors
-       
-    1: PostProcessor = processors.PostProcessor
-    1: BertProcessing = processors.BertProcessing
-    1: ByteLevel = processors.ByteLevel
-    1: RobertaProcessing = processors.RobertaProcessing
-    1: Sequence = processors.Sequence
-    1: TemplateProcessing = processors.TemplateProcessing

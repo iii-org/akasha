@@ -1,5 +1,0 @@
-    1: import sys
-       
-    1: is_windows = sys.platform.startswith("win")
-    1: is_linux = sys.platform.startswith("linux")
-    1: is_osx = sys.platform == "darwin"

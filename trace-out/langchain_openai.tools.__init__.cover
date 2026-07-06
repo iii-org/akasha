@@ -1,5 +1,0 @@
-    1: """Tools package for OpenAI integrations."""
-       
-    1: from langchain_openai.tools.custom_tool import custom_tool
-       
-    1: __all__ = ["custom_tool"]

@@ -1,8 +1,0 @@
-    1: import sys
-       
-       
-       # Use typing_extensions for Python versions < 3.8
-    1: if sys.version_info < (3, 8):
-           from typing_extensions import Protocol, Literal
-       else:
-    1:     from typing import Protocol, Literal  # noqa: F401

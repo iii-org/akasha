@@ -1,6 +1,0 @@
-    1: """Module for OpenAI large language models. Chat models are in `chat_models/`."""
-       
-    1: from langchain_openai.llms.azure import AzureOpenAI
-    1: from langchain_openai.llms.base import OpenAI
-       
-    1: __all__ = ["AzureOpenAI", "OpenAI"]

@@ -1,7 +1,0 @@
-    1: """`tqdm` version detector. Precedence: installed dist, git, 'UNKNOWN'."""
-    1: from importlib.metadata import PackageNotFoundError, version
-       
-    1: try:
-    1:     __version__ = version('tqdm')
-       except PackageNotFoundError:
-           __version__ = "UNKNOWN"

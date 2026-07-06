@@ -1,9 +1,0 @@
-    1: from .main import app  # isort: skip
-       
-    1: from .assets import project_assets
-    1: from .clone import project_clone
-    1: from .document import project_document
-    1: from .dvc import project_update_dvc
-    1: from .pull import project_pull
-    1: from .push import project_push
-    1: from .run import project_run

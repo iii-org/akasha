@@ -1,5 +1,0 @@
-       # Copyright ExplsionAI GmbH, released under BSD.
-       
-    1: from .cy import init
-       
-    1: init()

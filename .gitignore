@@ -28,6 +28,8 @@ config/
 summarization/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.txt
 eva.json
 .coverage
+trace-out/
+tmp_run_pytest_no_plugins.py
 dataset.json
 expert.json
 akasha_ui_1_5.tar

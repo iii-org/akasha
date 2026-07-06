@@ -1,8 +1,0 @@
-       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-       
-    1: from typing import Dict
-    1: from typing_extensions import TypeAlias
-       
-    1: __all__ = ["FunctionParameters"]
-       
-    1: FunctionParameters: TypeAlias = Dict[str, object]

@@ -1,8 +1,0 @@
-       # Generated content DO NOT EDIT
-    1: from .. import trainers
-       
-    1: Trainer = trainers.Trainer
-    1: BpeTrainer = trainers.BpeTrainer
-    1: UnigramTrainer = trainers.UnigramTrainer
-    1: WordLevelTrainer = trainers.WordLevelTrainer
-    1: WordPieceTrainer = trainers.WordPieceTrainer

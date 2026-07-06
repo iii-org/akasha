@@ -1,5 +1,0 @@
-    1: import httpx
-       
-       
-    2: class SSEError(httpx.TransportError):
-    1:     pass

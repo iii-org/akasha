@@ -1,7 +1,0 @@
-    1: __title__ = "cymem"
-    1: __version__ = "2.0.13"
-    1: __summary__ = "Manage calls to calloc/free through Cython"
-    1: __uri__ = "https://github.com/explosion/cymem"
-    1: __author__ = "Matthew Honnibal"
-    1: __email__ = "matt@explosion.ai"
-    1: __license__ = "MIT"

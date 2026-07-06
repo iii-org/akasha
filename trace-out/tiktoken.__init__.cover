@@ -1,8 +1,0 @@
-       # This is the public API of tiktoken
-    1: from .core import Encoding as Encoding
-    1: from .model import encoding_for_model as encoding_for_model
-    1: from .model import encoding_name_for_model as encoding_name_for_model
-    1: from .registry import get_encoding as get_encoding
-    1: from .registry import list_encoding_names as list_encoding_names
-       
-    1: __version__ = "0.13.0"

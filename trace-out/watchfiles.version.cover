@@ -1,5 +1,0 @@
-    1: from ._rust_notify import __version__
-       
-    1: __all__ = ('VERSION',)
-       
-    1: VERSION = __version__

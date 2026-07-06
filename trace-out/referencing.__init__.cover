@@ -1,7 +1,0 @@
-    1: """
-       Cross-specification, implementation-agnostic JSON referencing.
-       """
-       
-    1: from referencing._core import Anchor, Registry, Resource, Specification
-       
-    1: __all__ = ["Anchor", "Registry", "Resource", "Specification"]

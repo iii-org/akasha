@@ -1,7 +1,0 @@
-       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-       
-    1: from typing_extensions import Literal, TypeAlias
-       
-    1: __all__ = ["FilePurpose"]
-       
-    1: FilePurpose: TypeAlias = Literal["assistants", "batch", "fine-tune", "vision", "user_data", "evals"]

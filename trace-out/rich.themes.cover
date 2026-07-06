@@ -1,5 +1,0 @@
-    1: from .default_styles import DEFAULT_STYLES
-    1: from .theme import Theme
-       
-       
-    1: DEFAULT = Theme(DEFAULT_STYLES)

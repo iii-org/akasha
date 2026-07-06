@@ -1,7 +1,0 @@
-    1: from torch._C import FileCheck as FileCheck
-       
-    1: from . import _utils
-       
-       # pyrefly: ignore [deprecated]
-    1: from ._comparison import assert_allclose, assert_close as assert_close
-    1: from ._creation import make_tensor as make_tensor

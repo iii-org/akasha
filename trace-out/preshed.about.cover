@@ -1,8 +1,0 @@
-    1: __title__ = "preshed"
-    1: __version__ = "3.0.13"
-    1: __summary__ = "Cython hash table that trusts the keys are pre-hashed"
-    1: __uri__ = "https://github.com/explosion/preshed"
-    1: __author__ = "Explosion"
-    1: __email__ = "contact@explosion.ai"
-    1: __license__ = "MIT"
-    1: __release__ = True

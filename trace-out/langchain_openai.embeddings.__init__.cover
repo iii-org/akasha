@@ -1,6 +1,0 @@
-    1: """Module for OpenAI embeddings."""
-       
-    1: from langchain_openai.embeddings.azure import AzureOpenAIEmbeddings
-    1: from langchain_openai.embeddings.base import OpenAIEmbeddings
-       
-    1: __all__ = ["AzureOpenAIEmbeddings", "OpenAIEmbeddings"]

@@ -1,5 +1,0 @@
-    1: from sse_starlette.event import ServerSentEvent, JSONServerSentEvent
-    1: from sse_starlette.sse import EventSourceResponse
-       
-    1: __all__ = ["EventSourceResponse", "ServerSentEvent", "JSONServerSentEvent"]
-    1: __version__ = "3.4.5"

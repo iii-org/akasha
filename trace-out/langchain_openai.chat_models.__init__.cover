@@ -1,6 +1,0 @@
-    1: """Module for OpenAI chat models."""
-       
-    1: from langchain_openai.chat_models.azure import AzureChatOpenAI
-    1: from langchain_openai.chat_models.base import ChatOpenAI
-       
-    1: __all__ = ["AzureChatOpenAI", "ChatOpenAI"]

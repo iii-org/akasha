@@ -1,9 +1,0 @@
-    1: """
-       Experimental client features.
-       
-       WARNING: These APIs are experimental and may change without notice.
-       """
-       
-    1: from mcp.client.experimental.tasks import ExperimentalClientFeatures
-       
-    1: __all__ = ["ExperimentalClientFeatures"]

@@ -1,9 +1,0 @@
-       # File generated from our OpenAPI spec by Stainless. See CONTRIBUTING.md for details.
-       
-    1: from typing_extensions import Literal, TypeAlias
-       
-    1: __all__ = ["RunsFilterDataSourceTypeEnum"]
-       
-    2: RunsFilterDataSourceTypeEnum: TypeAlias = Literal[
-    1:     "current", "historical", "lite", "root_lite", "runs_feedbacks_rmt_wide"
-       ]

@@ -1,2 +1,0 @@
-    1: def is_fbcode() -> bool:
-    2:     return False

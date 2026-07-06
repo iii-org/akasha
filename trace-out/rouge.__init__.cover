@@ -1,5 +1,0 @@
-    1: from __future__ import absolute_import
-    1: from rouge.rouge import FilesRouge, Rouge
-       
-    1: __version__ = "1.0.1"
-    1: __all__ = ["FilesRouge", "Rouge"]
