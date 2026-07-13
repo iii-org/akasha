@@ -39,26 +39,9 @@ def test_live_model_final_action_aliases(model_name: str, key_env: str):
     )
 
     response = asyncio.run(
-        agent._run_agent(
-            "Please follow the required JSON schema and respond with 'hi' as the final answer.",
-            lambda tool, tool_input: None,
-            messages=[],
-        )
+        agent.acall("Please respond with 'hi' as the final answer.", messages=[])
     )
 
-    # Extract the recorded final action for visibility in test logs.
-    final_action = None
-    for msg in agent.messages[::-1]:
-        if msg.get("role") == "Action":
-            try:
-                import json
-
-                action_obj = json.loads(msg["content"])
-                final_action = action_obj.get("action")
-            except Exception:
-                final_action = msg.get("content")
-            break
-
-    print(f"[integration] model={model_name} final_action={final_action}")
+    print(f"[integration] model={model_name} final_answer={response}")
 
     assert isinstance(response, str) and response.strip(), "LLM did not return a final response string"

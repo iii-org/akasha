@@ -267,6 +267,8 @@ def handle_model(
     temperature: float = 0.0,
     max_output_tokens: int = 1024,
     env_file: str = "",
+    thinking: bool = False,
+    thinking_budget: int | None = None,
 ) -> BaseLanguageModel:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
@@ -279,6 +281,10 @@ def handle_model(
         vars: model client
     """
     if isinstance(model_name, BaseLanguageModel):
+        if thinking:
+            raise ValueError(
+                "thinking settings must be configured on a directly supplied ChatModel."
+            )
         return model_name
 
     if isinstance(model_name, Callable):
@@ -312,61 +318,48 @@ def handle_model(
         )
 
     elif model_type in ["ollama"]:
-        from akasha.utils.models.remo import remote_model
+        from akasha.utils.models.chat import build_chat_model
 
-        ollama_api_base = env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
-        ollama_api_key = env_dict.get("OLLAMA_API_KEY", "ollama")
-
+        ollama_env = dict(env_dict)
+        ollama_env.setdefault(
+            "OLLAMA_API_BASE", env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
+        )
         if "@" in model_name:
             ollama_api_base, ollama_model_name = model_name.split("@", 1)
-            if not ollama_api_base.strip():
-                ollama_api_base = env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
+            ollama_env["OLLAMA_API_BASE"] = (
+                ollama_api_base.strip() or env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
+            )
         else:
             ollama_model_name = model_name
 
-        if ollama_model_name.strip() == "":
+        if not ollama_model_name.strip():
             raise ValueError(
                 "ollama model name is required. Use 'ollama:<model>' or "
                 "'ollama:<base_url>@<model>'."
             )
 
-        info = "selected ollama model via OpenAI-compatible API. \n"
-        model = remote_model(
-            ollama_api_base,
-            temperature,
-            api_key=ollama_api_key,
-            model_name=ollama_model_name,
-            max_output_tokens=max_output_tokens,
+        info = "selected ollama ChatModel. \n"
+        model = build_chat_model(
+            "ollama", ollama_model_name, ollama_env, temperature, max_output_tokens,
+            thinking, thinking_budget,
         )
 
     elif model_type in ["google", "gemini", "gemi"]:
-        from akasha.utils.models.gemi import gemini_model
+        from akasha.utils.models.chat import build_chat_model
 
-        if "GEMINI_API_KEY" not in env_dict:
-            raise Exception(
-                "can not find the GEMINI_API_KEY in environment variable.\n\n"
-            )
-        info = "selected gemini model. \n"
-        model = gemini_model(
-            model_name=model_name,
-            api_key=env_dict["GEMINI_API_KEY"],
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
+        info = "selected gemini ChatModel. \n"
+        model = build_chat_model(
+            "gemini", model_name, env_dict, temperature, max_output_tokens,
+            thinking, thinking_budget,
         )
 
     elif model_type in ["anthropic", "anthropicai", "claude", "anthro"]:
-        from akasha.utils.models.anthro import anthropic_model
+        from akasha.utils.models.chat import build_chat_model
 
-        if "ANTHROPIC_API_KEY" not in env_dict:
-            raise Exception(
-                "can not find the ANTHROPIC_API_KEY in environment variable.\n\n"
-            )
-        info = "selected anthropic model. \n"
-        model = anthropic_model(
-            model_name=model_name,
-            api_key=env_dict["ANTHROPIC_API_KEY"],
-            temperature=temperature,
-            max_output_tokens=max_output_tokens,
+        info = "selected anthropic ChatModel. \n"
+        model = build_chat_model(
+            "anthropic", model_name, env_dict, temperature, max_output_tokens,
+            thinking, thinking_budget,
         )
 
     elif (
@@ -463,36 +456,12 @@ def handle_model(
             info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"
             model_name = "gpt-3.5-turbo"
             print(info)
-        import openai
-        from akasha.utils.models.azure_openai import AzureOpenAIClient
+        from akasha.utils.models.chat import build_chat_model
 
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
-            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
-        ):
-            model_name = model_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env(env_dict)
-            model = AzureOpenAIClient(
-                api_key=api_key,
-                model_name=model_name,
-                max_output_tokens=max_output_tokens,
-                temperature=temperature,
-                api_type="azure",
-                api_base=api_base,
-                api_version=api_version,
-            )
-        else:
-            if "OPENAI_API_KEY" not in env_dict:
-                raise Exception(
-                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
-                )
-            openai.api_type = "open_ai"
-            model = AzureOpenAIClient(
-                api_key=env_dict["OPENAI_API_KEY"],
-                model_name=model_name,
-                max_output_tokens=max_output_tokens,
-                temperature=temperature,
-                api_type="openai",
-            )
+        model = build_chat_model(
+            "openai", model_name, env_dict, temperature, max_output_tokens,
+            thinking, thinking_budget,
+        )
 
         info = f"selected openai model {model_name}.\n"
     if verbose:

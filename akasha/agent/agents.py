@@ -1,52 +1,162 @@
-from langchain_core.tools import BaseTool
-from typing import Union, List
-import json
-import datetime
-import time
-import logging
+"""LangChain-native Agent facade used by Akasha."""
+
+from __future__ import annotations
+
 import asyncio
-import queue
-import threading
-from langchain_mcp_adapters.client import MultiServerMCPClient
+import datetime
+import json
+import logging
+import time
+from typing import Any, Generator, List, Union
+
+from langchain.agents import create_agent
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
+from langchain_core.tools import BaseTool
+
+from akasha.helper.base import get_doc_length
+from akasha.helper.run_llm import content_to_text, content_to_thinking
 from akasha.utils.atman import basic_llm
 from akasha.utils.base import (
-    DEFAULT_MODEL,
-    DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_MAX_INPUT_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MODEL,
 )
-from akasha.helper.preprocess_prompts import retri_history_messages
-from akasha.helper.base import get_doc_length, extract_json
-from akasha.utils.prompts.gen_prompt import format_sys_prompt
-from akasha.helper.run_llm import call_model, call_stream_model
-from akasha.utils.logging_config import configure_logging
-from .base import (
-    get_tool_explaination,
-    get_REACT_PROMPT,
-    DEFAULT_REMEMBER_PROMPT,
-    DEFAULT_OBSERVATION_PROMPT,
-    DEFAULT_RETRI_OBSERVATION_PROMPT,
-)
-
-FINAL_ACTION_ALIASES = {
-    "final answer",
-    "final_answer",
-    "final",
-    "answer",
-}
-
-
-def _is_final_action(action_raw: str) -> bool:
-    """Return True if the action string is any accepted final-answer alias."""
-    if not isinstance(action_raw, str):
-        return False
-    return action_raw.lower() in FINAL_ACTION_ALIASES
-
 
 logger = logging.getLogger("akasha.agent")
 
 
+def _message_text(message: Any) -> str:
+    if isinstance(message, dict):
+        return content_to_text(message.get("content", ""))
+    return content_to_text(getattr(message, "content", message))
+
+
+def _message_dump(message: Any) -> Any:
+    try:
+        return message.model_dump(mode="json")
+    except Exception:
+        try:
+            return message.dict()
+        except Exception:
+            return {"type": type(message).__name__, "content": _message_text(message)}
+
+
+def _json_safe(value: Any) -> Any:
+    try:
+        json.dumps(value, ensure_ascii=False)
+        return value
+    except TypeError:
+        if isinstance(value, dict):
+            return {str(key): _json_safe(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [_json_safe(item) for item in value]
+        return str(value)
+
+
+def _thinking_text(message: Any) -> str:
+    blocks = getattr(message, "content_blocks", None) or []
+    parts = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") in {"reasoning", "thinking"}:
+            value = block.get("reasoning") or block.get("thinking") or block.get("text")
+            if value:
+                parts.append(str(value))
+    if parts:
+        return "".join(parts)
+
+    value = content_to_thinking(getattr(message, "content", None))
+    if value:
+        return value
+
+    extra = getattr(message, "additional_kwargs", {}) or {}
+    for key in ("reasoning_content", "thinking", "reasoning"):
+        value = extra.get(key)
+        if value:
+            return value if isinstance(value, str) else str(value)
+    return ""
+
+
+def _as_message_list(messages: List[dict] | None) -> list:
+    """Convert legacy history roles to messages accepted by create_agent."""
+    if not messages:
+        return []
+    converted = []
+    for message in messages:
+        if not isinstance(message, dict):
+            converted.append(message)
+            continue
+        role = message.get("role", "user")
+        content = message.get("content", "")
+        if role in {"Action", "Observation"}:
+            role = "assistant" if role == "Action" else "user"
+        converted.append({"role": role, "content": content})
+    return converted
+
+
+def _extract_messages(result: Any) -> list:
+    if isinstance(result, dict):
+        messages = result.get("messages", [])
+        return messages if isinstance(messages, list) else list(messages)
+    return []
+
+
+def _last_answer(messages: list) -> str:
+    for message in reversed(messages):
+        if isinstance(message, (AIMessage, AIMessageChunk)):
+            text = _message_text(message)
+            if text:
+                return text
+        elif getattr(message, "type", None) == "ai":
+            text = _message_text(message)
+            if text:
+                return text
+    return ""
+
+
+def _stream_update_messages(update: Any) -> list:
+    """Read messages from LangGraph v1/v2 update stream shapes."""
+    payload = update
+    if (
+        isinstance(update, dict)
+        and update.get("type") == "updates"
+        and isinstance(update.get("data"), dict)
+    ):
+        payload = update["data"]
+
+    if not isinstance(payload, dict):
+        return []
+
+    messages = []
+    for node_update in payload.values():
+        if isinstance(node_update, dict):
+            node_messages = node_update.get("messages", [])
+            if isinstance(node_messages, list):
+                messages.extend(node_messages)
+        elif isinstance(node_update, (AIMessage, AIMessageChunk, ToolMessage)):
+            messages.append(node_update)
+    return messages
+
+
+def _stream_message_chunk(update: Any) -> Any:
+    """Extract the message chunk from LangGraph ``messages`` stream output."""
+    if isinstance(update, tuple) and update:
+        return update[0]
+    if isinstance(update, (AIMessage, AIMessageChunk, ToolMessage)):
+        return update
+    return None
+
+
+def _count_tokens(model: Any, text: str) -> int:
+    try:
+        return model.get_num_tokens(text)
+    except Exception:
+        return len(text)
+
+
 class agents(basic_llm):
-    """basic class for akasha agent, implement _change_variables, _check_db, add_log and save_logs function."""
+    """Public Akasha facade over LangChain 1.3+ ``create_agent``."""
 
     def __init__(
         self,
@@ -66,24 +176,9 @@ class agents(basic_llm):
         verbose: bool = False,
         stream: bool = False,
         env_file: str = "",
+        thinking: bool = False,
+        thinking_budget: int | None = None,
     ):
-        """initials of agent class
-
-        Args:
-            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
-            **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
-            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
-                max token size of llm input.\n
-            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
-            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
-            ** max_round (int, optional)**: the maximum round of the conversation. Defaults to 20.\n
-            ** max_doc_len (int, optional)**: the maximum length of the past thoughts and observations that will send to agent. Defaults to 1500.\n (deprecated in future 1.0.0 version)\n
-            ** max_past_observation (int, optional)**: the maximum round of the past thoughts and observations that will send to agent. Defaults to 10.\n
-            ** prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
-            ** retri_observation (bool, optional)**: if True, agent will ask LLM to retrieve the information from the past thoughts and observations. Defaults to False.\n
-            **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
-            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3600.\n
-        """
         super().__init__(
             model=model,
             max_input_tokens=max_input_tokens,
@@ -95,956 +190,171 @@ class agents(basic_llm):
             keep_logs=keep_logs,
             verbose=verbose,
             env_file=env_file,
+            thinking=thinking,
+            thinking_budget=thinking_budget,
         )
         self.stream = stream
         self.prompt_format_type = prompt_format_type
         self.max_round = max_round
         self.max_past_observation = max_past_observation
         self.retri_observation = retri_observation
-
-        ## var ##
-        self.messages = []
-        self.thoughts = []
-
+        self.messages: list = []
+        self.thoughts: list = []
+        self.tool_calls: list = []
         self.tokens = 0
         self.input_len = 0
         self.question = ""
-        self.tools = {}
-        ## if tools is mcp connection info, connect mcp client to get tools when acall ##
-
         if isinstance(tools, BaseTool):
             tools = [tools]
+        self.tools = {tool.name: tool for tool in tools if isinstance(tool, BaseTool)}
+        if len(self.tools) != len(tools):
+            logger.warning("tools should be a list of BaseTool")
+        self.tool_name_str = ", ".join(f'"{name}"' for name in self.tools)
+        self.tool_explaination = {
+            name: tool.description for name, tool in self.tools.items()
+        }
+        self._agent = self._build_agent()
 
-        self.tool_explaination = get_tool_explaination(tools)
-        for tool in tools:
-            if not isinstance(tool, BaseTool):
-                logging.warning("tools should be a list of BaseTool")
-                continue
-            tool_name = tool.name
-            self.tools[tool_name] = tool
+    def _set_model(self, **kwargs):
+        previous = getattr(self, "model_obj", None)
+        super()._set_model(**kwargs)
+        if getattr(self, "model_obj", None) is not previous:
+            self._agent = self._build_agent()
 
-        self.REACT_PROMPT = self._merge_tool_explaination_and_react()
-        self.REMEMBER_PROMPT = DEFAULT_REMEMBER_PROMPT
-        self.OBSERVATION_PROMPT = DEFAULT_OBSERVATION_PROMPT
-        self.RETRI_OBSERVATION_PROMPT = DEFAULT_RETRI_OBSERVATION_PROMPT
+    def _build_agent(self):
+        kwargs = {"model": self.model_obj, "tools": list(self.tools.values())}
+        if self.system_prompt.strip():
+            kwargs["system_prompt"] = self.system_prompt
+        return create_agent(**kwargs)
 
-    def _merge_tool_explaination_and_react(self) -> str:
-        tool_explain_str = "\n".join(
-            [
-                f"{tool_name}: {tool_des}"
-                for tool_name, tool_des in self.tool_explaination.items()
-            ]
-        )
-        tool_name_str = ", ".join(
-            [f'"{tool_name}"' for tool_name in self.tool_explaination.keys()]
-        )
-        self.tool_name_str = tool_name_str
+    def _record_result(self, timestamp: str, result: Any, elapsed: float) -> None:
+        messages = _extract_messages(result)
+        self.messages = [_message_dump(message) for message in messages]
+        self.tool_calls = []
+        thinking = []
+        for message in messages:
+            if isinstance(message, (AIMessage, AIMessageChunk)):
+                if getattr(message, "tool_calls", None):
+                    self.tool_calls.extend(message.tool_calls)
+                value = _thinking_text(message)
+                if value:
+                    thinking.append(value)
+        self.thoughts = thinking
+        self.response = _last_answer(messages)
+        if self.keep_logs:
+            self.logs[timestamp].update(
+                {
+                    "time": elapsed,
+                    "messages": self.messages,
+                    "tool_calls": _json_safe(self.tool_calls),
+                    "thinking": "".join(thinking),
+                    "response": self.response,
+                    "model": self.model,
+                    "provider": self.model.split(":", 1)[0],
+                    "tokens": self.tokens,
+                    "input_len": self.input_len,
+                }
+            )
 
-        return get_REACT_PROMPT(tool_explain_str, tool_name_str)
+    def _payload(self, question: str, messages: List[dict] | None) -> dict:
+        history = _as_message_list(messages)
+        history.append({"role": "user", "content": question})
+        return {"messages": history}
 
-    def _add_basic_log(self, timestamp: str, fn_type: str) -> bool:
-        """add pre-process log to self.logs
-
-        Args:
-            timestamp (str): timestamp of this run
-            fn_type (str): function type of this run
-        """
-        if super()._add_basic_log(timestamp, fn_type) is False:
-            return False
-
-        self.logs[timestamp]["question"] = self.question
-        self.logs[timestamp]["max_round"] = self.max_round
-        self.logs[timestamp]["max_input_tokens"] = self.max_input_tokens
-        self.logs[timestamp]["max_past_observation"] = self.max_past_observation
-        return True
-
-    def _add_result_log(self, timestamp: str, time: float) -> bool:
-        """add post-process log to self.logs
-
-        Args:
-            timestamp (str): timestamp of this run
-            time (float): spent time of this run
-        """
-
-        if self.keep_logs is False:
-            return False
-
-        ### add token information ###
-        tool_list = []
-        for name, tool in self.tools.items():
-            tool_list.append(name)
-
-        self.logs[timestamp]["time"] = time
-        self.logs[timestamp]["tools"] = tool_list
-        self.logs[timestamp]["messages"] = self.messages
-        self.logs[timestamp]["thoughts"] = self.thoughts
-        self.logs[timestamp]["response"] = self.response
-        self.logs[timestamp]["tokens"] = self.tokens
-        self.logs[timestamp]["input_len"] = self.input_len
-        return True
-
-    def _display_info(self, batch: int = 1) -> bool:
-        """display the information of the parameters if verbose is True"""
-        if self.verbose is False:
-            return False
-        logging.info("Model: %s, Temperature: %s", self.model, self.temperature)
-        logging.info("Tool: %s", self.tool_name_str)
-        logging.info(
-            "Prompt format type: %s, Max input tokens: %s",
-            self.prompt_format_type,
-            self.max_input_tokens,
-        )
-
-        return True
-
-    def _normalize_observation(self, observation) -> str:
-        """Normalize tool/model observation to a string for prompt/log/message safety."""
-        if isinstance(observation, str):
-            return observation
-        if isinstance(observation, (dict, list, tuple)):
-            try:
-                return json.dumps(observation, ensure_ascii=False, default=str)
-            except Exception:
-                return str(observation)
-        return str(observation)
-
-    def __call__(self, question: str, messages: List[dict] = None):
-        """Synchronous version of agent."""
-        configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
-
+    def __call__(
+        self,
+        question: str,
+        messages: List[dict] = None,
+        include_thinking: bool | None = None,
+    ):
         self.question = question
-
-        if not self.stream:
-            # Non-streaming: just run and return the result
-            async def collect_non_stream():
-                return await self._run_agent(
-                    question,
-                    tool_runner=lambda tool, tool_input: tool._run(**tool_input),
-                    messages=messages,
-                )
-
-            result = asyncio.run(collect_non_stream())
-            return result
-
-        return self._run_agent_stream(
-            question,
-            tool_runner=lambda tool, tool_input: tool._run(**tool_input),
-            messages=messages,
-        )
-
-    async def acall(self, question: str, messages: List[dict] = None):
-        """Asynchronous version of agent."""
-        configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
-
-        self.REACT_PROMPT = self._merge_tool_explaination_and_react()
-
-        return await self._run_agent(
-            question,
-            tool_runner=lambda tool, tool_input: tool.ainvoke(tool_input),
-            messages=messages,
-        )
-
-    async def _run_agent(
-        self, question: str, tool_runner: callable, messages: List[dict] = None
-    ):
-        """run agent to get response"""
         if self.stream:
-            return self._run_agent_stream(question, tool_runner, messages)
+            return self._stream(question, messages, include_thinking)
+        return asyncio.run(self._ainvoke(question, messages))
 
-        start_time = time.time()
-        step_idx = 0
-
-        def log_step(message: str) -> None:
-            nonlocal step_idx
-            step_idx += 1
-            logging.info("[step-%s] %s", step_idx, message)
-
-        round_count = self.max_round
-        self.response = ""
-        if messages is None:
-            self.messages = []
-        else:
-            self.messages = messages
-        self.thoughts = []
-        observation = ""
-        thought = ""
-        retri_messages = ""
-        self._display_info()
-        ### call model to get response ###
-        retri_messages, messages_len = retri_history_messages(
-            self.messages,
-            self.max_past_observation,
-            self.max_input_tokens,
-            self.model,
-            "Action",
-            "Observation",
-        )
-        if retri_messages != "":
-            retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
-        log_step("Prepared history/context for model call")
-
-        text_input = format_sys_prompt(
-            self.REACT_PROMPT,
-            "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.prompt_format_type,
-            self.model,
-        )
-        log_step("Calling LLM for initial response")
-        response = call_model(
-            self.model_obj,
-            text_input,
-            self.verbose,
-            keep_logs=self.keep_logs,
-        )
-        log_step("Received LLM response")
-
-        txt = (
-            "Question: "
-            + " think step by step"
-            + question
-            + self.REMEMBER_PROMPT
-            + self.REACT_PROMPT
-            + retri_messages
-        )
-        self.input_len = get_doc_length(self.language, txt)
-        self.tokens = self.model_obj.get_num_tokens(txt)
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        if self.keep_logs is True:
-            self.timestamp_list.append(timestamp)
-            self._add_basic_log(timestamp, "agent_call")
-
-        ### start to run agent ###
-        while round_count > 0:
-            try:
-                log_step("Parsing action from model response")
-                cur_action = extract_json(response)
-                if isinstance(cur_action, list):
-                    action_raw = ""
-                    for action_item in cur_action:
-                        if (
-                            isinstance(action_item, dict)
-                            and _is_final_action(action_item.get("action", ""))
-                        ):
-                            cur_action = action_item
-                            action_raw = cur_action.get("action", "")
-                            break
-                    if action_raw == "":
-                        raise ValueError("Cannot find correct action from response")
-                elif isinstance(cur_action, dict):
-                    action_raw = cur_action.get("action", "")
-                else:
-                    raise ValueError("Cannot find correct action from response")
-
-                if (not isinstance(action_raw, str)) or (
-                    not isinstance(cur_action.get("action_input"), dict)
-                    and not _is_final_action(action_raw)
-                ):
-                    raise ValueError("Cannot find correct action from response")
-            except Exception:
-                logging.warning(
-                    "Cannot extract JSON format action from response, retry."
-                )
-                text_input = format_sys_prompt(
-                    self.REACT_PROMPT,
-                    "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-                    self.prompt_format_type,
-                    self.model,
-                )
-                response = call_model(
-                    self.model_obj,
-                    text_input,
-                    self.verbose,
-                    keep_logs=self.keep_logs,
-                )
-                round_count -= 1
-                txt = (
-                    "Question: "
-                    + question
-                    + retri_messages
-                    + self.REACT_PROMPT
-                    + self.REMEMBER_PROMPT
-                )
-                self.input_len += get_doc_length(self.language, txt)
-                self.tokens += self.model_obj.get_num_tokens(txt)
-                continue
-
-            ### get thought from response ###
-            # NEW: read thought from structured JSON
-            thought = cur_action.get("thought")
-            if not isinstance(thought, str) or thought.replace(" ", "").replace("\n", "") == "":
-                thought = "None."
-            self.thoughts.append(thought)
-
-            if cur_action is None:
-                raise ValueError("Cannot find correct action from response")
-            if _is_final_action(action_raw):
-                if isinstance(cur_action["action_input"], (dict, list)):
-                    response = json.dumps(
-                        cur_action["action_input"], ensure_ascii=False
-                    )
-                else:
-                    response = str(cur_action["action_input"])
-
-                self.messages.append(
-                    {
-                        "role": "Action",
-                        "content": json.dumps(cur_action, ensure_ascii=False),
-                    }
-                )
-                log_step("Final answer produced")
-                break
-            elif cur_action["action"] in self.tools:
-                try:
-                    tool_name = cur_action["action"]
-                    tool_input = cur_action["action_input"]
-                    log_step(f"Invoking tool '{tool_name}'")
-                    logging.info(
-                        "Running tool: %s | input=%s",
-                        tool_name,
-                        json.dumps(tool_input, ensure_ascii=False, default=str),
-                    )
-
-                    tool = self.tools[tool_name]
-                    result = tool_runner(tool, tool_input)
-                    if asyncio.iscoroutine(result):
-                        try:
-                            loop = asyncio.get_event_loop()
-                        except RuntimeError:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                        if loop.is_running():
-                            import concurrent.futures
-                            with concurrent.futures.ThreadPoolExecutor() as pool:
-                                firsthand_observation = pool.submit(asyncio.run, result).result()
-                        else:
-                            firsthand_observation = loop.run_until_complete(result)
-                    else:
-                        firsthand_observation = result  # Sync result
-                    log_step(f"Tool '{tool_name}' returned")
-                    logging.info(
-                        "Tool result: %s | output=%s",
-                        tool_name,
-                        json.dumps(firsthand_observation, ensure_ascii=False, default=str),
-                    )
-                    firsthand_observation_text = self._normalize_observation(
-                        firsthand_observation
-                    )
-
-                except Exception:
-                    logging.exception(
-                        "Tool execution failed: %s | input=%s",
-                        cur_action.get("action"),
-                        json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
-                    )
-                    if self.verbose or self.keep_logs:
-                        logging.warning("Cannot run the tool, retry.")
-                    text_input = format_sys_prompt(
-                        self.REACT_PROMPT,
-                        "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-                        self.prompt_format_type,
-                        self.model,
-                    )
-                    response = call_model(
-                        self.model_obj,
-                        text_input,
-                        self.verbose,
-                        keep_logs=self.keep_logs,
-                    )
-                    round_count -= 1
-                    txt = (
-                        "Question: "
-                        + question
-                        + retri_messages
-                        + self.REACT_PROMPT
-                        + self.REMEMBER_PROMPT
-                    )
-                    self.input_len += get_doc_length(self.language, txt)
-                    self.tokens += self.model_obj.get_num_tokens(txt)
-                    continue
-
-                if self.retri_observation:
-                    log_step("Summarizing observation via LLM")
-                    text_input = format_sys_prompt(
-                        self.RETRI_OBSERVATION_PROMPT,
-                        "Question: "
-                        + question
-                        + "\n\nThought: "
-                        + thought
-                        + "\n\nObservation: "
-                        + firsthand_observation_text,
-                        self.prompt_format_type,
-                        self.model,
-                    )
-                    observation = call_model(
-                        self.model_obj,
-                        text_input,
-                        self.verbose,
-                        keep_logs=self.keep_logs,
-                    )
-                    txt = (
-                        "Question: "
-                        + question
-                        + "\n\nThought: "
-                        + thought
-                        + "\n\nObservation: "
-                        + firsthand_observation_text
-                        + self.RETRI_OBSERVATION_PROMPT
-                    )
-                    self.input_len += get_doc_length(self.language, txt)
-                    self.tokens += self.model_obj.get_num_tokens(txt)
-                else:
-                    observation = firsthand_observation_text
-                log_step("Observation recorded")
-                observation_text = self._normalize_observation(observation)
-
-                if self.verbose:
-                    logging.info("Observation: %s", observation_text)
-            else:
-                raise ValueError(f"Cannot find tool {cur_action['action']}")
-
-            cur_action["action_input"].pop("run_manager", None)
-            self.messages.append(
-                {
-                    "role": "Action",
-                    "content": json.dumps(cur_action, ensure_ascii=False),
-                }
-            )
-            self.messages.append({"role": "Observation", "content": observation_text})
-
-            retri_messages, messages_len = retri_history_messages(
-                self.messages,
-                self.max_past_observation,
-                self.max_input_tokens,
-                self.model,
-                "Action",
-                "Observation",
-            )
-            if retri_messages != "":
-                retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
-
-            text_input = format_sys_prompt(
-                self.REACT_PROMPT,
-                "Question: " + question + retri_messages,
-                self.prompt_format_type,
-                self.model,
-            )
-            response = call_model(
-                self.model_obj,
-                text_input,
-                self.verbose,
-                keep_logs=self.keep_logs,
-            )
-            log_step("Received LLM response for next step")
-            txt = "Question: " + question + retri_messages + self.REACT_PROMPT
-            self.input_len += get_doc_length(self.language, txt)
-            self.tokens += self.model_obj.get_num_tokens(txt)
-
-            round_count -= 1
-
-        end_time = time.time()
-        if self.verbose:
-            logging.info(
-                "Time Spent: %s s",
-                end_time - start_time,
-            )
-        self.response = response
-        self._add_result_log(timestamp, end_time - start_time)
-        return response
-
-    def _run_agent_stream(
-        self, question: str, tool_runner: callable, messages: List[dict] = None
+    async def acall(
+        self,
+        question: str,
+        messages: List[dict] = None,
+        include_thinking: bool | None = None,
     ):
-        """run agent stream to get response"""
+        self.question = question
+        if self.stream:
+            return self._stream(question, messages, include_thinking)
+        return await self._ainvoke(question, messages)
 
-        start_time = time.time()
-        step_idx = 0
-
-        def log_step(message: str) -> None:
-            nonlocal step_idx
-            step_idx += 1
-            logging.info("[step-%s] %s", step_idx, message)
-
-        round_count = self.max_round
-        self.response = ""
-        if messages is None:
-            self.messages = []
-        else:
-            self.messages = messages
-        self.thoughts = []
-        observation = ""
-        thought = ""
-        retri_messages = ""
-        self._display_info()
-        ### call model to get response ###
-        retri_messages, messages_len = retri_history_messages(
-            self.messages,
-            self.max_past_observation,
-            self.max_input_tokens,
-            self.model,
-            "Action",
-            "Observation",
-        )
-        if retri_messages != "":
-            retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
-        log_step("Prepared history/context for model call (stream)")
-
-        text_input = format_sys_prompt(
-            self.REACT_PROMPT,
-            "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-            self.prompt_format_type,
-            self.model,
-        )
-        log_step("Calling LLM for initial response (stream)")
-        response = ""
-        
-        for chunk in call_stream_model(
-            self.model_obj,
-            text_input,
-            self.verbose,
-            keep_logs=self.keep_logs,
-        ):
-            yield chunk
-            response += chunk
-        
-        log_step("Received LLM response (stream)")
-
-        txt = (
-            "Question: "
-            + " think step by step"
-            + question
-            + self.REMEMBER_PROMPT
-            + self.REACT_PROMPT
-            + retri_messages
-        )
-        self.input_len = get_doc_length(self.language, txt)
-        self.tokens = self.model_obj.get_num_tokens(txt)
+    async def _ainvoke(self, question: str, messages: List[dict] | None):
+        start = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
-        if self.keep_logs is True:
+        if self.keep_logs:
             self.timestamp_list.append(timestamp)
-            self._add_basic_log(timestamp, "agent_call")
+            self.logs[timestamp] = {
+                "fn_type": "agent_call",
+                "question": question,
+                "model": self.model,
+                "tools": list(self.tools),
+            }
+        self.input_len = get_doc_length(self.language, question)
+        self.tokens = _count_tokens(self.model_obj, question)
+        result = await self._agent.ainvoke(
+            self._payload(question, messages),
+            config={"recursion_limit": max(3, self.max_round * 2 + 1)},
+        )
+        self._record_result(timestamp, result, time.time() - start)
+        if not self.response:
+            raise RuntimeError("LangChain agent returned no final answer")
+        return self.response
 
-        ### start to run agent ###
-        while round_count > 0:
-            try:
-                log_step("Parsing action from model response (stream)")
-                cur_action = extract_json(response)
-                if isinstance(cur_action, list):
-                    action_raw = ""
-                    for action_item in cur_action:
-                        if (
-                            isinstance(action_item, dict)
-                            and _is_final_action(action_item.get("action", ""))
-                        ):
-                            cur_action = action_item
-                            action_raw = cur_action.get("action", "")
-                            break
-                    if action_raw == "":
-                        raise ValueError("Cannot find correct action from response")
-                elif isinstance(cur_action, dict):
-                    action_raw = cur_action.get("action", "")
-                else:
-                    raise ValueError("Cannot find correct action from response")
-
-                if (not isinstance(action_raw, str)) or (
-                    not isinstance(cur_action.get("action_input"), dict)
-                    and not _is_final_action(action_raw)
-                ):
-                    raise ValueError("Cannot find correct action from response")
-            except Exception:
-                logging.warning(
-                    "Cannot extract JSON format action from response, retry."
-                )
-                text_input = format_sys_prompt(
-                    self.REACT_PROMPT,
-                    "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-                    self.prompt_format_type,
-                    self.model,
-                )
-                response = ""
-                for chunk in call_stream_model(
-                    self.model_obj,
-                    text_input,
-                    self.verbose,
-                    keep_logs=self.keep_logs,
-                ):
-                    yield chunk
-                    response += chunk
-                round_count -= 1
-                txt = (
-                    "Question: "
-                    + question
-                    + retri_messages
-                    + self.REACT_PROMPT
-                    + self.REMEMBER_PROMPT
-                )
-                self.input_len += get_doc_length(self.language, txt)
-                self.tokens += self.model_obj.get_num_tokens(txt)
-                continue
-
-            ### get thought from response ###
-            thought = cur_action.get("thought")
-            if not isinstance(thought, str) or thought.replace(" ", "").replace("\n", "") == "":
-                thought = "None."
-            self.thoughts.append(thought)
-
-            # yield thought #
-            # intermed_stream_text = "\n[THOUGHT]: " + str(thought) + "\n"
-            # yield intermed_stream_text
-
-            if cur_action is None:
-                raise ValueError("Cannot find correct action from response")
-            if _is_final_action(action_raw):
-                if isinstance(cur_action["action_input"], (dict, list)):
-                    response = json.dumps(
-                        cur_action["action_input"], ensure_ascii=False
-                    )
-                else:
-                    response = str(cur_action["action_input"])
-
-                self.messages.append(
-                    {
-                        "role": "Action",
-                        "content": json.dumps(cur_action, ensure_ascii=False),
-                    }
-                )
-
-                # Content already streamed, just break
-                break
-
-            elif cur_action["action"] in self.tools:
-                try:
-                    tool_name = cur_action["action"]
-                    tool_input = cur_action["action_input"]
-                    log_step(f"Invoking tool '{tool_name}' (stream)")
-                    logging.info(
-                        "Running tool: %s | input=%s",
-                        tool_name,
-                        json.dumps(tool_input, ensure_ascii=False, default=str),
-                    )
-
-                    # yield action #
-                    intermed_stream_text = (
-                        "\n[ACTION]: "
-                        + tool_name
-                        + " "
-                        + json.dumps(tool_input, ensure_ascii=False)
-                        + "\n"
-                    )
-                    yield intermed_stream_text
-
-                    tool = self.tools[tool_name]
-                    result = tool_runner(tool, tool_input)
-                    if asyncio.iscoroutine(result):
-                        try:
-                            loop = asyncio.get_event_loop()
-                        except RuntimeError:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                        if loop.is_running():
-                            import concurrent.futures
-                            with concurrent.futures.ThreadPoolExecutor() as pool:
-                                firsthand_observation = pool.submit(asyncio.run, result).result()
-                        else:
-                            firsthand_observation = loop.run_until_complete(result)
-                    else:
-                        firsthand_observation = result  # Sync result
-                    log_step(f"Tool '{tool_name}' returned (stream)")
-                    logging.info(
-                        "Tool result: %s | output=%s",
-                        tool_name,
-                        json.dumps(firsthand_observation, ensure_ascii=False, default=str),
-                    )
-                    firsthand_observation_text = self._normalize_observation(
-                        firsthand_observation
-                    )
-                except Exception:
-                    logging.exception(
-                        "Tool execution failed (stream): %s | input=%s",
-                        cur_action.get("action"),
-                        json.dumps(cur_action.get("action_input"), ensure_ascii=False, default=str),
-                    )
-                    if self.verbose or self.keep_logs:
-                        logging.warning("Cannot run the tool, retry (stream).")
-                    text_input = format_sys_prompt(
-                        self.REACT_PROMPT,
-                        "Question: " + question + retri_messages + self.REMEMBER_PROMPT,
-                        self.prompt_format_type,
-                        self.model,
-                    )
-                    response = ""
-                    for chunk in call_stream_model(
-                        self.model_obj,
-                        text_input,
-                        self.verbose,
-                        keep_logs=self.keep_logs,
-                    ):
-                        yield chunk
-                        response += chunk
-                    round_count -= 1
-                    txt = (
-                        "Question: "
-                        + question
-                        + retri_messages
-                        + self.REACT_PROMPT
-                        + self.REMEMBER_PROMPT
-                    )
-                    self.input_len += get_doc_length(self.language, txt)
-                    self.tokens += self.model_obj.get_num_tokens(txt)
-                    continue
-
-                if self.retri_observation:
-                    log_step("Summarizing observation via LLM (stream)")
-                    text_input = format_sys_prompt(
-                        self.RETRI_OBSERVATION_PROMPT,
-                        "Question: "
-                        + question
-                        + "\n\nThought: "
-                        + thought
-                        + "\n\nObservation: "
-                        + firsthand_observation_text,
-                        self.prompt_format_type,
-                        self.model,
-                    )
-                    observation_response = ""
-                    for chunk in call_stream_model(
-                        self.model_obj,
-                        text_input,
-                        self.verbose,
-                        keep_logs=self.keep_logs,
-                    ):
-                        yield chunk
-                        observation_response += chunk
-                    observation = observation_response
-                    txt = (
-                        "Question: "
-                        + question
-                        + "\n\nThought: "
-                        + thought
-                        + "\n\nObservation: "
-                        + firsthand_observation_text
-                        + self.RETRI_OBSERVATION_PROMPT
-                    )
-                    self.input_len += get_doc_length(self.language, txt)
-                    self.tokens += self.model_obj.get_num_tokens(txt)
-                else:
-                    observation = firsthand_observation_text
-                log_step("Observation recorded (stream)")
-                observation_text = self._normalize_observation(observation)
-
-                if self.verbose:
-                    logging.info("[OBSERVATION]: %s", observation_text)
-                # yield observation #
-                intermed_stream_text = "\n[OBSERVATION]: " + observation_text + "\n"
-                yield intermed_stream_text
-
-            else:
-                raise ValueError(f"Cannot find tool {cur_action['action']}")
-
-            cur_action["action_input"].pop("run_manager", None)
-            self.messages.append(
-                {
-                    "role": "Action",
-                    "content": json.dumps(cur_action, ensure_ascii=False),
-                }
-            )
-            self.messages.append({"role": "Observation", "content": observation_text})
-
-            retri_messages, messages_len = retri_history_messages(
-                self.messages,
-                self.max_past_observation,
-                self.max_input_tokens,
-                self.model,
-                "Action",
-                "Observation",
-            )
-            if retri_messages != "":
-                retri_messages = self.OBSERVATION_PROMPT + retri_messages + "\n\n"
-
-            text_input = format_sys_prompt(
-                self.REACT_PROMPT,
-                "Question: " + question + retri_messages,
-                self.prompt_format_type,
-                self.model,
-            )
-            log_step("Calling LLM for next step (stream)")
-            response = ""
-            
-            for chunk in call_stream_model(
-                self.model_obj,
-                text_input,
-                self.verbose,
-                keep_logs=self.keep_logs,
+    def _stream(
+        self, question: str, messages: List[dict] | None, include_thinking: bool | None
+    ) -> Generator[dict, None, None]:
+        start = time.time()
+        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        collected = []
+        answer_parts = []
+        thinking_parts = []
+        include_thinking = self.thinking if include_thinking is None else include_thinking
+        if self.keep_logs:
+            self.timestamp_list.append(timestamp)
+            self.logs[timestamp] = {
+                "fn_type": "agent_call",
+                "question": question,
+                "model": self.model,
+                "tools": list(self.tools),
+            }
+        try:
+            for update in self._agent.stream(
+                self._payload(question, messages),
+                config={"recursion_limit": max(3, self.max_round * 2 + 1)},
+                # ``messages`` yields AIMessageChunk/ToolMessage chunks, so
+                # callers receive token-level answer/thinking events.
+                stream_mode="messages",
             ):
-                yield chunk
-                response += chunk
-            
-            log_step("Received LLM response for next step (stream)")
-            txt = "Question: " + question + retri_messages + self.REACT_PROMPT
-            self.input_len += get_doc_length(self.language, txt)
-            self.tokens += self.model_obj.get_num_tokens(txt)
-
-            round_count -= 1
-
-        end_time = time.time()
-        if self.verbose:
-            logging.info(
-                "Time Spent: %s s",
-                end_time - start_time,
-            )
-        self.response = response
-        self._add_result_log(timestamp, end_time - start_time)
-
-        return
-
-    def mcp_agent(self, connection_info: dict, prompt: str):
-        """Call the agent with the given connection info and prompt.
-
-        Args:
-            connection_info (dict): _description_
-            prompt (str): _description_
-
-        Raises:
-            RuntimeError: _description_
-            RuntimeError: _description_
-
-        Returns:
-            _type_: _description_
-
-        Yields:
-            _type_: _description_
-        """
-        self.question = prompt
-        if not self.stream:
-            return asyncio.run(self._call_agents_non_streaming(connection_info, prompt))
-
-        # For streaming, use a thread approach with a queue
-        import queue
-        import threading
-
-        # Create a queue for passing messages from async to sync
-        message_queue = queue.Queue()
-        stop_event = threading.Event()
-
-        # Function to run in a background thread
-        def run_async_stream():
-            # Create a new event loop for this thread
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            async def process_stream():
-                try:
-                    client = MultiServerMCPClient(connection_info)
-                    tools = await client.get_tools()
-
-                    if isinstance(tools, BaseTool):
-                        tools = [tools]
-
-                    self.tool_explaination = get_tool_explaination(tools)
-                    for tool in tools:
-                        if not isinstance(tool, BaseTool):
-                            logging.warning("tools should be a list of BaseTool")
-                            continue
-                        tool_name = tool.name
-                        self.tools[tool_name] = tool
-
-                    # Use the agent asynchronously
-                    response = await self.acall(prompt)
-
-                    # Process the streaming response in real-time
-                    async for chunk in response:
-                        # Put each chunk in the queue as it arrives
-                        message_queue.put(chunk)
-                except Exception:
-                    import traceback
-
-                    message_queue.put(("ERROR", traceback.format_exc()))
-                finally:
-                    # Signal that we're done
-                    message_queue.put(None)
-
-            # Run the async function and ensure proper cleanup
-            try:
-                loop.run_until_complete(process_stream())
-            finally:
-                # Clean up the event loop
-                pending = asyncio.all_tasks(loop)
-                for task in pending:
-                    task.cancel()
-
-                # Give cancelled tasks a chance to clean up
-                if pending:
-                    loop.run_until_complete(
-                        asyncio.gather(*pending, return_exceptions=True)
-                    )
-
-                loop.run_until_complete(loop.shutdown_asyncgens())
-                loop.close()
-
-        # Start the background thread
-        thread = threading.Thread(target=run_async_stream)
-        thread.daemon = True  # The thread will exit when the main thread exits
-        thread.start()
-
-        # Return a generator that yields results as they arrive from the queue
-        def result_generator():
-            try:
-                while not stop_event.is_set():
-                    try:
-                        # Timeout allows checking the stop_event occasionally
-                        result = message_queue.get(timeout=0.1)
-
-                        # None signals end of stream
-                        if result is None:
-                            break
-
-                        # Check for error
-                        if isinstance(result, tuple) and result[0] == "ERROR":
-                            raise RuntimeError(f"Error in async thread: {result[1]}")
-
-                        yield result
-
-                    except queue.Empty:
-                        # Just a timeout, check if the thread is still alive
-                        if not thread.is_alive():
-                            # Thread died unexpectedly
-                            raise RuntimeError("Background thread died unexpectedly")
-                        # Otherwise continue waiting
-            finally:
-                # Clean up
-                stop_event.set()
-                # Wait for thread to finish if it's still running
-                if thread.is_alive():
-                    thread.join(timeout=5.0)
-
-        return result_generator()
-
-    ## use MultiServerMCPClient to connect to multiple MCP servers and get the tools
-    async def _call_agents_non_streaming(self, connection_info: dict, prompt: str):
-        """Handle the non-streaming case where we want to return a complete string"""
-
-        client = MultiServerMCPClient(connection_info)
-        tools = await client.get_tools()
-
-        if isinstance(tools, BaseTool):
-            tools = [tools]
-
-        self.tool_explaination = get_tool_explaination(tools)
-        for tool in tools:
-            if not isinstance(tool, BaseTool):
-                logging.warning("tools should be a list of BaseTool")
-                continue
-            tool_name = tool.name
-            self.tools[tool_name] = tool
-
-        # Use the agent asynchronously
-        response = await self.acall(prompt)
-
-        # For non-streaming, collect the complete response
-        if hasattr(response, "__aiter__"):
-            # If it's an async generator, collect all chunks and join them
-            result = ""
-            async for chunk in response:
-                result += chunk
-            return result
-        # If it's already a string or other non-generator response
-        return response
+                message = _stream_message_chunk(update)
+                messages = [message] if message is not None else _stream_update_messages(update)
+                for message in messages:
+                    if isinstance(message, ToolMessage):
+                        collected.append(message)
+                        yield {"type": "tool", "data": _message_dump(message)}
+                        continue
+                    collected.append(message)
+                    thinking = _thinking_text(message)
+                    if include_thinking and thinking:
+                        thinking_parts.append(thinking)
+                        yield {"type": "thinking", "data": thinking}
+                    text = _message_text(message)
+                    if text:
+                        answer_parts.append(text)
+                        yield {"type": "answer", "data": text}
+            result = {"messages": collected}
+            self._record_result(timestamp, result, time.time() - start)
+            self.response = "".join(answer_parts)
+            self.thoughts = thinking_parts
+            if self.keep_logs:
+                self.logs[timestamp]["response"] = self.response
+                self.logs[timestamp]["thinking"] = "".join(thinking_parts)
+            if not self.response:
+                raise RuntimeError("LangChain agent returned no final answer")
+        except Exception:
+            logger.exception("LangChain agent streaming failed")
+            raise

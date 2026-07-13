@@ -17,6 +17,7 @@ from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.helper.run_llm import (
     call_model,
     call_stream_model,
+    call_stream_events,
     call_batch_model,
     call_image_model,
     check_relevant_answer,
@@ -45,6 +46,8 @@ class ask(basic_llm):
         verbose: bool = False,
         stream: bool = False,
         env_file: str = "",
+        thinking: bool = False,
+        thinking_budget: int | None = None,
     ):
         """_summary_
 
@@ -71,6 +74,8 @@ class ask(basic_llm):
             keep_logs=keep_logs,
             verbose=verbose,
             env_file=env_file,
+            thinking=thinking,
+            thinking_budget=thinking_budget,
         )
         self.stream = stream
         self.prompt_format_type = prompt_format_type
@@ -365,7 +370,20 @@ class ask(basic_llm):
 
     def _display_stream(
         self, text_input: Union[str, List[str]]
-    ) -> Generator[str, None, None]:
+    ) -> Generator:
+        if self.thinking:
+            for event in call_stream_events(
+                self.model_obj,
+                text_input,
+                include_thinking=True,
+                verbose=self.verbose,
+                keep_logs=self.keep_logs,
+            ):
+                if event["type"] == "answer":
+                    self.response += event["data"]
+                yield event
+            return
+
         ret = call_stream_model(
             self.model_obj, text_input, self.verbose, keep_logs=self.keep_logs
         )

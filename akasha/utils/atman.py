@@ -41,6 +41,8 @@ class basic_llm:
         keep_logs: bool = False,
         verbose: bool = False,
         env_file: str = "",
+        thinking: bool = False,
+        thinking_budget: int | None = None,
     ):
         """_summary_
 
@@ -72,13 +74,21 @@ class basic_llm:
         self.max_output_tokens = max_output_tokens
         self.max_input_tokens = max_input_tokens
         self.env_file = env_file
+        self.thinking = thinking
+        self.thinking_budget = thinking_budget
         self.timestamp_list = []
         self.logs: dict[dict] = {}
         configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
 
         ### set model and embeddings ###
         self.model_obj = handle_model(
-            model, self.verbose, self.temperature, self.max_output_tokens, self.env_file
+            model,
+            self.verbose,
+            self.temperature,
+            self.max_output_tokens,
+            self.env_file,
+            self.thinking,
+            self.thinking_budget,
         )
         self.model = handle_model_type(model)
 
@@ -91,11 +101,15 @@ class basic_llm:
             or ("temperature" in kwargs)
             or ("max_output_tokens" in kwargs)
             or ("env_file" in kwargs)
+            or ("thinking" in kwargs)
+            or ("thinking_budget" in kwargs)
         ):
             new_temp = self.temperature
             new_model = self.model
             new_tokens = self.max_output_tokens
             new_env_file = self.env_file
+            new_thinking = self.thinking
+            new_thinking_budget = self.thinking_budget
             if "temperature" in kwargs:
                 new_temp = kwargs["temperature"]
             if "model" in kwargs:
@@ -104,15 +118,29 @@ class basic_llm:
                 new_tokens = kwargs["max_output_tokens"]
             if "env_file" in kwargs:
                 new_env_file = kwargs["env_file"]
+            if "thinking" in kwargs:
+                new_thinking = kwargs["thinking"]
+            if "thinking_budget" in kwargs:
+                new_thinking_budget = kwargs["thinking_budget"]
             if (
                 (new_model != self.model)
                 or (new_temp != self.temperature)
                 or (new_tokens != self.max_output_tokens)
                 or (new_env_file != self.env_file)
+                or (new_thinking != self.thinking)
+                or (new_thinking_budget != self.thinking_budget)
             ):
                 self.model_obj = handle_model(
-                    new_model, self.verbose, new_temp, new_tokens, new_env_file
+                    new_model,
+                    self.verbose,
+                    new_temp,
+                    new_tokens,
+                    new_env_file,
+                    new_thinking,
+                    new_thinking_budget,
                 )
+                self.thinking = new_thinking
+                self.thinking_budget = new_thinking_budget
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
