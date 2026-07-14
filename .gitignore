@@ -9,6 +9,7 @@ dist/
 .env*
 chromadb/
 chromadb*/
+graphify-out/cache/
 logs/
 akasha/doc/
 _build/

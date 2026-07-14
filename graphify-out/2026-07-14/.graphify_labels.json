@@ -169,18 +169,5 @@
   "167": "ex_scores.py",
   "168": "ex_token_count.py",
   "169": "setup.py",
-  "170": "THIRD_PARTY.md",
-  "171": "format_llama_json",
-  "172": "format_question_query",
-  "173": "irre_question_prompt",
-  "174": "test_summary.py",
-  "175": "__init__.py",
-  "176": "個人偏好.md",
-  "177": "居住地.md",
-  "178": "居住地理位置.md",
-  "179": "居住地資訊.md",
-  "180": "食物偏好.md",
-  "181": "食物喜好.md",
-  "182": "ex_api.py",
-  "183": "ex_generate_img.py"
+  "170": "THIRD_PARTY.md"
 }
