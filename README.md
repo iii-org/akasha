@@ -188,16 +188,13 @@ export ANTHROPIC_API_KEY="your_anthropic_api_key"
 ### AZURE OPENAI
 
 If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
-Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save `OPENAI_API_KEY=your azure key`, `OPENAI_API_BASE=your Language API base url`, `OPENAI_API_TYPE=azure`, `OPENAI_API_VERSION=2023-05-15` into `.env` file to current working directory.
-If you want to save both openai key and azure key at the same time, you can also use `AZURE_API_KEY`, `AZURE_API_BASE`, `AZURE_API_TYPE`, `AZURE_API_VERSION`
+Also, remember to deploy all the models in [Azure OpenAI Studio](https://oai.azure.com/portal). The deployment name should be used as the model name. Save the Azure OpenAI-compatible endpoint and key separately from regular OpenAI settings.
 
 ```sh
 
 ## .env file
-AZURE_API_KEY={your azure key}
-AZURE_API_BASE={your Language API base url}
-AZURE_API_TYPE=azure
-AZURE_API_VERSION=2023-05-15
+AZURE_OPENAI_API_KEY={your azure key}
+AZURE_OPENAI_BASE_URL={your Azure OpenAI-compatible base URL}
 
 ```
 And now we can run akasha in python
@@ -287,8 +284,10 @@ response = ak(data_source, prompt)
 Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY,' and for most Hugging Face models, a GPU is required to run the models. However, for .gguf models, you can use a CPU to run them.
 
 ```python
-openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
-openai4_model = "openai:gpt-4"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
+openai_model = "openai:gpt-3.5-turbo"  # needs OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
+openai4_model = "openai:gpt-4"  # needs OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
+azure_model = "azure:<deployment-name>"  # needs AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
+azure_embedding = "azure:<embedding-deployment-name>"  # Azure embedding deployment
 gemini_flash_model = "gemini:gemini-2.5-flash" # need environment variable "GEMINI_API_KEY"
 ollama_model = "ollama:llama3.1"  # default server: http://localhost:11434/v1
 ollama_remote_model = "ollama:http://192.168.1.10:11434@qwen3:8b"

@@ -1,0 +1,1 @@
+Device Beta uses protocol ORBIT-882.

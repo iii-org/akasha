@@ -62,6 +62,10 @@ def configure_logging(
         root_logger.addHandler(_console_handler)
     else:
         _console_handler.setFormatter(logging.Formatter(console_fmt))
+        # Test runners and applications may temporarily rebuild root handlers.
+        # Keep the cached handler usable when that happens.
+        if _console_handler not in root_logger.handlers:
+            root_logger.addHandler(_console_handler)
 
     log_file_path = None
     if isinstance(keep_logs, str) and keep_logs.strip():
@@ -88,6 +92,8 @@ def configure_logging(
             _file_path = log_file_str
         else:
             _file_handler.setFormatter(logging.Formatter(file_fmt))
+            if _file_handler not in root_logger.handlers:
+                root_logger.addHandler(_file_handler)
     else:
         if _file_handler is not None:
             root_logger.removeHandler(_file_handler)

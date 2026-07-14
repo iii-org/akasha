@@ -16,6 +16,7 @@ from langchain_core.tools import BaseTool
 from akasha.helper.base import get_doc_length
 from akasha.helper.run_llm import content_to_text, content_to_thinking
 from akasha.utils.atman import basic_llm
+from akasha.utils.models.thinking import ThinkingBudget
 from akasha.utils.base import (
     DEFAULT_MAX_INPUT_TOKENS,
     DEFAULT_MAX_OUTPUT_TOKENS,
@@ -177,7 +178,7 @@ class agents(basic_llm):
         stream: bool = False,
         env_file: str = "",
         thinking: bool = False,
-        thinking_budget: int | None = None,
+        thinking_budget: ThinkingBudget = None,
     ):
         super().__init__(
             model=model,
@@ -226,6 +227,28 @@ class agents(basic_llm):
         if self.system_prompt.strip():
             kwargs["system_prompt"] = self.system_prompt
         return create_agent(**kwargs)
+
+    def _display_thinking_info(self) -> None:
+        message = (
+            "Thinking: %s, Thinking budget level: %s, "
+            "Effective thinking budget: %s"
+        )
+        if self.verbose:
+            print(
+                message
+                % (
+                    self.thinking,
+                    self.thinking_budget_level,
+                    self.effective_thinking_budget,
+                )
+            )
+        if self.keep_logs:
+            logging.info(
+                message,
+                self.thinking,
+                self.thinking_budget_level,
+                self.effective_thinking_budget,
+            )
 
     def _record_result(self, timestamp: str, result: Any, elapsed: float) -> None:
         messages = _extract_messages(result)
@@ -284,6 +307,7 @@ class agents(basic_llm):
         return await self._ainvoke(question, messages)
 
     async def _ainvoke(self, question: str, messages: List[dict] | None):
+        self._display_thinking_info()
         start = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         if self.keep_logs:
@@ -293,6 +317,9 @@ class agents(basic_llm):
                 "question": question,
                 "model": self.model,
                 "tools": list(self.tools),
+                "thinking": self.thinking,
+                "thinking_budget_level": self.thinking_budget_level,
+                "effective_thinking_budget": self.effective_thinking_budget,
             }
         self.input_len = get_doc_length(self.language, question)
         self.tokens = _count_tokens(self.model_obj, question)
@@ -308,6 +335,7 @@ class agents(basic_llm):
     def _stream(
         self, question: str, messages: List[dict] | None, include_thinking: bool | None
     ) -> Generator[dict, None, None]:
+        self._display_thinking_info()
         start = time.time()
         timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
         collected = []

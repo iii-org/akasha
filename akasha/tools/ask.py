@@ -1,4 +1,5 @@
 from akasha.utils.atman import basic_llm
+from akasha.utils.models.thinking import ThinkingBudget
 from akasha.utils.base import (
     DEFAULT_MODEL,
     DEFAULT_MAX_OUTPUT_TOKENS,
@@ -47,7 +48,7 @@ class ask(basic_llm):
         stream: bool = False,
         env_file: str = "",
         thinking: bool = False,
-        thinking_budget: int | None = None,
+        thinking_budget: ThinkingBudget = None,
     ):
         """_summary_
 
@@ -97,6 +98,12 @@ class ask(basic_llm):
         if self.keep_logs:
             logging.info("Model: %s, Temperature: %s", self.model, self.temperature)
             logging.info(
+                "Thinking: %s, Thinking budget level: %s, Effective thinking budget: %s",
+                self.thinking,
+                self.thinking_budget_level,
+                self.effective_thinking_budget,
+            )
+            logging.info(
                 "Prompt format type: %s, Max input tokens: %s",
                 self.prompt_format_type,
                 self.max_input_tokens,
@@ -111,6 +118,12 @@ class ask(basic_llm):
 
         if self.verbose:
             print(f"Model: {self.model}, Temperature: {self.temperature}")
+            print(
+                "Thinking: "
+                f"{self.thinking}, Thinking budget level: "
+                f"{self.thinking_budget_level}, Effective thinking budget: "
+                f"{self.effective_thinking_budget}"
+            )
             print(
                 f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
             )

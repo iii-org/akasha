@@ -226,7 +226,10 @@ def call_stream_model(
             + "\n\nText generation encountered an error.\
             Please check your model setting.\n\n"
         )
-        yield e
+        # A provider exception is not a valid stream chunk.  Yielding it
+        # makes callers fail later with unrelated type errors while
+        # concatenating the response.  Preserve the original failure.
+        raise
 
 
 def content_to_text(content) -> str:
@@ -259,19 +262,23 @@ def content_to_text(content) -> str:
     return str(content)
 
 
-def content_to_thinking(content) -> str:
+def content_to_thinking(content, additional_kwargs=None) -> str:
     """Extract reasoning/thinking text from LangChain content blocks."""
-    if not isinstance(content, list):
-        return ""
     parts = []
-    for block in content:
-        if not isinstance(block, dict):
-            continue
-        if block.get("type") not in {"reasoning", "thinking"}:
-            continue
-        value = block.get("reasoning") or block.get("thinking") or block.get("text")
-        if value:
-            parts.append(str(value))
+    if isinstance(content, list):
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") not in {"reasoning", "thinking"}:
+                continue
+            value = block.get("reasoning") or block.get("thinking") or block.get("text")
+            if value:
+                parts.append(str(value))
+    if isinstance(additional_kwargs, dict):
+        for key in ("reasoning_content", "thinking", "reasoning"):
+            value = additional_kwargs.get(key)
+            if value:
+                parts.append(value if isinstance(value, str) else str(value))
     return "".join(parts)
 
 
@@ -288,7 +295,9 @@ def call_stream_events(
 
     for chunk in model.stream(normalize_chat_input(input_text)):
         content = getattr(chunk, "content", "")
-        thinking = content_to_thinking(content)
+        thinking = content_to_thinking(
+            content, getattr(chunk, "additional_kwargs", None)
+        )
         answer = content_to_text(content)
         if include_thinking and thinking:
             yield {"type": "thinking", "data": thinking}

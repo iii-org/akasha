@@ -5,13 +5,13 @@ from typing import Callable, Union, Tuple
 # from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_openai import (
     OpenAIEmbeddings,
-    AzureOpenAIEmbeddings,
 )
 import os
 import traceback
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.embeddings import Embeddings
 from dotenv import dotenv_values
+from akasha.utils.models.thinking import ThinkingBudget
 from akasha.helper.base import separate_name, decide_embedding_type
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
@@ -30,13 +30,9 @@ def _get_env_var(env_file: str = "") -> dict:
 
     require_env = [
         "OPENAI_API_KEY",
-        "OPENAI_API_BASE",
-        "OPENAI_API_VERSION",
-        "OPEANI_API_TYPE",
-        "AZURE_API_KEY",
-        "AZURE_API_BASE",
-        "AZURE_API_VERSION",
-        "AZURE_API_TYPE",
+        "OPENAI_BASE_URL",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_BASE_URL",
         "SERPER_API_KEY",
         "GEMINI_API_KEY",
         "HF_TOKEN",
@@ -58,37 +54,21 @@ def _get_env_var(env_file: str = "") -> dict:
     return env_dict
 
 
-def _handle_azure_env(env_dict: dict) -> Tuple[str, str, str]:
-    """from environment variable dictionary env_dict get the api_base, api_key, api_version
+def _openai_endpoint(env_dict: dict, provider: str = "openai") -> Tuple[str, str]:
+    """Return the endpoint and key for the explicitly selected provider."""
+    if provider == "azure":
+        api_key = env_dict.get("AZURE_OPENAI_API_KEY")
+        base_url = env_dict.get("AZURE_OPENAI_BASE_URL")
+        if not api_key or not base_url:
+            raise ValueError(
+                "AZURE_OPENAI_API_KEY and AZURE_OPENAI_BASE_URL must be provided together."
+            )
+        return base_url, api_key
 
-    Returns:
-        (str, str, str): api_base, api_key, api_version
-    """
-    check_env, ret, count = ["BASE", "KEY", "VERSION"], ["", "", ""], 0
-    try:
-        for check in check_env:
-            if f"AZURE_API_{check}" in env_dict:
-                ret[count] = env_dict[f"AZURE_API_{check}"]
-                # if "OPENAI_API_BASE" in os.environ:
-                # os.environ.pop("OPENAI_API_BASE", None)
-            elif f"OPENAI_API_{check}" in os.environ:
-                ret[count] = env_dict[f"OPENAI_API_{check}"]
-                if check == "BASE":
-                    env_dict["AZURE_API_BASE"] = os.environ["OPENAI_API_BASE"]
-                    env_dict.pop("OPENAI_API_BASE", None)
-            else:
-                if check == "VERSION":
-                    ret[count] = "2023-05-15"
-                else:
-                    raise Exception(
-                        f"can not find the openai {check} in environment variable.\n\n"
-                    )
-            count += 1
-    except Exception as err:
-        traceback.print_exc()
-        print(err)
-
-    return ret[0], ret[1], ret[2]
+    api_key = env_dict.get("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("can not find the OPENAI_API_KEY in environment variable.\n\n")
+    return env_dict.get("OPENAI_BASE_URL", ""), api_key
 
 
 def handle_embeddings(
@@ -122,34 +102,11 @@ def handle_embeddings(
     embedding_type, embedding_name = separate_name(embedding_name)
     env_dict = _get_env_var(env_file)
     if embedding_type in ["text-embedding-ada-002", "openai", "openaiembeddings"]:
-        import openai
-
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
-            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
-        ):
-            embedding_name = embedding_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env(env_dict)
-            embeddings = AzureOpenAIEmbeddings(
-                model=embedding_name,
-                azure_endpoint=api_base,
-                api_key=api_key,
-                api_version=api_version,
-                validate_base_url=False,
-            )
-
-        else:
-            if "OPENAI_API_KEY" not in env_dict:
-                raise Exception(
-                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
-                )
-
-            openai.api_type = "open_ai"
-            embeddings = OpenAIEmbeddings(
-                model=embedding_name,
-                openai_api_base="https://api.openai.com/v1",
-                api_key=env_dict["OPENAI_API_KEY"],
-                openai_api_type="open_ai",
-            )
+        base_url, api_key = _openai_endpoint(env_dict, provider="openai")
+        kwargs = {"model": embedding_name, "api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        embeddings = OpenAIEmbeddings(**kwargs)
         info = "selected openai embeddings.\n"
 
     elif embedding_type in [
@@ -191,40 +148,28 @@ def handle_embeddings(
     elif embedding_type in ["gemini", "gemi", "google"]:
         from akasha.utils.models.gemi import gemini_embed
 
+        if not env_dict.get("GEMINI_API_KEY"):
+            raise ValueError("can not find the GEMINI_API_KEY in environment variable.\n\n")
         embeddings = gemini_embed(
-            model_name=embedding_name, api_key=os.environ["GEMINI_API_KEY"]
+            model_name=embedding_name, api_key=env_dict["GEMINI_API_KEY"]
         )
         info = "selected gemini embeddings.\n"
 
+    elif embedding_type in ["azure", "azure-openai", "azure_openai"]:
+        base_url, api_key = _openai_endpoint(env_dict, provider="azure")
+        kwargs = {"model": embedding_name, "api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        embeddings = OpenAIEmbeddings(**kwargs)
+
+        info = "selected Azure OpenAI-compatible embeddings.\n"
+
     else:
-        import openai
-
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
-            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
-        ):
-            embedding_name = embedding_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env(env_dict)
-            embeddings = AzureOpenAIEmbeddings(
-                model=embedding_name,
-                azure_endpoint=api_base,
-                api_key=api_key,
-                api_version=api_version,
-                validate_base_url=False,
-            )
-
-        else:
-            if "OPENAI_API_KEY" not in env_dict:
-                raise Exception(
-                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
-                )
-            openai.api_type = "open_ai"
-
-            embeddings = OpenAIEmbeddings(
-                model=embedding_name,
-                openai_api_base="https://api.openai.com/v1",
-                api_key=env_dict["OPENAI_API_KEY"],
-                openai_api_type="open_ai",
-            )
+        base_url, api_key = _openai_endpoint(env_dict, provider="openai")
+        kwargs = {"model": embedding_name, "api_key": api_key}
+        if base_url:
+            kwargs["base_url"] = base_url
+        embeddings = OpenAIEmbeddings(**kwargs)
 
         info = "can not find the embeddings, use openai as default.\n"
 
@@ -268,7 +213,7 @@ def handle_model(
     max_output_tokens: int = 1024,
     env_file: str = "",
     thinking: bool = False,
-    thinking_budget: int | None = None,
+    thinking_budget: ThinkingBudget = None,
 ) -> BaseLanguageModel:
     """create model client used in document QA, default if openai "gpt-3.5-turbo"
 
@@ -341,6 +286,15 @@ def handle_model(
         info = "selected ollama ChatModel. \n"
         model = build_chat_model(
             "ollama", ollama_model_name, ollama_env, temperature, max_output_tokens,
+            thinking, thinking_budget,
+        )
+
+    elif model_type in ["azure", "azure-openai", "azure_openai"]:
+        from akasha.utils.models.chat import build_chat_model
+
+        info = "selected Azure OpenAI-compatible ChatModel. \n"
+        model = build_chat_model(
+            "azure", model_name, env_dict, temperature, max_output_tokens,
             thinking, thinking_budget,
         )
 
@@ -473,33 +427,19 @@ def handle_model(
 def handle_client(model: str, env_file: str = ""):
     client_type, model_name = separate_name(model)
     env_dict = _get_env_var(env_file)
-    if client_type == "openai":
+    if client_type in ["openai", "azure", "azure-openai", "azure_openai"]:
         from akasha.utils.models.azure_openai import AzureOpenAIClient
 
-        if ("AZURE_API_TYPE" in env_dict and env_dict["AZURE_API_TYPE"] == "azure") or (
-            "OPENAI_API_TYPE" in env_dict and env_dict["OPENAI_API_TYPE"] == "azure"
-        ):
-            model_name = model_name.replace(".", "")
-            api_base, api_key, api_version = _handle_azure_env(env_dict)
-
-            client = AzureOpenAIClient(
-                api_key=api_key,
-                model_name=model_name,
-                api_type="azure",
-                api_base=api_base,
-                api_version=api_version,
-            )
-
-        else:
-            if "OPENAI_API_KEY" not in env_dict:
-                raise Exception(
-                    "can not find the OPENAI_API_KEY in environment variable.\n\n"
-                )
-            client = AzureOpenAIClient(
-                api_key=env_dict["OPENAI_API_KEY"],
-                model_name=model_name,
-                api_type="openai",
-            )
+        api_base, api_key = _openai_endpoint(
+            env_dict,
+            provider="azure" if client_type in ["azure", "azure-openai", "azure_openai"] else "openai",
+        )
+        client = AzureOpenAIClient(
+            api_key=api_key,
+            model_name=model_name,
+            api_type="openai",
+            api_base=api_base,
+        )
     elif client_type == "gemini":
         from akasha.utils.models.gemi import gemini_model
 

@@ -18,3 +18,9 @@ def test_legacy_gemini_parts_are_chat_message_content():
     assert normalize_chat_input(
         [{"role": "model", "parts": ["system text"]}]
     ) == [{"role": "system", "content": "system text"}]
+
+
+def test_reasoning_content_from_provider_metadata_is_normalized():
+    assert content_to_thinking(
+        "", {"reasoning_content": "private provider reasoning"}
+    ) == "private provider reasoning"

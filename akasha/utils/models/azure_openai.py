@@ -57,9 +57,10 @@ class AzureOpenAIClient(LLM):
         self.api_type = api_type
         self.api_key = api_key
         if api_type == "openai":
-            self.client = OpenAI(
-                api_key=api_key,
-            )
+            kwargs = {"api_key": api_key}
+            if api_base:
+                kwargs["base_url"] = api_base
+            self.client = OpenAI(**kwargs)
 
         else:
             self.client = AzureOpenAI(
@@ -191,7 +192,10 @@ class AzureOpenAIClient(LLM):
         async def process_batch(prompts):
             # 根據 api_type 決定用哪個 async client
             if self.api_type == "openai":
-                client = AsyncOpenAI(api_key=self.api_key)
+                kwargs = {"api_key": self.api_key}
+                if self.api_base:
+                    kwargs["base_url"] = self.api_base
+                client = AsyncOpenAI(**kwargs)
             else:
                 client = AsyncAzureOpenAI(
                     azure_endpoint=self.api_base,

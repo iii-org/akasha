@@ -19,6 +19,11 @@ from akasha.utils.base import (
 )
 from akasha.utils.db.db_structure import dbs
 from akasha.utils.logging_config import configure_logging
+from akasha.utils.models.thinking import (
+    ThinkingBudget,
+    normalize_thinking_budget,
+    normalize_thinking_level,
+)
 from akasha.utils.db.load_db import process_db, load_db_by_chroma_name
 
 
@@ -42,7 +47,7 @@ class basic_llm:
         verbose: bool = False,
         env_file: str = "",
         thinking: bool = False,
-        thinking_budget: int | None = None,
+        thinking_budget: ThinkingBudget = None,
     ):
         """_summary_
 
@@ -76,6 +81,12 @@ class basic_llm:
         self.env_file = env_file
         self.thinking = thinking
         self.thinking_budget = thinking_budget
+        self.thinking_budget_level = normalize_thinking_level(thinking_budget)
+        self.effective_thinking_budget = normalize_thinking_budget(
+            thinking_budget,
+            thinking=thinking,
+            max_output_tokens=max_output_tokens,
+        )
         self.timestamp_list = []
         self.logs: dict[dict] = {}
         configure_logging(verbose=self.verbose, keep_logs=self.keep_logs)
@@ -141,6 +152,14 @@ class basic_llm:
                 )
                 self.thinking = new_thinking
                 self.thinking_budget = new_thinking_budget
+                self.thinking_budget_level = normalize_thinking_level(
+                    new_thinking_budget
+                )
+                self.effective_thinking_budget = normalize_thinking_budget(
+                    new_thinking_budget,
+                    thinking=new_thinking,
+                    max_output_tokens=new_tokens,
+                )
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
@@ -187,6 +206,9 @@ class basic_llm:
         self.logs[timestamp]["language"] = language_dict[self.language]
         self.logs[timestamp]["temperature"] = self.temperature
         self.logs[timestamp]["max_input_tokens"] = self.max_input_tokens
+        self.logs[timestamp]["thinking"] = self.thinking
+        self.logs[timestamp]["thinking_budget_level"] = self.thinking_budget_level
+        self.logs[timestamp]["effective_thinking_budget"] = self.effective_thinking_budget
 
         return True
 
