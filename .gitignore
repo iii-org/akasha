@@ -22,11 +22,13 @@ process_dataset.py
 t.py
 summarization/
 summarization/mic_10.txt
-docs/plant/风车菊.pdf
-docs/plant/石珀.pdf
+docs/plant/风车??pdf
+docs/plant/?��?.pdf
 docs/test_memory/
 config/
-summarization/20230531_智慧製造需求下之邊緣運算與新興通訊發展分析.txt
+!tests/config/
+!tests/config/model_manifest.yaml
+summarization/20230531_?�慧製造�?求�?之�?�??算�??��??��??��??��?.txt
 eva.json
 .coverage
 trace-out/

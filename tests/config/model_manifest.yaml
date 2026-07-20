@@ -1,0 +1,50 @@
+# 測試模型清單；此檔案可提交，不得放 API key。
+# model ID 請填 provider 帳號中實際可用的名稱。
+
+models:
+  - id: "openai:gpt-5.4"
+    provider: "openai"
+    test_group: "pr"
+    capabilities: {}
+
+  # Azure deployment name；實際呼叫使用 AZURE_OPENAI_* 環境變數。
+  - id: "azure:DeepSeek-V4-Flash"
+    provider: "azure"
+    test_group: "pr"
+    capabilities: {}
+
+  - id: "gemini:gemini-3.5-flash"
+    provider: "gemini"
+    test_group: "pr"
+    capabilities: {}
+
+  - id: "anthropic:claude-sonnet-4-6"
+    provider: "anthropic"
+    test_group: "pr"
+    capabilities: {}
+
+  # 只有在有固定 Ollama runner 時加入 PR；否則改成 nightly。
+  - id: "ollama:gemma4:26b"
+    provider: "ollama"
+    test_group: "pr"
+    capabilities: {}
+
+embeddings:
+  - id: "openai:text-embedding-3-small"
+    provider: "openai"
+    test_group: "pr"
+    dimensions: "discover"
+
+  # # Azure embedding deployment；實際呼叫使用 AZURE_OPENAI_* 環境變數。
+  # - id: "azure:<embedding-deployment-name>"
+  #   provider: "azure"
+  #   test_group: "pr"
+  #   dimensions: "discover"
+
+  - id: "gemini:gemini-embedding-2"
+    provider: "gemini"
+    test_group: "pr"
+    dimensions: "discover"
+
+# 初始只需填 model ID；capabilities 會在後續 probe/測試建置時補齊。
+# dimensions 使用 discover，讓測試實際取得並驗證 embedding 維度。
