@@ -84,6 +84,50 @@ def test_openai_thinking_level_maps_to_reasoning_effort(monkeypatch):
     assert captured["reasoning_effort"] == "high"
 
 
+def test_anthropic_does_not_send_temperature(monkeypatch):
+    captured = {}
+
+    class FakeChatAnthropic:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    import langchain_anthropic
+
+    monkeypatch.setattr(langchain_anthropic, "ChatAnthropic", FakeChatAnthropic)
+    build_chat_model(
+        "anthropic",
+        "claude-sonnet-4-6",
+        {"ANTHROPIC_API_KEY": "test"},
+        temperature=0.0,
+    )
+
+    assert captured["model"] == "claude-sonnet-4-6"
+    assert "temperature" not in captured
+
+
+def test_anthropic_thinking_reserves_tokens_for_reasoning(monkeypatch):
+    captured = {}
+
+    class FakeChatAnthropic:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    import langchain_anthropic
+
+    monkeypatch.setattr(langchain_anthropic, "ChatAnthropic", FakeChatAnthropic)
+    build_chat_model(
+        "anthropic",
+        "claude-sonnet-4-6",
+        {"ANTHROPIC_API_KEY": "test"},
+        max_output_tokens=256,
+        thinking=True,
+        thinking_budget="medium",
+    )
+
+    assert captured["max_tokens_to_sample"] == 5120
+    assert captured["thinking"]["budget_tokens"] == 4096
+
+
 def test_thinking_budget_is_ignored_when_thinking_is_disabled(monkeypatch):
     captured = {}
 

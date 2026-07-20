@@ -292,6 +292,7 @@ class agents(basic_llm):
     ):
         self.question = question
         if self.stream:
+            self._ensure_stream_supported()
             return self._stream(question, messages, include_thinking)
         return asyncio.run(self._ainvoke(question, messages))
 
@@ -303,6 +304,7 @@ class agents(basic_llm):
     ):
         self.question = question
         if self.stream:
+            self._ensure_stream_supported()
             return self._stream(question, messages, include_thinking)
         return await self._ainvoke(question, messages)
 
@@ -351,13 +353,20 @@ class agents(basic_llm):
                 "tools": list(self.tools),
             }
         try:
-            for update in self._agent.stream(
-                self._payload(question, messages),
-                config={"recursion_limit": max(3, self.max_round * 2 + 1)},
-                # ``messages`` yields AIMessageChunk/ToolMessage chunks, so
-                # callers receive token-level answer/thinking events.
-                stream_mode="messages",
-            ):
+            stream_kwargs = {
+                "input": self._payload(question, messages),
+                "config": {"recursion_limit": max(3, self.max_round * 2 + 1)},
+                "stream_mode": "messages",
+            }
+            updates = self._agent.stream(
+                stream_kwargs["input"],
+                config=stream_kwargs["config"],
+                stream_mode=stream_kwargs["stream_mode"],
+            )
+
+            # ``messages`` yields AIMessageChunk/ToolMessage chunks, so
+            # callers receive token-level answer/thinking events.
+            for update in updates:
                 message = _stream_message_chunk(update)
                 messages = [message] if message is not None else _stream_update_messages(update)
                 for message in messages:
@@ -386,3 +395,24 @@ class agents(basic_llm):
         except Exception:
             logger.exception("LangChain agent streaming failed")
             raise
+
+    def _has_async_only_tools(self) -> bool:
+        """Return whether the agent contains tools that cannot sync-invoke.
+
+        MCP tools produced by ``langchain-mcp-adapters`` expose only a
+        coroutine. LangGraph's synchronous ToolNode calls ``tool.invoke`` and
+        therefore raises for those tools.
+        """
+        return any(
+            getattr(tool, "coroutine", None) is not None
+            and getattr(tool, "func", None) is None
+            for tool in self.tools.values()
+        )
+
+    def _ensure_stream_supported(self) -> None:
+        """Reject sync streaming when the agent contains async-only tools."""
+        if self._has_async_only_tools():
+            raise ValueError(
+                "MCP tools are async-only; construct the agent with stream=False "
+                "so the agent can await the complete tool result via ainvoke()."
+            )

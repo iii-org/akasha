@@ -440,9 +440,8 @@ class ask(basic_llm):
             ret[-1] += db_doc.page_content + "\n"
             tot_token_len += cur_token_len
 
-        ## remove the last empty string ##
-        if ret[-1] == "":
-            ret = ret[:-1]
+        ## remove empty and whitespace-only chunks ##
+        ret = [document for document in ret if document.strip()]
 
         return ret, tot_token_len
 

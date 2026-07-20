@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "akasha/agent/agents.py": {
-    "mtime": 1784018941.1717417,
-    "ast_hash": "ff55dbd9f765a63ae6c8b1cb1e33fa9c",
+    "mtime": 1784031284.5323646,
+    "ast_hash": "927082a7f27bc94d93dc9e87ea2d1d27",
     "semantic_hash": ""
   },
   "akasha/agent/base.py": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "akasha/tools/ask.py": {
-    "mtime": 1784018904.3890555,
-    "ast_hash": "c8c07bdf039bc6e2b44aa38bb31bcbab",
+    "mtime": 1784517322.9961102,
+    "ast_hash": "106daa92fe7937c55ed98165e2450bb2",
     "semantic_hash": ""
   },
   "akasha/tools/gen_img.py": {
@@ -619,11 +619,6 @@
     "ast_hash": "7d0eaefeaca0407b11c47ee143a7442f",
     "semantic_hash": ""
   },
-  "upgrade_light_version.md": {
-    "mtime": 1783319435.2235186,
-    "ast_hash": "39bb905e152468adab1c91bcb7ed5047",
-    "semantic_hash": ""
-  },
   "docs/mic/20230224_\u88fd\u9020\u696d\u6a5f\u5ee0\u93c8\u667a\u6167\u61c9\u7528\u767c\u5c55\u614b\u52e2.pdf": {
     "mtime": 1782974917.2214673,
     "ast_hash": "1358b49b95a51a467b0f3ce0791f7ec1",
@@ -725,8 +720,8 @@
     "semantic_hash": ""
   },
   "akasha/utils/models/chat.py": {
-    "mtime": 1784018532.4057972,
-    "ast_hash": "b4f61862d747a493a09c9f63f5c48227",
+    "mtime": 1784033615.4441817,
+    "ast_hash": "b1b00adb7c087c9c835629ac7ee8e54e",
     "semantic_hash": ""
   },
   "akasha/utils/models/thinking.py": {
@@ -760,8 +755,8 @@
     "semantic_hash": ""
   },
   "tests/smoke/test_provider_contract_smoke.py": {
-    "mtime": 1784019021.8957913,
-    "ast_hash": "3f1be2814703666b6d2c3f56249ed24a",
+    "mtime": 1784033153.0917118,
+    "ast_hash": "1bfecd6618747a6599d1aad6a4e75f31",
     "semantic_hash": ""
   },
   "tests/smoke/test_rag_contract_smoke.py": {
@@ -845,8 +840,8 @@
     "semantic_hash": ""
   },
   "tests/unit/test_thinking_model_config.py": {
-    "mtime": 1784018553.6723053,
-    "ast_hash": "8e5fd10101b927c34924ea159bc8ee0f",
+    "mtime": 1784033617.1417243,
+    "ast_hash": "35eead1434e412bfcd39e2b77bb2f4ae",
     "semantic_hash": ""
   },
   "dev_docs/2026-07-common-chat-model-interface-upgrade.md": {
@@ -885,8 +880,8 @@
     "semantic_hash": ""
   },
   "tests/README.md": {
-    "mtime": 1784023672.7038417,
-    "ast_hash": "95c1eb22db7500ea18cfe282d550524b",
+    "mtime": 1784033522.9309795,
+    "ast_hash": "44792ae66ff76f3e74f8b3c702433255",
     "semantic_hash": ""
   },
   "tests/TESTING_GUIDE.md": {
@@ -917,6 +912,41 @@
   "tests/tests_data/rag_smoke/unicode_\u7e41\u4e2d.txt": {
     "mtime": 1784020017.493036,
     "ast_hash": "fdc083e42fb28d39d8f378250a9ce174",
+    "semantic_hash": ""
+  },
+  "akasha/helper/token_counter.py": {
+    "mtime": 1784011109.9338422,
+    "ast_hash": "5f2e24698375d77f0deee16f99ddd36d",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/mcp/echo_server.py": {
+    "mtime": 1784029820.984764,
+    "ast_hash": "763bac9f54a2c7aca22502c57190dd25",
+    "semantic_hash": ""
+  },
+  "tests/smoke/test_ask_info_urls_pure.py": {
+    "mtime": 1784517543.20031,
+    "ast_hash": "f61fe56bf28722b4bf064ef8b9b88ab8",
+    "semantic_hash": ""
+  },
+  "tests/smoke/test_mcp_pipeline.py": {
+    "mtime": 1784031982.485155,
+    "ast_hash": "fa44da484ade9634e7a9f94f4c64df17",
+    "semantic_hash": ""
+  },
+  "tests/smoke/test_web_info_ask.py": {
+    "mtime": 1784513488.281611,
+    "ast_hash": "23220dc2467b1ec533781258275845ca",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_ask_info.py": {
+    "mtime": 1784517262.2477422,
+    "ast_hash": "cf0ba2d5c78a16b14fbf234f0d8e8d38",
+    "semantic_hash": ""
+  },
+  "dev_docs/upgrade_light_version.md": {
+    "mtime": 1783319435.2235186,
+    "ast_hash": "39bb905e152468adab1c91bcb7ed5047",
     "semantic_hash": ""
   }
 }

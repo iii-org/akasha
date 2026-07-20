@@ -115,11 +115,16 @@ def build_chat_model(
 
         if not env.get("ANTHROPIC_API_KEY"):
             raise ValueError("can not find the ANTHROPIC_API_KEY in environment variable.\n\n")
+        anthropic_max_tokens = max_output_tokens
+        if thinking:
+            anthropic_max_tokens = max(
+                anthropic_max_tokens,
+                (normalized_budget or max(1024, max_output_tokens // 2)) + 1024,
+            )
         kwargs = {
             "model": model_name,
             "api_key": env["ANTHROPIC_API_KEY"],
-            "temperature": temperature,
-            "max_tokens_to_sample": max_output_tokens,
+            "max_tokens_to_sample": anthropic_max_tokens,
         }
         if thinking:
             kwargs["thinking"] = {

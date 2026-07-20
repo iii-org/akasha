@@ -2,7 +2,7 @@
 
 本文件說明目前 `akasha-repo` 的測試環境、執行指令與測試案例。所有指令以 Windows `cmd.exe` 和專案外部的 `.venv` 為準；不要使用 WSL 或 PowerShell 執行這組測試。
 
-目前測試範圍先聚焦在：
+目前測試範圍包含：
 
 - Akasha 公開 API：`ask`、`agents`
 - LLM provider adapter 與真實 provider contract
@@ -10,8 +10,10 @@
 - thinking=False/True 與 semantic thinking level
 - thinking、answer、tool event 的 response normalization
 - logs 與 JSON serializable contract
+- embedding provider contract
+- RAG 的 Chroma、retrieval、grounded answer 與 cleanup pipeline
 
-RAG、embedding 與 MCP 測試目前刻意不納入 provider smoke workflow，等測試資料準備完成後再加入。
+RAG/embedding live tests 是 opt-in，只有明確設定對應的 `RUN_*` 開關才會呼叫外部 provider。
 
 ## 測試環境
 
@@ -41,29 +43,38 @@ cmd.exe /d /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo && C:\Use
 tests\.env
 ```
 
-目前 provider model 設定位於 `tests/smoke/test_provider_contract_smoke.py`：
+Provider smoke 的 chat model 設定位於 `tests/smoke/test_provider_contract_smoke.py`；RAG embedding model 統一由 `tests/config/model_manifest.yaml` 的 `embeddings` 區段提供：
 
 | Provider | Model alias | 必要設定 |
 |---|---|---|
 | OpenAI | `openai:gpt-5.4` | `OPENAI_API_KEY` |
 | Azure OpenAI | `azure:DeepSeek-V4-Flash` | `AZURE_OPENAI_API_KEY`、`AZURE_OPENAI_BASE_URL` |
 | Gemini | `gemini:gemini-3.5-flash` | `GEMINI_API_KEY` |
-| Anthropic | `anthropic:claude-opus-4-8` | `ANTHROPIC_API_KEY` |
+| Anthropic | `anthropic:claude-sonnet-4-6` | `ANTHROPIC_API_KEY` |
 | Ollama | `ollama:gemma4:26b` | `OLLAMA_API_BASE` |
+
+目前 manifest 中的 embedding cases：
+
+| Provider | Embedding alias | 必要設定 |
+|---|---|---|
+| OpenAI | `openai:text-embedding-3-small` | `OPENAI_API_KEY` |
+| Gemini | `gemini:gemini-embedding-2` | `GEMINI_API_KEY` |
+
+若新增 embedding provider，請先更新 `model_manifest.yaml`；embedding contract test 會自動依 manifest 收集案例。
 
 不要把 API key 寫入測試程式或 commit 到 Git。`tests/.env` 應維持在 ignored/private 狀態。
 
 ## 基本測試指令
 
-### 1. 執行所有 unit 與 contract tests
+### 1. 執行 unit tests
 
 這是日常修改後的第一個回歸測試，不會呼叫真實 provider API：
 
 ```bat
-cmd.exe /d /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo && C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\unit tests\contract -q"
+cmd.exe /d /s /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo&& C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\unit -q"
 ```
 
-涵蓋目前約 58 個測試案例，重點包括：
+重點包括：
 
 - agent tools schema 與 agent 核心行為
 - database structure 與文件處理
@@ -75,6 +86,60 @@ cmd.exe /d /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo && C:\Use
 - ask/agents 公開 API event contract
 - logging handler 行為
 
+### 5. 執行 embedding provider smoke
+
+這個測試會從 `tests/config/model_manifest.yaml` 讀取所有 embedding alias，實際呼叫 provider 並確認回傳向量數量、維度與數值格式：
+
+```bat
+cmd.exe /d /s /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo&& set RUN_EMBEDDING_SMOKE=1&& C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\smoke\test_embedding_provider_contract.py -vv -s"
+```
+
+目前預期 2 個案例：OpenAI 與 Gemini。
+
+### 6. 執行 OpenAI 分階段 RAG pipeline
+
+這會實際執行：
+
+```text
+real embedding -> Chroma build -> Chroma reload -> retrieval -> chat model -> grounded answer -> cleanup
+```
+
+回答必須包含測試文件中的 `RAG-7319-TAIPEI`：
+
+```bat
+cmd.exe /d /s /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo&& set RUN_RAG_PIPELINE=1&& C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\smoke\test_rag_pipeline_stages.py -vv -s"
+```
+
+### 7. 執行 Gemini 完整 RAG pipeline
+
+這個測試會從 manifest 讀取 `gemini:gemini-embedding-2`，再實際串接 Gemini embedding、Chroma、retrieval 與 Gemini chat model：
+
+```bat
+cmd.exe /d /s /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo&& set RUN_GEMINI_RAG=1&& C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\smoke\test_gemini_rag_pipeline.py -vv -s"
+```
+
+### 8. 執行 MCP smoke tests
+
+MCP 測試使用本地 deterministic stdio server：
+
+```text
+tests/fixtures/mcp/echo_server.py
+```
+
+測試會驗證 MCP tool discovery、input schema、直接 tool invocation，以及由 `model_manifest.yaml` 的 `models` 區段逐一讀取每個實際模型進行 non-stream tool calling：
+
+```bat
+cmd.exe /d /s /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo&& set RUN_MCP_SMOKE=1&& C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\smoke\test_mcp_pipeline.py -vv -s"
+```
+
+目前會執行 1 個 discovery case、每個 manifest model 1 個端到端 case，以及 1 個 stream guard case：
+
+- discovery/direct invocation
+- 每個 `models` 項目的 real agent non-stream tool calling
+- async-only MCP agent 明確拒絕 sync stream，避免誤用
+
+若 provider key 存在但無效，該 provider 的端到端 case 會失敗；這是刻意保留的真實 credential failure，不會被當成 skip。
+
 ### 2. 只執行 thinking adapter 測試
 
 ```bat
@@ -84,7 +149,7 @@ cmd.exe /d /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo && C:\Use
 ### 3. 執行 API contract 與 response normalization 測試
 
 ```bat
-cmd.exe /d /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo && C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\contract tests\unit\test_run_llm_chat_normalization.py -q"
+cmd.exe /d /s /c "cd /d C:\Users\today\Projects\akasha-update\akasha-repo&& C:\Users\today\Projects\akasha-update\.venv\Scripts\python.exe -m pytest tests\unit\test_run_llm_chat_normalization.py tests\unit\test_thinking_model_config.py -q"
 ```
 
 ### 4. 執行 logging 回歸測試
@@ -132,6 +197,23 @@ cmd.exe /d /c "set RUN_PROVIDER_SMOKE=1 && cd /d C:\Users\today\Projects\akasha-
 6. `ask(stream=True, thinking=True, thinking_budget="medium")`：確認 thinking-enabled stream 仍能產生 final answer。
 
 Gemini 另有 native thinking stream contract 測試。完整收集時目前共 32 個 provider smoke cases；未設定必要 API key 的 provider 會 skip。
+
+## RAG 測試資料與向量儲存
+
+固定 RAG 測試資料位於：
+
+```text
+tests/tests_data/rag_smoke/
+```
+
+其中 `single_fact.txt` 包含固定識別碼 `RAG-7319-TAIPEI`，directory 測試資料包含 Alpha/Beta protocol facts。測試使用專案的 Chroma storage path，不使用正式資料庫或正式 memory 目錄。
+
+RAG pipeline test 的 grounded assertion 分成兩層：
+
+1. retriever 回傳的 `Document` 必須包含測試文件事實。
+2. chat model 的最終回答也必須包含同一個固定識別碼。
+
+因此只回傳非空文字、但沒有使用檢索內容的模型回答不會通過完整 pipeline test。
 
 ## Thinking semantic level
 
@@ -196,9 +278,8 @@ Effective thinking budget: 4096
 
 以下測試不屬於目前的 provider contract smoke workflow：
 
-- RAG：需要文件、embedding、vector store 與檢索資料。
-- MCP：需要 MCP server、工具 schema 與測試資料。
-- `tests/upgrade_tests/` 中的 RAG provider tests：等 RAG 測試資料準備完成後再執行。
+- MCP：請使用上方的 `RUN_MCP_SMOKE=1` 指令單獨執行。
+- `tests/upgrade_tests/` 中的舊 RAG provider tests：仍需依各自 fixture 與 model 設定單獨執行。
 
 不要用以下指令當作目前的非 RAG/MCP 回歸測試：
 
@@ -210,7 +291,7 @@ pytest tests
 
 ## 常見問題
 
-### Smoke tests 全部顯示 skipped
+### Live smoke tests 全部顯示 skipped
 
 確認同一個 `cmd.exe` command 中有：
 
@@ -218,7 +299,7 @@ pytest tests
 set RUN_PROVIDER_SMOKE=1
 ```
 
-並確認 `tests/.env` 存在必要 key。測試會對缺少 key 的 provider 個別 skip。
+並確認使用的是正確的 `RUN_*` 開關；embedding/RAG 測試分別使用 `RUN_EMBEDDING_SMOKE`、`RUN_RAG_PIPELINE` 或 `RUN_GEMINI_RAG`。測試會對缺少 key 的 provider 個別 skip。
 
 ### Ollama 連線失敗
 

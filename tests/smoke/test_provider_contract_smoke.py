@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 
 import pytest
+import yaml
 from dotenv import dotenv_values, load_dotenv
 
 import akasha
@@ -19,18 +20,25 @@ import akasha
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / "tests" / ".env"
+MODEL_MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
 RUN_LIVE = os.getenv("RUN_PROVIDER_SMOKE", "").strip().lower() in {
     "1",
     "true",
     "yes",
 }
 
+REQUIRED_KEYS = {
+    "openai": "OPENAI_API_KEY",
+    "azure": "AZURE_OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "ollama": None,
+}
+
+_manifest = yaml.safe_load(MODEL_MANIFEST.read_text(encoding="utf-8"))
 PROVIDER_MODELS = [
-    ("openai", "openai:gpt-5.4", "OPENAI_API_KEY"),
-    ("azure", "azure:DeepSeek-V4-Flash", "AZURE_OPENAI_API_KEY"),
-    ("gemini", "gemini:gemini-3.5-flash", "GEMINI_API_KEY"),
-    ("anthropic", "anthropic:claude-opus-4-8", "ANTHROPIC_API_KEY"),
-    ("ollama", "ollama:gemma4:26b", None),
+    (item["provider"], item["id"], REQUIRED_KEYS.get(item["provider"]))
+    for item in _manifest["models"]
 ]
 
 pytestmark = [
