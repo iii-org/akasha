@@ -22,7 +22,7 @@ jobs:
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
       AZURE_OPENAI_BASE_URL: ${{ secrets.AZURE_OPENAI_BASE_URL }}
       BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
-
+      RUN_LLM_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
 
