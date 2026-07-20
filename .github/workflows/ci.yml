@@ -17,7 +17,12 @@ jobs:
     container: ${{ matrix.python-image }}
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_BASE_URL: ${{ secrets.AZURE_OPENAI_BASE_URL }}
+      BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +32,20 @@ jobs:
 
       - name: Install dependencies
         run: uv pip install --system -e ".[light,dev]"
+
+      - name: Create test environment file
+        shell: bash
+        run: |
+          umask 077
+          cat > tests/.env <<EOF
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+          OPENAI_BASE_URL=${OPENAI_BASE_URL}
+          GEMINI_API_KEY=${GEMINI_API_KEY}
+          ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+          AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+          AZURE_OPENAI_BASE_URL=${AZURE_OPENAI_BASE_URL}
+          BRAVE_API_KEY=${BRAVE_API_KEY}
+          EOF
 
       - name: Run pytest
         run: pytest --maxfail=1 --disable-warnings -q
