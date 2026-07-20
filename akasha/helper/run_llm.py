@@ -360,7 +360,7 @@ def call_image_model(
             or ("gemini" in model_type)
         ):
             print_flag = False
-            response = model.invoke(input_text, verbose=verbose)
+            response = model.invoke(input_text)
 
         else:
             response = model.call_image(input_text, verbose=verbose)
@@ -382,7 +382,7 @@ def call_image_model(
                 or ("remote" in model_type)
                 or ("gemini" in model_type)
             ):
-                response = model.invoke(input_text, verbose=verbose)
+                response = model.invoke(input_text)
             else:
                 response = model.call_image(input_text, verbose=verbose)
 
