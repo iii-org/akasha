@@ -17,7 +17,6 @@ jobs:
     container: ${{ matrix.python-image }}
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
@@ -39,7 +38,6 @@ jobs:
           umask 077
           cat > tests/.env <<EOF
           OPENAI_API_KEY=${OPENAI_API_KEY}
-          OPENAI_BASE_URL=${OPENAI_BASE_URL}
           GEMINI_API_KEY=${GEMINI_API_KEY}
           ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
           AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
@@ -57,18 +55,13 @@ jobs:
           from openai import OpenAI
 
           api_key = os.environ.get("OPENAI_API_KEY")
-          base_url = os.environ.get("OPENAI_BASE_URL") or None
 
           if not api_key:
               raise RuntimeError("OPENAI_API_KEY is empty")
 
           print("Testing OpenAI embeddings...")
-          print("Using custom base URL:", bool(base_url))
 
-          client = OpenAI(
-              api_key=api_key,
-              base_url=base_url,
-          )
+          client = OpenAI(api_key=api_key)
 
           result = client.embeddings.create(
               model="text-embedding-3-small",
