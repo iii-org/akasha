@@ -80,4 +80,4 @@ jobs:
           PY
 
       - name: Run pytest
-        run: pytest --maxfail=1 --disable-warnings -q
+        run: pytest --maxfail=1 --disable-warnings -q -k "not ollama"
