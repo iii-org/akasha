@@ -124,6 +124,25 @@ class ask(basic_llm):
                 f"{self.thinking_budget_level}, Effective thinking budget: "
                 f"{self.effective_thinking_budget}"
             )
+            if (
+                self.thinking
+                and str(self.model).split(":", 1)[0].lower() in {"gemini", "google", "gemi"}
+                and self.thinking_budget is None
+            ):
+                print(
+                    "\033[33mWarning: Gemini thinking is enabled but "
+                    "thinking_budget is not set. Set thinking_budget to "
+                    "control the thinking token budget.\033[0m"
+                )
+            elif (
+                self.thinking
+                and str(self.model).split(":", 1)[0].lower() in {"openai", "gpt", "gpt-3.5"}
+            ):
+                print(
+                    "\033[33mInfo: OpenAI reasoning_effort supports "
+                    "low / medium / high; default is medium. "
+                    "Set thinking_budget to choose a level.\033[0m"
+                )
             print(
                 f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
             )
