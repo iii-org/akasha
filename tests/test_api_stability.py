@@ -68,8 +68,8 @@ def test_rag_smoke(check_env, model_name, embed_name):
 @pytest.mark.upgrade
 @pytest.mark.requires_api
 @pytest.mark.parametrize("model_name", MODELS)
-def test_agent_json_processing(check_env, model_name):
-    """測試 Agent 讀取 JSON 並處理資訊的能力"""
+def test_agent_native_tool_calling(check_env, model_name):
+    """測試原生 tool calling Agent 讀取 JSON 並處理資訊的能力"""
     json_file = DOCS_PATH / "simple_case.json"
     if not json_file.exists():
         pytest.skip("找不到 simple_case.json 文件")
@@ -94,7 +94,7 @@ def test_agent_json_processing(check_env, model_name):
     
     assert isinstance(response, str)
     assert len(response) > 0
-    print(f"\n[Model: {model_name}] Agent JSON Task Response: {response}")
+    print(f"\n[Model: {model_name}] Agent Native Tool Task Response: {response}")
 
 @pytest.mark.integration
 @pytest.mark.upgrade

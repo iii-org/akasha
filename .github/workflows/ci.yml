@@ -18,7 +18,17 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_BASE_URL: ${{ secrets.AZURE_OPENAI_BASE_URL }}
+      BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+      RUN_LLM_TESTS: "1"
+      RUN_EMBEDDING_SMOKE: "1"
+      RUN_GEMINI_RAG: "1"
+      RUN_MCP_SMOKE: "1"
+      RUN_PROVIDER_SMOKE: "1"
+      RUN_RAG_PIPELINE: "1"
+      RUN_RAG_SMOKE: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -28,5 +38,46 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system -e ".[light,dev]"
 
+      - name: Create test environment file
+        shell: bash
+        run: |
+          umask 077
+          cat > tests/.env <<EOF
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+          GEMINI_API_KEY=${GEMINI_API_KEY}
+          ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+          AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+          AZURE_OPENAI_BASE_URL=${AZURE_OPENAI_BASE_URL}
+          BRAVE_API_KEY=${BRAVE_API_KEY}
+          EOF
+
+      - name: Diagnose OpenAI embeddings
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          import os
+          from openai import OpenAI
+
+          api_key = os.environ.get("OPENAI_API_KEY")
+
+          if not api_key:
+              raise RuntimeError("OPENAI_API_KEY is empty")
+
+          print("Testing OpenAI embeddings...")
+
+          client = OpenAI(api_key=api_key)
+
+          result = client.embeddings.create(
+              model="text-embedding-3-small",
+              input="CI embedding check",
+          )
+
+          vector = result.data[0].embedding
+          print("OpenAI embedding request succeeded")
+          print("Embedding dimension:", len(vector))
+          PY
+
       - name: Run pytest
-        run: pytest --maxfail=1 --disable-warnings -q
+        run: pytest --maxfail=1 --disable-warnings -q -k "not ollama"

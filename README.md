@@ -40,6 +40,12 @@ python examples/ex_agent.py
 
 # Change log
 
+- Next
+
+    1. upgraded LangChain baseline to 1.3+
+    2. unified supported providers through LangChain ChatModel integrations
+    3. upgraded agents to LangChain native tool calling
+
 - 1.1
 
     1. fixed `keep_logs` consistency for `ask`, `RAG`, `summary`, `websearch`, and `eval`
@@ -144,8 +150,8 @@ python scripts/sync_requirements.py
 ### OPENAI
 
 If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key.
-You can either save **OPENAI_API_KEY=your api key** into **.env** file to current working directory or,
-set as a environment variable, using **export** in bash or use **os.environ** in python.
+You can either save `OPENAI_API_KEY=your api key` into `.env` file to current working directory or,
+set as a environment variable, using `export` in bash or use `os.environ` in python.
 
 ```bash
 
@@ -171,19 +177,24 @@ Shell example:
 export GEMINI_API_KEY="your_gemini_api_key"
 ```
 
+### ANTHROPIC
+
+For Anthropic models, set `ANTHROPIC_API_KEY` in `.env` or export it in your shell:
+
+```bash
+export ANTHROPIC_API_KEY="your_anthropic_api_key"
+```
+
 ### AZURE OPENAI
 
 If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
-Also, remember to depoly all the models in [Azure OpenAI Studio](https://oai.azure.com/portal), the deployment name should be same as the model name. save **OPENAI_API_KEY=your azure key**,  **OPENAI_API_BASE=your Language API base url**, **OPENAI_API_TYPE=azure**, **OPENAI_API_VERSION=2023-05-15** into **.env** file to current working directory.
-If you want to save both openai key and azure key at the same time, you can also use **AZURE_API_KEY**, **AZURE_API_BASE**, **AZURE_API_TYPE**, **AZURE_API_VERSION**
+Also, remember to deploy all the models in [Azure OpenAI Studio](https://oai.azure.com/portal). The deployment name should be used as the model name. Save the Azure OpenAI-compatible endpoint and key separately from regular OpenAI settings.
 
 ```sh
 
 ## .env file
-AZURE_API_KEY={your azure key}
-AZURE_API_BASE={your Language API base url}
-AZURE_API_TYPE=azure
-AZURE_API_VERSION=2023-05-15
+AZURE_OPENAI_API_KEY={your azure key}
+AZURE_OPENAI_BASE_URL={your Azure OpenAI-compatible base URL}
 
 ```
 And now we can run akasha in python
@@ -219,6 +230,43 @@ qa = akasha.ask(model="ollama:http://192.168.1.10:11434@qwen3:8b")
 
 You can also set `OLLAMA_API_BASE` to change the default server location.
 
+Akasha uses LangChain 1.3+ ChatModel integrations for the supported providers. The
+same `akasha.ask()` and `akasha.agents()` interfaces can therefore be used with
+OpenAI, Gemini, Anthropic, or Ollama model names:
+
+```python
+import akasha
+
+models = [
+    "openai:gpt-4o",
+    "gemini:gemini-2.5-flash",
+    "anthropic:claude-3-5-sonnet-latest",
+    "ollama:qwen3:8b",
+]
+
+qa = akasha.ask(model=models[0])
+print(qa("請簡短介紹 Akasha。"))
+```
+
+The model factory also accepts an already configured LangChain ChatModel object
+when provider-specific settings are needed.
+
+`ask()` accepts the same thinking settings. In streaming mode it yields the same
+`thinking` and `answer` event types; without streaming it returns only the final
+answer string:
+
+```python
+qa = akasha.ask(
+    model="gemini:gemini-2.5-flash",
+    stream=True,
+    thinking=True,
+    thinking_budget=1024,
+)
+
+for event in qa("請分析向量資料庫是否適合這個需求。"):
+    print(event)
+```
+
 And then run a RAG example:
 
 ```python
@@ -236,8 +284,10 @@ response = ak(data_source, prompt)
 Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY,' and for most Hugging Face models, a GPU is required to run the models. However, for .gguf models, you can use a CPU to run them.
 
 ```python
-openai_model = "openai:gpt-3.5-turbo"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
-openai4_model = "openai:gpt-4"  # need environment variable "OPENAI_API_KEY" or "AZURE_API_KEY"
+openai_model = "openai:gpt-3.5-turbo"  # needs OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
+openai4_model = "openai:gpt-4"  # needs OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
+azure_model = "azure:<deployment-name>"  # needs AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
+azure_embedding = "azure:<embedding-deployment-name>"  # Azure embedding deployment
 gemini_flash_model = "gemini:gemini-2.5-flash" # need environment variable "GEMINI_API_KEY"
 ollama_model = "ollama:llama3.1"  # default server: http://localhost:11434/v1
 ollama_remote_model = "ollama:http://192.168.1.10:11434@qwen3:8b"
@@ -308,7 +358,11 @@ ret = summ(content=["https://github.com/iii-org/akasha"])
 
 ## agent
 
-By implementing an agent, you empower the LLM with the capability to utilize tools more effectively to accomplish tasks. You can allocate tools for tasks such as file editing, conducting Google searches, and enlisting the LLM's assistance in task execution, rather than solely relying on it to respond your questions.
+Akasha agents use LangChain 1.3+'s `create_agent` and native tool calling. The
+agent manages `AIMessage`, `ToolMessage`, tool arguments, and the model/tool loop;
+`akasha.agents(...)` keeps the public non-streaming return value as a plain `str`.
+Models must support native tool calling. OpenAI, Gemini, Anthropic, and compatible
+Ollama models can be used when their selected model exposes that capability.
 
 ### Use Built-in Tools
 
@@ -370,6 +424,64 @@ print(response)
 agent.save_logs("logs.json")
 ```
 
+### Thinking model streaming
+
+Thinking/reasoning content is kept out of the final answer by default. When a
+provider exposes thinking content through LangChain message blocks, it is stored
+in the agent logs. To observe it during streaming, pass `include_thinking=True`.
+The event types are `answer`, `tool`, and optionally `thinking`.
+
+```python
+import akasha
+from dotenv import load_dotenv
+
+# thinking=True enables provider-specific thinking and automatically exposes
+# thinking events when stream=True.
+load_dotenv(".env")
+agent = akasha.agents(
+    model="gemini:gemini-2.5-flash",
+    tools=[],
+    stream=True,
+    keep_logs=True,
+    thinking=True,
+    thinking_budget=1024,
+)
+
+events = agent(
+    "請比較向量資料庫與關聯式資料庫，最後給出建議。",
+)
+
+for event in events:
+    if event["type"] == "thinking":
+        print("[thinking]", event["data"])
+    elif event["type"] == "answer":
+        print(event["data"], end="", flush=True)
+    elif event["type"] == "tool":
+        print("\n[tool]", event["data"])
+```
+
+If the selected provider or model does not return thinking blocks, no `thinking`
+event is emitted; the final answer is still handled normally.
+
+For provider-specific settings, a configured LangChain ChatModel can still be
+passed directly. The following is equivalent to the convenience configuration
+above:
+
+```python
+import akasha
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+thinking_model = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    thinking_budget=1024,
+    include_thoughts=True,
+)
+
+agent = akasha.agents(model=thinking_model, stream=True, keep_logs=True)
+for event in agent("請分析這個問題並提出結論。", include_thinking=True):
+    print(event)
+```
+
 ### Use Tools from MCP Servers
 
 ```python
@@ -393,14 +505,22 @@ connection_info = {
 }
 prompt = "tell me the weather in Taipei"
 
-# Use MCP tools
-agent = akasha.agents(
-    model=MODEL,
-    temperature=1.0,
-    verbose=True,
-    keep_logs=True,
-)
-response = agent.mcp_agent(connection_info, prompt)
-agent.save_logs("logs_agent.json")
+async def main():
+    client = MultiServerMCPClient(connection_info)
+    tools = await client.get_tools()
+
+    agent = akasha.agents(
+        model=MODEL,
+        tools=tools,
+        temperature=1.0,
+        verbose=True,
+        keep_logs=True,
+    )
+    response = await agent.acall(prompt)
+    print(response)
+    agent.save_logs("logs_agent.json")
+
+
+asyncio.run(main())
 
 ```

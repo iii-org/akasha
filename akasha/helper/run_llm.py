@@ -1,6 +1,8 @@
 from typing import Union, List, Generator
 from pydantic import BaseModel
 from langchain_core.messages.ai import AIMessage
+from langchain_core.messages import AIMessageChunk
+from langchain_core.language_models.chat_models import BaseChatModel
 import traceback
 import logging
 from langchain_core.language_models.base import BaseLanguageModel
@@ -43,12 +45,12 @@ def call_model(
         max_retries = 20
         attempt = 0
         def normalize_response(value):
-            if isinstance(value, AIMessage):
-                value = value.content
-            if isinstance(value, dict):
-                value = value.__str__()
-            if isinstance(value, list):
-                value = "\n".join(str(item) for item in value)
+            if isinstance(value, (AIMessage, AIMessageChunk)):
+                value = content_to_text(value.content)
+            elif isinstance(value, dict):
+                value = str(value)
+            elif isinstance(value, list):
+                value = content_to_text(value)
             return value
 
         def is_empty_response(value):
@@ -59,8 +61,8 @@ def call_model(
             return not bool(value)
 
         while attempt < max_retries and is_empty_response(response):
-            if "openai" in model_type:
-                response = model.invoke(input_text, verbose=verbose)
+            if isinstance(model, BaseChatModel):
+                response = model.invoke(normalize_chat_input(input_text))
             elif "remote" in model_type:
                 response = model._call(input_text, verbose=verbose)
             else:
@@ -126,15 +128,20 @@ def call_batch_model(
         max_retries = 3
         attempt = 0
         while attempt < max_retries and (response is None or response == "" or "".join(responses) == ""):
-            response = model.batch(input_text)
+            batch_input = (
+                [normalize_chat_input(item) for item in input_text]
+                if isinstance(model, BaseChatModel)
+                else input_text
+            )
+            response = model.batch(batch_input)
             responses = []
             for res in response:
-                if isinstance(res, AIMessage):
-                    res = res.content
+                if isinstance(res, (AIMessage, AIMessageChunk)):
+                    res = content_to_text(res.content)
                 if isinstance(res, dict):
-                    res = res.__str__()
+                    res = str(res)
                 if isinstance(res, list):
-                    res = "\n".join(res)
+                    res = content_to_text(res)
                 responses.append(res)
 
             if response is None or response == "" or "".join(responses) == "":
@@ -188,17 +195,17 @@ def call_stream_model(
         while attempt < max_retries:
             texts = ""
             try:
-                response = model.stream(input_text, verbose=verbose)
+                response = model.stream(normalize_chat_input(input_text))
             except Exception:
                 response = model._call(input_text, verbose=verbose)
 
             for r in response:
-                if isinstance(r, AIMessage):
-                    r = r.content
-                    if isinstance(r, dict):
-                        r = r.__str__()
-                    if isinstance(r, list):
-                        r = "\n".join(r)
+                if isinstance(r, (AIMessage, AIMessageChunk)):
+                    r = content_to_text(r.content)
+                elif isinstance(r, list):
+                    r = content_to_text(r)
+                elif not isinstance(r, str):
+                    r = str(r)
                 texts += r
                 yield sim_to_trad(r)
 
@@ -219,7 +226,107 @@ def call_stream_model(
             + "\n\nText generation encountered an error.\
             Please check your model setting.\n\n"
         )
-        yield e
+        # A provider exception is not a valid stream chunk.  Yielding it
+        # makes callers fail later with unrelated type errors while
+        # concatenating the response.  Preserve the original failure.
+        raise
+
+
+def content_to_text(content) -> str:
+    """Extract visible text from LangChain content blocks.
+
+    Reasoning/thinking blocks are intentionally excluded from the public answer
+    path. They remain available on the original AIMessage for logging.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+                continue
+            if isinstance(block, dict):
+                if block.get("type") in {"reasoning", "thinking"}:
+                    continue
+                text = block.get("text") or block.get("content")
+                if isinstance(text, str):
+                    parts.append(text)
+                elif text is not None:
+                    parts.append(str(text))
+                continue
+            parts.append(str(block))
+        return "".join(parts)
+    return str(content)
+
+
+def content_to_thinking(content, additional_kwargs=None) -> str:
+    """Extract reasoning/thinking text from LangChain content blocks."""
+    parts = []
+    if isinstance(content, list):
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") not in {"reasoning", "thinking"}:
+                continue
+            value = block.get("reasoning") or block.get("thinking") or block.get("text")
+            if value:
+                parts.append(str(value))
+    if isinstance(additional_kwargs, dict):
+        for key in ("reasoning_content", "thinking", "reasoning"):
+            value = additional_kwargs.get(key)
+            if value:
+                parts.append(value if isinstance(value, str) else str(value))
+    return "".join(parts)
+
+
+def call_stream_events(
+    model: BaseLanguageModel,
+    input_text: Union[str, list],
+    include_thinking: bool = False,
+    verbose: bool = True,
+    keep_logs: bool = False,
+) -> Generator[dict, None, None]:
+    """Yield normalized answer/thinking events from a ChatModel stream."""
+    if not isinstance(model, BaseChatModel):
+        raise ValueError("thinking streaming requires a LangChain ChatModel.")
+
+    for chunk in model.stream(normalize_chat_input(input_text)):
+        content = getattr(chunk, "content", "")
+        thinking = content_to_thinking(
+            content, getattr(chunk, "additional_kwargs", None)
+        )
+        answer = content_to_text(content)
+        if include_thinking and thinking:
+            yield {"type": "thinking", "data": thinking}
+        if answer:
+            if verbose:
+                print(answer, end="", flush=True)
+            yield {"type": "answer", "data": sim_to_trad(answer)}
+
+
+def normalize_chat_input(input_text):
+    """Convert legacy prompt dictionaries to LangChain chat messages."""
+    if not isinstance(input_text, list):
+        return input_text
+    normalized = []
+    for message in input_text:
+        if not isinstance(message, dict):
+            normalized.append(message)
+            continue
+        role = message.get("role", "user")
+        if role == "model":
+            role = "system" if not normalized else "assistant"
+        content = message.get("content", message.get("parts", ""))
+        if isinstance(content, list):
+            content = "".join(
+                item if isinstance(item, str) else str(item)
+                for item in content
+            )
+        normalized.append({"role": role, "content": content})
+    return normalized
 
 
 def call_image_model(
@@ -253,7 +360,7 @@ def call_image_model(
             or ("gemini" in model_type)
         ):
             print_flag = False
-            response = model.invoke(input_text, verbose=verbose)
+            response = model.invoke(input_text)
 
         else:
             response = model.call_image(input_text, verbose=verbose)
@@ -275,7 +382,7 @@ def call_image_model(
                 or ("remote" in model_type)
                 or ("gemini" in model_type)
             ):
-                response = model.invoke(input_text, verbose=verbose)
+                response = model.invoke(input_text)
             else:
                 response = model.call_image(input_text, verbose=verbose)
 

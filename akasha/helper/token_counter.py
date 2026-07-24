@@ -116,7 +116,13 @@ class myTokenizer(object):
             raise ValueError("Non-OpenAI models are not supported")
         if model_name.lower().startswith("openai:"):
             model_name = model_name.lower().lstrip("openai:")
-        encoding = tiktoken.encoding_for_model(model_name)
+        try:
+            encoding = tiktoken.encoding_for_model(model_name)
+        except KeyError:
+            # tiktoken may lag behind newly released OpenAI model IDs.  Token
+            # counting is used for input budgeting, so a stable approximation
+            # is safer than preventing the provider request altogether.
+            encoding = tiktoken.get_encoding("cl100k_base")
         tokens = encoding.encode(text)
         num_tokens = len(tokens)
         return num_tokens

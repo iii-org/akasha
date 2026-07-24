@@ -189,7 +189,7 @@ pytest tests/test_api_stability.py -s
 
 - **擴充金鑰 (.env)**:
   - [ ] 所有 [Light] 版的金鑰。
-  - [ ] `AZURE_API_KEY`: 測試 Azure OpenAI 特定整合。
+  - [ ] `AZURE_OPENAI_API_KEY` 與 `AZURE_OPENAI_BASE_URL`: 測試 Azure OpenAI-compatible endpoint 整合。
   - [ ] `HUGGINGFACEHUB_API_TOKEN`: 用於下載門檻較高的權重檔。
 - **測試數據 (test_data/)**:
   - [ ] **深度文件**: 超過 20 頁的 `.pdf` 或 `.docx` (壓力測試)。

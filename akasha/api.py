@@ -71,6 +71,9 @@ OTHER_ENV = set(
         "BRAVE_API_KEY",
         "ANTHROPIC_API_KEY",
         "GEMINI_API_KEY",
+        "OPENAI_BASE_URL",
+        "AZURE_OPENAI_BASE_URL",
+        "AZURE_OPENAI_API_KEY",
     ]
 )
 
@@ -79,26 +82,21 @@ def load_env(config: dict) -> bool:
     """delete old environment variable and load new one.
 
     Args:
-        config (dict): dictionary may contain openai_key, azure_key, azure_base.
+        config (dict): dictionary may contain OpenAI or Azure OpenAI-compatible
+            endpoint settings.
 
     Returns:
         bool: load success or not
     """
 
+    if "OPENAI_API_KEY" in os.environ:
+        del os.environ["OPENAI_API_KEY"]
+    for key in ("OPENAI_BASE_URL", "AZURE_OPENAI_BASE_URL", "AZURE_OPENAI_API_KEY"):
+        os.environ.pop(key, None)
+
     for key, val in config.items():
         if key in OTHER_ENV:
             os.environ[key] = val
-
-    if "OPENAI_API_KEY" in os.environ:
-        del os.environ["OPENAI_API_KEY"]
-    if "AZURE_API_BASE" in os.environ:
-        del os.environ["AZURE_API_BASE"]
-    if "AZURE_API_KEY" in os.environ:
-        del os.environ["AZURE_API_KEY"]
-    if "AZURE_API_TYPE" in os.environ:
-        del os.environ["AZURE_API_TYPE"]
-    if "AZURE_API_VERSION" in os.environ:
-        del os.environ["AZURE_API_VERSION"]
 
     if "OPENAI_API_KEY" in config and config["OPENAI_API_KEY"] != "":
         os.environ["OPENAI_API_KEY"] = config["OPENAI_API_KEY"]
@@ -106,15 +104,13 @@ def load_env(config: dict) -> bool:
         return True
 
     if (
-        "AZURE_API_KEY" in config
-        and "AZURE_API_BASE" in config
-        and config["AZURE_API_KEY"] != ""
-        and config["AZURE_API_BASE"] != ""
+        "AZURE_OPENAI_API_KEY" in config
+        and "AZURE_OPENAI_BASE_URL" in config
+        and config["AZURE_OPENAI_API_KEY"] != ""
+        and config["AZURE_OPENAI_BASE_URL"] != ""
     ):
-        os.environ["AZURE_API_KEY"] = config["AZURE_API_KEY"]
-        os.environ["AZURE_API_BASE"] = config["AZURE_API_BASE"]
-        os.environ["AZURE_API_TYPE"] = "azure"
-        os.environ["AZURE_API_VERSION"] = "2023-05-15"
+        os.environ["AZURE_OPENAI_API_KEY"] = config["AZURE_OPENAI_API_KEY"]
+        os.environ["AZURE_OPENAI_BASE_URL"] = config["AZURE_OPENAI_BASE_URL"]
         return True
 
     if (

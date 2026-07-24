@@ -13,8 +13,8 @@ urls = {
 }
 
 env_config = {
-    "AZURE_API_KEY": "your azure key",
-    "AZURE_API_BASE": "your azure base",
+    "AZURE_OPENAI_API_KEY": "your azure key",
+    "AZURE_OPENAI_BASE_URL": "your azure openai base url",
     "OPENAI_API_KEY": "your openai key",
     "SERPER_API_KEY": "your serper key",
     "BRAVE_API_KEY": "your brave key",

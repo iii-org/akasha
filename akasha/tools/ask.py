@@ -1,4 +1,5 @@
 from akasha.utils.atman import basic_llm
+from akasha.utils.models.thinking import ThinkingBudget
 from akasha.utils.base import (
     DEFAULT_MODEL,
     DEFAULT_MAX_OUTPUT_TOKENS,
@@ -17,6 +18,7 @@ from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.helper.run_llm import (
     call_model,
     call_stream_model,
+    call_stream_events,
     call_batch_model,
     call_image_model,
     check_relevant_answer,
@@ -45,6 +47,8 @@ class ask(basic_llm):
         verbose: bool = False,
         stream: bool = False,
         env_file: str = "",
+        thinking: bool = False,
+        thinking_budget: ThinkingBudget = None,
     ):
         """_summary_
 
@@ -71,6 +75,8 @@ class ask(basic_llm):
             keep_logs=keep_logs,
             verbose=verbose,
             env_file=env_file,
+            thinking=thinking,
+            thinking_budget=thinking_budget,
         )
         self.stream = stream
         self.prompt_format_type = prompt_format_type
@@ -92,6 +98,12 @@ class ask(basic_llm):
         if self.keep_logs:
             logging.info("Model: %s, Temperature: %s", self.model, self.temperature)
             logging.info(
+                "Thinking: %s, Thinking budget level: %s, Effective thinking budget: %s",
+                self.thinking,
+                self.thinking_budget_level,
+                self.effective_thinking_budget,
+            )
+            logging.info(
                 "Prompt format type: %s, Max input tokens: %s",
                 self.prompt_format_type,
                 self.max_input_tokens,
@@ -106,6 +118,12 @@ class ask(basic_llm):
 
         if self.verbose:
             print(f"Model: {self.model}, Temperature: {self.temperature}")
+            print(
+                "Thinking: "
+                f"{self.thinking}, Thinking budget level: "
+                f"{self.thinking_budget_level}, Effective thinking budget: "
+                f"{self.effective_thinking_budget}"
+            )
             print(
                 f"Prompt format type: {self.prompt_format_type}, Max input tokens: {self.max_input_tokens}"
             )
@@ -365,7 +383,20 @@ class ask(basic_llm):
 
     def _display_stream(
         self, text_input: Union[str, List[str]]
-    ) -> Generator[str, None, None]:
+    ) -> Generator:
+        if self.thinking:
+            for event in call_stream_events(
+                self.model_obj,
+                text_input,
+                include_thinking=True,
+                verbose=self.verbose,
+                keep_logs=self.keep_logs,
+            ):
+                if event["type"] == "answer":
+                    self.response += event["data"]
+                yield event
+            return
+
         ret = call_stream_model(
             self.model_obj, text_input, self.verbose, keep_logs=self.keep_logs
         )
@@ -409,9 +440,8 @@ class ask(basic_llm):
             ret[-1] += db_doc.page_content + "\n"
             tot_token_len += cur_token_len
 
-        ## remove the last empty string ##
-        if ret[-1] == "":
-            ret = ret[:-1]
+        ## remove empty and whitespace-only chunks ##
+        ret = [document for document in ret if document.strip()]
 
         return ret, tot_token_len
 

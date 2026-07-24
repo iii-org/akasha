@@ -66,6 +66,20 @@ coverage 設定已放進 `pyproject.toml`。
 
 建議先以 Python 3.11 建立 light 環境，例如 `uv venv --python 3.11` 後再執行以下命令。
 
+### 真實 Gemini Agent 測試
+
+`tests/test_live_gemini_agent.py` 會直接呼叫 Gemini API，驗證 final answer、thinking/answer token-level events，以及 `thinking=False` 時忽略 `thinking_budget`。測試預設停用；請明確設定 `RUN_LLM_TESTS=1` 才會執行，並可用 `ENV_FILE` 指定 API key 所在的 `.env`。
+
+Windows `cmd.exe` 範例：
+
+```bat
+set RUN_LLM_TESTS=1
+set ENV_FILE=C:\path\to\akasha-update\.env
+python -m pytest tests\test_live_gemini_agent.py -m integration -s
+```
+
+這些測試會產生實際模型 API 費用。
+
 如果 light 環境位於 `akasha-update/.venv`：
 
 ```bash
