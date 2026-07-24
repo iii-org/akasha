@@ -12,7 +12,7 @@ def anthropic_rag():
         pytest.skip("ANTHROPIC_API_KEY not found in environment")
     
     return akasha.RAG(
-        model="anthropic:claude-sonnet-4-20250514",
+        model="anthropic:claude-sonnet-4-6",
         verbose=True
     )
 

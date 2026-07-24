@@ -329,3 +329,75 @@ gemma4:26b
 - Azure OpenAI 使用 `AZURE_OPENAI_API_KEY` 與 `AZURE_OPENAI_BASE_URL`。
 - 不要用 Azure endpoint 當作 `OPENAI_BASE_URL`。
 - 不要把完整 `/chat/completions` 路徑重複傳給 OpenAI-compatible SDK。
+
+## Local total live test
+
+若要在 local 端執行完整的 live API 測試，請先在 PowerShell 設定所有測試開關：
+
+```powershell
+$env:RUN_LLM_TESTS="1"
+$env:RUN_PROVIDER_SMOKE="1"
+$env:RUN_EMBEDDING_SMOKE="1"
+$env:RUN_GEMINI_RAG="1"
+$env:RUN_RAG_PIPELINE="1"
+$env:RUN_RAG_SMOKE="1"
+$env:RUN_MCP_SMOKE="1"
+```
+
+接著從 `akasha-repo` 目錄執行：
+
+```powershell
+& ..\.venv\Scripts\python.exe -m pytest tests -vv -s
+```
+
+這個 total command 的測試範圍是整個 `tests/`，包含：
+
+- `tests/unit/`：不呼叫遠端模型的單元測試
+- `tests/contract/`：公開 API、stream event、Agent response 與 logs contract
+- `tests/smoke/`：OpenAI、Azure、Gemini、Anthropic、Ollama provider、embedding、RAG、web-info 與 MCP live smoke tests
+- `tests/test_api_stability.py`：OpenAI/Gemini ask、RAG、Agent、vision、memory stability
+- `tests/upgrade_tests/`：各 provider 的升級相容性測試
+- 其他根目錄 `tests/test_*.py`：legacy API、DB、evaluation、Agent 與 summary 測試
+
+各開關的作用如下：
+
+這些開關只控制標示為 live/integration 的那一小組測試，不是整個
+`tests/` 的總開關。大多數測試以不區分大小寫的 `1`、`true` 或 `yes` 啟用；
+`RUN_LLM_TESTS` 所涵蓋的 `test_agents_final_action_integration.py` 目前只判斷
+變數是否為非空，因此請統一使用 `=1`，不要依賴其他值。
+
+### Live 測試矩陣
+
+| 開關 | 實際測試檔與案例 | Chat model | Embedding / 外部元件 | 驗證內容 |
+|---|---|---|---|---|
+| `RUN_LLM_TESTS=1` | `test_live_gemini_agent.py`：3 cases | `gemini:gemini-2.5-flash` | 無工具；Gemini live API | Agent final answer、stream 的 `thinking`/`answer` event，以及 `thinking=False` 時不誤用 budget |
+| 〃 | `test_agents_final_action_integration.py`：每個模型 1 case | `openai:gpt-4o`、`gemini:gemini-2.5-flash` | 無工具 | 真實模型回傳的 final-action alias 能被 Agent 接受 |
+| 〃 | `smoke/test_web_info_ask.py`：1 case | `gemini:gemini-3.5-flash` | web-info 來源 | `ask` 能根據 web-info 回答 Akasha 相關問題 |
+| 〃 | `smoke/test_ask_info_urls_pure.py`：1 case | `gemini:gemini-2.5-flash` | 兩個 URL `info` 來源 | 公開 `ask` API 能接受多個 URL reference |
+| `RUN_PROVIDER_SMOKE=1` | `smoke/test_provider_contract_smoke.py`：目前 5 models × 6 基本/ thinking cases，加上 Gemini 2 個 native thinking cases，共 32 cases | 由 manifest 的 5 個 model：OpenAI `gpt-5.4`、Azure `DeepSeek-V4-Flash`、Gemini `gemini-3.5-flash`、Anthropic `claude-sonnet-4-6`、Ollama `gemma4:26b` | 各 provider 的真實 chat endpoint | `ask`/`agents` 的 non-stream、stream、logs JSON serializable，以及 thinking/answer 分離與 native thinking 設定 |
+| `RUN_EMBEDDING_SMOKE=1` | `smoke/test_embedding_provider_contract.py`：manifest 的每個 embedding 1 case，目前 2 cases | 無 chat model | OpenAI `text-embedding-3-small`、Gemini `gemini-embedding-2` | 向量數量、維度、數值格式與 provider embedding contract |
+| `RUN_RAG_PIPELINE=1` | `smoke/test_rag_pipeline_stages.py`：4 stages | `openai:gpt-5.4` | OpenAI `text-embedding-3-small` + Chroma | Chroma reload → retrieval → chat model grounded answer → cleanup；答案須含 `RAG-7319-TAIPEI` |
+| `RUN_GEMINI_RAG=1` | `smoke/test_gemini_rag_pipeline.py`：1 end-to-end case | `gemini:gemini-2.5-flash` | manifest 的 Gemini `gemini-embedding-2` + Chroma | Gemini embedding、Chroma 建立/搜尋與 grounded chat answer |
+| `RUN_RAG_SMOKE=1` | `smoke/test_rag_contract_smoke.py`：OpenAI file、Gemini directory、Windows absolute path，共 3 cases（非 Windows 的 path case 會再 skip） | OpenAI `gpt-5.4`、Gemini `gemini-3.5-flash` | 對應 OpenAI/Gemini embedding + RAG file/path input | `RAG` 公開介面、文件載入、retrieval、非空回答與 logs JSON contract |
+| `RUN_MCP_SMOKE=1` | `smoke/test_mcp_pipeline.py`：1 discovery、每個 manifest model 1 agent case、1 stream guard；目前共 7 cases | manifest 的 5 個 chat models | 本地 `tests/fixtures/mcp/echo_server.py` | MCP tool discovery/schema/direct invocation、每個真實模型的 non-stream Agent tool calling，以及明確拒絕不支援的 sync stream |
+
+其中 `RUN_LLM_TESTS` 不會啟用 `RUN_PROVIDER_SMOKE`、任何 RAG、embedding 或 MCP
+測試；反過來設定 `RUN_PROVIDER_SMOKE` 也不會啟用一般的 Gemini Agent/web-info
+測試。要執行哪一格，必須設定該格自己的開關。
+
+### 開關未設定時會發生什麼
+
+- 對應的 live 測試會在 pytest collection 時以 `SKIPPED` 結束，不會呼叫模型、抓 web-info、建立向量庫或啟動 MCP agent；這不是測試通過（passed），而是明確表示該 live contract 沒有執行。
+- 開關已設定但該 provider 的必要 key 不存在時，通常只 skip 該 provider 的案例。例如 provider smoke 可以只執行已設定 key 的模型；embedding/RAG/MCP 也會依 provider 個別 skip。
+- 開關已設定且 key 存在但無效、endpoint 不可連線或模型名稱錯誤時，案例會 fail；這是刻意保留的 credential/endpoint failure，不會被當成 skip。
+- 沒有設定任何開關時，`tests/unit` 與 `tests/contract` 仍照常執行；它們使用 mock/fake model，不需要 live API。這些開關也不會替根目錄的 legacy `tests/test_*.py` 或 `tests/upgrade_tests/` 自動加上保護，因此不要把 `pytest tests` 解讀成「所有外部 API 都已由開關控制」。
+
+因此，若只執行日常本地回歸，建議使用 `tests/unit`、`tests/contract`；若要驗證真實 provider，除了設定對應開關，也要確認 manifest 的 model ID 與必要 secrets 都可用。
+
+API keys 預設從 `tests/.env` 載入；也可以透過 `ENV_FILE` 指定其他 `.env`：
+
+```powershell
+$env:ENV_FILE="C:\path\to\tests\.env"
+```
+
+注意：這個 total command 會實際消耗各家模型 API quota。`MCP` 在 Windows 可能受 named pipe 權限影響，Ollama 則需要可連線的 `OLLAMA_API_BASE`；這兩類失敗不一定代表 OpenAI/Gemini/Anthropic provider 本身有問題。

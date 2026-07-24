@@ -33,7 +33,9 @@ def test_openai_rag_call(api_rag):
             data_source=test_file,
             prompt="What is the capital of France?"
         )
-        assert "Paris" in response
+        # The prompt does not constrain the response language; accept English or Chinese.
+        normalized = response.casefold()
+        assert "paris" in normalized or "巴黎" in response
     finally:
         if os.path.exists(test_file):
             os.remove(test_file)

@@ -23,6 +23,12 @@ jobs:
       AZURE_OPENAI_BASE_URL: ${{ secrets.AZURE_OPENAI_BASE_URL }}
       BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
       RUN_LLM_TESTS: "1"
+      RUN_EMBEDDING_SMOKE: "1"
+      RUN_GEMINI_RAG: "1"
+      RUN_MCP_SMOKE: "1"
+      RUN_PROVIDER_SMOKE: "1"
+      RUN_RAG_PIPELINE: "1"
+      RUN_RAG_SMOKE: "1"
     steps:
       - uses: actions/checkout@v4
 
