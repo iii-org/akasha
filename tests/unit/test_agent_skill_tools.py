@@ -214,11 +214,11 @@ def _invoke_script(
         store=None,
     )
     middleware._loaded(loaded)
-    script_tool = middleware._dynamic_tools(loaded)["run_skill_script"]
+    script_tool = middleware._dynamic_tools(loaded)["python_execute"]
     result = script_tool.invoke(
         {
             "skill": "runtime-test",
-            "path": "scripts/run.py",
+            "source": "scripts/run.py",
             "args": args or [],
             "interpreter": interpreter,
             "runtime": runtime,
@@ -227,7 +227,7 @@ def _invoke_script(
     return middleware, result
 
 
-def test_skill_script_uses_caller_runtime_and_returns_repl_result(
+def test_skill_script_uses_caller_runtime_and_returns_process_result(
     tmp_path, monkeypatch
 ):
     monkeypatch.setenv("AKASHA_SKILL_TEST_VALUE", "inherited")
@@ -243,19 +243,21 @@ def test_skill_script_uses_caller_runtime_and_returns_repl_result(
                 "print(f'args:{sys.argv[1:]}')",
                 "print(f'caller-package:{pytest.__name__}')",
                 "print('script warning', file=sys.stderr)",
+                "raise SystemExit(3)",
             ]
         ),
     )
 
     middleware, result = _invoke_script(skill_dir, args=["alpha", "two words"])
 
-    assert middleware._script_tool.args.keys() == {
+    assert middleware._python_tool.args.keys() == {
         "skill",
-        "path",
+        "source",
         "args",
         "interpreter",
     }
-    assert "exit_code: 0" in result
+    assert "execution: script" in result
+    assert "exit_code: 3" in result
     assert f"executable:{sys.executable}" in result
     assert "env:inherited" in result
     assert "args:['alpha', 'two words']" in result
@@ -263,18 +265,76 @@ def test_skill_script_uses_caller_runtime_and_returns_repl_result(
     assert "stderr:\nscript warning" in result
 
 
-def test_skill_script_rejects_interpreter_override(tmp_path):
+def test_python_execute_repl_supports_normal_code_and_persists_by_thread(tmp_path):
+    skill_dir = _temporary_script_skill(tmp_path, "print('unused')\n")
+    reference = str(skill_dir)
+    middleware = DynamicSkillMiddleware([reference])
+    loaded = [reference]
+    runtime = ToolRuntime(
+        state={"loaded_skills": loaded},
+        context=None,
+        config={"configurable": {"thread_id": "repl-thread"}},
+        stream_writer=lambda _: None,
+        tool_call_id="python-repl-test",
+        store=None,
+    )
+    middleware._loaded(loaded)
+    python_tool = middleware._dynamic_tools(loaded)["python_execute"]
+
+    first = python_tool.invoke(
+        {
+            "skill": "runtime-test",
+            "source": (
+                "import statistics\n"
+                "values = [2, 4, 6, 8]\n"
+                "def calculate_average(items):\n"
+                "    return statistics.mean(items)\n"
+                "total = sum(values)\n"
+                "total"
+            ),
+            "runtime": runtime,
+        }
+    )
+    second = python_tool.invoke(
+        {
+            "skill": "runtime-test",
+            "source": "calculate_average(values)",
+            "runtime": runtime,
+        }
+    )
+
+    assert "execution: repl" in first
+    assert "20" in first
+    assert "execution: repl" in second
+    assert "5" in second
+def test_skill_script_timeout_is_reported_without_crashing(tmp_path):
     skill_dir = _temporary_script_skill(
         tmp_path,
         "import time\nprint('started', flush=True)\ntime.sleep(1)\n",
     )
     reference = str(skill_dir)
     middleware = DynamicSkillMiddleware([reference])
-    _, result = _invoke_script(
-        skill_dir,
-        interpreter="python-that-is-not-used-by-pythonrepl",
+    middleware._default_script_timeout = 0.05
+    loaded = [reference]
+    runtime = ToolRuntime(
+        state={"loaded_skills": loaded},
+        context=None,
+        config={},
+        stream_writer=lambda _: None,
+        tool_call_id="script-timeout-test",
+        store=None,
     )
-    assert "interpreter override is not supported" in result
+    middleware._loaded(loaded)
+
+    result = middleware._dynamic_tools(loaded)["python_execute"].invoke(
+        {
+            "skill": "runtime-test",
+            "source": "scripts/run.py",
+            "runtime": runtime,
+        }
+    )
+
+    assert "timed out after 0.05s" in result
 
 
 def test_skill_script_output_is_truncated(tmp_path, monkeypatch):
@@ -296,10 +356,10 @@ def test_skill_script_output_is_truncated(tmp_path, monkeypatch):
     )
     middleware._loaded(loaded)
 
-    result = middleware._dynamic_tools(loaded)["run_skill_script"].invoke(
+    result = middleware._dynamic_tools(loaded)["python_execute"].invoke(
         {
             "skill": "runtime-test",
-            "path": "scripts/run.py",
+            "source": "scripts/run.py",
             "runtime": runtime,
         }
     )
@@ -318,11 +378,11 @@ def test_skill_script_missing_interpreter_and_module_are_reported(tmp_path):
         skill_dir,
         interpreter="akasha-interpreter-that-does-not-exist",
     )
-    assert "interpreter override is not supported" in interpreter_result
+    assert "could not be started" in interpreter_result
     assert "akasha-interpreter-that-does-not-exist" in interpreter_result
 
     _, module_result = _invoke_script(skill_dir)
-    assert "exit_code: 0" in module_result
+    assert "exit_code: 1" in module_result
     assert "ModuleNotFoundError" in module_result
     assert "akasha_module_that_does_not_exist" in module_result
 

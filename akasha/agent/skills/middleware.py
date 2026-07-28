@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
-from io import StringIO
-import os
 from pathlib import Path
+import subprocess
 import sys
 from threading import RLock
 from typing import Any, NotRequired
@@ -44,11 +42,11 @@ class SkillAgentState(AgentState, total=False):
     loaded_skills: NotRequired[list[str]]
 
 
-class _RunSkillScriptInput(BaseModel):
+class _PythonExecuteInput(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     skill: str
-    path: str
+    source: str
     args: list[str] = Field(default_factory=list)
     interpreter: str | None = None
     runtime: ToolRuntime
@@ -73,6 +71,7 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
     """Expose load_skill first, then route loaded skill tools and resources."""
 
     state_schema = SkillAgentState
+    _default_script_timeout = 120.0
     _max_script_output_bytes = 100_000
 
     def __init__(
@@ -99,10 +98,10 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
         self._loaded_contexts: dict[tuple[str, ...], SkillContext] = {}
         self._loaded_tools: dict[str, Any] = {}
         self._loaded_skill_tools: dict[str, tuple[str, ...]] = {}
-        self._python_repls: dict[str, PythonAstREPLTool] = {}
+        self._python_repls: dict[tuple[str, str], PythonAstREPLTool] = {}
         self._python_repl_lock = RLock()
         self._resource_tool = self._make_resource_tool()
-        self._script_tool = self._make_script_tool()
+        self._python_tool = self._make_python_tool()
         self.tools = [self._make_load_skill_tool()]
 
     @property
@@ -237,20 +236,20 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
 
         return read_skill_resource
 
-    def _make_script_tool(self):
+    def _make_python_tool(self):
         @tool(
-            "run_skill_script",
+            "python_execute",
             description=(
-                "Run a Python script from a loaded local skill in a persistent "
-                "Python AST REPL session. The path must be relative to the skill "
-                "root. Variables persist for this skill during the agent run; "
-                "follow the skill instructions for the script path and arguments."
+                "Execute Python with automatic routing. Pass an existing relative "
+                ".py path from the loaded skill to run it in a fresh subprocess. "
+                "Pass Python code generated during analysis to run it in a "
+                "persistent REPL whose variables survive later calls."
             ),
-            args_schema=_RunSkillScriptInput,
+            args_schema=_PythonExecuteInput,
         )
-        def run_skill_script(
+        def python_execute(
             skill: str,
-            path: str,
+            source: str,
             runtime: ToolRuntime,
             args: list[str] | None = None,
             interpreter: str | None = None,
@@ -259,69 +258,98 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
             item = self._find_available(skill)
             if item.reference not in loaded:
                 raise ValueError(
-                    f"skill {item.metadata.name!r} must be loaded before running scripts"
+                    f"skill {item.metadata.name!r} must be loaded before executing Python"
                 )
             if item.root is None:
                 raise ValueError(
-                    f"skill {item.metadata.name!r} has no filesystem scripts"
+                    f"skill {item.metadata.name!r} has no filesystem runtime"
                 )
-            target = self._resolve_skill_file(item, path, "script")
+            if not isinstance(source, str) or not source.strip():
+                raise ValueError("Python source must be a non-empty string")
+
+            value = source.strip()
+            if self._is_script_source(value):
+                target = self._resolve_skill_file(item, value, "script")
+                return self._execute_script(item, target, args, interpreter)
             if interpreter and interpreter.strip():
-                return (
-                    "skill script interpreter override is not supported by "
-                    f"PythonREPL: {interpreter}"
-                )
-            if target.suffix.lower() != ".py":
-                raise ValueError("PythonREPL can only run Python skill scripts")
+                raise ValueError("interpreter override is only valid for script paths")
+            if args:
+                raise ValueError("args are only valid for script paths")
+            return self._execute_repl(item, value, runtime)
 
-            try:
-                source = target.read_text(encoding="utf-8-sig")
-            except UnicodeDecodeError as exc:
-                raise ValueError("skill script must be a UTF-8 Python file") from exc
+        return python_execute
 
-            with self._python_repl_lock:
-                repl = self._python_repls.get(item.reference)
-                if repl is None:
-                    repl = PythonAstREPLTool(
-                        globals={"__name__": "__main__"},
-                        locals={},
-                    )
-                    self._python_repls[item.reference] = repl
-                repl.locals["__file__"] = str(target)
-                repl.locals["__name__"] = "__main__"
+    @staticmethod
+    def _is_script_source(source: str) -> bool:
+        return (
+            "\n" not in source
+            and "\r" not in source
+            and Path(source).suffix.lower() == ".py"
+        )
 
-                output = StringIO()
-                errors = StringIO()
-                old_argv = sys.argv
-                old_cwd = Path.cwd()
-                script_dir = str(target.parent)
-                sys.argv = [str(target), *(str(value) for value in (args or []))]
-                exit_code = 0
-                try:
-                    # PythonREPL executes in-process. Serialize execution because
-                    # cwd, argv and stdio are process-global.
-                    sys.path.insert(0, script_dir)
-                    os.chdir(item.root)
-                    with redirect_stdout(output), redirect_stderr(errors):
-                        result = repl.invoke(source)
-                except SystemExit as exc:
-                    exit_code = exc.code if isinstance(exc.code, int) else 1
-                    result = f"SystemExit: {exc}"
-                except BaseException as exc:  # noqa: BLE001 - tool-shaped errors
-                    exit_code = 1
-                    result = f"{type(exc).__name__}: {exc}"
-                finally:
-                    sys.path.remove(script_dir)
-                    os.chdir(old_cwd)
-                    sys.argv = old_argv
-
-            return (
-                f"exit_code: {exit_code}\n"
-                f"stdout:\n{self._limit_script_output(output.getvalue() + str(result))}\n"
-                f"stderr:\n{self._limit_script_output(errors.getvalue())}"
+    def _execute_script(
+        self,
+        item: _AvailableSkill,
+        target: Path,
+        args: list[str] | None,
+        interpreter: str | None,
+    ) -> str:
+        command = self._script_command(target, interpreter)
+        command.extend(str(value) for value in (args or []))
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=str(item.root),
+                capture_output=True,
+                timeout=self._default_script_timeout,
+                check=False,
             )
+        except subprocess.TimeoutExpired as exc:
+            return (
+                "execution: script\n"
+                f"skill script timed out after {self._default_script_timeout:g}s: "
+                f"{target.name}\n{self._decode_output(exc.stdout)}"
+            )
+        except (FileNotFoundError, OSError) as exc:
+            return (
+                "execution: script\n"
+                "skill script could not be started with interpreter "
+                f"{command[0]!r}: {target.name}: {exc}"
+            )
+        return (
+            "execution: script\n"
+            f"exit_code: {completed.returncode}\n"
+            f"stdout:\n{self._limit_script_output(completed.stdout)}\n"
+            f"stderr:\n{self._limit_script_output(completed.stderr)}"
+        )
 
-        return run_skill_script
+    def _execute_repl(
+        self,
+        item: _AvailableSkill,
+        code: str,
+        runtime: ToolRuntime,
+    ) -> str:
+        configurable = runtime.config.get("configurable", {})
+        thread_id = str(configurable.get("thread_id") or "__default__")
+        key = (item.reference, thread_id)
+        with self._python_repl_lock:
+            repl = self._python_repls.get(key)
+            if repl is None:
+                namespace = {"__name__": "__main__"}
+                repl = PythonAstREPLTool()
+                repl.globals = namespace
+                repl.locals = namespace
+                self._python_repls[key] = repl
+            result = repl.invoke(code)
+        return f"execution: repl\nstdout:\n{self._limit_script_output(result)}"
+
+    @staticmethod
+    def _script_command(target: Path, interpreter: str | None) -> list[str]:
+        if interpreter and interpreter.strip():
+            return [interpreter.strip(), str(target)]
+        if target.suffix.lower() == ".py":
+            return [sys.executable, str(target)]
+        return [str(target)]
 
     @classmethod
     def _decode_output(cls, output: bytes | str | None) -> str:
@@ -405,7 +433,7 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
         tools = dict(self._loaded_tools)
         if loaded_refs and self._resource_available(loaded_refs):
             tools[self._resource_tool.name] = self._resource_tool
-            tools[self._script_tool.name] = self._script_tool
+            tools[self._python_tool.name] = self._python_tool
         return tools
 
     @property
@@ -445,9 +473,10 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
                 "under a loaded skill directory."
             )
             sections.append(
-                "Use run_skill_script(skill, path, args) to run a referenced script "
-                "with the calling application's current runtime. Follow the loaded "
-                "skill instructions for paths and arguments."
+                "Use python_execute(skill, source, args) for Python work. Pass an "
+                "existing relative .py path when a loaded skill references a bundled "
+                "script; pass Python code generated by you for iterative calculations. "
+                "Execution routing is automatic and has no mode parameter."
             )
         return (chr(10) + chr(10)).join(sections)
 

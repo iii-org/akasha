@@ -1,8 +1,10 @@
+import importlib
 import io
 import logging
 from datetime import datetime
 
 import pytest
+from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 
 from akasha.utils.logging_config import configure_logging
 
@@ -81,3 +83,125 @@ def test_keep_logs_bool_creates_default_path(tmp_path, monkeypatch):
     log_file = tmp_path / "logs" / f"ak_{datetime.now():%Y%m%d}.log"
     assert log_file.exists()
     assert "default-path" in log_file.read_text(encoding="utf-8")
+
+
+def _install_fake_agent(monkeypatch, fake_agent):
+    agents_module = importlib.import_module("akasha.agent.agents")
+
+    class FakeModel:
+        def get_num_tokens(self, text):
+            return len(text)
+
+    monkeypatch.setattr(
+        "akasha.utils.atman.handle_model",
+        lambda *args, **kwargs: FakeModel(),
+    )
+    monkeypatch.setattr(
+        agents_module,
+        "create_agent",
+        lambda **kwargs: fake_agent,
+    )
+    return agents_module
+
+
+def test_agent_verbose_prints_non_stream_tool_trace(monkeypatch, capsys):
+    class FakeAgent:
+        async def ainvoke(self, _payload, config=None):
+            return {
+                "messages": [
+                    AIMessage(
+                        content="",
+                        tool_calls=[
+                            {
+                                "name": "load_skill",
+                                "args": {"reference": "python-repl-skill"},
+                                "id": "load-1",
+                            }
+                        ],
+                    ),
+                    ToolMessage(
+                        content="Skill 'python-repl-skill' loaded.",
+                        name="load_skill",
+                        tool_call_id="load-1",
+                    ),
+                    AIMessage(
+                        content="",
+                        tool_calls=[
+                            {
+                                "name": "python_execute",
+                                "args": {
+                                    "skill": "python-repl-skill",
+                                    "source": "total / len(values)",
+                                },
+                                "id": "python-1",
+                            }
+                        ],
+                    ),
+                    ToolMessage(
+                        content="execution: repl\nstdout:\n5.0",
+                        name="python_execute",
+                        tool_call_id="python-1",
+                    ),
+                    AIMessage(content="The average is 5.0."),
+                ]
+            }
+
+    agents_module = _install_fake_agent(monkeypatch, FakeAgent())
+    agent = agents_module.agents(
+        model="fake:model",
+        verbose=True,
+        keep_logs=False,
+    )
+
+    assert agent("calculate") == "The average is 5.0."
+    output = capsys.readouterr().out
+    assert "[akasha] tool call: load_skill" in output
+    assert '"reference": "python-repl-skill"' in output
+    assert "[akasha] tool result: load_skill" in output
+    assert "[akasha] tool call: python_execute" in output
+    assert '"source": "total / len(values)"' in output
+    assert "execution: repl" in output
+
+    quiet_agent = agents_module.agents(
+        model="fake:model",
+        verbose=False,
+        keep_logs=False,
+    )
+    assert quiet_agent("calculate") == "The average is 5.0."
+    assert "[akasha] tool" not in capsys.readouterr().out
+
+
+def test_agent_verbose_prints_stream_tool_trace(monkeypatch, capsys):
+    class FakeAgent:
+        def stream(self, _payload, config=None, stream_mode=None):
+            yield AIMessageChunk(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "python_execute",
+                        "args": {"source": "2 + 3"},
+                        "id": "python-1",
+                    }
+                ],
+            )
+            yield ToolMessage(
+                content="execution: repl\nstdout:\n5",
+                name="python_execute",
+                tool_call_id="python-1",
+            )
+            yield AIMessageChunk(content="5")
+
+    agents_module = _install_fake_agent(monkeypatch, FakeAgent())
+    agent = agents_module.agents(
+        model="fake:model",
+        stream=True,
+        verbose=True,
+        keep_logs=False,
+    )
+
+    events = list(agent("calculate"))
+    output = capsys.readouterr().out
+    assert [event["type"] for event in events] == ["tool", "answer"]
+    assert output.count("[akasha] tool call: python_execute") == 1
+    assert "[akasha] tool result: python_execute" in output
+    assert "execution: repl" in output

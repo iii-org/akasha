@@ -60,6 +60,17 @@ def _json_safe(value: Any) -> Any:
         return str(value)
 
 
+def _trace_text(value: Any, limit: int = 4_000) -> str:
+    safe = _json_safe(value)
+    if isinstance(safe, str):
+        text = safe
+    else:
+        text = json.dumps(safe, ensure_ascii=False, indent=2)
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "\n... [verbose output truncated]"
+
+
 def _thinking_text(message: Any) -> str:
     blocks = getattr(message, "content_blocks", None) or []
     parts = []
@@ -292,6 +303,36 @@ class agents(basic_llm):
                 self.effective_thinking_budget,
             )
 
+    def _display_tool_call(self, call: Any) -> None:
+        if not self.verbose:
+            return
+        call = _json_safe(call)
+        name = (
+            call.get("name", "unknown")
+            if isinstance(call, dict)
+            else "unknown"
+        )
+        args = call.get("args", {}) if isinstance(call, dict) else call
+        print(f"[akasha] tool call: {name}")
+        print(f"  args: {_trace_text(args)}")
+
+    def _display_tool_result(self, message: ToolMessage) -> None:
+        if not self.verbose:
+            return
+        name = getattr(message, "name", None) or "unknown"
+        print(f"[akasha] tool result: {name}")
+        print(f"  result: {_trace_text(_message_text(message))}")
+
+    def _display_tool_trace(self, messages: list) -> None:
+        if not self.verbose:
+            return
+        for message in messages:
+            if isinstance(message, (AIMessage, AIMessageChunk)):
+                for call in getattr(message, "tool_calls", None) or []:
+                    self._display_tool_call(call)
+            elif isinstance(message, ToolMessage):
+                self._display_tool_result(message)
+
     def _record_result(self, timestamp: str, result: Any, elapsed: float) -> None:
         if self.skill_middleware is not None:
             self.skill_tool_names = self.skill_middleware.loaded_skill_tools
@@ -377,6 +418,7 @@ class agents(basic_llm):
             self._payload(question, messages),
             config={"recursion_limit": max(3, self.max_round * 2 + 1)},
         )
+        self._display_tool_trace(_extract_messages(result))
         self._record_result(timestamp, result, time.time() - start)
         if not self.response:
             raise RuntimeError("LangChain agent returned no final answer")
@@ -391,6 +433,7 @@ class agents(basic_llm):
         collected = []
         answer_parts = []
         thinking_parts = []
+        displayed_tool_calls = set()
         include_thinking = self.thinking if include_thinking is None else include_thinking
         if self.keep_logs:
             self.timestamp_list.append(timestamp)
@@ -423,9 +466,18 @@ class agents(basic_llm):
                 for message in messages:
                     if isinstance(message, ToolMessage):
                         collected.append(message)
+                        self._display_tool_result(message)
                         yield {"type": "tool", "data": _message_dump(message)}
                         continue
                     collected.append(message)
+                    for call in getattr(message, "tool_calls", None) or []:
+                        safe_call = _json_safe(call)
+                        identity = json.dumps(
+                            safe_call, ensure_ascii=False, sort_keys=True
+                        )
+                        if identity not in displayed_tool_calls:
+                            displayed_tool_calls.add(identity)
+                            self._display_tool_call(call)
                     thinking = _thinking_text(message)
                     if include_thinking and thinking:
                         thinking_parts.append(thinking)
