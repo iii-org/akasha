@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+import os
 import subprocess
 import sys
 from threading import RLock
@@ -296,6 +297,12 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
     ) -> str:
         command = self._script_command(target, interpreter)
         command.extend(str(value) for value in (args or []))
+        # Skill scripts run in a child process. Force Python child processes
+        # to emit UTF-8 so captured stdout/stderr can be decoded consistently
+        # across Windows code pages and POSIX locales.
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONUTF8"] = "1"
         try:
             completed = subprocess.run(
                 command,
@@ -303,6 +310,7 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
                 capture_output=True,
                 timeout=self._default_script_timeout,
                 check=False,
+                env=env,
             )
         except subprocess.TimeoutExpired as exc:
             return (
@@ -316,13 +324,17 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
                 "skill script could not be started with interpreter "
                 f"{command[0]!r}: {target.name}: {exc}"
             )
-        return (
-            "execution: script\n"
-            f"exit_code: {completed.returncode}\n"
-            f"stdout:\n{self._limit_script_output(completed.stdout)}\n"
-            f"stderr:\n{self._limit_script_output(completed.stderr)}"
-        )
 
+        stdout = self._limit_script_output(completed.stdout)
+        stderr = self._limit_script_output(completed.stderr)
+        result = [
+            "execution: script",
+            f"exit_code: {completed.returncode}",
+            f"stdout:\n{stdout}",
+        ]
+        if stderr:
+            result.append(f"stderr:\n{stderr}")
+        return "\n".join(result) + "\n"
     def _execute_repl(
         self,
         item: _AvailableSkill,

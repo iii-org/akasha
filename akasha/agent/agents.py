@@ -286,8 +286,8 @@ class agents(basic_llm):
             "Thinking: %s, Thinking budget level: %s, "
             "Effective thinking budget: %s"
         )
-        if self.verbose:
-            print(
+        if self.verbose or self.keep_logs:
+            self._emit_trace(
                 message
                 % (
                     self.thinking,
@@ -295,25 +295,66 @@ class agents(basic_llm):
                     self.effective_thinking_budget,
                 )
             )
-        if self.keep_logs:
-            logging.info(
-                message,
-                self.thinking,
-                self.thinking_budget_level,
-                self.effective_thinking_budget,
-                extra={"akasha_trace": True},
-            )
 
     def _emit_trace(self, text: str) -> None:
         """Write one complete agent trace line to enabled debug channels."""
         if self.verbose:
-            print(f"[akasha] {text}")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            prefix = f"\033[32m[akasha {timestamp}]\033[0m"
+            console_text = (
+                "\033[33m[agent.trace]\033[0m "
+                + text
+            )
+            if "stderr:\n" in console_text:
+                before, error = console_text.split("stderr:\n", 1)
+                console_text = (
+                    before
+                    + "\033[31mstderr:\n"
+                    + error
+                    + "\033[0m"
+                )
+            print(f"{prefix} {console_text}")
         if self.keep_logs:
             logging.getLogger("akasha.agent").info(
-                text,
+                f"[agent.logger] {text}",
                 extra={"akasha_trace": True},
             )
+    def _record_timing(
+        self,
+        timestamp: str,
+        started_at: datetime.datetime,
+        ended_at: datetime.datetime,
+        elapsed: float,
+    ) -> None:
+        if self.keep_logs:
+            self.logs[timestamp].update(
+                {
+                    "start_time": started_at.isoformat(timespec="milliseconds"),
+                    "end_time": ended_at.isoformat(timespec="milliseconds"),
+                    "elapsed_seconds": elapsed,
+                }
+            )
 
+    def _display_timing(
+        self,
+        phase: str,
+        moment: datetime.datetime,
+        elapsed: float | None = None,
+    ) -> None:
+        if not (self.verbose or self.keep_logs):
+            return
+        message = f"{phase}: {moment.isoformat(timespec='milliseconds')}"
+        if elapsed is not None:
+            message += f" elapsed={elapsed:.3f}s"
+        self._emit_trace(message)
+    def _display_stream_event(self, event_type: str, data: Any) -> None:
+        """Display consumed stream data when verbose mode is enabled."""
+        if not self.verbose:
+            return
+        if event_type == "thinking":
+            self._emit_trace(f"stream.thinking: {data}")
+        elif event_type == "answer":
+            print(str(data), end="", flush=True)
     def _display_tool_call(self, call: Any) -> None:
         if not (self.verbose or self.keep_logs):
             return
@@ -407,12 +448,15 @@ class agents(basic_llm):
 
     async def _ainvoke(self, question: str, messages: List[dict] | None):
         self._display_thinking_info()
+        started_at = datetime.datetime.now()
         start = time.time()
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        timestamp = started_at.strftime("%Y/%m/%d, %H:%M:%S")
+        self._display_timing("start", started_at)
         if self.keep_logs:
             self.timestamp_list.append(timestamp)
             self.logs[timestamp] = {
                 "fn_type": "agent_call",
+                "start_time": started_at.isoformat(timespec="milliseconds"),
                 "question": question,
                 "model": self.model,
                 "tools": list(self.tools),
@@ -430,7 +474,11 @@ class agents(basic_llm):
             config={"recursion_limit": max(3, self.max_round * 2 + 1)},
         )
         self._display_tool_trace(_extract_messages(result))
-        self._record_result(timestamp, result, time.time() - start)
+        elapsed = time.time() - start
+        ended_at = datetime.datetime.now()
+        self._record_result(timestamp, result, elapsed)
+        self._record_timing(timestamp, started_at, ended_at, elapsed)
+        self._display_timing("end", ended_at, elapsed)
         if not self.response:
             raise RuntimeError("LangChain agent returned no final answer")
         return self.response
@@ -439,8 +487,10 @@ class agents(basic_llm):
         self, question: str, messages: List[dict] | None, include_thinking: bool | None
     ) -> Generator[dict, None, None]:
         self._display_thinking_info()
+        started_at = datetime.datetime.now()
         start = time.time()
-        timestamp = datetime.datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
+        timestamp = started_at.strftime("%Y/%m/%d, %H:%M:%S")
+        self._display_timing("start", started_at)
         collected = []
         answer_parts = []
         thinking_parts = []
@@ -450,6 +500,7 @@ class agents(basic_llm):
             self.timestamp_list.append(timestamp)
             self.logs[timestamp] = {
                 "fn_type": "agent_call",
+                "start_time": started_at.isoformat(timespec="milliseconds"),
                 "question": question,
                 "model": self.model,
                 "tools": list(self.tools),
@@ -492,14 +543,24 @@ class agents(basic_llm):
                     thinking = _thinking_text(message)
                     if include_thinking and thinking:
                         thinking_parts.append(thinking)
+                        self._display_stream_event("thinking", thinking)
                         yield {"type": "thinking", "data": thinking}
                     text = _message_text(message)
                     if text:
+                        if self.verbose and not answer_parts:
+                            print("\033[33m[agent.answer]\033[0m ", end="", flush=True)
                         answer_parts.append(text)
+                        self._display_stream_event("answer", text)
                         yield {"type": "answer", "data": text}
             result = {"messages": collected}
-            self._record_result(timestamp, result, time.time() - start)
+            elapsed = time.time() - start
+            ended_at = datetime.datetime.now()
+            self._record_result(timestamp, result, elapsed)
+            self._record_timing(timestamp, started_at, ended_at, elapsed)
+            self._display_timing("end", ended_at, elapsed)
             self.response = "".join(answer_parts)
+            if self.verbose and self.response:
+                print()
             self.thoughts = thinking_parts
             if self.keep_logs:
                 self.logs[timestamp]["response"] = self.response

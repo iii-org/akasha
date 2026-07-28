@@ -26,6 +26,12 @@ class _AkashaConsoleFilter(logging.Filter):
         return True
 
 
+class _SuppressAkashaTraceFilter(logging.Filter):
+    """Prevent fallback/root handlers from duplicating agent trace records."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not getattr(record, "akasha_trace", False)
+
 class _AkashaOnlyFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         return _is_akasha_record(record)
@@ -103,3 +109,13 @@ def configure_logging(
             _file_handler.close()
             _file_handler = None
             _file_path = None
+    # Some dependencies call logging.basicConfig() before Akasha configures
+    # its handlers. Suppress trace records on those fallback handlers so an
+    # agent trace is not printed a second time as INFO:akasha.agent.
+    for handler in root_logger.handlers:
+        if handler not in {_console_handler, _file_handler}:
+            if not any(
+                isinstance(item, _SuppressAkashaTraceFilter)
+                for item in handler.filters
+            ):
+                handler.addFilter(_SuppressAkashaTraceFilter())

@@ -23,7 +23,20 @@ def main() -> None:
     )
     response = agent(prompt)
     print(response)
-    breakpoint()
+    # breakpoint()
+    
+    for event in response:
+        event_type = event.get("type")
+        if event_type == "thinking":
+            print(f"[thinking] {event.get('data', '')}", flush=True)
+        elif event_type == "tool":
+            tool = event.get("data", {})
+            name = tool.get("name", "unknown")
+            content = tool.get("content", "")
+            print(f"\n[tool:{name}] {content}", flush=True)
+        elif event_type == "answer":
+            chunk = event.get("data", "")
+            print(chunk, end="", flush=True)
 
 
 if __name__ == "__main__":
