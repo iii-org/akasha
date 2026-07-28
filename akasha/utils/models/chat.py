@@ -65,7 +65,8 @@ def build_chat_model(
             }
             if thinking:
                 kwargs["max_completion_tokens"] = max_output_tokens
-                kwargs["reasoning_effort"] = thinking_level or "medium"
+                if thinking_level is not None:
+                    kwargs["reasoning_effort"] = thinking_level
             else:
                 kwargs["max_tokens"] = max_output_tokens
             return ChatOpenAI(**kwargs)
@@ -86,7 +87,8 @@ def build_chat_model(
             kwargs["base_url"] = _normalize_openai_base_url(env["OPENAI_BASE_URL"])
         if thinking:
             kwargs["max_completion_tokens"] = max_output_tokens
-            kwargs["reasoning_effort"] = thinking_level or "medium"
+            if thinking_level is not None:
+                kwargs["reasoning_effort"] = thinking_level
         else:
             kwargs["max_tokens"] = max_output_tokens
         return ChatOpenAI(
@@ -106,7 +108,9 @@ def build_chat_model(
         }
         if thinking:
             kwargs["include_thoughts"] = True
-            if normalized_budget is not None:
+            if thinking_level is not None and model_name.lower().startswith("gemini-3"):
+                kwargs["thinking_level"] = thinking_level
+            elif normalized_budget is not None:
                 kwargs["thinking_budget"] = normalized_budget
         return ChatGoogleGenerativeAI(**kwargs)
 

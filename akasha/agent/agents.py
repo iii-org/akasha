@@ -301,10 +301,21 @@ class agents(basic_llm):
                 self.thinking,
                 self.thinking_budget_level,
                 self.effective_thinking_budget,
+                extra={"akasha_trace": True},
+            )
+
+    def _emit_trace(self, text: str) -> None:
+        """Write one complete agent trace line to enabled debug channels."""
+        if self.verbose:
+            print(f"[akasha] {text}")
+        if self.keep_logs:
+            logging.getLogger("akasha.agent").info(
+                text,
+                extra={"akasha_trace": True},
             )
 
     def _display_tool_call(self, call: Any) -> None:
-        if not self.verbose:
+        if not (self.verbose or self.keep_logs):
             return
         call = _json_safe(call)
         name = (
@@ -313,18 +324,18 @@ class agents(basic_llm):
             else "unknown"
         )
         args = call.get("args", {}) if isinstance(call, dict) else call
-        print(f"[akasha] tool call: {name}")
-        print(f"  args: {_trace_text(args)}")
+        self._emit_trace(f"tool call: {name}\n  args: {_trace_text(args)}")
 
     def _display_tool_result(self, message: ToolMessage) -> None:
-        if not self.verbose:
+        if not (self.verbose or self.keep_logs):
             return
         name = getattr(message, "name", None) or "unknown"
-        print(f"[akasha] tool result: {name}")
-        print(f"  result: {_trace_text(_message_text(message))}")
+        self._emit_trace(
+            f"tool result: {name}\n  result: {_trace_text(_message_text(message))}"
+        )
 
     def _display_tool_trace(self, messages: list) -> None:
-        if not self.verbose:
+        if not (self.verbose or self.keep_logs):
             return
         for message in messages:
             if isinstance(message, (AIMessage, AIMessageChunk)):

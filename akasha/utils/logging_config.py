@@ -18,6 +18,9 @@ def _is_akasha_record(record: logging.LogRecord) -> bool:
 
 class _AkashaConsoleFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
+        # Keep the file copy of agent traces without duplicating it on console.
+        if getattr(record, "akasha_trace", False):
+            return False
         if _is_akasha_record(record):
             return _console_enabled
         return True

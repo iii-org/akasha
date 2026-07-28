@@ -24,11 +24,11 @@ def _ask_for_display(**overrides):
     return instance
 
 
-def test_verbose_warns_for_gemini_without_thinking_budget(capsys):
+def test_verbose_reports_gemini_api_default_without_thinking_budget(capsys):
     _ask_for_display()._display_info()
 
     output = capsys.readouterr().out
-    assert "Warning: Gemini thinking is enabled" in output
+    assert "Info: Gemini thinking_budget is not set" in output
     assert "\033[33m" in output
 
 

@@ -29,6 +29,49 @@ def test_gemini_thinking_settings_are_forwarded(monkeypatch):
     assert captured["thinking_budget"] == 4096
 
 
+def test_gemini_thinking_budget_is_omitted_when_unspecified(monkeypatch):
+    captured = {}
+
+    class FakeGemini:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    import langchain_google_genai
+
+    monkeypatch.setattr(langchain_google_genai, "ChatGoogleGenerativeAI", FakeGemini)
+    build_chat_model(
+        "gemini",
+        "gemini-2.5-flash",
+        {"GEMINI_API_KEY": "test"},
+        thinking=True,
+    )
+
+    assert captured["include_thoughts"] is True
+    assert "thinking_budget" not in captured
+    assert "thinking_level" not in captured
+
+
+def test_gemini_3_explicit_level_uses_thinking_level(monkeypatch):
+    captured = {}
+
+    class FakeGemini:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    import langchain_google_genai
+
+    monkeypatch.setattr(langchain_google_genai, "ChatGoogleGenerativeAI", FakeGemini)
+    build_chat_model(
+        "gemini",
+        "gemini-3.6-flash",
+        {"GEMINI_API_KEY": "test"},
+        thinking=True,
+        thinking_budget="high",
+    )
+
+    assert captured["thinking_level"] == "high"
+    assert "thinking_budget" not in captured
+
 @pytest.mark.parametrize(
     ("level", "max_output_tokens", "expected"),
     [
@@ -83,6 +126,26 @@ def test_openai_thinking_level_maps_to_reasoning_effort(monkeypatch):
 
     assert captured["reasoning_effort"] == "high"
 
+
+def test_openai_reasoning_effort_is_omitted_when_unspecified(monkeypatch):
+    captured = {}
+
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    import langchain_openai
+
+    monkeypatch.setattr(langchain_openai, "ChatOpenAI", FakeChatOpenAI)
+    build_chat_model(
+        "openai",
+        "gpt-5.4",
+        {"OPENAI_API_KEY": "test"},
+        thinking=True,
+    )
+
+    assert captured["max_completion_tokens"] == 1024
+    assert "reasoning_effort" not in captured
 
 def test_anthropic_does_not_send_temperature(monkeypatch):
     captured = {}

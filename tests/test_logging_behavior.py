@@ -171,6 +171,59 @@ def test_agent_verbose_prints_non_stream_tool_trace(monkeypatch, capsys):
     assert "[akasha] tool" not in capsys.readouterr().out
 
 
+def test_agent_keep_logs_writes_the_same_tool_trace_as_verbose(
+    monkeypatch, tmp_path, capsys
+):
+    class FakeAgent:
+        async def ainvoke(self, _payload, config=None):
+            return {
+                "messages": [
+                    AIMessage(
+                        content="",
+                        tool_calls=[
+                            {
+                                "name": "python_execute",
+                                "args": {"source": "2 + 3"},
+                                "id": "python-1",
+                            }
+                        ],
+                    ),
+                    ToolMessage(
+                        content="execution: repl\nstdout:\n5",
+                        name="python_execute",
+                        tool_call_id="python-1",
+                    ),
+                    AIMessage(content="5"),
+                ]
+            }
+
+    log_file = tmp_path / "agent.log"
+    agents_module = _install_fake_agent(monkeypatch, FakeAgent())
+    agent = agents_module.agents(
+        model="fake:model",
+        verbose=True,
+        keep_logs=str(log_file),
+    )
+
+    assert agent("calculate") == "5"
+    console = capsys.readouterr().out
+    file_handler = _get_file_handler()
+    assert file_handler is not None
+    file_handler.flush()
+    recorded = log_file.read_text(encoding="utf-8")
+
+    for text in (
+        "tool call: python_execute",
+        '"source": "2 + 3"',
+        "tool result: python_execute",
+        "execution: repl",
+        "stdout:\n5",
+    ):
+        assert text in console
+        assert text in recorded
+
+    assert console.count("tool call: python_execute") == 1
+
 def test_agent_verbose_prints_stream_tool_trace(monkeypatch, capsys):
     class FakeAgent:
         def stream(self, _payload, config=None, stream_mode=None):
