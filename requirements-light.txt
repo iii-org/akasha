@@ -4,6 +4,7 @@
 pypdf
 langchain-core>=1.3,<2.0
 langchain>=1.3,<2.0
+langchain-experimental>=0.4,<0.5
 langchain-community>=0.4.1,<0.5
 langchain-classic>=1.0,<2.0
 langchain_openai>=1.0,<2.0
@@ -40,3 +41,4 @@ mlflow
 json_repair
 jsonpatch>=1.33
 python-dotenv
+pyyaml>=6.0,<7.0

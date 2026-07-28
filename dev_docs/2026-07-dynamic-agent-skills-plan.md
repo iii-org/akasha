@@ -104,25 +104,24 @@ agents._build_agent() 保持單一建立點；模型切換重新建立 agent 時
 
 ## 8. Skill 檔案格式
 
-暫定：
+外部 skill 使用標準 SKILL.md frontmatter，不增加 Akasha-specific 欄位：
 
     skills/
       research/
         SKILL.md
-        skill.yaml       # optional
       reporting/
         SKILL.md
-        skill.yaml       # optional
 
-第一版只要求 SKILL.md。skill.yaml 後續可提供：
+SKILL.md：
 
+    ---
     name: research
     description: Web and document research workflow
-    version: "1.0.0"
-    tools:
-      - web_search_tool
-      - rag_tool
+    ---
 
+    Skill instructions...
+
+外部 skill 只提供 metadata 與 instructions。Skill-specific tools 由 agent 的既有 tools、Python Skill 物件或應用程式內部受控綁定提供。
 ## 9. 相容性要求
 
 - agents(tools=[...]) 不傳 skills 時行為完全不變。
@@ -197,4 +196,6 @@ agents._build_agent() 保持單一建立點；模型切換重新建立 agent 時
 3. registry 預設來源是否限定為 akasha/skills/，或由呼叫端顯式傳入？
 4. instructions 要每次 call 重讀，還是初始化時載入並 cache？
 5. tool name collision 是否採 fail fast？本計畫預設採 fail fast。
+## 17. Resource Loading
 
+Skill directory 可包含 references/、assets/ 與 scripts/。Akasha 不會預先索引或執行這些內容；skill 載入後才提供 read_skill_resource，讓模型依 SKILL.md 中的相對路徑讀取 UTF-8 text resource。resource path 必須留在 skill root 內，並受 max_resource_bytes 限制。

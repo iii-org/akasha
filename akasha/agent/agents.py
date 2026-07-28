@@ -7,12 +7,18 @@ import datetime
 import json
 import logging
 import time
-from typing import Any, Generator, List, Union
+from typing import Any, Generator, List, Sequence, Union
 
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_core.tools import BaseTool
 
+from akasha.agent.skills import (
+    DynamicSkillMiddleware,
+    Skill,
+    SkillContext,
+    SkillToolContext,
+)
 from akasha.helper.base import get_doc_length
 from akasha.helper.run_llm import content_to_text, content_to_thinking
 from akasha.utils.atman import basic_llm
@@ -161,7 +167,8 @@ class agents(basic_llm):
 
     def __init__(
         self,
-        tools: Union[BaseTool, List] = [],
+        tools: Union[BaseTool, List] | None = None,
+        skills: str | Skill | Sequence[str | Skill] | None = None,
         model: str = DEFAULT_MODEL,
         max_input_tokens: int = DEFAULT_MAX_INPUT_TOKENS,
         max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
@@ -179,6 +186,7 @@ class agents(basic_llm):
         env_file: str = "",
         thinking: bool = False,
         thinking_budget: ThinkingBudget = None,
+        max_resource_bytes: int = 128 * 1024,
     ):
         super().__init__(
             model=model,
@@ -205,6 +213,8 @@ class agents(basic_llm):
         self.tokens = 0
         self.input_len = 0
         self.question = ""
+        if tools is None:
+            tools = []
         if isinstance(tools, BaseTool):
             tools = [tools]
         self.tools = {tool.name: tool for tool in tools if isinstance(tool, BaseTool)}
@@ -214,6 +224,13 @@ class agents(basic_llm):
         self.tool_explaination = {
             name: tool.description for name, tool in self.tools.items()
         }
+        self.max_resource_bytes = max_resource_bytes
+        self.skill_references = skills
+        self._skills_enabled = self._has_skill_references(skills)
+        self.skill_context: SkillContext = SkillContext()
+        self.skill_tools = ()
+        self.skill_tool_names: dict[str, tuple[str, ...]] = {}
+        self.skill_middleware: DynamicSkillMiddleware | None = None
         self._agent = self._build_agent()
 
     def _set_model(self, **kwargs):
@@ -222,12 +239,37 @@ class agents(basic_llm):
         if getattr(self, "model_obj", None) is not previous:
             self._agent = self._build_agent()
 
+    @staticmethod
+    def _has_skill_references(skills) -> bool:
+        if skills is None:
+            return False
+        if isinstance(skills, (str, Skill)):
+            return True
+        return bool(skills)
+
     def _build_agent(self):
-        kwargs = {"model": self.model_obj, "tools": list(self.tools.values())}
-        if self.system_prompt.strip():
+        kwargs = {
+            "model": self.model_obj,
+            "tools": list(self.tools.values()),
+        }
+        if self._skills_enabled:
+            self.skill_tool_context = SkillToolContext(
+                env_file=self.env_file,
+                language=self.language,
+                model=self.model,
+            )
+            self.skill_middleware = DynamicSkillMiddleware(
+                self.skill_references,
+                base_prompt=self.system_prompt,
+                tool_context=self.skill_tool_context,
+                existing_tools=list(self.tools.values()),
+                max_resource_bytes=self.max_resource_bytes,
+            )
+            self.skill_context = self.skill_middleware.available_context
+            kwargs["middleware"] = [self.skill_middleware]
+        elif self.system_prompt.strip():
             kwargs["system_prompt"] = self.system_prompt
         return create_agent(**kwargs)
-
     def _display_thinking_info(self) -> None:
         message = (
             "Thinking: %s, Thinking budget level: %s, "
@@ -251,6 +293,9 @@ class agents(basic_llm):
             )
 
     def _record_result(self, timestamp: str, result: Any, elapsed: float) -> None:
+        if self.skill_middleware is not None:
+            self.skill_tool_names = self.skill_middleware.loaded_skill_tools
+            self.skill_tools = tuple(self.skill_middleware._loaded_tools.values())
         messages = _extract_messages(result)
         self.messages = [_message_dump(message) for message in messages]
         self.tool_calls = []
@@ -319,6 +364,9 @@ class agents(basic_llm):
                 "question": question,
                 "model": self.model,
                 "tools": list(self.tools),
+                "skills": self.skill_context.names,
+                "skill_versions": self.skill_context.versions,
+                "skill_tools": self.skill_tool_names,
                 "thinking": self.thinking,
                 "thinking_budget_level": self.thinking_budget_level,
                 "effective_thinking_budget": self.effective_thinking_budget,
@@ -351,6 +399,9 @@ class agents(basic_llm):
                 "question": question,
                 "model": self.model,
                 "tools": list(self.tools),
+                "skills": self.skill_context.names,
+                "skill_versions": self.skill_context.versions,
+                "skill_tools": self.skill_tool_names,
             }
         try:
             stream_kwargs = {

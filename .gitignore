@@ -65,3 +65,5 @@ logs*.json
 .DS_Store
 tests/upgrade_tests/.env
 __pycache__
+
+.pytest-tmp/
