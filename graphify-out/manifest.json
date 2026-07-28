@@ -10,13 +10,13 @@
     "semantic_hash": ""
   },
   "akasha/__init__.py": {
-    "mtime": 1783315760.9615245,
-    "ast_hash": "9f0e6c53fe8ea99b2c6f28c133f52c5e",
+    "mtime": 1784894366.3461351,
+    "ast_hash": "1341e062e658ffd075d2c0bbdf623a77",
     "semantic_hash": ""
   },
   "akasha/agent/__init__.py": {
-    "mtime": 1782974916.9062443,
-    "ast_hash": "0d9352254e6db00724bcf13cb0dd0ec2",
+    "mtime": 1784894366.3451347,
+    "ast_hash": "5b6e2cf9b6715a26e6bc31d6469a4cbe",
     "semantic_hash": ""
   },
   "akasha/agent/agent_tools.py": {
@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "akasha/agent/agents.py": {
-    "mtime": 1784879439.0783982,
-    "ast_hash": "a6911f89a049ce6799abb1c418e340b3",
+    "mtime": 1785225622.3277957,
+    "ast_hash": "e521b4b920495db03af7b40c95ee16bd",
     "semantic_hash": ""
   },
   "akasha/agent/base.py": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "akasha/tools/ask.py": {
-    "mtime": 1784879439.2036352,
-    "ast_hash": "106daa92fe7937c55ed98165e2450bb2",
+    "mtime": 1785216184.4983838,
+    "ast_hash": "fac017dff410c26845513a55b71805f0",
     "semantic_hash": ""
   },
   "akasha/tools/gen_img.py": {
@@ -230,8 +230,8 @@
     "semantic_hash": ""
   },
   "akasha/utils/logging_config.py": {
-    "mtime": 1784879439.244897,
-    "ast_hash": "acbc1f17e9b64c3e413db15d0999863e",
+    "mtime": 1785222550.2682586,
+    "ast_hash": "8cf3f279c9ff710f31c062aa512e2a54",
     "semantic_hash": ""
   },
   "akasha/utils/models/anthro.py": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "pyproject.toml": {
-    "mtime": 1784880133.0367794,
-    "ast_hash": "56f1b0284b8ad7f089825c38d507deb8",
+    "mtime": 1785204509.3631504,
+    "ast_hash": "45173e615b4914d8268211ad704cabac",
     "semantic_hash": ""
   },
   "setup.py": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "tests/test_logging_behavior.py": {
-    "mtime": 1782982840.3618085,
-    "ast_hash": "818acc819f6c90aaf9176e1295cad98f",
+    "mtime": 1785208709.3140275,
+    "ast_hash": "97202afb5f7b2c19464d314dfca790cf",
     "semantic_hash": ""
   },
   "tests/test_summary.py": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1784879438.841406,
-    "ast_hash": "3d2e06f727e718f5bd59495442a155a7",
+    "mtime": 1785203493.6708753,
+    "ast_hash": "239382174a36b257faf799231dc41a1a",
     "semantic_hash": ""
   },
   ".github/workflows/publish.yml": {
@@ -605,13 +605,13 @@
     "semantic_hash": ""
   },
   "requirements-light.txt": {
-    "mtime": 1784879439.968801,
-    "ast_hash": "927b4b19fec462c6a8d184a7e9d99edb",
+    "mtime": 1785206429.1116047,
+    "ast_hash": "f0817d6c7633b04df54d76e0f91c906d",
     "semantic_hash": ""
   },
   "requirements.txt": {
-    "mtime": 1784879440.0643573,
-    "ast_hash": "2d93a7b9e943cbe1b3785df8919d7469",
+    "mtime": 1785206429.1116047,
+    "ast_hash": "dca7e20ae0d7e91c6d25e99ce3e73b26",
     "semantic_hash": ""
   },
   "tests.md": {
@@ -720,8 +720,8 @@
     "semantic_hash": ""
   },
   "akasha/utils/models/chat.py": {
-    "mtime": 1784879439.2569475,
-    "ast_hash": "ef3915fed910d200ac1eac39a271cb1a",
+    "mtime": 1785216104.8686607,
+    "ast_hash": "637846a75f9e2cc51d99894bbe18af97",
     "semantic_hash": ""
   },
   "akasha/utils/models/thinking.py": {
@@ -840,8 +840,8 @@
     "semantic_hash": ""
   },
   "tests/unit/test_thinking_model_config.py": {
-    "mtime": 1784879441.0354412,
-    "ast_hash": "2d71ce6f175d843b0c6dc987f33a3812",
+    "mtime": 1785216128.4393127,
+    "ast_hash": "9a0e5370c289a6c7001feb75709a8181",
     "semantic_hash": ""
   },
   "dev_docs/2026-07-common-chat-model-interface-upgrade.md": {
@@ -962,6 +962,166 @@
   "tests/config/model_manifest.yaml": {
     "mtime": 1784879440.1275947,
     "ast_hash": "11d5dfe29ced12abf667b0730af93975",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/__init__.py": {
+    "mtime": 1784894366.349135,
+    "ast_hash": "146ecf679e71e72f4f9d8881fe0da907",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/loader.py": {
+    "mtime": 1784897030.0340066,
+    "ast_hash": "d2e2001e22151479c68e8a3ebb39482d",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/middleware.py": {
+    "mtime": 1785221722.1290133,
+    "ast_hash": "7d7e95c91f1d9d3fe355aa4b346744c7",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/models.py": {
+    "mtime": 1784891426.158738,
+    "ast_hash": "48c7f1b2f1ee44fc4bc3b4b2d383d146",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/registry.py": {
+    "mtime": 1784884072.9808927,
+    "ast_hash": "21534963d76b31dbeb381e5227ee48a5",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/resolver.py": {
+    "mtime": 1784892489.7448413,
+    "ast_hash": "b8ea84301c812eaada8e9128e02d5c4a",
+    "semantic_hash": ""
+  },
+  "akasha/agent/skills/tool_registry.py": {
+    "mtime": 1784891260.3914976,
+    "ast_hash": "fc0ec86b866597e78ff6cd43b8396c48",
+    "semantic_hash": ""
+  },
+  "examples/examples_skills/app_non_stream.py": {
+    "mtime": 1785220420.1837504,
+    "ast_hash": "02de362e3b96c57e9edbf239455d9e7c",
+    "semantic_hash": ""
+  },
+  "examples/examples_skills/app_stream.py": {
+    "mtime": 1785226734.9708195,
+    "ast_hash": "2f2a2f8886cfb8ad747bd9023804ad93",
+    "semantic_hash": ""
+  },
+  "examples/examples_skills/hello-skill/scripts/greet.py": {
+    "mtime": 1785204541.9916494,
+    "ast_hash": "539cb8f57c7dd25929a09b99804f4fcb",
+    "semantic_hash": ""
+  },
+  "examples/examples_skills/repl_app.py": {
+    "mtime": 1785224154.5648794,
+    "ast_hash": "e8864a2d157df7129a0d85458f5f5167",
+    "semantic_hash": ""
+  },
+  "tests/conftest.py": {
+    "mtime": 1785203235.9658146,
+    "ast_hash": "ed96e70bfd8500d670e8896802d7df68",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/research/assets/config.json": {
+    "mtime": 1784896647.1992195,
+    "ast_hash": "e72f93a3bdd9d6e5544f91cfb5f17d87",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/research/scripts/read_data.py": {
+    "mtime": 1784905871.218313,
+    "ast_hash": "2d1fd094f40ecba4e0d46498bf36040f",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_agent_skill_paths.py": {
+    "mtime": 1784896901.6536238,
+    "ast_hash": "be2170b1a5bd39e007bf6efc707fbef2",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_agent_skill_tools.py": {
+    "mtime": 1785206592.328116,
+    "ast_hash": "2fcfa36907612306cea8ee90bee36aa1",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_agent_skills.py": {
+    "mtime": 1784896701.160275,
+    "ast_hash": "07be430968aa018ae9b6186bca01c6f9",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_ask_thinking_warning.py": {
+    "mtime": 1785216184.5013735,
+    "ast_hash": "1ec8f3b0438bcd4989dd061bba1a19fb",
+    "semantic_hash": ""
+  },
+  "dev_docs/2026-07-agent-skills-local-runtime-plan.md": {
+    "mtime": 1784904980.327811,
+    "ast_hash": "2597a8c386d1ea6e38ac6dbe01e6da19",
+    "semantic_hash": ""
+  },
+  "dev_docs/2026-07-agent-skills-phase2-plan.md": {
+    "mtime": 1784896888.4064019,
+    "ast_hash": "965ac75f78b74bb353cd1cffc51a1e43",
+    "semantic_hash": ""
+  },
+  "dev_docs/2026-07-agent-skills-usage.md": {
+    "mtime": 1784905871.2213016,
+    "ast_hash": "1c8b6a4622d54f66894e8a65e3330d15",
+    "semantic_hash": ""
+  },
+  "dev_docs/2026-07-dynamic-agent-skills-plan.md": {
+    "mtime": 1784896888.4069197,
+    "ast_hash": "b5ebd97831d8fc621a25ff71def19fcd",
+    "semantic_hash": ""
+  },
+  "dev_docs/2026-07-thinking-response-contract.md": {
+    "mtime": 1785216990.9414778,
+    "ast_hash": "a94db6d35c0cb7957b3afbd1cee11ed9",
+    "semantic_hash": ""
+  },
+  "examples/examples_skills/hello-skill/SKILL.md": {
+    "mtime": 1785206300.6273146,
+    "ast_hash": "f3e71487ab948f7e7bb18b9772b0474b",
+    "semantic_hash": ""
+  },
+  "examples/examples_skills/python-repl-skill/SKILL.md": {
+    "mtime": 1785206547.697265,
+    "ast_hash": "9331b296d074b41a51a2f4518dd2513f",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260728_024922_\u6211\u57f7\u884c_repl_app_py_\u7136\u5f8c\u518d\u770b\u8f38\u51fa\u6642_\u770b\u4e0d\u51fa\u662f\u6a21\u578b\u81ea\u5df1\u60f3\u7684_\u9084\u662f\u6709\u6839\u64da_skill_\u505a\u7684.md": {
+    "mtime": 1785206962.2603939,
+    "ast_hash": "f1467f5a04a86b55352d53686949bfcb",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260728_025804_verbose_true_\u61c9\u7531_akasha_\u5167\u90e8\u5370\u51fa\u8f09\u5165_skill_\u8207\u4f7f\u7528\u5de5\u5177\u7684\u904e\u7a0b_\u800c\u4e0d\u662f\u8981\u6c42.md": {
+    "mtime": 1785207484.0689864,
+    "ast_hash": "9e489ea986a4039d29bc6cb29d149b20",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/invalid-name/SKILL.md": {
+    "mtime": 1784896901.6471834,
+    "ast_hash": "9898e34ea3efbde808f560b0562976f9",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/mismatched/SKILL.md": {
+    "mtime": 1784896901.649184,
+    "ast_hash": "946646967370db48b3e0d56d366dc036",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/research/SKILL.md": {
+    "mtime": 1784896664.3780265,
+    "ast_hash": "19c892ad291cfea8de19037043253da4",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/research/references/REFERENCE.md": {
+    "mtime": 1784896647.1982486,
+    "ast_hash": "0cf80c56c6d93427809d861a7e211c54",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/skills/research/references/large.txt": {
+    "mtime": 1784896647.2012608,
+    "ast_hash": "baf1da0e2b9065ab5edd36ca00ed1826",
     "semantic_hash": ""
   }
 }
