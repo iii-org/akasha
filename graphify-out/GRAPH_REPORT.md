@@ -1,16 +1,16 @@
-# Graph Report - akasha-repo  (2026-07-28)
+# Graph Report - akasha-repo  (2026-07-30)
 
 ## Corpus Check
 - 193 files · ~157,943 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1827 nodes · 3255 edges · 152 communities (144 shown, 8 thin omitted)
+- 1827 nodes · 3255 edges · 152 communities (143 shown, 9 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 113 edges (avg confidence: 0.65)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `02b870cf`
+- Built from commit: `b6e18213`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -152,7 +152,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (152 total, 8 thin omitted)
+## Communities (152 total, 9 thin omitted)
 
 ### Community 0 - "evaluation.py"
 Cohesion: 0.08
@@ -175,8 +175,8 @@ Cohesion: 0.22
 Nodes (12): get_storage_directory(), is_url(), _sanitize_path_part(), _sanitize_path_string(), PurePath, _FakeArray, _FakeChroma, test_dbs_initializes_from_chroma_like_object_with_fallbacks() (+4 more)
 
 ### Community 5 - "dbs"
-Cohesion: 0.20
-Nodes (5): gemini_model, LLM, Path, run llm and get the response          Args:             **prompt (str)**: use, return llm type          Returns:             str: llm type
+Cohesion: 0.19
+Nodes (7): gemini_model, BaseModel, LLM, Path, run llm and get the response          Args:             **prompt (str)**: use, run llm and get the response          Args:             **prompt (str)**: use, run llm and get the response          Args:             **prompt (str)**: use
 
 ### Community 6 - "self_query_filter.py"
 Cohesion: 0.10
@@ -538,10 +538,6 @@ Nodes (11): call_stream_events(), content_to_text(), content_to_thinking(), norm
 Cohesion: 0.43
 Nodes (4): _Response, test_get_text_from_url_extracts_title_and_visible_text(), test_get_text_from_url_handles_request_exceptions(), test_get_webpage_last_modified_handles_present_and_missing_headers()
 
-### Community 123 - "._call"
-Cohesion: 0.50
-Nodes (3): BaseModel, run llm and get the response          Args:             **prompt (str)**: use, run llm and get the response          Args:             **prompt (str)**: use
-
 ### Community 124 - "Q: 我執行 repl_app.py 然後再看輸出時，看不出是模型自己想的，還是有根據 skill 做的? 能在加上一些過程的訊息嗎?"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: 我執行 repl_app.py 然後再看輸出時，看不出是模型自己想的，還是有根據 skill 做的? 能在加上一些過程的訊息嗎?, Source Nodes
@@ -561,7 +557,7 @@ Nodes (3): pytest_sessionfinish(), Shared pytest configuration for the repositor
 ## Knowledge Gaps
 - **273 isolated node(s):** `akasha_terminal`, `Quick Start (Local Development)`, `Change log`, `Standard Installation`, `Lightweight Installation (API-call-only, v1.0+)` (+268 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_

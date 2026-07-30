@@ -22,13 +22,10 @@ process_dataset.py
 t.py
 summarization/
 summarization/mic_10.txt
-docs/plant/é£Žè½¦??pdf
-docs/plant/?³ç?.pdf
 docs/test_memory/
 config/
 !tests/config/
 !tests/config/model_manifest.yaml
-summarization/20230531_?ºæ…§è£½é€ é?æ±‚ä?ä¹‹é?ç·??ç®—è??°è??šè??¼å??†æ?.txt
 eva.json
 .coverage
 trace-out/
@@ -67,3 +64,12 @@ tests/upgrade_tests/.env
 __pycache__
 
 .pytest-tmp/
+
+# graphify generated local state and date-based snapshots
+graphify-out/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/
+graphify-out/memory/
+graphify-out/reflections/
+graphify-out/.graphify_learning.json
+graphify-out/.vocab.txt
+
+summarization/20230531_*.txt
