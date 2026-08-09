@@ -10,8 +10,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_rag_rag",
-      "community": 27,
-      "community_name": "file_loader.py",
+      "community": 0,
+      "community_name": "evaluation.py",
       "norm_label": "rag.py"
     },
     {
@@ -2276,8 +2276,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_constants",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "constants.py"
     },
     {
@@ -2287,8 +2287,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_constants_rationale_1",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "shared constants for the akasha package."
     },
     {
@@ -2298,8 +2298,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_eval_init",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "__init__.py"
     },
     {
@@ -2430,8 +2430,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "akasha_eval_evaluation_eval",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "eval"
     },
     {
@@ -2441,8 +2441,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "akasha_eval_evaluation_eval_init",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": ".__init__()"
     },
     {
@@ -2452,8 +2452,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_eval_evaluation_py_baselanguagemodel",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "baselanguagemodel"
     },
     {
@@ -2463,8 +2463,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_eval_evaluation_py_embeddings",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "embeddings"
     },
     {
@@ -2518,8 +2518,8 @@
       "source_location": "L623",
       "_origin": "ast",
       "id": "akasha_eval_evaluation_eval_decide_eval_model",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "._decide_eval_model()"
     },
     {
@@ -2529,8 +2529,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "akasha_eval_evaluation_rationale_56",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "initials of model_eval class          args:             **embeddings (str, op"
     },
     {
@@ -2988,22 +2988,22 @@
       "label": "separate_name()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L15",
+      "source_location": "L14",
       "_origin": "ast",
       "id": "akasha_helper_base_separate_name",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "separate_name()"
     },
     {
       "label": "decide_embedding_type()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L40",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "akasha_helper_base_decide_embedding_type",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 52,
+      "community_name": "__init__.py",
       "norm_label": "decide_embedding_type()"
     },
     {
@@ -3013,26 +3013,26 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_helper_base_py_embeddings",
-      "community": 51,
-      "community_name": "test_light_restrictions.py",
+      "community": 52,
+      "community_name": "__init__.py",
       "norm_label": "embeddings"
     },
     {
       "label": "get_embedding_type_and_name()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L81",
+      "source_location": "L82",
       "_origin": "ast",
       "id": "akasha_helper_base_get_embedding_type_and_name",
-      "community": 51,
-      "community_name": "test_light_restrictions.py",
+      "community": 52,
+      "community_name": "__init__.py",
       "norm_label": "get_embedding_type_and_name()"
     },
     {
       "label": "sim_to_trad()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L97",
+      "source_location": "L98",
       "_origin": "ast",
       "id": "akasha_helper_base_sim_to_trad",
       "community": 39,
@@ -3043,7 +3043,7 @@
       "label": "get_doc_length()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L110",
+      "source_location": "L111",
       "_origin": "ast",
       "id": "akasha_helper_base_get_doc_length",
       "community": 3,
@@ -3054,7 +3054,7 @@
       "label": "get_docs_length()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L128",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "akasha_helper_base_get_docs_length",
       "community": 3,
@@ -3076,7 +3076,7 @@
       "label": "extract_json()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L144",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "akasha_helper_base_extract_json",
       "community": 3,
@@ -3098,7 +3098,7 @@
       "label": "extract_multiple_json()",
       "file_type": "code",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L191",
+      "source_location": "L192",
       "_origin": "ast",
       "id": "akasha_helper_base_extract_multiple_json",
       "community": 71,
@@ -3109,42 +3109,42 @@
       "label": "separate type:name by ':'      Args:         **name (str)**: string with form",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L16",
+      "source_location": "L15",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_16",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "id": "akasha_helper_base_rationale_15",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "separate type:name by ':'      args:         **name (str)**: string with form"
     },
     {
       "label": "check the embedding type and return the type:name      Args:         embeddin",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L41",
+      "source_location": "L40",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_41",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "id": "akasha_helper_base_rationale_40",
+      "community": 52,
+      "community_name": "__init__.py",
       "norm_label": "check the embedding type and return the type:name      args:         embeddin"
     },
     {
       "label": "get the type and name of the embeddings",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L83",
+      "source_location": "L84",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_83",
-      "community": 51,
-      "community_name": "test_light_restrictions.py",
+      "id": "akasha_helper_base_rationale_84",
+      "community": 52,
+      "community_name": "__init__.py",
       "norm_label": "get the type and name of the embeddings"
     },
     {
       "label": "convert simplified chinese to traditional chinese      Args:         **text (",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L98",
+      "source_location": "L99",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_98",
+      "id": "akasha_helper_base_rationale_99",
       "community": 39,
       "community_name": "MemoryManager",
       "norm_label": "convert simplified chinese to traditional chinese      args:         **text ("
@@ -3153,9 +3153,9 @@
       "label": "calculate the length of terms in a giving Document      Args:         **langu",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L111",
+      "source_location": "L112",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_111",
+      "id": "akasha_helper_base_rationale_112",
       "community": 3,
       "community_name": "gen_prompt.py",
       "norm_label": "calculate the length of terms in a giving document      args:         **langu"
@@ -3164,9 +3164,9 @@
       "label": "calculate the total length of terms in giving documents      Args:         la",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L129",
+      "source_location": "L130",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_129",
+      "id": "akasha_helper_base_rationale_130",
       "community": 3,
       "community_name": "gen_prompt.py",
       "norm_label": "calculate the total length of terms in giving documents      args:         la"
@@ -3175,9 +3175,9 @@
       "label": "Extract JSON data from text generated by LLMs.     Handles both individual dict",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L146",
+      "source_location": "L147",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_146",
+      "id": "akasha_helper_base_rationale_147",
       "community": 3,
       "community_name": "gen_prompt.py",
       "norm_label": "extract json data from text generated by llms.     handles both individual dict"
@@ -3186,9 +3186,9 @@
       "label": "Extract multiple JSON objects from text generated by LLMs.      Args:",
       "file_type": "rationale",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L192",
+      "source_location": "L193",
       "_origin": "ast",
-      "id": "akasha_helper_base_rationale_192",
+      "id": "akasha_helper_base_rationale_193",
       "community": 71,
       "community_name": "\u98df\u7269\u504f\u597d.md",
       "norm_label": "extract multiple json objects from text generated by llms.      args:"
@@ -3233,8 +3233,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_helper_encoding",
-      "community": 115,
-      "community_name": "MemoryManager",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "encoding.py"
     },
     {
@@ -3266,8 +3266,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "akasha_helper_encoding_get_text_md5",
-      "community": 115,
-      "community_name": "MemoryManager",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "get_text_md5()"
     },
     {
@@ -3288,41 +3288,41 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "handle_objects.py"
     },
     {
       "label": "_get_env_var()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L20",
+      "source_location": "L18",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_get_env_var",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "_get_env_var()"
     },
     {
       "label": "_openai_endpoint()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L57",
+      "source_location": "L55",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_openai_endpoint",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "_openai_endpoint()"
     },
     {
       "label": "handle_embeddings()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L74",
+      "source_location": "L72",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_handle_embeddings",
-      "community": 1,
-      "community_name": "agents",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "handle_embeddings()"
     },
     {
@@ -3340,18 +3340,18 @@
       "label": "handle_embeddings_and_name()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L181",
+      "source_location": "L184",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_handle_embeddings_and_name",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "handle_embeddings_and_name()"
     },
     {
       "label": "handle_model()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L209",
+      "source_location": "L212",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_handle_model",
       "community": 18,
@@ -3384,18 +3384,18 @@
       "label": "handle_client()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L427",
+      "source_location": "L430",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_handle_client",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "handle_client()"
     },
     {
       "label": "handle_model_and_name()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L456",
+      "source_location": "L459",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_handle_model_and_name",
       "community": 39,
@@ -3406,7 +3406,7 @@
       "label": "handle_model_type()",
       "file_type": "code",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L488",
+      "source_location": "L491",
       "_origin": "ast",
       "id": "akasha_helper_handle_objects_handle_model_type",
       "community": 67,
@@ -3417,53 +3417,53 @@
       "label": "if env_file is not empty, get the environment variable from the file         el",
       "file_type": "rationale",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L21",
+      "source_location": "L19",
       "_origin": "ast",
-      "id": "akasha_helper_handle_objects_rationale_21",
-      "community": 1,
-      "community_name": "agents",
+      "id": "akasha_helper_handle_objects_rationale_19",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "if env_file is not empty, get the environment variable from the file         el"
     },
     {
       "label": "Return the endpoint and key for the explicitly selected provider.",
       "file_type": "rationale",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L58",
+      "source_location": "L56",
       "_origin": "ast",
-      "id": "akasha_helper_handle_objects_rationale_58",
-      "community": 1,
-      "community_name": "agents",
+      "id": "akasha_helper_handle_objects_rationale_56",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "return the endpoint and key for the explicitly selected provider."
     },
     {
       "label": "create model client used in document QA, default if openai \"gpt-3.5-turbo\"",
       "file_type": "rationale",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L79",
+      "source_location": "L77",
       "_origin": "ast",
-      "id": "akasha_helper_handle_objects_rationale_79",
-      "community": 1,
-      "community_name": "agents",
+      "id": "akasha_helper_handle_objects_rationale_77",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "create model client used in document qa, default if openai \"gpt-3.5-turbo\""
     },
     {
       "label": "get the embeddings object and embed name      Args:         embed (_type_, op",
       "file_type": "rationale",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L186",
+      "source_location": "L189",
       "_origin": "ast",
-      "id": "akasha_helper_handle_objects_rationale_186",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "id": "akasha_helper_handle_objects_rationale_189",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "get the embeddings object and embed name      args:         embed (_type_, op"
     },
     {
       "label": "create model client used in document QA, default if openai \"gpt-3.5-turbo\"",
       "file_type": "rationale",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L218",
+      "source_location": "L221",
       "_origin": "ast",
-      "id": "akasha_helper_handle_objects_rationale_218",
+      "id": "akasha_helper_handle_objects_rationale_221",
       "community": 18,
       "community_name": "ask.py",
       "norm_label": "create model client used in document qa, default if openai \"gpt-3.5-turbo\""
@@ -3472,9 +3472,9 @@
       "label": "get the model object and model name      Args:         model (_type_, optiona",
       "file_type": "rationale",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L463",
+      "source_location": "L466",
       "_origin": "ast",
-      "id": "akasha_helper_handle_objects_rationale_463",
+      "id": "akasha_helper_handle_objects_rationale_466",
       "community": 39,
       "community_name": "MemoryManager",
       "norm_label": "get the model object and model name      args:         model (_type_, optiona"
@@ -3508,8 +3508,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "akasha_helper_memory_memorymanager_init",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": ".__init__()"
     },
     {
@@ -3519,8 +3519,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_helper_memory_py_baselanguagemodel",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "baselanguagemodel"
     },
     {
@@ -3530,8 +3530,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_helper_memory_py_embeddings",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "embeddings"
     },
     {
@@ -3607,8 +3607,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "akasha_helper_memory_rationale_56",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "initializes the memorymanager.          args:             model_obj (baselang"
     },
     {
@@ -4542,8 +4542,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_mytokenizer_load",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".load()"
     },
     {
@@ -4553,8 +4553,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_mytokenizer_save",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".save()"
     },
     {
@@ -4564,8 +4564,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_mytokenizer_compute_tokens_huggingface",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".compute_tokens_huggingface()"
     },
     {
@@ -4586,8 +4586,8 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_mytokenizer_compute_tokens_openai",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".compute_tokens_openai()"
     },
     {
@@ -4597,8 +4597,8 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_mytokenizer_compute_tokens_gemini",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".compute_tokens_gemini()"
     },
     {
@@ -4608,8 +4608,8 @@
       "source_location": "L166",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_mytokenizer_compute_tokens",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".compute_tokens()"
     },
     {
@@ -4641,8 +4641,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_rationale_29",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "load a tokenizer from local path or huggingface model hub.          args:"
     },
     {
@@ -4652,8 +4652,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_rationale_53",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "save the tokenizer to local path.          args:             name (str): the"
     },
     {
@@ -4663,8 +4663,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_rationale_73",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "compute the number of tokens in a given text using huggingface tokenizer."
     },
     {
@@ -4674,8 +4674,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_rationale_99",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "compute the number of tokens in a given text using openai tiktoken.          a"
     },
     {
@@ -4685,8 +4685,8 @@
       "source_location": "L132",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_rationale_132",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "compute the number of tokens in a given text using google vertex ai."
     },
     {
@@ -4696,8 +4696,8 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "akasha_helper_token_counter_rationale_173",
-      "community": 20,
-      "community_name": "ui.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "compute the number of tokens in a given text using either huggingface or openai"
     },
     {
@@ -5268,8 +5268,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_tools_gen_img",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "gen_img.py"
     },
     {
@@ -5279,8 +5279,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "akasha_tools_gen_img_gen_image",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "gen_image()"
     },
     {
@@ -5290,8 +5290,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "akasha_tools_gen_img_edit_image",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "edit_image()"
     },
     {
@@ -5301,8 +5301,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_tools_gen_img_py_path",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "path"
     },
     {
@@ -5312,8 +5312,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "akasha_tools_gen_img_rationale_18",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "the image generate image call model to generate image based on the user prompt.\\"
     },
     {
@@ -5323,8 +5323,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "akasha_tools_gen_img_rationale_65",
-      "community": 1,
-      "community_name": "agents",
+      "community": 20,
+      "community_name": "ui.py",
       "norm_label": "the image generate image call model to generate image based on the user prompt.\\"
     },
     {
@@ -5807,8 +5807,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "basic_llm"
     },
     {
@@ -5818,8 +5818,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_init",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": ".__init__()"
     },
     {
@@ -5829,8 +5829,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_atman_py_thinkingbudget",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "thinkingbudget"
     },
     {
@@ -5840,8 +5840,8 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_set_model",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "._set_model()"
     },
     {
@@ -5851,8 +5851,8 @@
       "source_location": "L164",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_change_variables",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "._change_variables()"
     },
     {
@@ -5862,8 +5862,8 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_add_basic_log",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "._add_basic_log()"
     },
     {
@@ -5873,8 +5873,8 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_add_result_log",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "._add_result_log()"
     },
     {
@@ -5884,8 +5884,8 @@
       "source_location": "L261",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_display_docs",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "._display_docs()"
     },
     {
@@ -5895,8 +5895,8 @@
       "source_location": "L278",
       "_origin": "ast",
       "id": "akasha_utils_atman_basic_llm_save_logs",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": ".save_logs()"
     },
     {
@@ -5917,8 +5917,8 @@
       "source_location": "L348",
       "_origin": "ast",
       "id": "akasha_utils_atman_atman_init",
-      "community": 7,
-      "community_name": "atman",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": ".__init__()"
     },
     {
@@ -5928,8 +5928,8 @@
       "source_location": "L420",
       "_origin": "ast",
       "id": "akasha_utils_atman_atman_set_model",
-      "community": 7,
-      "community_name": "atman",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "._set_model()"
     },
     {
@@ -6016,8 +6016,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_31",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "basic class for akasha, implement _set_model, _change_variables, _check_db, add_"
     },
     {
@@ -6027,8 +6027,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_52",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "_summary_          args:             model (str, optional): _description_. de"
     },
     {
@@ -6038,8 +6038,8 @@
       "source_location": "L107",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_107",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "change model, temperature if user use **kwargs to change them."
     },
     {
@@ -6049,8 +6049,8 @@
       "source_location": "L165",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_165",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "change other arguments if user use **kwargs to change them."
     },
     {
@@ -6060,8 +6060,8 @@
       "source_location": "L192",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_192",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "add pre-process log to self.logs          args:             timestamp (str):"
     },
     {
@@ -6071,8 +6071,8 @@
       "source_location": "L216",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_216",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "add post-process log to self.logs          args:             timestamp (str):"
     },
     {
@@ -6082,8 +6082,8 @@
       "source_location": "L279",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_279",
-      "community": 33,
-      "community_name": "basic_llm",
+      "community": 15,
+      "community_name": "remote_model",
       "norm_label": "save logs into json or txt file          args:             file_name (str, op"
     },
     {
@@ -6104,8 +6104,8 @@
       "source_location": "L366",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_366",
-      "community": 7,
-      "community_name": "atman",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "initials of atman class          args:             **chunk_size (int, optiona"
     },
     {
@@ -6115,8 +6115,8 @@
       "source_location": "L421",
       "_origin": "ast",
       "id": "akasha_utils_atman_rationale_421",
-      "community": 7,
-      "community_name": "atman",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "change model, embeddings, search_type, temperature if user use **kwargs to chang"
     },
     {
@@ -6533,8 +6533,8 @@
       "source_location": "L95",
       "_origin": "ast",
       "id": "akasha_utils_db_db_structure_get_storage_directory",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "get_storage_directory()"
     },
     {
@@ -6544,8 +6544,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "purepath",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "purepath"
     },
     {
@@ -6555,8 +6555,8 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "akasha_utils_db_db_structure_sanitize_path_string",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "_sanitize_path_string()"
     },
     {
@@ -6566,8 +6566,8 @@
       "source_location": "L148",
       "_origin": "ast",
       "id": "akasha_utils_db_db_structure_sanitize_path_part",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "_sanitize_path_part()"
     },
     {
@@ -6577,8 +6577,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "akasha_utils_db_db_structure_is_url",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "is_url()"
     },
     {
@@ -6709,8 +6709,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract_db.py"
     },
     {
@@ -6720,8 +6720,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_extract_db_by_file",
-      "community": 25,
-      "community_name": "Akasha Upgrade Plan: Light Version Support",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract_db_by_file()"
     },
     {
@@ -6731,8 +6731,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_extract_db_by_keyword",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract_db_by_keyword()"
     },
     {
@@ -6742,8 +6742,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_extract_db_by_ids",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract_db_by_ids()"
     },
     {
@@ -6753,8 +6753,8 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_pop_db_by_ids",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "pop_db_by_ids()"
     },
     {
@@ -6764,8 +6764,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_rationale_8",
-      "community": 25,
-      "community_name": "Akasha Upgrade Plan: Light Version Support",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract db from dbs based on file_name_list      args:         db (dbs): dbs"
     },
     {
@@ -6775,8 +6775,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_rationale_42",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract db from dbs based on keyword_list      args:         db (dbs): dbs ob"
     },
     {
@@ -6786,8 +6786,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_rationale_73",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "extract db from dbs based on ids      args:         db (dbs): dbs object"
     },
     {
@@ -6797,8 +6797,8 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "akasha_utils_db_extract_db_rationale_101",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "pop undesired data from  dbs based on ids      args:         db (dbs): dbs ob"
     },
     {
@@ -7105,8 +7105,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_db_upadte_db",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "upadte_db.py"
     },
     {
@@ -7116,8 +7116,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "akasha_utils_db_upadte_db_update_db",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "update_db()"
     },
     {
@@ -7127,8 +7127,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_db_upadte_db_py_path",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "path"
     },
     {
@@ -7138,8 +7138,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_db_upadte_db_py_embeddings",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "embeddings"
     },
     {
@@ -7149,8 +7149,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "akasha_utils_db_upadte_db_add_chunks",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "add_chunks()"
     },
     {
@@ -7160,8 +7160,8 @@
       "source_location": "L75",
       "_origin": "ast",
       "id": "akasha_utils_db_upadte_db_rationale_75",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "add chunk(s) to the chromadb collection of the given file_name      args:"
     },
     {
@@ -7831,8 +7831,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_models_chat",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "chat.py"
     },
     {
@@ -7842,8 +7842,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_normalize_openai_base_url",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "_normalize_openai_base_url()"
     },
     {
@@ -7853,8 +7853,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_build_chat_model",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "build_chat_model()"
     },
     {
@@ -7864,8 +7864,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_py_any",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "any"
     },
     {
@@ -7875,8 +7875,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_py_thinkingbudget",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "thinkingbudget"
     },
     {
@@ -7886,8 +7886,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_rationale_1",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "langchain chatmodel factory used by the public akasha model selectors."
     },
     {
@@ -7897,8 +7897,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_rationale_14",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "convert a full openai endpoint url into an sdk base url."
     },
     {
@@ -7908,8 +7908,8 @@
       "source_location": "L34",
       "_origin": "ast",
       "id": "akasha_utils_models_chat_rationale_34",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "build a langchain 1.3+ chat model for a supported provider."
     },
     {
@@ -8051,8 +8051,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_custom_embed",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": "custom_embed"
     },
     {
@@ -8062,8 +8062,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_py_basemodel",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": "basemodel"
     },
     {
@@ -8073,8 +8073,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_py_embeddings",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": "embeddings"
     },
     {
@@ -8106,8 +8106,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_custom_embed_embed_documents",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": ".embed_documents()"
     },
     {
@@ -8117,8 +8117,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_custom_embed_embed_query",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": ".embed_query()"
     },
     {
@@ -8194,8 +8194,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_rationale_8",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": "huggingface sentence_transformers embedding models.      to use, you should ha"
     },
     {
@@ -8216,8 +8216,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_rationale_44",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": "compute doc embeddings using a huggingface transformer model.          args:"
     },
     {
@@ -8227,8 +8227,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "akasha_utils_models_custom_rationale_64",
-      "community": 17,
-      "community_name": "gptq",
+      "community": 30,
+      "community_name": "LlamaCPP",
       "norm_label": "compute query embeddings using a huggingface transformer model.          args:"
     },
     {
@@ -8282,8 +8282,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "gemi.py"
     },
     {
@@ -8315,8 +8315,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_gemini_model_init",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".__init__()"
     },
     {
@@ -8326,8 +8326,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_gemini_model_llm_type",
-      "community": 123,
-      "community_name": "._call",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "._llm_type()"
     },
     {
@@ -8337,8 +8337,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_gemini_model_stream",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".stream()"
     },
     {
@@ -8348,8 +8348,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_py_any",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "any"
     },
     {
@@ -8414,8 +8414,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_gemini_model_invoke_stream",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".invoke_stream()"
     },
     {
@@ -8469,8 +8469,8 @@
       "source_location": "L288",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_convert_vision_prompt",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "convert_vision_prompt()"
     },
     {
@@ -8480,8 +8480,8 @@
       "source_location": "L309",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_check_format_prompt",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "check_format_prompt()"
     },
     {
@@ -8491,8 +8491,8 @@
       "source_location": "L335",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_calculate_token",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "calculate_token()"
     },
     {
@@ -8524,8 +8524,8 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_gemini_embed_init",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": ".__init__()"
     },
     {
@@ -8557,8 +8557,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_28",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "define custom model, input func and temperature          args:             **"
     },
     {
@@ -8568,8 +8568,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_43",
-      "community": 123,
-      "community_name": "._call",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "return llm type          returns:             str: llm type"
     },
     {
@@ -8579,8 +8579,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_57",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "run llm and get the stream generator          args:             prompt (str):"
     },
     {
@@ -8623,8 +8623,8 @@
       "source_location": "L181",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_181",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "run llm and get the response          args:             **prompt (str)**: use"
     },
     {
@@ -8634,8 +8634,8 @@
       "source_location": "L289",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_289",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "convert the vision prompt to the correct format"
     },
     {
@@ -8645,8 +8645,8 @@
       "source_location": "L310",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_310",
-      "community": 50,
-      "community_name": "test_openai_rag.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "check and format the prompt to fit the correct gemini format"
     },
     {
@@ -8667,8 +8667,8 @@
       "source_location": "L360",
       "_origin": "ast",
       "id": "akasha_utils_models_gemi_rationale_360",
-      "community": 59,
-      "community_name": "test_agent.py",
+      "community": 5,
+      "community_name": "dbs",
       "norm_label": "initialize the sentence_transformer."
     },
     {
@@ -8942,8 +8942,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_models_hf",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "hf.py"
     },
     {
@@ -8953,8 +8953,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "hf_model"
     },
     {
@@ -8964,8 +8964,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_py_llm",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "llm"
     },
     {
@@ -8975,8 +8975,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_init",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".__init__()"
     },
     {
@@ -8986,8 +8986,8 @@
       "source_location": "L81",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_llm_type",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "._llm_type()"
     },
     {
@@ -8997,8 +8997,8 @@
       "source_location": "L89",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_init_vision_model",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".init_vision_model()"
     },
     {
@@ -9008,8 +9008,8 @@
       "source_location": "L117",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_stream",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".stream()"
     },
     {
@@ -9019,8 +9019,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_call",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "._call()"
     },
     {
@@ -9030,8 +9030,8 @@
       "source_location": "L175",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_generate",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "._generate()"
     },
     {
@@ -9041,8 +9041,8 @@
       "source_location": "L180",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_batch",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".batch()"
     },
     {
@@ -9052,8 +9052,8 @@
       "source_location": "L205",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_hf_model_call_image",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".call_image()"
     },
     {
@@ -9063,8 +9063,8 @@
       "source_location": "L245",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_get_stop_list",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "get_stop_list()"
     },
     {
@@ -9074,8 +9074,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_rationale_38",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "define custom model, input func and temperature          args:             **"
     },
     {
@@ -9085,8 +9085,8 @@
       "source_location": "L82",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_rationale_82",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "return llm type          returns:             str: llm type"
     },
     {
@@ -9096,8 +9096,8 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_rationale_90",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "init vision model          args:             model_name (str): model name"
     },
     {
@@ -9107,8 +9107,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_rationale_144",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "run llm and get the response          args:             **prompt (str)**: use"
     },
     {
@@ -9118,8 +9118,8 @@
       "source_location": "L246",
       "_origin": "ast",
       "id": "akasha_utils_models_hf_rationale_246",
-      "community": 24,
-      "community_name": "Installation",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "get stop list      args:         stop (optional[list[str]]): stop list"
     },
     {
@@ -9536,8 +9536,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "thinking.py"
     },
     {
@@ -9547,8 +9547,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking_normalize_thinking_budget",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "normalize_thinking_budget()"
     },
     {
@@ -9558,8 +9558,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking_py_thinkingbudget",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "thinkingbudget"
     },
     {
@@ -9569,8 +9569,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking_normalize_thinking_level",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "normalize_thinking_level()"
     },
     {
@@ -9580,8 +9580,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "thinkinglevel",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "thinkinglevel"
     },
     {
@@ -9591,8 +9591,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking_rationale_1",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "provider-neutral thinking budget normalization."
     },
     {
@@ -9602,8 +9602,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking_rationale_28",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "convert a shared level to a dynamic numeric provider budget."
     },
     {
@@ -9613,8 +9613,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "akasha_utils_models_thinking_rationale_49",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "return an openai-compatible reasoning level when explicitly supplied."
     },
     {
@@ -10020,8 +10020,8 @@
       "source_location": "L537",
       "_origin": "ast",
       "id": "akasha_utils_prompts_gen_prompt_default_doc_ask_prompt",
-      "community": 9,
-      "community_name": "model_eval.py",
+      "community": 0,
+      "community_name": "evaluation.py",
       "norm_label": "default_doc_ask_prompt()"
     },
     {
@@ -10526,8 +10526,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_search_auto_search",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "auto_search.py"
     },
     {
@@ -10537,8 +10537,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "akasha_utils_search_auto_search_get_relevant_doc_auto",
-      "community": 3,
-      "community_name": "gen_prompt.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "get_relevant_doc_auto()"
     },
     {
@@ -10548,8 +10548,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "akasha_utils_search_auto_search_get_relevant_doc_auto_rerank",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "get_relevant_doc_auto_rerank()"
     },
     {
@@ -10559,8 +10559,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "akasha_utils_search_auto_search_rationale_8",
-      "community": 3,
-      "community_name": "gen_prompt.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "try every solution to get  to search relevant documents.      args:         *"
     },
     {
@@ -10570,8 +10570,8 @@
       "source_location": "L78",
       "_origin": "ast",
       "id": "akasha_utils_search_auto_search_rationale_78",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "try every solution to get  to search relevant documents.      args:         *"
     },
     {
@@ -11307,8 +11307,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "retri_rerank.py"
     },
     {
@@ -11318,8 +11318,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_myrerankretriever",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "myrerankretriever"
     },
     {
@@ -11329,8 +11329,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_py_baseretriever",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "baseretriever"
     },
     {
@@ -11340,8 +11340,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_myrerankretriever_from_documents",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": ".from_documents()"
     },
     {
@@ -11351,8 +11351,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_py_document",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "document"
     },
     {
@@ -11362,8 +11362,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_py_any",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "any"
     },
     {
@@ -11373,8 +11373,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_myrerankretriever_gs",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "._gs()"
     },
     {
@@ -11384,8 +11384,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_myrerankretriever_get_relevant_documents_and_scores",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": ".get_relevant_documents_and_scores()"
     },
     {
@@ -11395,8 +11395,8 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_myrerankretriever_aget_relevant_documents",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "._aget_relevant_documents()"
     },
     {
@@ -11406,8 +11406,8 @@
       "source_location": "L62",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_myrerankretriever_get_relevant_documents",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "._get_relevant_documents()"
     },
     {
@@ -11417,8 +11417,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_rerank",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "rerank()"
     },
     {
@@ -11428,8 +11428,8 @@
       "source_location": "L125",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_rerank_reduce",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "rerank_reduce()"
     },
     {
@@ -11439,8 +11439,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "akasha_utils_search_retrievers_retri_rerank_rationale_38",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 4,
+      "community_name": "__init__.py",
       "norm_label": "implement rerank to find relevant documents          args:             **quer"
     },
     {
@@ -11758,8 +11758,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "akasha_utils_search_search_doc_search_docs",
-      "community": 3,
-      "community_name": "gen_prompt.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "search_docs()"
     },
     {
@@ -11769,8 +11769,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "akasha_utils_search_search_doc_py_baselanguagemodel",
-      "community": 3,
-      "community_name": "gen_prompt.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "baselanguagemodel"
     },
     {
@@ -11813,8 +11813,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "akasha_utils_search_search_doc_rationale_64",
-      "community": 3,
-      "community_name": "gen_prompt.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "search docs based on given search_type, default is merge, which contain 'mmr', '"
     },
     {
@@ -12319,8 +12319,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "examples_helper_ex_self_query",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "ex_self_query.py"
     },
     {
@@ -12330,8 +12330,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "examples_helper_ex_self_query_add_metadata",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "add_metadata()"
     },
     {
@@ -12341,8 +12341,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "examples_helper_ex_self_query_rationale_23",
-      "community": 13,
-      "community_name": "gemini_model",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "this function is used to add metadata to the old_db object.      args:"
     },
     {
@@ -12696,8 +12696,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_openai_diag",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "_openai_diag.py"
     },
     {
@@ -12751,8 +12751,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_test_embedding_provider_contract",
-      "community": 1,
-      "community_name": "agents",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "test_embedding_provider_contract.py"
     },
     {
@@ -12762,8 +12762,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "tests_smoke_test_embedding_provider_contract_required_key",
-      "community": 1,
-      "community_name": "agents",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "_required_key()"
     },
     {
@@ -12773,8 +12773,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "tests_smoke_test_embedding_provider_contract_test_embedding_provider_returns_vectors",
-      "community": 1,
-      "community_name": "agents",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "test_embedding_provider_returns_vectors()"
     },
     {
@@ -12784,8 +12784,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_test_embedding_provider_contract_rationale_1",
-      "community": 1,
-      "community_name": "agents",
+      "community": 67,
+      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
       "norm_label": "live contract checks for the embedding providers used by rag."
     },
     {
@@ -12795,8 +12795,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_test_gemini_rag_pipeline",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_gemini_rag_pipeline.py"
     },
     {
@@ -12806,8 +12806,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "tests_smoke_test_gemini_rag_pipeline_test_gemini_embedding_chroma_search_and_answer",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 25,
+      "community_name": "Akasha Upgrade Plan: Light Version Support",
       "norm_label": "test_gemini_embedding_chroma_search_and_answer()"
     },
     {
@@ -12817,8 +12817,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_test_gemini_rag_pipeline_rationale_1",
-      "community": 67,
-      "community_name": "\u500b\u4eba\u8cc7\u8a0a.md",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "gemini embedding -> chroma -> retrieval -> gemini answer smoke test."
     },
     {
@@ -13323,8 +13323,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "test_rag_pipeline_stages.py"
     },
     {
@@ -13356,8 +13356,8 @@
       "source_location": "L60",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_built_db",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "built_db()"
     },
     {
@@ -13367,8 +13367,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_test_rag_stage_1_reload_chroma",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "test_rag_stage_1_reload_chroma()"
     },
     {
@@ -13389,8 +13389,8 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_test_rag_stage_3_chat_model_answers_from_retrieved_document",
-      "community": 27,
-      "community_name": "file_loader.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "test_rag_stage_3_chat_model_answers_from_retrieved_document()"
     },
     {
@@ -13400,8 +13400,8 @@
       "source_location": "L142",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_test_rag_stage_4_cleanup_is_executable",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "test_rag_stage_4_cleanup_is_executable()"
     },
     {
@@ -13411,8 +13411,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_rationale_1",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "stage-by-stage live rag checks for the chroma-to-answer pipeline."
     },
     {
@@ -13422,8 +13422,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_rationale_68",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "a built chroma store can be opened again and read independently."
     },
     {
@@ -13444,8 +13444,8 @@
       "source_location": "L110",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_rationale_110",
-      "community": 27,
-      "community_name": "file_loader.py",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "the chat model receives retrieved context and returns text."
     },
     {
@@ -13455,8 +13455,8 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "tests_smoke_test_rag_pipeline_stages_rationale_143",
-      "community": 30,
-      "community_name": "LlamaCPP",
+      "community": 42,
+      "community_name": "mySVMRetriever",
       "norm_label": "release rag-owned references and run collection before pytest exits."
     },
     {
@@ -13873,8 +13873,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "tests_test_db_test_load_extract_db",
-      "community": 25,
-      "community_name": "Akasha Upgrade Plan: Light Version Support",
+      "community": 23,
+      "community_name": "self_ask.py",
       "norm_label": "test_load_extract_db()"
     },
     {
@@ -13895,8 +13895,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_test_eval",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "test_eval.py"
     },
     {
@@ -13906,8 +13906,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_test_eval_base_line",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "base_line()"
     },
     {
@@ -13917,8 +13917,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "tests_test_eval_test_model_eval",
-      "community": 23,
-      "community_name": "self_ask.py",
+      "community": 3,
+      "community_name": "gen_prompt.py",
       "norm_label": "test_model_eval()"
     },
     {
@@ -14566,8 +14566,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_test_crawler",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_crawler.py"
     },
     {
@@ -14577,8 +14577,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_unit_test_crawler_response",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "_response"
     },
     {
@@ -14588,8 +14588,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_unit_test_crawler_response_init",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".__init__()"
     },
     {
@@ -14599,8 +14599,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "tests_unit_test_crawler_response_raise_for_status",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": ".raise_for_status()"
     },
     {
@@ -14610,8 +14610,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "tests_unit_test_crawler_test_get_text_from_url_extracts_title_and_visible_text",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_get_text_from_url_extracts_title_and_visible_text()"
     },
     {
@@ -14621,8 +14621,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "tests_unit_test_crawler_test_get_text_from_url_handles_request_exceptions",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_get_text_from_url_handles_request_exceptions()"
     },
     {
@@ -14632,8 +14632,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "tests_unit_test_crawler_test_get_webpage_last_modified_handles_present_and_missing_headers",
-      "community": 122,
-      "community_name": "_Response",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_get_webpage_last_modified_handles_present_and_missing_headers()"
     },
     {
@@ -14643,8 +14643,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_db_structure.py"
     },
     {
@@ -14654,8 +14654,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_fakearray",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "_fakearray"
     },
     {
@@ -14665,8 +14665,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_fakearray_init",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": ".__init__()"
     },
     {
@@ -14687,8 +14687,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_fakechroma",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "_fakechroma"
     },
     {
@@ -14698,8 +14698,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_fakechroma_init",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": ".__init__()"
     },
     {
@@ -14709,8 +14709,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_fakechroma_get",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": ".get()"
     },
     {
@@ -14731,8 +14731,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_test_dbs_initializes_from_chroma_like_object_with_fallbacks",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_dbs_initializes_from_chroma_like_object_with_fallbacks()"
     },
     {
@@ -14742,8 +14742,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_test_merge_and_add_chromadb_keep_unique_ids",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_merge_and_add_chromadb_keep_unique_ids()"
     },
     {
@@ -14764,8 +14764,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_test_storage_directory_handles_path_dot_and_url",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_storage_directory_handles_path_dot_and_url()"
     },
     {
@@ -14775,8 +14775,8 @@
       "source_location": "L115",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_test_storage_directory_sanitizes_windows_absolute_paths",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_storage_directory_sanitizes_windows_absolute_paths()"
     },
     {
@@ -14786,8 +14786,8 @@
       "source_location": "L131",
       "_origin": "ast",
       "id": "tests_unit_test_db_structure_test_url_and_path_sanitization_helpers",
-      "community": 4,
-      "community_name": "__init__.py",
+      "community": 13,
+      "community_name": "gemini_model",
       "norm_label": "test_url_and_path_sanitization_helpers()"
     },
     {
@@ -14797,8 +14797,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_test_encoding",
-      "community": 115,
-      "community_name": "MemoryManager",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_encoding.py"
     },
     {
@@ -14808,8 +14808,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_unit_test_encoding_test_detect_encoding_reads_file_prefix",
-      "community": 115,
-      "community_name": "MemoryManager",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_detect_encoding_reads_file_prefix()"
     },
     {
@@ -14819,8 +14819,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "tests_unit_test_encoding_test_md5_and_mac_address_are_stable",
-      "community": 115,
-      "community_name": "MemoryManager",
+      "community": 12,
+      "community_name": "anthropic_model",
       "norm_label": "test_md5_and_mac_address_are_stable()"
     },
     {
@@ -15053,6 +15053,61 @@
       "community": 100,
       "community_name": "Chroma",
       "norm_label": "test_retri_history_messages_limits_pairs_and_tokens()"
+    },
+    {
+      "label": "test_provider_import_boundaries.py",
+      "file_type": "code",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_unit_test_provider_import_boundaries",
+      "community": 43,
+      "community_name": "BaseRetriever",
+      "norm_label": "test_provider_import_boundaries.py"
+    },
+    {
+      "label": "_run_probe()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "tests_unit_test_provider_import_boundaries_run_probe",
+      "community": 43,
+      "community_name": "BaseRetriever",
+      "norm_label": "_run_probe()"
+    },
+    {
+      "label": "test_agent_import_does_not_load_provider_adapters()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "tests_unit_test_provider_import_boundaries_test_agent_import_does_not_load_provider_adapters",
+      "community": 43,
+      "community_name": "BaseRetriever",
+      "norm_label": "test_agent_import_does_not_load_provider_adapters()"
+    },
+    {
+      "label": "test_selected_gemini_adapter_does_not_load_openai_sdk()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "tests_unit_test_provider_import_boundaries_test_selected_gemini_adapter_does_not_load_openai_sdk",
+      "community": 43,
+      "community_name": "BaseRetriever",
+      "norm_label": "test_selected_gemini_adapter_does_not_load_openai_sdk()"
+    },
+    {
+      "label": "Provider adapters are imported only at the selected runtime seam.",
+      "file_type": "rationale",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "tests_unit_test_provider_import_boundaries_rationale_1",
+      "community": 43,
+      "community_name": "BaseRetriever",
+      "norm_label": "provider adapters are imported only at the selected runtime seam."
     },
     {
       "label": "test_rag_input_contract.py",
@@ -15358,8 +15413,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_thinking_model_config.py"
     },
     {
@@ -15369,8 +15424,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_gemini_thinking_settings_are_forwarded",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_gemini_thinking_settings_are_forwarded()"
     },
     {
@@ -15380,8 +15435,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_gemini_thinking_budget_is_omitted_when_unspecified",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_gemini_thinking_budget_is_omitted_when_unspecified()"
     },
     {
@@ -15391,8 +15446,8 @@
       "source_location": "L54",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_gemini_3_explicit_level_uses_thinking_level",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_gemini_3_explicit_level_uses_thinking_level()"
     },
     {
@@ -15402,8 +15457,8 @@
       "source_location": "L83",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_thinking_levels_scale_with_output_budget",
-      "community": 43,
-      "community_name": "BaseRetriever",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_thinking_levels_scale_with_output_budget()"
     },
     {
@@ -15413,8 +15468,8 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_thinking_level_rejects_typo",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_thinking_level_rejects_typo()"
     },
     {
@@ -15424,8 +15479,8 @@
       "source_location": "L109",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_openai_thinking_level_maps_to_reasoning_effort",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_openai_thinking_level_maps_to_reasoning_effort()"
     },
     {
@@ -15435,8 +15490,8 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_openai_reasoning_effort_is_omitted_when_unspecified",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_openai_reasoning_effort_is_omitted_when_unspecified()"
     },
     {
@@ -15446,8 +15501,8 @@
       "source_location": "L150",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_anthropic_does_not_send_temperature",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_anthropic_does_not_send_temperature()"
     },
     {
@@ -15457,8 +15512,8 @@
       "source_location": "L171",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_anthropic_thinking_reserves_tokens_for_reasoning",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_anthropic_thinking_reserves_tokens_for_reasoning()"
     },
     {
@@ -15468,8 +15523,8 @@
       "source_location": "L194",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_thinking_budget_is_ignored_when_thinking_is_disabled",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_thinking_budget_is_ignored_when_thinking_is_disabled()"
     },
     {
@@ -15479,8 +15534,8 @@
       "source_location": "L216",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_ollama_thinking_has_at_least_2048_prediction_tokens",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_ollama_thinking_has_at_least_2048_prediction_tokens()"
     },
     {
@@ -15490,8 +15545,8 @@
       "source_location": "L239",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_azure_openai_compatible_endpoint_uses_dedicated_environment",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_azure_openai_compatible_endpoint_uses_dedicated_environment()"
     },
     {
@@ -15501,8 +15556,8 @@
       "source_location": "L269",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_openai_uses_openai_base_url_without_azure_environment",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_openai_uses_openai_base_url_without_azure_environment()"
     },
     {
@@ -15512,8 +15567,8 @@
       "source_location": "L292",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_azure_environment_requires_key_and_base_url",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_azure_environment_requires_key_and_base_url()"
     },
     {
@@ -15534,8 +15589,8 @@
       "source_location": "L334",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_agent_stream_enables_thinking_events_automatically",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_agent_stream_enables_thinking_events_automatically()"
     },
     {
@@ -15545,8 +15600,8 @@
       "source_location": "L377",
       "_origin": "ast",
       "id": "tests_unit_test_thinking_model_config_test_agent_stream_accepts_langgraph_v2_update_shape",
-      "community": 44,
-      "community_name": "test_api_stability.py",
+      "community": 28,
+      "community_name": "configure_logging",
       "norm_label": "test_agent_stream_accepts_langgraph_v2_update_shape()"
     },
     {
@@ -15699,8 +15754,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test_light_restrictions.py"
     },
     {
@@ -15710,8 +15765,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_test_torch_missing_hf_model",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test_torch_missing_hf_model()"
     },
     {
@@ -15721,8 +15776,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_test_rerank_warning_when_torch_missing",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test_rerank_warning_when_torch_missing()"
     },
     {
@@ -15732,8 +15787,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_test_bert_score_missing",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test_bert_score_missing()"
     },
     {
@@ -15743,8 +15798,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_test_chromadb_missing_raises_clear_error",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test_chromadb_missing_raises_clear_error()"
     },
     {
@@ -15754,8 +15809,8 @@
       "source_location": "L67",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_importlib_reload",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "importlib_reload()"
     },
     {
@@ -15765,8 +15820,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_rationale_7",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test that hf_model raises importerror when torch is missing."
     },
     {
@@ -15776,8 +15831,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_rationale_19",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test that search_type='rerank' shows a warning when torch is missing."
     },
     {
@@ -15787,8 +15842,8 @@
       "source_location": "L42",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_rationale_42",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test that get_bert_score raises importerror when bert_score is missing."
     },
     {
@@ -15798,8 +15853,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "tests_upgrade_tests_test_light_restrictions_rationale_53",
-      "community": 42,
-      "community_name": "mySVMRetriever",
+      "community": 24,
+      "community_name": "Installation",
       "norm_label": "test that chroma-backed features point users to a light/base install."
     },
     {
@@ -18694,6 +18749,94 @@
       "community": 118,
       "community_name": "Thinking / Tool / Skill / Answer \u56de\u50b3\u683c\u5f0f",
       "norm_label": "`ask()` \u7bc4\u4f8b"
+    },
+    {
+      "label": "2026-08-09-provider-lazy-import-optimization.md",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "2026-08-09-provider-lazy-import-optimization.md"
+    },
+    {
+      "label": "Provider Lazy Import \u512a\u5316\u7d00\u9304",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "provider lazy import \u512a\u5316\u7d00\u9304"
+    },
+    {
+      "label": "\u76ee\u7684",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u76ee\u7684",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "\u76ee\u7684"
+    },
+    {
+      "label": "\u554f\u984c",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u554f\u984c",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "\u554f\u984c"
+    },
+    {
+      "label": "\u8b8a\u66f4",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u8b8a\u66f4",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "\u8b8a\u66f4"
+    },
+    {
+      "label": "\u9a57\u8b49\u7d50\u679c",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u9a57\u8b49\u7d50\u679c",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "\u9a57\u8b49\u7d50\u679c"
+    },
+    {
+      "label": "\u6e2c\u8a66",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u6e2c\u8a66",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "\u6e2c\u8a66"
+    },
+    {
+      "label": "\u6548\u80fd\u9650\u5236",
+      "file_type": "document",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L56",
+      "_origin": "ast",
+      "id": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u6548\u80fd\u9650\u5236",
+      "community": 33,
+      "community_name": "basic_llm",
+      "norm_label": "\u6548\u80fd\u9650\u5236"
     },
     {
       "label": "upgrade_light_version.md",
@@ -29012,7 +29155,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L40",
+      "source_location": "L39",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_decide_embedding_type",
@@ -29022,7 +29165,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L144",
+      "source_location": "L145",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_extract_json",
@@ -29032,7 +29175,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L191",
+      "source_location": "L192",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_extract_multiple_json",
@@ -29042,7 +29185,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L110",
+      "source_location": "L111",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_get_doc_length",
@@ -29052,7 +29195,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_get_docs_length",
@@ -29062,7 +29205,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L81",
+      "source_location": "L82",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_get_embedding_type_and_name",
@@ -29072,7 +29215,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L15",
+      "source_location": "L14",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_separate_name",
@@ -29082,7 +29225,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L97",
+      "source_location": "L98",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_helper_base_sim_to_trad",
@@ -29093,7 +29236,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L61",
+      "source_location": "L62",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_utils_models_custom_custom_embed",
@@ -29104,7 +29247,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L56",
+      "source_location": "L57",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_utils_models_gemi_gemini_embed",
@@ -29115,7 +29258,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L2",
+      "source_location": "L1",
       "weight": 1.0,
       "source": "akasha_helper_base",
       "target": "akasha_utils_prompts_format",
@@ -29126,7 +29269,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L15",
+      "source_location": "L13",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_base",
@@ -29269,7 +29412,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L92",
+      "source_location": "L93",
       "weight": 1.0,
       "source": "akasha_helper_base_get_embedding_type_and_name",
       "target": "akasha_helper_base_separate_name",
@@ -29279,9 +29422,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L16",
+      "source_location": "L15",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_16",
+      "source": "akasha_helper_base_rationale_15",
       "target": "akasha_helper_base_separate_name",
       "confidence_score": 1.0
     },
@@ -29290,7 +29433,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L15",
+      "source_location": "L13",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_base_separate_name",
@@ -29301,7 +29444,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L428",
+      "source_location": "L431",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_client",
       "target": "akasha_helper_base_separate_name",
@@ -29312,7 +29455,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L102",
+      "source_location": "L100",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings",
       "target": "akasha_helper_base_separate_name",
@@ -29323,7 +29466,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L243",
+      "source_location": "L246",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_helper_base_separate_name",
@@ -29466,7 +29609,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L40",
+      "source_location": "L39",
       "weight": 1.0,
       "source": "akasha_helper_base_decide_embedding_type",
       "target": "akasha_helper_base_py_embeddings",
@@ -29478,7 +29621,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "akasha/helper/base.py",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0,
       "source": "akasha_helper_base_decide_embedding_type",
       "target": "akasha_utils_models_custom_custom_embed"
@@ -29489,7 +29632,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "akasha/helper/base.py",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0,
       "source": "akasha_helper_base_decide_embedding_type",
       "target": "akasha_utils_models_gemi_gemini_embed"
@@ -29499,7 +29642,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L90",
+      "source_location": "L91",
       "weight": 1.0,
       "source": "akasha_helper_base_get_embedding_type_and_name",
       "target": "akasha_helper_base_decide_embedding_type",
@@ -29509,9 +29652,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L41",
+      "source_location": "L40",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_41",
+      "source": "akasha_helper_base_rationale_40",
       "target": "akasha_helper_base_decide_embedding_type",
       "confidence_score": 1.0
     },
@@ -29520,7 +29663,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L15",
+      "source_location": "L13",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_base_decide_embedding_type",
@@ -29531,7 +29674,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L202",
+      "source_location": "L205",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings_and_name",
       "target": "akasha_helper_base_decide_embedding_type",
@@ -29542,7 +29685,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L495",
+      "source_location": "L498",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model_type",
       "target": "akasha_helper_base_decide_embedding_type",
@@ -29553,7 +29696,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L81",
+      "source_location": "L82",
       "weight": 1.0,
       "source": "akasha_helper_base_get_embedding_type_and_name",
       "target": "akasha_helper_base_py_embeddings",
@@ -29563,9 +29706,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L83",
+      "source_location": "L84",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_83",
+      "source": "akasha_helper_base_rationale_84",
       "target": "akasha_helper_base_get_embedding_type_and_name",
       "confidence_score": 1.0
     },
@@ -29606,9 +29749,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L98",
+      "source_location": "L99",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_98",
+      "source": "akasha_helper_base_rationale_99",
       "target": "akasha_helper_base_sim_to_trad",
       "confidence_score": 1.0
     },
@@ -29672,7 +29815,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L140",
+      "source_location": "L141",
       "weight": 1.0,
       "source": "akasha_helper_base_get_docs_length",
       "target": "akasha_helper_base_get_doc_length",
@@ -29682,9 +29825,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L111",
+      "source_location": "L112",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_111",
+      "source": "akasha_helper_base_rationale_112",
       "target": "akasha_helper_base_get_doc_length",
       "confidence_score": 1.0
     },
@@ -29792,7 +29935,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L128",
+      "source_location": "L129",
       "weight": 1.0,
       "source": "akasha_helper_base_get_docs_length",
       "target": "akasha_helper_base_py_document",
@@ -29802,9 +29945,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L129",
+      "source_location": "L130",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_129",
+      "source": "akasha_helper_base_rationale_130",
       "target": "akasha_helper_base_get_docs_length",
       "confidence_score": 1.0
     },
@@ -29835,7 +29978,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L144",
+      "source_location": "L145",
       "weight": 1.0,
       "source": "akasha_helper_base_extract_json",
       "target": "akasha_helper_base_py_any",
@@ -29845,9 +29988,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L146",
+      "source_location": "L147",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_146",
+      "source": "akasha_helper_base_rationale_147",
       "target": "akasha_helper_base_extract_json",
       "confidence_score": 1.0
     },
@@ -29878,7 +30021,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L191",
+      "source_location": "L192",
       "weight": 1.0,
       "source": "akasha_helper_base_extract_multiple_json",
       "target": "akasha_helper_base_py_any",
@@ -29888,9 +30031,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/base.py",
-      "source_location": "L192",
+      "source_location": "L193",
       "weight": 1.0,
-      "source": "akasha_helper_base_rationale_192",
+      "source": "akasha_helper_base_rationale_193",
       "target": "akasha_helper_base_extract_multiple_json",
       "confidence_score": 1.0
     },
@@ -30146,7 +30289,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L20",
+      "source_location": "L18",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_get_env_var",
@@ -30156,7 +30299,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L427",
+      "source_location": "L430",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_handle_client",
@@ -30166,7 +30309,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L74",
+      "source_location": "L72",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_handle_embeddings",
@@ -30176,7 +30319,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L181",
+      "source_location": "L184",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_handle_embeddings_and_name",
@@ -30186,7 +30329,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L209",
+      "source_location": "L212",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_handle_model",
@@ -30196,7 +30339,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L456",
+      "source_location": "L459",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_handle_model_and_name",
@@ -30206,7 +30349,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L488",
+      "source_location": "L491",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_handle_model_type",
@@ -30216,7 +30359,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L57",
+      "source_location": "L55",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_helper_handle_objects_openai_endpoint",
@@ -30227,7 +30370,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L431",
+      "source_location": "L434",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_azure_openai_azureopenaiclient",
@@ -30238,7 +30381,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L266",
+      "source_location": "L269",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_chat_build_chat_model",
@@ -30249,7 +30392,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L361",
+      "source_location": "L364",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_chglm_chatglm",
@@ -30260,7 +30403,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L95",
+      "source_location": "L93",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_custom_custom_embed",
@@ -30271,7 +30414,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L236",
+      "source_location": "L239",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_custom_custom_model",
@@ -30293,7 +30436,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L444",
+      "source_location": "L447",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_gemi_gemini_model",
@@ -30304,7 +30447,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L395",
+      "source_location": "L398",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_gtq_gptq",
@@ -30315,7 +30458,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L376",
+      "source_location": "L379",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_gtq_peft_llama2",
@@ -30326,7 +30469,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L388",
+      "source_location": "L391",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_gtq_taiwanllamagptq",
@@ -30337,7 +30480,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L345",
+      "source_location": "L348",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_hf_hf_model",
@@ -30348,7 +30491,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L324",
+      "source_location": "L327",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_llamacpp2_llamacpp",
@@ -30359,7 +30502,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L246",
+      "source_location": "L249",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_remo_remote_model",
@@ -30370,7 +30513,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L14",
+      "source_location": "L12",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects",
       "target": "akasha_utils_models_thinking",
@@ -30491,7 +30634,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L429",
+      "source_location": "L432",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_client",
       "target": "akasha_helper_handle_objects_get_env_var",
@@ -30502,7 +30645,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L103",
+      "source_location": "L101",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings",
       "target": "akasha_helper_handle_objects_get_env_var",
@@ -30513,7 +30656,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L244",
+      "source_location": "L247",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_helper_handle_objects_get_env_var",
@@ -30523,9 +30666,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L21",
+      "source_location": "L19",
       "weight": 1.0,
-      "source": "akasha_helper_handle_objects_rationale_21",
+      "source": "akasha_helper_handle_objects_rationale_19",
       "target": "akasha_helper_handle_objects_get_env_var",
       "confidence_score": 1.0
     },
@@ -30534,7 +30677,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L433",
+      "source_location": "L436",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_client",
       "target": "akasha_helper_handle_objects_openai_endpoint",
@@ -30555,9 +30698,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L58",
+      "source_location": "L56",
       "weight": 1.0,
-      "source": "akasha_helper_handle_objects_rationale_58",
+      "source": "akasha_helper_handle_objects_rationale_56",
       "target": "akasha_helper_handle_objects_openai_endpoint",
       "confidence_score": 1.0
     },
@@ -30566,7 +30709,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L74",
+      "source_location": "L72",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings",
       "target": "akasha_helper_handle_objects_py_embeddings",
@@ -30577,7 +30720,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L97",
+      "source_location": "L95",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings",
       "target": "akasha_utils_models_custom_custom_embed",
@@ -30599,7 +30742,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L204",
+      "source_location": "L207",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings_and_name",
       "target": "akasha_helper_handle_objects_handle_embeddings",
@@ -30609,9 +30752,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L79",
+      "source_location": "L77",
       "weight": 1.0,
-      "source": "akasha_helper_handle_objects_rationale_79",
+      "source": "akasha_helper_handle_objects_rationale_77",
       "target": "akasha_helper_handle_objects_handle_embeddings",
       "confidence_score": 1.0
     },
@@ -30675,7 +30818,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L181",
+      "source_location": "L184",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_embeddings_and_name",
       "target": "akasha_helper_handle_objects_py_embeddings",
@@ -30686,7 +30829,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L488",
+      "source_location": "L491",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model_type",
       "target": "akasha_helper_handle_objects_py_embeddings",
@@ -30696,9 +30839,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L186",
+      "source_location": "L189",
       "weight": 1.0,
-      "source": "akasha_helper_handle_objects_rationale_186",
+      "source": "akasha_helper_handle_objects_rationale_189",
       "target": "akasha_helper_handle_objects_handle_embeddings_and_name",
       "confidence_score": 1.0
     },
@@ -30872,7 +31015,7 @@
       "context": "return_type",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L209",
+      "source_location": "L212",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_helper_handle_objects_py_baselanguagemodel",
@@ -30883,7 +31026,7 @@
       "context": "parameter_type",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L209",
+      "source_location": "L212",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_helper_handle_objects_py_thinkingbudget",
@@ -30894,7 +31037,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L287",
+      "source_location": "L290",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_chat_build_chat_model",
@@ -30905,7 +31048,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L363",
+      "source_location": "L366",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_chglm_chatglm",
@@ -30916,7 +31059,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L238",
+      "source_location": "L241",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_custom_custom_model",
@@ -30927,7 +31070,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L397",
+      "source_location": "L400",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_gtq_gptq",
@@ -30938,7 +31081,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L378",
+      "source_location": "L381",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_gtq_peft_llama2",
@@ -30949,7 +31092,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L390",
+      "source_location": "L393",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_gtq_taiwanllamagptq",
@@ -30960,7 +31103,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L347",
+      "source_location": "L350",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_hf_hf_model",
@@ -30971,7 +31114,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L326",
+      "source_location": "L329",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_llamacpp2_llamacpp",
@@ -30982,7 +31125,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L257",
+      "source_location": "L260",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model",
       "target": "akasha_utils_models_remo_remote_model",
@@ -30993,7 +31136,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L483",
+      "source_location": "L486",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model_and_name",
       "target": "akasha_helper_handle_objects_handle_model",
@@ -31003,9 +31146,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L218",
+      "source_location": "L221",
       "weight": 1.0,
-      "source": "akasha_helper_handle_objects_rationale_218",
+      "source": "akasha_helper_handle_objects_rationale_221",
       "target": "akasha_helper_handle_objects_handle_model",
       "confidence_score": 1.0
     },
@@ -31047,7 +31190,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L456",
+      "source_location": "L459",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model_and_name",
       "target": "akasha_helper_handle_objects_py_baselanguagemodel",
@@ -31058,7 +31201,7 @@
       "context": "generic_arg",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L488",
+      "source_location": "L491",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_model_type",
       "target": "akasha_helper_handle_objects_py_baselanguagemodel",
@@ -31069,7 +31212,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L437",
+      "source_location": "L440",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_client",
       "target": "akasha_utils_models_azure_openai_azureopenaiclient",
@@ -31080,7 +31223,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L446",
+      "source_location": "L449",
       "weight": 1.0,
       "source": "akasha_helper_handle_objects_handle_client",
       "target": "akasha_utils_models_gemi_gemini_model",
@@ -31123,9 +31266,9 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "akasha/helper/handle_objects.py",
-      "source_location": "L463",
+      "source_location": "L466",
       "weight": 1.0,
-      "source": "akasha_helper_handle_objects_rationale_463",
+      "source": "akasha_helper_handle_objects_rationale_466",
       "target": "akasha_helper_handle_objects_handle_model_and_name",
       "confidence_score": 1.0
     },
@@ -50071,6 +50214,68 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L12",
+      "weight": 1.0,
+      "source": "tests_unit_test_provider_import_boundaries",
+      "target": "tests_unit_test_provider_import_boundaries_run_probe",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "tests_unit_test_provider_import_boundaries",
+      "target": "tests_unit_test_provider_import_boundaries_test_agent_import_does_not_load_provider_adapters",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L32",
+      "weight": 1.0,
+      "source": "tests_unit_test_provider_import_boundaries",
+      "target": "tests_unit_test_provider_import_boundaries_test_selected_gemini_adapter_does_not_load_openai_sdk",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "tests_unit_test_provider_import_boundaries_rationale_1",
+      "target": "tests_unit_test_provider_import_boundaries",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "tests_unit_test_provider_import_boundaries_test_agent_import_does_not_load_provider_adapters",
+      "target": "tests_unit_test_provider_import_boundaries_run_probe",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_provider_import_boundaries.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "tests_unit_test_provider_import_boundaries_test_selected_gemini_adapter_does_not_load_openai_sdk",
+      "target": "tests_unit_test_provider_import_boundaries_run_probe",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "tests/unit/test_rag_input_contract.py",
       "source_location": "L74",
       "weight": 1.0,
@@ -53304,6 +53509,76 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u554f\u984c",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L56",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u6548\u80fd\u9650\u5236",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u6e2c\u8a66",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u76ee\u7684",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L18",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u8b8a\u66f4",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "dev_docs/2026-08-09-provider-lazy-import-optimization.md",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "dev_docs_2026_08_09_provider_lazy_import_optimization_provider_lazy_import_\u512a\u5316\u7d00\u9304",
+      "target": "dev_docs_2026_08_09_provider_lazy_import_optimization_\u9a57\u8b49\u7d50\u679c",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "dev_docs/upgrade_light_version.md",
       "source_location": "L1",
       "weight": 1.0,
@@ -54333,5 +54608,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "b6e18213eb69dffa2e0a6cab5cbb4cd387cb6e04"
+  "built_at_commit": "eb356d8dc8c76ec2ecd56714f5e9ec9720afafd6"
 }

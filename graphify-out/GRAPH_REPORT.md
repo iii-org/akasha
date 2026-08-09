@@ -1,16 +1,16 @@
-# Graph Report - akasha-repo  (2026-07-30)
+# Graph Report - akasha-repo  (2026-08-09)
 
 ## Corpus Check
-- 193 files · ~157,943 words
+- 195 files · ~158,230 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1827 nodes · 3255 edges · 152 communities (143 shown, 9 thin omitted)
+- 1840 nodes · 3268 edges · 147 communities (139 shown, 8 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 113 edges (avg confidence: 0.65)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b6e18213`
+- Built from commit: `eb356d8d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -59,13 +59,11 @@
 - LLM
 - mySVMRetriever
 - BaseRetriever
-- test_api_stability.py
 - get_retrivers
 - aiido_upload
 - customRetriever
 - myMMRRetriever
 - myRerankRetriever
-- test_openai_rag.py
 - test_light_restrictions.py
 - __init__.py
 - base.py
@@ -74,7 +72,6 @@
 - anthropic_rag
 - gemini_rag
 - _generate_single_choice_question
-- test_agent.py
 - test_live_model_final_action_aliases
 - pytest_configure
 - hello memory.md
@@ -114,8 +111,6 @@
 - SkillContext
 - BaseRetriever
 - call_stream_events
-- _Response
-- ._call
 - Q: 我執行 repl_app.py 然後再看輸出時，看不出是模型自己想的，還是有根據 skill 做的? 能在加上一些過程的訊息嗎?
 - Q: verbose=True 應由 akasha 內部印出載入 skill 與使用工具的過程，而不是要求範例使用者解析 stream event。
 - test_ask_thinking_warning.py
@@ -152,31 +147,31 @@
 ## Import Cycles
 - None detected.
 
-## Communities (152 total, 9 thin omitted)
+## Communities (147 total, 8 thin omitted)
 
 ### Community 0 - "evaluation.py"
 Cohesion: 0.08
-Nodes (34): merge_history_and_prompt(), merge system prompt, history messages, and prompt based on the prompt format typ, from messages dict list, get pairs of user question and assistant response from, retri_history_messages(), reference docs after calling the rag function, will return the reference file na, decide_auto_prompt_format_type(), default_get_reference_prompt(), fact_question_prompt() (+26 more)
+Nodes (35): merge_history_and_prompt(), merge system prompt, history messages, and prompt based on the prompt format typ, from messages dict list, get pairs of user question and assistant response from, retri_history_messages(), reference docs after calling the rag function, will return the reference file na, decide_auto_prompt_format_type(), default_doc_ask_prompt(), default_get_reference_prompt() (+27 more)
 
 ### Community 1 - "agents"
-Cohesion: 0.06
-Nodes (37): calculate_tool(), _jsonSaveTool(), BaseTool, rag_tool(), return the tool to use search engine to search information for user      Args:, return the json save tool that can save the content into json file.      Retur, save content into json file, saveJSON_tool() (+29 more)
+Cohesion: 0.10
+Nodes (23): calculate_tool(), _jsonSaveTool(), BaseTool, rag_tool(), return the tool to use search engine to search information for user      Args:, return the json save tool that can save the content into json file.      Retur, save content into json file, saveJSON_tool() (+15 more)
 
 ### Community 2 - "tests.md"
 Cohesion: 0.05
 Nodes (40): 1.1 RAG 核心, 1.1 遠端模型與基礎問答, 1.2 摘要功能 (Summary), 1.2 核心邏輯與數據處理, 1.3 代理人功能 (Agents), 1.3 輕量檢索器, 1.4 評估功能 (Eval), 1.5 影像處理與多模態 (Vision & Multimodal) (+32 more)
 
 ### Community 3 - "gen_prompt.py"
-Cohesion: 0.09
-Nodes (38): check_essay_system_prompt(), check_sum_type(), find_same_category(), get_non_repeat_rand_int(), get_question_from_file(), get_source_files(), load questions from file and save the questions into lists.     a question list, iterate the category dictionary and check if any category has more than cate_thr (+30 more)
+Cohesion: 0.08
+Nodes (39): check_essay_system_prompt(), check_sum_type(), find_same_category(), get_non_repeat_rand_int(), get_question_from_file(), get_source_files(), load questions from file and save the questions into lists.     a question list, iterate the category dictionary and check if any category has more than cate_thr (+31 more)
 
 ### Community 4 - "__init__.py"
 Cohesion: 0.22
-Nodes (12): get_storage_directory(), is_url(), _sanitize_path_part(), _sanitize_path_string(), PurePath, _FakeArray, _FakeChroma, test_dbs_initializes_from_chroma_like_object_with_fallbacks() (+4 more)
+Nodes (9): get_relevant_doc_auto_rerank(), try every solution to get  to search relevant documents.      Args:         *, myRerankRetriever, Any, BaseRetriever, Document, implement rerank to find relevant documents          Args:             **quer, rerank() (+1 more)
 
 ### Community 5 - "dbs"
-Cohesion: 0.19
-Nodes (7): gemini_model, BaseModel, LLM, Path, run llm and get the response          Args:             **prompt (str)**: use, run llm and get the response          Args:             **prompt (str)**: use, run llm and get the response          Args:             **prompt (str)**: use
+Cohesion: 0.06
+Nodes (24): Compute the number of tokens in a given text using Google Vertex AI., Compute the number of tokens in a given text using either huggingface or OpenAI, Load a tokenizer from local path or huggingface model hub.          Args:, Save the tokenizer to local path.          Args:             name (str): The, Compute the number of tokens in a given text using huggingface tokenizer., Compute the number of tokens in a given text using OpenAI tiktoken.          A, calculate_token(), check_format_prompt() (+16 more)
 
 ### Community 6 - "self_query_filter.py"
 Cohesion: 0.10
@@ -184,7 +179,7 @@ Nodes (27): check_metadata_info(), DocumentCP, filter_docs(), find_subset(), gen
 
 ### Community 7 - "atman"
 Cohesion: 0.06
-Nodes (26): BaseLanguageModel, Embeddings, Path, RAG, input the documents directory path and question, will first store the documents, input the documents directory path and question, will first store the documents, class for implement search db based on user prompt and generate response from ll, initials of Doc_QA class          Args:             embeddings (_type_, optio (+18 more)
+Nodes (24): BaseLanguageModel, Embeddings, Path, RAG, input the documents directory path and question, will first store the documents, input the documents directory path and question, will first store the documents, class for implement search db based on user prompt and generate response from ll, initials of Doc_QA class          Args:             embeddings (_type_, optio (+16 more)
 
 ### Community 8 - "handle_objects.py"
 Cohesion: 0.05
@@ -192,7 +187,7 @@ Nodes (37): 10. Logs 與可觀測性, 11. 測試規劃, 12. 實作階段, 13. �
 
 ### Community 9 - "model_eval.py"
 Cohesion: 0.10
-Nodes (23): get_torch(), generate fact resposne from the question, can evaluate with reference answer, generate summary resposne from the question, can evaluate with reference answer, separate the question type and call different function to generate response, get_bert_pack(), get_bert_score(), get_llm_score(), get_rouge_score() (+15 more)
+Nodes (22): get_torch(), generate fact resposne from the question, can evaluate with reference answer, generate summary resposne from the question, can evaluate with reference answer, separate the question type and call different function to generate response, get_bert_pack(), get_bert_score(), get_llm_score(), get_rouge_score() (+14 more)
 
 ### Community 10 - ".__call__"
 Cohesion: 0.10
@@ -203,28 +198,28 @@ Cohesion: 0.11
 Nodes (13): get_stop_list(), handle_url(), LLM, run llm and get the response          Args:             **prompt (str)**: use, run llm and get the response          Args:             **prompt (str)**: use, get number of tokens in the text          Args:             **text (str)**: i, get stop list      Args:         stop (Optional[List[str]]): stop list, define custom model, input func and temperature          Args:             ** (+5 more)
 
 ### Community 12 - "anthropic_model"
-Cohesion: 0.16
-Nodes (18): get_text_from_url(), detect_encoding(), Path, get_load_file_list(), load_directory(), load_file(), load_url(), Document (+10 more)
+Cohesion: 0.06
+Nodes (32): Shared constants for the Akasha package., get_text_from_url(), detect_encoding(), get_text_md5(), Path, get_load_file_list(), load_directory(), load_file() (+24 more)
 
 ### Community 13 - "gemini_model"
 Cohesion: 0.11
-Nodes (11): dbs, extract_db_by_ids(), extract_db_by_keyword(), pop_db_by_ids(), pop undesired data from  dbs based on ids      Args:         db (dbs): dbs ob, extract db from dbs based on keyword_list      Args:         db (dbs): dbs ob, extract db from dbs based on ids      Args:         db (dbs): dbs object, add_metadata() (+3 more)
+Nodes (16): dbs, get_storage_directory(), is_url(), _sanitize_path_part(), _sanitize_path_string(), PurePath, Gemini embedding -> Chroma -> retrieval -> Gemini answer smoke test., _FakeArray (+8 more)
 
 ### Community 14 - "AzureOpenAIClient"
 Cohesion: 0.10
 Nodes (14): _async_get_completion(), AzureOpenAIClient, Any, BaseModel, LLM, Path, run llm and get the stream generator          Args:             prompt (str):, generate image based on the user prompt.\n         Args:             prompt (s (+6 more)
 
 ### Community 15 - "remote_model"
-Cohesion: 0.09
-Nodes (29): agents, _as_message_list(), _count_tokens(), _extract_messages(), _json_safe(), _last_answer(), _message_dump(), _message_text() (+21 more)
+Cohesion: 0.07
+Nodes (34): agents, _as_message_list(), _count_tokens(), _extract_messages(), _json_safe(), _last_answer(), _message_dump(), _message_text() (+26 more)
 
 ### Community 16 - "create_db.py"
 Cohesion: 0.24
 Nodes (17): ask(), clean(), ConsultModel, ConsultModelReturn, InfoModel, load_env(), BaseModel, RAG() (+9 more)
 
 ### Community 17 - "gptq"
-Cohesion: 0.10
-Nodes (14): custom_embed, custom_model, Any, BaseModel, Embeddings, LLM, run llm and get the response          Args:             **prompt (str)**: use, get number of tokens in the text          Args:             **text (str)**: i (+6 more)
+Cohesion: 0.14
+Nodes (8): custom_model, Any, LLM, run llm and get the response          Args:             **prompt (str)**: use, get number of tokens in the text          Args:             **text (str)**: i, Initialize the sentence_transformer., define custom model, input func and temperature          Args:             **, return llm type          Returns:             str: llm type
 
 ### Community 18 - "ask.py"
 Cohesion: 0.10
@@ -235,8 +230,8 @@ Cohesion: 0.07
 Nodes (28): Akasha Package Upgrade Log, Chroma compatibility helper, Code Changes, Dependency Changes, Fix, Follow-up Suggestions, Import chain hardening, Known Constraints (+20 more)
 
 ### Community 20 - "ui.py"
-Cohesion: 0.20
-Nodes (5): Compute the number of tokens in a given text using either huggingface or OpenAI, Load a tokenizer from local path or huggingface model hub.          Args:, Save the tokenizer to local path.          Args:             name (str): The, Compute the number of tokens in a given text using huggingface tokenizer., Compute the number of tokens in a given text using OpenAI tiktoken.          A
+Cohesion: 0.24
+Nodes (10): _get_env_var(), handle_client(), _openai_endpoint(), if env_file is not empty, get the environment variable from the file         el, Return the endpoint and key for the explicitly selected provider., edit_image(), gen_image(), Path (+2 more)
 
 ### Community 21 - "api.py"
 Cohesion: 0.11
@@ -247,28 +242,28 @@ Cohesion: 0.07
 Nodes (27): 1. 執行 unit tests, 2. 只執行 thinking adapter 測試, 3. 執行 API contract 與 response normalization 測試, 4. 執行 logging 回歸測試, 5. 執行 embedding provider smoke, 6. 執行 OpenAI 分階段 RAG pipeline, 7. 執行 Gemini 完整 RAG pipeline, 8. 執行 MCP smoke tests (+19 more)
 
 ### Community 23 - "self_ask.py"
-Cohesion: 0.24
-Nodes (6): eval, BaseLanguageModel, Embeddings, initials of Model_Eval class          Args:             **embeddings (str, op, base_line(), test_Model_Eval()
+Cohesion: 0.20
+Nodes (9): extract_db_by_file(), extract_db_by_ids(), extract_db_by_keyword(), pop_db_by_ids(), pop undesired data from  dbs based on ids      Args:         db (dbs): dbs ob, extract db from dbs based on keyword_list      Args:         db (dbs): dbs ob, extract db from dbs based on ids      Args:         db (dbs): dbs object, extract db from dbs based on file_name_list      Args:         db (dbs): dbs (+1 more)
 
 ### Community 24 - "Installation"
-Cohesion: 0.13
-Nodes (9): Shared constants for the Akasha package., get_stop_list(), hf_model, LLM, run llm and get the response          Args:             **prompt (str)**: use, get stop list      Args:         stop (Optional[List[str]]): stop list, define custom model, input func and temperature          Args:             **, return llm type          Returns:             str: llm type (+1 more)
+Cohesion: 0.24
+Nodes (9): importlib_reload(), Test that search_type='rerank' shows a warning when torch is missing., Test that get_bert_score raises ImportError when bert_score is missing., Test that Chroma-backed features point users to a light/base install., Test that hf_model raises ImportError when torch is missing., test_bert_score_missing(), test_chromadb_missing_raises_clear_error(), test_rerank_warning_when_torch_missing() (+1 more)
 
 ### Community 25 - "Akasha Upgrade Plan: Light Version Support"
-Cohesion: 0.19
-Nodes (16): get_chroma_components(), Compatibility helpers for optional Chroma dependencies., extract_db_by_file(), extract db from dbs based on file_name_list      Args:         db (dbs): dbs, _display_db_num(), load_db_by_chroma_name(), load_directory_db(), load_files_db() (+8 more)
+Cohesion: 0.13
+Nodes (26): separate type:name by ':'      Args:         **name (str)**: string with form, separate_name(), handle_embeddings_and_name(), get the embeddings object and embed name      Args:         embed (_type_, op, BaseLanguageModel, Embeddings, Initializes the MemoryManager.          Args:             model_obj (BaseLang, get_chroma_components() (+18 more)
 
 ### Community 26 - "delete_documents_by_file"
 Cohesion: 0.12
 Nodes (10): parse all model files(gguf) and directory in the model folder, set the arguments for the model, set_model_dir(), setting_page(), upload documents files to docs folder, upload_page(), implement get response ui, websearch_page() (+2 more)
 
 ### Community 27 - "file_loader.py"
-Cohesion: 0.13
-Nodes (19): call_model(), call llm model and return the response      Args:         model (BaseLanguage, get_inter_info(), format the follow up question and answer to a string      Args:         inter, implement the self ask rag function, first get the follow up questions by user p, self_ask_f(), default_self_ask_prompt(), JSON_formatter() (+11 more)
+Cohesion: 0.14
+Nodes (17): call_model(), call llm model and return the response      Args:         model (BaseLanguage, get_inter_info(), format the follow up question and answer to a string      Args:         inter, implement the self ask rag function, first get the follow up questions by user p, self_ask_f(), default_self_ask_prompt(), JSON_formatter() (+9 more)
 
 ### Community 28 - "configure_logging"
-Cohesion: 0.14
-Nodes (16): _AkashaConsoleFilter, _AkashaOnlyFilter, configure_logging(), _is_akasha_record(), Prevent fallback/root handlers from duplicating agent trace records., _SuppressAkashaTraceFilter, LogRecord, _get_console_handler() (+8 more)
+Cohesion: 0.05
+Nodes (48): ThinkingBudget, change model, temperature if user use **kwargs to change them., change other arguments if user use **kwargs to change them., _summary_          Args:             model (str, optional): _description_. De, _AkashaConsoleFilter, _AkashaOnlyFilter, configure_logging(), _is_akasha_record() (+40 more)
 
 ### Community 29 - "search_docs"
 Cohesion: 0.18
@@ -276,7 +271,7 @@ Nodes (21): create_chromadb_from_file(), create_directory_db(), create_single_fi
 
 ### Community 30 - "LlamaCPP"
 Cohesion: 0.29
-Nodes (5): Stage-by-stage live RAG checks for the Chroma-to-answer pipeline., Release RAG-owned references and run collection before pytest exits., A built Chroma store can be opened again and read independently., test_rag_stage_1_reload_chroma(), test_rag_stage_4_cleanup_is_executable()
+Nodes (6): custom_embed, BaseModel, Embeddings, Compute doc embeddings using a HuggingFace transformer model.          Args:, Compute query embeddings using a HuggingFace transformer model.          Args:, HuggingFace sentence_transformers embedding models.      To use, you should ha
 
 ### Community 31 - "search_doc.py"
 Cohesion: 0.13
@@ -287,8 +282,8 @@ Cohesion: 0.10
 Nodes (20): 1. `akasha.ask()`, 2. `akasha.agents()`, 3. `akasha.RAG()`, 4. `akasha.summary()`, 5. `MemoryManager`, 6. `akasha.agent.*` / 內部但對外可感知的行為, 7. 共通高風險參數, 8. 測試優先順序 (+12 more)
 
 ### Community 33 - "basic_llm"
-Cohesion: 0.18
-Nodes (6): basic_llm, change other arguments if user use **kwargs to change them., add pre-process log to self.logs          Args:             timestamp (str):, add post-process log to self.logs          Args:             timestamp (str):, save logs into json or txt file          Args:             file_name (str, op, basic class for akasha, implement _set_model, _change_variables, _check_db, add_
+Cohesion: 0.25
+Nodes (7): Provider Lazy Import 優化紀錄, 問題, 效能限制, 測試, 目的, 變更, 驗證結果
 
 ### Community 34 - "gemini_embed"
 Cohesion: 0.10
@@ -323,16 +318,12 @@ Cohesion: 0.16
 Nodes (8): get_stop_list(), LlamaCPP, LLM, run llm and get the response          Args:             **prompt (str)**: use, get stop list      Args:         stop (Optional[List[str]]): stop list, define custom model, input func and temperature          Args:             **, Cleanup function to be called on exit., return llm type          Returns:             str: llm type
 
 ### Community 42 - "mySVMRetriever"
-Cohesion: 0.06
-Nodes (29): Searches the vector store for memories relevant to the query., get_relevant_doc_auto_rerank(), try every solution to get  to search relevant documents.      Args:         *, get_retrivers(), BaseRetriever, Embeddings, get the retrivers based on given search_type, default is auto, which contain, 's, myRerankRetriever (+21 more)
+Cohesion: 0.07
+Nodes (25): Searches the vector store for memories relevant to the query., get_relevant_doc_auto(), try every solution to get  to search relevant documents.      Args:         *, get_retrivers(), BaseRetriever, Embeddings, get the retrivers based on given search_type, default is auto, which contain, 's, BaseLanguageModel (+17 more)
 
 ### Community 43 - "BaseRetriever"
-Cohesion: 0.13
-Nodes (14): ThinkingBudget, change model, temperature if user use **kwargs to change them., _summary_          Args:             model (str, optional): _description_. De, _normalize_openai_base_url(), LangChain ChatModel factory used by the public Akasha model selectors., Convert a full OpenAI endpoint URL into an SDK base URL., normalize_thinking_budget(), normalize_thinking_level() (+6 more)
-
-### Community 44 - "test_api_stability.py"
-Cohesion: 0.17
-Nodes (17): build_chat_model(), Any, ThinkingBudget, Build a LangChain 1.3+ chat model for a supported provider., test_anthropic_does_not_send_temperature(), test_anthropic_thinking_reserves_tokens_for_reasoning(), test_azure_environment_requires_key_and_base_url(), test_azure_openai_compatible_endpoint_uses_dedicated_environment() (+9 more)
+Cohesion: 0.60
+Nodes (4): Provider adapters are imported only at the selected runtime seam., _run_probe(), test_agent_import_does_not_load_provider_adapters(), test_selected_gemini_adapter_does_not_load_openai_sdk()
 
 ### Community 45 - "get_retrivers"
 Cohesion: 0.23
@@ -354,17 +345,13 @@ Nodes (10): 測試 Memory 記憶功能 (light 版使用遠端 embedding + Chroma
 Cohesion: 0.15
 Nodes (13): 2026-07 測試實際準備清單, B. 第一批要測的模型清單, C. Embedding model 清單, D. Python 與套件環境, E. 測試資料夾與檔案, F. Vision 實際需要的東西, G. Tool-calling 實際需要的東西, H. MCP 實際需要的東西 (+5 more)
 
-### Community 50 - "test_openai_rag.py"
-Cohesion: 0.29
-Nodes (6): Compute the number of tokens in a given text using Google Vertex AI., calculate_token(), check_format_prompt(), convert_vision_prompt(), convert the vision prompt to the correct format, check and format the prompt to fit the correct gemini format
-
 ### Community 51 - "test_light_restrictions.py"
-Cohesion: 0.26
-Nodes (11): get_embedding_type_and_name(), Embeddings, get the type and name of the embeddings, _delete_docs_built_time(), delete_documents_by_directory(), delete_documents_by_file(), Embeddings, Path (+3 more)
+Cohesion: 0.33
+Nodes (8): _delete_docs_built_time(), delete_documents_by_directory(), delete_documents_by_file(), Embeddings, Path, delete the documents in the chroma db by directory path      Args:         di, delete the documents in the chroma db by file name      Args:         file_na, test_delete_file_db()
 
 ### Community 52 - "__init__.py"
-Cohesion: 0.29
-Nodes (5): gemini_embed, Embeddings, gemini embedding models., Compute doc embeddings using a HuggingFace transformer model.          Args:, Compute query embeddings using a HuggingFace transformer model.          Args:
+Cohesion: 0.18
+Nodes (10): decide_embedding_type(), get_embedding_type_and_name(), Embeddings, check the embedding type and return the type:name      Args:         embeddin, get the type and name of the embeddings, gemini_embed, Embeddings, gemini embedding models. (+2 more)
 
 ### Community 53 - "base.py"
 Cohesion: 0.20
@@ -389,10 +376,6 @@ Nodes (20): Public skill APIs for Akasha agents., _build_skill(), load_skill_dir
 ### Community 58 - "_generate_single_choice_question"
 Cohesion: 0.18
 Nodes (6): chatGLM, LLM, define chatglm model and the tokenizer          Args:             **model_nam, return llm type          Returns:             str: llm type, run llm and get the response          Args:             **prompt (str)**: use, get number of tokens in the text          Args:             **text (str)**: i
-
-### Community 59 - "test_agent.py"
-Cohesion: 0.22
-Nodes (5): Any, run llm and get the response          Args:             **prompt (str)**: use, define custom model, input func and temperature          Args:             **, Initialize the sentence_transformer., run llm and get the stream generator          Args:             prompt (str):
 
 ### Community 60 - "test_live_model_final_action_aliases"
 Cohesion: 0.10
@@ -419,8 +402,8 @@ Cohesion: 0.33
 Nodes (5): myMMRRetriever, BaseRetriever, Document, Embeddings, implement using custom function to find relevant documents, the custom function
 
 ### Community 67 - "個人資訊.md"
-Cohesion: 0.14
-Nodes (19): decide_embedding_type(), separate type:name by ':'      Args:         **name (str)**: string with form, check the embedding type and return the type:name      Args:         embeddin, separate_name(), handle_embeddings_and_name(), handle_model_type(), BaseLanguageModel, Embeddings (+11 more)
+Cohesion: 0.19
+Nodes (9): handle_embeddings(), handle_model_type(), BaseLanguageModel, Embeddings, create model client used in document QA, default if openai "gpt-3.5-turbo", initials of atman class          Args:             **chunk_size (int, optiona, change model, embeddings, search_type, temperature if user use **kwargs to chang, Live contract checks for the embedding providers used by RAG. (+1 more)
 
 ### Community 68 - "地點資訊.md"
 Cohesion: 0.16
@@ -511,8 +494,8 @@ Cohesion: 0.67
 Nodes (3): A. API keys 與 provider 帳號, CI secrets, 本機 .env
 
 ### Community 115 - "MemoryManager"
-Cohesion: 0.14
-Nodes (9): get_mac_address(), get_text_md5(), MemoryManager, Uses an LLM to extract key information from a conversation turn., Uses an LLM to determine a suitable topic for the memory., The main pipeline to process a conversation turn and save it to memory., Manages the creation, storage, and retrieval of long-term semantic memory., default_categorize_memory_prompt() (+1 more)
+Cohesion: 0.20
+Nodes (8): get_mac_address(), MemoryManager, Uses an LLM to extract key information from a conversation turn., Uses an LLM to determine a suitable topic for the memory., The main pipeline to process a conversation turn and save it to memory., Manages the creation, storage, and retrieval of long-term semantic memory., default_categorize_memory_prompt(), Returns the system prompt for categorizing a piece of memory.
 
 ### Community 116 - "akasha.agents 動態 Skills 使用說明"
 Cohesion: 0.12
@@ -534,10 +517,6 @@ Nodes (6): AgentState, BaseModel, _PythonExecuteInput, SkillAgentState, Resolved
 Cohesion: 0.26
 Nodes (11): call_stream_events(), content_to_text(), content_to_thinking(), normalize_chat_input(), Extract visible text from LangChain content blocks.      Reasoning/thinking bloc, Extract reasoning/thinking text from LangChain content blocks., Yield normalized answer/thinking events from a ChatModel stream., Convert legacy prompt dictionaries to LangChain chat messages. (+3 more)
 
-### Community 122 - "_Response"
-Cohesion: 0.43
-Nodes (4): _Response, test_get_text_from_url_extracts_title_and_visible_text(), test_get_text_from_url_handles_request_exceptions(), test_get_webpage_last_modified_handles_present_and_missing_headers()
-
 ### Community 124 - "Q: 我執行 repl_app.py 然後再看輸出時，看不出是模型自己想的，還是有根據 skill 做的? 能在加上一些過程的訊息嗎?"
 Cohesion: 0.40
 Nodes (4): Answer, Outcome, Q: 我執行 repl_app.py 然後再看輸出時，看不出是模型自己想的，還是有根據 skill 做的? 能在加上一些過程的訊息嗎?, Source Nodes
@@ -555,18 +534,18 @@ Cohesion: 0.50
 Nodes (3): pytest_sessionfinish(), Shared pytest configuration for the repository., Remove the project-local pytest temporary directory after a run.
 
 ## Knowledge Gaps
-- **273 isolated node(s):** `akasha_terminal`, `Quick Start (Local Development)`, `Change log`, `Standard Installation`, `Lightweight Installation (API-call-only, v1.0+)` (+268 more)
+- **279 isolated node(s):** `akasha_terminal`, `Quick Start (Local Development)`, `Change log`, `Standard Installation`, `Lightweight Installation (API-call-only, v1.0+)` (+274 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **8 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `dbs` connect `gemini_model` to `basic_llm`, `個人資料.md`, `gen_prompt.py`, `個人資訊.md`, `Embeddings`, `self_query_filter.py`, `atman`, `__init__.py`, `居住地資訊.md`, `mySVMRetriever`, `get_retrivers`, `aiido_upload`, `MemoryManager`, `test_agents_observation_normalization.py`, `self_ask.py`, `Akasha Upgrade Plan: Light Version Support`, `file_loader.py`, `test_summary.py`?**
-  _High betweenness centrality (0.086) - this node is a cross-community bridge._
+- **Why does `dbs` connect `gemini_model` to `evaluation.py`, `Embeddings`, `個人資料.md`, `gen_prompt.py`, `self_query_filter.py`, `atman`, `居住地資訊.md`, `mySVMRetriever`, `get_retrivers`, `aiido_upload`, `remote_model`, `MemoryManager`, `self_ask.py`, `test_agents_observation_normalization.py`, `Installation`, `Akasha Upgrade Plan: Light Version Support`, `test_summary.py`?**
+  _High betweenness centrality (0.088) - this node is a cross-community bridge._
 - **Why does `Skill` connect `地點資訊.md` to `ResolvedSkillTools`, `remote_model`, `load_docs_from_webengine`, `SkillContext`, `gemini_rag`, `search_doc.py`?**
-  _High betweenness centrality (0.045) - this node is a cross-community bridge._
-- **Why does `basic_llm` connect `basic_llm` to `atman`, `BaseRetriever`, `gemini_model`, `remote_model`, `api.py`, `test_agents_observation_normalization.py`, `test_live_model_final_action_aliases`?**
+  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Why does `basic_llm` connect `remote_model` to `atman`, `gemini_model`, `test_live_model_final_action_aliases`, `api.py`, `test_agents_observation_normalization.py`, `configure_logging`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **Are the 15 inferred relationships involving `dbs` (e.g. with `eval` and `MemoryManager`) actually correct?**
   _`dbs` has 15 INFERRED edges - model-reasoned connections that need verification._

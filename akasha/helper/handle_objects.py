@@ -3,9 +3,7 @@ from pathlib import Path
 from typing import Callable, Union, Tuple
 
 # from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from langchain_openai import (
-    OpenAIEmbeddings,
-)
+
 import os
 import traceback
 from langchain_core.language_models.base import BaseLanguageModel
@@ -102,6 +100,8 @@ def handle_embeddings(
     embedding_type, embedding_name = separate_name(embedding_name)
     env_dict = _get_env_var(env_file)
     if embedding_type in ["text-embedding-ada-002", "openai", "openaiembeddings"]:
+        from langchain_openai import OpenAIEmbeddings
+
         base_url, api_key = _openai_endpoint(env_dict, provider="openai")
         kwargs = {"model": embedding_name, "api_key": api_key}
         if base_url:
@@ -156,6 +156,8 @@ def handle_embeddings(
         info = "selected gemini embeddings.\n"
 
     elif embedding_type in ["azure", "azure-openai", "azure_openai"]:
+        from langchain_openai import OpenAIEmbeddings
+
         base_url, api_key = _openai_endpoint(env_dict, provider="azure")
         kwargs = {"model": embedding_name, "api_key": api_key}
         if base_url:
@@ -165,6 +167,8 @@ def handle_embeddings(
         info = "selected Azure OpenAI-compatible embeddings.\n"
 
     else:
+        from langchain_openai import OpenAIEmbeddings
+
         base_url, api_key = _openai_endpoint(env_dict, provider="openai")
         kwargs = {"model": embedding_name, "api_key": api_key}
         if base_url:
@@ -172,7 +176,6 @@ def handle_embeddings(
         embeddings = OpenAIEmbeddings(**kwargs)
 
         info = "can not find the embeddings, use openai as default.\n"
-
     if verbose:
         print(info)
     return embeddings

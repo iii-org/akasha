@@ -1,4 +1,3 @@
-from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 from akasha.utils.prompts.format import language_dict
 from langchain_core.embeddings import Embeddings
 from typing import Union, Callable, Tuple, List, Dict, Any
@@ -49,6 +48,8 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
     Returns:
         str: type:name
     """
+    from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
+
     if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
             embeddings, AzureOpenAIEmbeddings):
         return "openai:" + embeddings.model

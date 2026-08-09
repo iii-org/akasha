@@ -44,7 +44,7 @@ def test_gemini_ask_answers_from_web_info():
 
     qa = akasha.ask(
         model="gemini:gemini-3.5-flash",
-        max_output_tokens=2048,
+        max_output_tokens=65536,
         env_file=_env_file(),
     )
     info = [

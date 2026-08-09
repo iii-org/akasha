@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "akasha/helper/base.py": {
-    "mtime": 1782974916.9575565,
-    "ast_hash": "8292ae26a589a15f8d1f63ddd4b284d1",
+    "mtime": 1786279570.7022474,
+    "ast_hash": "84f91d80bedda64f5016d6237acfff7e",
     "semantic_hash": ""
   },
   "akasha/helper/crawler.py": {
@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "akasha/helper/handle_objects.py": {
-    "mtime": 1784879439.113392,
-    "ast_hash": "cf9a4805e73f191a9885fc103cd95fa4",
+    "mtime": 1786279523.7961602,
+    "ast_hash": "2b7825a0824fbae66138745c64c384e9",
     "semantic_hash": ""
   },
   "akasha/helper/memory.py": {
@@ -935,8 +935,8 @@
     "semantic_hash": ""
   },
   "tests/smoke/test_web_info_ask.py": {
-    "mtime": 1784879440.4699345,
-    "ast_hash": "e3b79bc2939c68aaf6ea884e89e53682",
+    "mtime": 1786151805.1578891,
+    "ast_hash": "3a88c798f362530ff1c98084939328a3",
     "semantic_hash": ""
   },
   "tests/unit/test_ask_info.py": {
@@ -1122,6 +1122,16 @@
   "tests/fixtures/skills/research/references/large.txt": {
     "mtime": 1784896647.2012608,
     "ast_hash": "baf1da0e2b9065ab5edd36ca00ed1826",
+    "semantic_hash": ""
+  },
+  "tests/unit/test_provider_import_boundaries.py": {
+    "mtime": 1786279833.0411494,
+    "ast_hash": "0c526eff1aba8ddc5760ffe59a63eaec",
+    "semantic_hash": ""
+  },
+  "dev_docs/2026-08-09-provider-lazy-import-optimization.md": {
+    "mtime": 1786280585.5370266,
+    "ast_hash": "0399a98bbc5c35537945448c748805ea",
     "semantic_hash": ""
   }
 }
