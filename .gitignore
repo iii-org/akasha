@@ -73,3 +73,8 @@ graphify-out/.graphify_learning.json
 graphify-out/.vocab.txt
 
 summarization/20230531_*.txt
+
+# Agent-local skills and configuration
+.agents/
+.claude/
+.codex/skills/

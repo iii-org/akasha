@@ -108,7 +108,7 @@ Chat API 與 embedding API 可以共用同一個 provider key，但兩者都必�
     akasha-repo/
     └── tests/
         ├── .env                         # 本機 secrets，不 commit
-        ├── tests_data/
+        ├── data/
         │   ├── rag_smoke/
         │   │   ├── single_fact.txt
         │   │   ├── unicode_繁中.txt
@@ -150,7 +150,7 @@ unicode_繁中.txt：
 
 empty.txt 保持空白，用來測試空文件處理。
 
-- [ ] 已建立 tests/tests_data/rag_smoke/。
+- [ ] 已建立 tests/data/rag/。
 - [ ] 已建立上述單檔與多檔文件。
 - [ ] 已確認文件是 UTF-8。
 - [ ] 已確認文件內容不含秘密或私人資料。
@@ -217,8 +217,8 @@ MCP server 至少提供三個工具：
 - [ ] 確認可以使用本地 MCP server 作為測試服務。
 - [ ] 確認已安裝 langchain-mcp-adapters。
 - [ ] 確認第一階段測 stdio transport。
-- [ ] 若要測 SSE，準備可在測試期間啟動的本地 HTTP/SSE server 與 port。
-- [ ] 若要測 streamable HTTP，準備對應的本地 server 與 endpoint。
+- [ ] 若要測 Streamable HTTP，準備可在測試期間啟動的本地 server 與 `/mcp` endpoint。
+- [ ] 舊 HTTP+SSE 僅作相容性觀察，不作為新的測試或文件主路徑。
 - [ ] MCP server 不依賴外部網路、資料庫或私人資料。
 - [ ] MCP 工具名稱、description、input schema 固定且可重現。
 

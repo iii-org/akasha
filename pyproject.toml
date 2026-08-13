@@ -103,6 +103,7 @@ markers = [
   "db: database and persistence tests",
   "eval: evaluation tests",
   "summary: summary tests",
+  "helper: shared test helper and coverage utilities",
 ]
 
 [tool.coverage.run]

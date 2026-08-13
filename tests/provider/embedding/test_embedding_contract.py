@@ -8,12 +8,12 @@ from pathlib import Path
 import pytest
 import yaml
 from dotenv import dotenv_values, load_dotenv
+from tests.support.paths import REPO_ROOT, TEST_ENV_FILE
 
 from akasha.helper.handle_objects import handle_embeddings
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = REPO_ROOT / "tests" / ".env"
+ENV_FILE = TEST_ENV_FILE
 MODEL_MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
 RUN_LIVE = os.getenv("RUN_EMBEDDING_SMOKE", "").lower() in {"1", "true", "yes"}
 

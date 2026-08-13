@@ -33,9 +33,9 @@ def _uninitialised_rag() -> RAG:
 @pytest.mark.parametrize(
     "data_source",
     [
-        Path("tests/tests_data/rag_smoke/single_fact.txt"),
-        Path("tests/tests_data/rag_smoke/directory"),
-        PureWindowsPath(r"C:\Users\today\Projects\akasha-update\tests\tests_data\rag_smoke\single_fact.txt"),
+        Path("tests/data/rag/single_fact.txt"),
+        Path("tests/data/rag/directory"),
+        PureWindowsPath(r"C:\Users\today\Projects\akasha-update\tests\data\rag\single_fact.txt"),
     ],
 )
 def test_rag_db_loader_receives_file_directory_and_windows_paths(monkeypatch, data_source):
@@ -59,7 +59,7 @@ def test_rag_db_loader_receives_file_directory_and_windows_paths(monkeypatch, da
 
 def test_rag_check_doc_path_preserves_path_objects():
     rag = RAG.__new__(RAG)
-    source = Path("tests/tests_data/rag_smoke/single_fact.txt")
+    source = Path("tests/data/rag/single_fact.txt")
 
     assert RAG._check_doc_path(rag, source) is source
 

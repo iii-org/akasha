@@ -87,4 +87,4 @@ ChatGoogleGenerativeAI(
 
 - unit tests：`41 passed`
 - Gemini live integration tests：`3 passed`
-- live tests 需要 `RUN_LLM_TESTS=1`，會實際呼叫 API 並產生費用；測試案例位於 `tests/test_live_gemini_agent.py`。
+- live tests 需要 `RUN_LLM_TESTS=1`，會實際呼叫 API 並產生費用；測試案例位於 `tests/integration/test_live_gemini_agent.py`。

@@ -308,5 +308,5 @@ Embedding contract tests 要確認 alias 可建立、文字可轉成非空 vecto
 - MCP tool call 與結果可寫入 logs 並 JSON serialize
 - MCP server unavailable、tool error、錯誤 schema 有獨立診斷訊息
 
-第一階段使用本地 deterministic MCP server 與 stdio transport，不需要另外申請 MCP API key。SSE 或 streamable HTTP transport 可在有本地 server 與 endpoint 後加入；不要把外部 MCP 服務的不穩定性混入 PR 基本 smoke。
+第一階段使用本地 deterministic MCP server 與 stdio transport，不需要另外申請 MCP API key。Streamable HTTP 使用本地 `/mcp` endpoint 加入 deterministic contract test；舊 HTTP+SSE 不作為新的測試主路徑，也不要把外部 MCP 服務的不穩定性混入 PR 基本 smoke。
 

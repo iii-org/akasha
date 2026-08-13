@@ -1,11 +1,16 @@
 import pytest
 import akasha  # noqa: F401
+import os
 from akasha.helper import handle_embeddings
 from pathlib import Path
 from dotenv import load_dotenv
+from tests.support.paths import TEST_ENV_FILE
 
-ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
+ENV_FILE = TEST_ENV_FILE
 load_dotenv(ENV_FILE, override=True)
+
+if not ENV_FILE.exists() or not os.getenv("GEMINI_API_KEY"):
+    pytest.skip("GEMINI_API_KEY is required for database integration tests", allow_module_level=True)
 
 EMB_OBJ = handle_embeddings("gemini:gemini-embedding-001", False, str(ENV_FILE))
 CHUNK_SIZE = 1000

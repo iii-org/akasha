@@ -1,10 +1,15 @@
 import akasha
 import pytest
+import os
 from pathlib import Path
 from dotenv import load_dotenv
+from tests.support.paths import TEST_ENV_FILE
 
-ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
+ENV_FILE = TEST_ENV_FILE
 load_dotenv(ENV_FILE, override=True)
+
+if not ENV_FILE.exists() or not os.getenv("GEMINI_API_KEY"):
+    pytest.skip("GEMINI_API_KEY is required for summary integration tests", allow_module_level=True)
 
 
 @pytest.mark.summary

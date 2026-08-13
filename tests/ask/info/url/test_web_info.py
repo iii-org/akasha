@@ -7,6 +7,7 @@ network access or spend provider quota.
 
 import os
 from pathlib import Path
+from tests.support.paths import TEST_ENV_FILE
 
 import pytest
 
@@ -29,7 +30,7 @@ def _env_file() -> str:
     if configured:
         return configured
 
-    root_env = Path(__file__).resolve().parents[2] / "tests" / ".env"
+    root_env = TEST_ENV_FILE
     return str(root_env) if root_env.exists() else ".env"
 
 

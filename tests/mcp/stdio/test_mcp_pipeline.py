@@ -6,20 +6,22 @@ import asyncio
 import json
 import os
 import sys
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 from pathlib import Path
 
 import pytest
 import yaml
 from dotenv import dotenv_values, load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient
+from tests.support.paths import FIXTURES_ROOT, REPO_ROOT, TEST_ENV_FILE
 
 import akasha
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = REPO_ROOT / "tests" / ".env"
+ENV_FILE = TEST_ENV_FILE
 MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
-SERVER = REPO_ROOT / "tests" / "fixtures" / "mcp" / "echo_server.py"
+SERVER = FIXTURES_ROOT / "mcp" / "echo_server.py"
 RUN_LIVE = os.getenv("RUN_MCP_SMOKE", "").lower() in {"1", "true", "yes"}
 
 REQUIRED_KEYS = {
@@ -58,6 +60,17 @@ def _load_test_env(required_key: str | None = None) -> None:
         pytest.skip(f"{required_key} is not configured")
     if ENV_FILE.exists():
         load_dotenv(ENV_FILE, override=False)
+
+
+def _ollama_is_available() -> bool:
+    """Check the configured Ollama endpoint before starting an agent call."""
+    base_url = os.getenv("OLLAMA_API_BASE") or "http://localhost:11434"
+    probe_url = base_url.rstrip("/") + "/api/version"
+    try:
+        with urlopen(Request(probe_url, method="GET"), timeout=5) as response:
+            return 200 <= response.status < 300
+    except (OSError, URLError):
+        return False
 
 
 def _client() -> MultiServerMCPClient:
@@ -104,6 +117,8 @@ def test_mcp_tools_are_executed_by_real_agent_non_stream(
 ):
     """Every manifest model must select MCP and record its tool call."""
     _load_test_env(required_key)
+    if provider == "ollama" and not _ollama_is_available():
+        pytest.skip("configured Ollama endpoint is unavailable")
     _client_obj, tools = asyncio.run(_discover_tools())
     agent = akasha.agents(
         model=model,
@@ -125,7 +140,7 @@ def test_mcp_tools_are_executed_by_real_agent_non_stream(
     json.dumps(agent.logs, ensure_ascii=False)
 
 
-def test_mcp_agent_requires_non_stream_mode():
+def test_mcp_tools_require_non_stream_mode():
     """MCP agents use ainvoke and reject the sync stream facade explicitly."""
     _load_test_env("OPENAI_API_KEY")
     _client_obj, tools = asyncio.run(_discover_tools())

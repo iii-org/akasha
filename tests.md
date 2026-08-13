@@ -130,7 +130,7 @@
 - 使用 `pytest` 作為主要測試框架。
 - 使用 `pytest-asyncio` 測試非同步功能 (如 Agent)。
 - 使用 `pydantic` 進行參數校驗 (如果需要)。
-- 利用 `tests/upgrade_tests/` 下的結構來進行跨平臺相容性測試。
+- 利用 `tests/compatibility/` 與各功能目錄下的 `upgrade` marker 進行跨平臺相容性測試。
 
 ### 5.2 環境架設建議 (使用 `uv`)
 為了確保測試環境與開發代碼同步，推薦使用以下流程：
@@ -160,7 +160,7 @@
 ### 5.3 執行測試
 ```bash
 # 執行 API 穩定性測試
-pytest tests/test_api_stability.py -s
+pytest tests/compatibility/test_api_stability.py -s
 ```
 
 ---

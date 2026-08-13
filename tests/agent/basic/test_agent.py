@@ -1,9 +1,11 @@
 import pytest
 import akasha
+import os
 from pathlib import Path
 from dotenv import load_dotenv
+from tests.support.paths import TEST_ENV_FILE
 
-ENV_FILE = Path(__file__).resolve().parents[1] / "tests" / "test_upgrade" / ".env"
+ENV_FILE = TEST_ENV_FILE
 load_dotenv(ENV_FILE, override=True)
 
 
@@ -26,6 +28,10 @@ today_tool = akasha.create_tool(
 @pytest.mark.integration
 @pytest.mark.requires_api
 @pytest.mark.smoke
+@pytest.mark.skipif(
+    not ENV_FILE.exists() or not os.getenv("GEMINI_API_KEY"),
+    reason="GEMINI_API_KEY is required for this live agent test",
+)
 def test_agent():
     agent = akasha.agents(
         model="gemini:gemini-2.5-flash",

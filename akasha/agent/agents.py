@@ -301,10 +301,9 @@ class agents(basic_llm):
         if self.verbose:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             prefix = f"\033[32m[akasha {timestamp}]\033[0m"
-            console_text = (
-                "\033[33m[agent.trace]\033[0m "
-                + text
-            )
+            trace_label = "\033[33m[agent.trace]\033[0m "
+            compatibility_label = "[akasha] " if text.startswith("tool ") else ""
+            console_text = trace_label + compatibility_label + text
             if "stderr:\n" in console_text:
                 before, error = console_text.split("stderr:\n", 1)
                 console_text = (

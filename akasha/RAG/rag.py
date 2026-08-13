@@ -455,3 +455,13 @@ class RAG(atman):
             logging.info("Self-ask RAG request finished")
 
         return self.response
+
+
+# Importing the namespace package ``akasha.RAG`` can otherwise leave the
+# package attribute pointing at the submodule instead of the public class.
+# Restore the documented lazy top-level API once this implementation loads.
+import sys as _sys
+
+_akasha_package = _sys.modules.get("akasha")
+if _akasha_package is not None:
+    _akasha_package.RAG = RAG

@@ -9,6 +9,7 @@ from akasha.agent.skills import (
     load_skill_metadata,
     resolve_skills,
 )
+from tests.support.paths import FIXTURES_ROOT
 
 
 pytestmark = pytest.mark.unit
@@ -36,7 +37,7 @@ def test_resolve_skills_rejects_unknown_names():
 
 
 def test_load_skill_directory_reads_only_skill_markdown():
-    skill_dir = Path(__file__).parents[1] / "fixtures" / "skills" / "research"
+    skill_dir = FIXTURES_ROOT / "skills" / "research"
 
     skill = load_skill_directory(skill_dir)
 
@@ -54,7 +55,7 @@ def test_skill_context_formats_multiple_instructions():
 
     assert context.instructions == "## Skill: one\nFirst\n\n## Skill: two\nSecond"
 def test_load_skill_metadata_defers_instructions():
-    skill_dir = Path(__file__).parents[1] / "fixtures" / "skills" / "research"
+    skill_dir = FIXTURES_ROOT / "skills" / "research"
 
     skill = load_skill_metadata(skill_dir)
 

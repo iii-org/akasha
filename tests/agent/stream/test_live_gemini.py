@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 import akasha
+from tests.support.paths import TEST_ENV_FILE
 
 
 pytestmark = [
@@ -27,7 +28,7 @@ def _env_file() -> str:
     configured = os.getenv("ENV_FILE")
     if configured:
         return configured
-    root_env = Path(__file__).resolve().parents[2] / ".env"
+    root_env = TEST_ENV_FILE
     return str(root_env) if root_env.exists() else ".env"
 
 

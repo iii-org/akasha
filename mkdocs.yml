@@ -58,13 +58,15 @@ plugins:
             Token counting: Token 計算
             Embeddings: Embedding
             MCP: MCP
+            Tool (call function): Tool（呼叫函式）
+            SKILL: SKILL
             What akasha provides: akasha 功能
             Choosing an API: 選擇 API 功能
             Installation: 安裝
             Configure a model provider: 設定模型 Provider
             First chat with ask: 第一個 ask 對話
             Build a RAG workflow: 建立 RAG 流程
-            Build an agent and use tools: 建立 Agent 與使用工具
+            Build an agent and use tools: 建立 Agent
             Streaming events: 串流事件
             FAQ: 常見問題
           site_name: akasha 使用說明
@@ -95,12 +97,14 @@ nav:
       - Choosing an API: concepts/choosing-an-api.md
   - Tutorials:
       - Build a RAG workflow: tutorials/rag.md
-      - Build an agent and use tools: tutorials/agents.md
       - Streaming events: tutorials/streaming.md
       - Evaluation: tutorials/evaluation.md
       - Token counting: tutorials/token-counting.md
       - Embeddings: tutorials/embeddings.md
-      - MCP: tutorials/mcp.md
+      - Build an agent and use tools:
+          - Tool (call function): tutorials/agents.md
+          - MCP: tutorials/mcp.md
+          - SKILL: tutorials/agents.md
   - API Reference:
       - API overview: reference/index.md
       - ask: reference/ask.md

@@ -3,13 +3,14 @@ from pathlib import Path
 import pytest
 
 from akasha.agent.skills import resolve_skills
+from tests.support.paths import FIXTURES_ROOT
 
 
 pytestmark = pytest.mark.unit
 
 
 def test_resolve_skills_loads_directory_without_global_registration():
-    skill_path = Path(__file__).parents[1] / "fixtures" / "skills" / "research"
+    skill_path = FIXTURES_ROOT / "skills" / "research"
 
     context = resolve_skills([str(skill_path)])
 
@@ -22,8 +23,8 @@ def test_resolve_skills_rejects_missing_path_like_value():
 def test_resolve_skills_validates_standard_skill_metadata():
     from akasha.agent.skills import load_skill_directory
 
-    invalid = Path(__file__).parents[1] / "fixtures" / "skills" / "invalid-name"
-    mismatched = Path(__file__).parents[1] / "fixtures" / "skills" / "mismatched"
+    invalid = FIXTURES_ROOT / "skills" / "invalid-name"
+    mismatched = FIXTURES_ROOT / "skills" / "mismatched"
 
     with pytest.raises(ValueError, match="lowercase"):
         load_skill_directory(invalid)

@@ -13,6 +13,7 @@ from akasha.agent.skills import (
     ToolRegistry,
     resolve_skill_tools,
 )
+from tests.support.paths import FIXTURES_ROOT
 
 
 pytestmark = pytest.mark.unit
@@ -111,7 +112,7 @@ def test_dynamic_skill_loads_instructions_and_tools_after_load():
 
 
 def test_filesystem_skill_resources_are_lazy_and_safe():
-    skill_dir = Path(__file__).parents[1] / "fixtures" / "skills" / "research"
+    skill_dir = FIXTURES_ROOT / "skills" / "research"
     middleware = DynamicSkillMiddleware([str(skill_dir)])
 
     assert [item.name for item in middleware.tools] == ["load_skill"]
@@ -169,7 +170,7 @@ def test_filesystem_skill_resources_are_lazy_and_safe():
 
 
 def test_filesystem_resource_size_limit_is_configurable():
-    skill_dir = Path(__file__).parents[1] / "fixtures" / "skills" / "research"
+    skill_dir = FIXTURES_ROOT / "skills" / "research"
     middleware = DynamicSkillMiddleware(
         [str(skill_dir)],
         max_resource_bytes=10,

@@ -14,19 +14,19 @@ Date: 2026-07-14
 
 | API / 能力 | 現有測試檔案 | 目前覆蓋重點 | 缺口 / 備註 |
 |---|---|---|---|
-| `akasha.ask()` | `tests/test_akasha.py`、`tests/test_live_gemini_agent.py` | 基本問答、stream、thinking、logs、live Gemini | 缺少多 provider 矩陣；`keep_logs` / `env_file` / `max_output_tokens` 沒有完整排列 |
-| `akasha.agents()` | `tests/test_agent.py`、`tests/test_live_gemini_agent.py`、`tests/unit/test_agents_core.py`、`tests/test_agents_observation_normalization.py`、`tests/test_agents_final_action_integration.py` | tool calling、final answer、message normalization、stream/thinking（live） | 缺少跨 provider smoke；多工具與 logs 契約可再補強 |
-| `akasha.RAG()` | `tests/test_akasha.py`、`tests/test_api_stability.py`、`tests/upgrade_tests/test_openai_rag.py`、`tests/upgrade_tests/test_gemini_rag.py`、`tests/upgrade_tests/test_light_restrictions.py` | OpenAI / Gemini RAG smoke、Windows absolute path、light restriction | 缺 Anthropic/Ollama smoke；`search_type` 矩陣覆蓋有限 |
-| `akasha.summary()` | `tests/test_summary.py`、`tests/unit/test_preprocess_prompts.py`、`tests/test_api_stability.py` | map_reduce 摘要、基本回傳型別、部分 prompt 處理 | 缺 text/file/URL 的完整矩陣與 refine smoke |
-| `MemoryManager` | `tests/test_akasha.py`、`tests/test_api_stability.py` | memory 寫入、查詢、Windows absolute path | 缺 persistence 重啟 smoke 與 provider alias 矩陣 |
-| provider alias / factory | `tests/unit/test_handle_objects_unit.py`、`tests/unit/test_run_llm_chat_normalization.py`、`tests/unit/test_thinking_model_config.py`、`tests/unit/test_agents_core.py` | 參數正規化、thinking 設定、chat input 轉換 | 缺少真實 provider 契約測試，主要還是 unit |
-| logs / keep_logs | `tests/test_akasha.py`、`tests/test_agent.py`、`tests/test_summary.py`、`tests/unit/test_logging_config_unit.py`、`tests/test_logging_behavior.py` | logging 基礎、keep_logs 行為、console/file handler | 缺 public API 層的完整 logs schema 驗證 |
-| Windows absolute path | `tests/test_api_stability.py`、`tests/unit/test_db_structure.py` | `RAG(data_source=<absolute path>)`、`MemoryManager(memory_dirname=<absolute path>)` | 已有 regression，建議保持為 P0 |
-| light / full 安裝邊界 | `tests/upgrade_tests/test_light_restrictions.py`、`tests/unit/test_db_structure.py`、`tests/unit/test_retrievers_base.py` | 缺少 torch / bert-score / chromadb 時的錯誤訊息 | 很好，但與 public API smoke 還可串接得更完整 |
+| `akasha.ask()` | `tests/ask/basic/`、`tests/ask/info/`、`tests/ask/prompt/`、`tests/ask/thinking/`、`tests/agent/stream/` | 基本問答、info、stream、thinking、logs、live Gemini | 缺少多 provider 矩陣；`keep_logs` / `env_file` / `max_output_tokens` 沒有完整排列 |
+| `akasha.agents()` | `tests/agent/basic/`、`tests/agent/stream/`、`tests/agent/tools/`、`tests/agent/skills/` | tool calling、final answer、message normalization、stream/thinking | 缺少跨 provider smoke；多工具與 logs 契約可再補強 |
+| `akasha.RAG()` | `tests/rag/input/`、`tests/rag/parameters/`、`tests/rag/retrieval/`、`tests/rag/chroma/`、`tests/rag/provider/` | OpenAI / Gemini / Anthropic RAG、Windows absolute path、Chroma、參數契約 | `search_type` 與部分 provider 組合仍有限 |
+| `akasha.summary()` | `tests/summary/basic/`、`tests/ask/prompt/`、`tests/compatibility/test_api_stability.py` | map_reduce 摘要、基本回傳型別、部分 prompt 處理 | 缺 text/file/URL 的完整矩陣與 refine smoke |
+| `MemoryManager` | `tests/compatibility/test_api_stability.py` | memory 寫入、查詢、Windows absolute path | 目前保留於跨功能相容性例外，需補獨立 memory 目錄 |
+| provider alias / factory | `tests/provider/factory/`、`tests/provider/chat/`、`tests/provider/thinking/`、`tests/agent/basic/` | 參數正規化、thinking 設定、chat input 轉換 | 缺少真實 provider 契約測試，主要還是 deterministic |
+| logs / keep_logs | `tests/observability/logging/`、`tests/ask/basic/`、`tests/agent/contracts/`、`tests/rag/provider/` | logging 基礎、keep_logs 行為、console/file handler | 缺 public API 層的完整 logs schema 驗證 |
+| Windows absolute path | `tests/compatibility/test_api_stability.py`、`tests/rag/input/` | `RAG(data_source=<absolute path>)`、`MemoryManager(memory_dirname=<absolute path>)` | 已有 regression，保持為 P0 |
+| light / full 安裝邊界 | `tests/provider/compatibility/`、`tests/rag/input/`、`tests/rag/retrieval/` | 缺少 torch / bert-score / chromadb 時的錯誤訊息 | 與 public API smoke 持續分開驗證 |
 
 ## 各檔案對照
 
-### `tests/test_akasha.py`
+### `tests/integration/test_akasha.py`
 
 目前是最接近「公開 API 綜合 smoke」的檔案，覆蓋：
 
@@ -47,7 +47,7 @@ Date: 2026-07-14
 - 沒有多 provider 版本的 smoke
 - 沒有 `summary()` / `agents()` 的完整串接
 
-### `tests/test_agent.py`
+### `tests/integration/test_agent.py`
 
 目前覆蓋：
 
@@ -67,7 +67,7 @@ Date: 2026-07-14
 - 沒有 thinking event assertions
 - 沒有多 tool / 多 provider smoke
 
-### `tests/test_live_gemini_agent.py`
+### `tests/integration/test_live_gemini_agent.py`
 
 目前覆蓋：
 
@@ -88,7 +88,7 @@ Date: 2026-07-14
 - 缺 OpenAI / Anthropic / Ollama 的真實契約 smoke
 - 沒有 tool calling smoke
 
-### `tests/test_summary.py`
+### `tests/integration/test_summary.py`
 
 目前覆蓋：
 
@@ -110,7 +110,7 @@ Date: 2026-07-14
 - 缺 refine 路徑
 - 缺回傳內容 schema 的更嚴格檢查
 
-### `tests/test_api_stability.py`
+### `tests/upgrade_tests/test_api_stability.py`
 
 目前覆蓋：
 

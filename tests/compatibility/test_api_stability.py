@@ -4,15 +4,16 @@ import akasha
 from pathlib import Path
 from dotenv import load_dotenv
 import shutil
+from tests.support.paths import DOCUMENTS_ROOT, IMAGES_ROOT, TEST_ENV_FILE
 
 # 測試用路徑
-BASE_PATH = Path(__file__).parent
-DATA_PATH = BASE_PATH / "tests_data"
-DOCS_PATH = DATA_PATH / "docs"
-IMAGES_PATH = DATA_PATH / "images"
+BASE_PATH = TEST_ENV_FILE.parent
+DATA_PATH = BASE_PATH / "data"
+DOCS_PATH = DOCUMENTS_ROOT
+IMAGES_PATH = IMAGES_ROOT
 
 # 載入環境變數 (指定從 tests/.env 讀取)
-ENV_PATH = BASE_PATH / ".env"
+ENV_PATH = TEST_ENV_FILE
 load_dotenv(dotenv_path=ENV_PATH)
 
 # 待測試模型 (由使用者指定)
@@ -54,7 +55,7 @@ def test_api_basic_ask(check_env, model_name):
 def test_rag_smoke(check_env, model_name, embed_name):
     """[Light] RAG 煙霧測試：使用遠端 API 進行文件檢索與回答"""
     if not DOCS_PATH.exists():
-        pytest.skip("找不到 tests_data/docs 資料夾")
+        pytest.skip("找不到 tests/data/documents 資料夾")
         
     ak = akasha.RAG(model=model_name, embeddings=embed_name, verbose=True, env_file=str(ENV_PATH))
     # data_source 可以是目錄路徑

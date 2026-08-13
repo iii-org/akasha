@@ -11,12 +11,12 @@ import pytest
 from dotenv import dotenv_values, load_dotenv
 
 import akasha
+from tests.support.paths import REPO_ROOT, TEST_ENV_FILE, RAG_DATA_ROOT
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = REPO_ROOT / "tests" / ".env"
+ENV_FILE = TEST_ENV_FILE
 RUN_LIVE = os.getenv("RUN_RAG_SMOKE", "").strip().lower() in {"1", "true", "yes"}
-RAG_DATA = REPO_ROOT / "tests" / "tests_data" / "rag_smoke"
+RAG_DATA = RAG_DATA_ROOT
 
 
 pytestmark = [

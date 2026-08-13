@@ -14,6 +14,18 @@ from akasha.helper.base import separate_name, decide_embedding_type
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
+# Kept as a patchable sentinel so tests can replace the provider without
+# importing the optional adapter during module import.
+OpenAIEmbeddings = None
+
+
+def _get_openai_embeddings_class():
+    if OpenAIEmbeddings is not None:
+        return OpenAIEmbeddings
+    from langchain_openai import OpenAIEmbeddings as embeddings_class
+
+    return embeddings_class
+
 
 def _get_env_var(env_file: str = "") -> dict:
     """if env_file is not empty, get the environment variable from the file
@@ -100,13 +112,12 @@ def handle_embeddings(
     embedding_type, embedding_name = separate_name(embedding_name)
     env_dict = _get_env_var(env_file)
     if embedding_type in ["text-embedding-ada-002", "openai", "openaiembeddings"]:
-        from langchain_openai import OpenAIEmbeddings
-
+        embeddings_class = _get_openai_embeddings_class()
         base_url, api_key = _openai_endpoint(env_dict, provider="openai")
         kwargs = {"model": embedding_name, "api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
-        embeddings = OpenAIEmbeddings(**kwargs)
+        embeddings = embeddings_class(**kwargs)
         info = "selected openai embeddings.\n"
 
     elif embedding_type in [
@@ -156,24 +167,22 @@ def handle_embeddings(
         info = "selected gemini embeddings.\n"
 
     elif embedding_type in ["azure", "azure-openai", "azure_openai"]:
-        from langchain_openai import OpenAIEmbeddings
-
+        embeddings_class = _get_openai_embeddings_class()
         base_url, api_key = _openai_endpoint(env_dict, provider="azure")
         kwargs = {"model": embedding_name, "api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
-        embeddings = OpenAIEmbeddings(**kwargs)
+        embeddings = embeddings_class(**kwargs)
 
         info = "selected Azure OpenAI-compatible embeddings.\n"
 
     else:
-        from langchain_openai import OpenAIEmbeddings
-
+        embeddings_class = _get_openai_embeddings_class()
         base_url, api_key = _openai_endpoint(env_dict, provider="openai")
         kwargs = {"model": embedding_name, "api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url
-        embeddings = OpenAIEmbeddings(**kwargs)
+        embeddings = embeddings_class(**kwargs)
 
         info = "can not find the embeddings, use openai as default.\n"
     if verbose:

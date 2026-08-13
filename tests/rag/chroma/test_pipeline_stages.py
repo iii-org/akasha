@@ -16,11 +16,11 @@ from akasha.utils.db.db_structure import get_storage_directory
 from akasha.utils.db.load_db import load_db_by_chroma_name
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
+from tests.support.paths import REPO_ROOT, TEST_ENV_FILE, RAG_DATA_ROOT
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-ENV_FILE = REPO_ROOT / "tests" / ".env"
-RAG_FILE = REPO_ROOT / "tests" / "tests_data" / "rag_smoke" / "single_fact.txt"
+ENV_FILE = TEST_ENV_FILE
+RAG_FILE = RAG_DATA_ROOT / "single_fact.txt"
 RUN_LIVE = os.getenv("RUN_RAG_PIPELINE", "").lower() in {"1", "true", "yes"}
 
 pytestmark = [

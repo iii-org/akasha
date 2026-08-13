@@ -139,7 +139,7 @@ Windows `.venv` live smoke 顯示：
   - 缺少 `bert-score`
   - 缺少 `chromadb/langchain-chroma`
 
-- `tests/test_api_stability.py`
+- `tests/upgrade_tests/test_api_stability.py`
   - `ask`
   - `RAG`
   - `agent`
@@ -180,22 +180,22 @@ python scripts/sync_requirements.py
 ### Light smoke
 
 ```bash
-../.venv/Scripts/python.exe -m pytest tests/test_api_stability.py -m "upgrade and requires_api" -s
+../.venv/Scripts/python.exe -m pytest tests/upgrade_tests/test_api_stability.py -m "upgrade and requires_api" -s
 ```
 
 ### Windows absolute path regression
 
 ```bash
-../.venv/Scripts/python.exe -m pytest tests/test_api_stability.py -k "windows_absolute_path" -s
+../.venv/Scripts/python.exe -m pytest tests/upgrade_tests/test_api_stability.py -k "windows_absolute_path" -s
 ```
 
 ## Follow-up Suggestions
 
 - 若後續繼續升級 `chromadb`，優先重跑：
   - `tests/unit/test_db_structure.py`
-  - `tests/test_api_stability.py -k "windows_absolute_path"`
-  - `tests/test_api_stability.py::test_rag_smoke`
-  - `tests/test_api_stability.py::test_memory_stability`
+  - `tests/upgrade_tests/test_api_stability.py -k "windows_absolute_path"`
+  - `tests/upgrade_tests/test_api_stability.py::test_rag_smoke`
+  - `tests/upgrade_tests/test_api_stability.py::test_memory_stability`
 
 - 若要再收斂 light 安裝體積，可後續評估：
   - 是否存在不拉 `onnxruntime` 的 `chromadb` 版本

@@ -217,7 +217,11 @@ agent = akasha.agents(
 
 Skills can provide instructions, resources, and allowlisted tool bundles. Skill tools are surfaced through normal `tool` events.
 
-MCP tools can be discovered with `langchain-mcp-adapters` and passed to `akasha.agents(tools=...)`. A local stdio MCP server is recommended for deterministic tests; external MCP services should not be required for basic CI smoke tests.
+MCP tools can be discovered with `langchain-mcp-adapters`, normalized with `akasha.normalize_mcp_tools()`, and passed to `akasha.agents(tools=...)`. The supported transports are local `stdio` and remote Streamable HTTP. New integrations should use one Streamable HTTP `/mcp` endpoint; the older HTTP+SSE transport is deprecated.
+
+The complete example is in [`examples/ex_mcp.py`](examples/ex_mcp.py), with its server in [`examples/mcp_server.py`](examples/mcp_server.py). It uses `tool_name_prefix=True` when aggregating servers, preserves structured MCP results, and uses `stream=False` because MCP tools may be async-only.
+
+For deterministic CI, use the local stdio fixture. Remote MCP tests must remain opt-in and should not require external credentials for the basic test suite.
 
 ## Provider loading
 
@@ -260,16 +264,16 @@ python examples/ex_agent.py
 Unit tests do not require provider API keys:
 
 ```bash
-python -m pytest tests/unit -m unit
+python -m pytest tests -m unit
 ```
 
 Focused agent and model tests:
 
 ```bash
 python -m pytest \
-  tests/unit/test_thinking_model_config.py \
-  tests/unit/test_agents_core.py \
-  tests/unit/test_provider_import_boundaries.py
+  tests/provider/thinking/test_thinking_config.py \
+  tests/agent/basic/test_core.py \
+  tests/provider/factory/test_import_boundaries.py
 ```
 
 Live provider tests are opt-in because they use API quota:
@@ -277,7 +281,7 @@ Live provider tests are opt-in because they use API quota:
 ```powershell
 $env:RUN_LLM_TESTS = "1"
 $env:ENV_FILE = "tests/.env"
-python -m pytest tests/test_live_gemini_agent.py -q
+python -m pytest tests/agent/stream/test_live_gemini.py -q
 ```
 
 Live tests validate provider wiring, response types, tool calling, streaming events, and RAG flow. They do not evaluate the quality of model answers.
