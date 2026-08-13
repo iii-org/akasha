@@ -53,6 +53,11 @@ plugins:
             agents: agents
             summary: summary
             MemoryManager: MemoryManager
+            Evaluation: 模型評估
+            eval: eval
+            Token counting: Token 計算
+            Embeddings: Embedding
+            MCP: MCP
             What akasha provides: akasha 功能
             Choosing an API: 選擇 API 功能
             Installation: 安裝
@@ -92,6 +97,10 @@ nav:
       - Build a RAG workflow: tutorials/rag.md
       - Build an agent and use tools: tutorials/agents.md
       - Streaming events: tutorials/streaming.md
+      - Evaluation: tutorials/evaluation.md
+      - Token counting: tutorials/token-counting.md
+      - Embeddings: tutorials/embeddings.md
+      - MCP: tutorials/mcp.md
   - API Reference:
       - API overview: reference/index.md
       - ask: reference/ask.md
@@ -99,6 +108,9 @@ nav:
       - agents: reference/agents.md
       - summary: reference/summary.md
       - MemoryManager: reference/memory-manager.md
+      - eval: reference/eval.md
+      - myTokenizer: reference/my-tokenizer.md
+      - handle_embeddings: reference/handle-embeddings.md
   - Troubleshooting:
       - FAQ: troubleshooting/faq.md
 

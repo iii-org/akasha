@@ -1,14 +1,13 @@
 /* Make the major navigation groups easy to distinguish from their pages. */
 .md-nav__item--section > .md-nav__link {
-  margin-top: 0.85rem;
-  padding: 0.35rem 0.6rem;
-  border-left: 0.2rem solid var(--md-primary-fg-color);
+  margin-top: 0.7rem;
+  padding: 0.25rem 0.55rem;
+  border-left: 0.12rem solid var(--md-primary-fg-color--light);
   border-radius: 0 0.2rem 0.2rem 0;
-  background: var(--md-code-bg-color);
-  color: var(--md-primary-fg-color);
-  font-size: 0.9rem;
+  background: transparent;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.84rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
 }
 
 .md-nav__item--section > .md-nav__link:hover {
