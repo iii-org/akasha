@@ -46,6 +46,13 @@ plugins:
             Core concepts: 核心概念
             Tutorials: 使用教學
             Troubleshooting: 疑難排解
+            API Reference: API 參考
+            API overview: API 總覽
+            ask: ask
+            RAG: RAG
+            agents: agents
+            summary: summary
+            MemoryManager: MemoryManager
             Installation: 安裝
             Configure a model provider: 設定模型 Provider
             First chat with ask: 第一個 ask 對話
@@ -78,6 +85,13 @@ nav:
       - Build a RAG workflow: tutorials/rag.md
       - Build an agent and use tools: tutorials/agents.md
       - Streaming events: tutorials/streaming.md
+  - API Reference:
+      - API overview: reference/index.md
+      - ask: reference/ask.md
+      - RAG: reference/rag.md
+      - agents: reference/agents.md
+      - summary: reference/summary.md
+      - MemoryManager: reference/memory-manager.md
   - Troubleshooting:
       - FAQ: troubleshooting/faq.md
 
