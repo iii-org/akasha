@@ -104,7 +104,7 @@ nav:
       - Build an agent and use tools:
           - Tool (call function): tutorials/agents.md
           - MCP: tutorials/mcp.md
-          - SKILL: tutorials/agents.md
+          - SKILL: tutorials/skill.md
   - API Reference:
       - API overview: reference/index.md
       - ask: reference/ask.md
