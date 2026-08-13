@@ -41,4 +41,4 @@ myTokenizer.compute_tokens(
 
 請使用與實際請求相同的模型別名。這個數量適合用來規劃輸入長度，但不保證等於 Provider 最終回報或計費的使用量。
 
-較完整的專案範例是 [`examples/helper/ex_token_count.py`](https://github.com/iii-org/akasha/blob/master/examples/helper/ex_token_count.py)。
+上方範例已經完整，可以直接複製到自己的專案使用。

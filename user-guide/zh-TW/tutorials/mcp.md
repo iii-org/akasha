@@ -18,12 +18,42 @@ $env:OPENAI_API_KEY = "your_key"
 
 ## 2. 啟動本機 MCP Server
 
-Repository 已提供 `examples/mcp_server.py`，其中有兩個固定結果工具：`add` 與 `get_weather`。
+建立 `mcp_server.py`，內容如下。這個 Server 會提供兩個固定結果工具：`add` 與 `get_weather`。
 
-在 Terminal 1 切換到 repository 根目錄後執行：
+```python
+import os
+
+from mcp.server.fastmcp import FastMCP
+
+
+mcp = FastMCP(
+    "akasha-example",
+    host="127.0.0.1",
+    port=int(os.getenv("MCP_PORT", "8000")),
+    streamable_http_path="/mcp",
+)
+
+
+@mcp.tool()
+def add(a: int, b: int) -> int:
+    """Add two integers."""
+    return a + b
+
+
+@mcp.tool()
+def get_weather(city: str) -> str:
+    """Return a deterministic weather response for a city."""
+    return f"{city}: sunny"
+
+
+if __name__ == "__main__":
+    mcp.run(transport="streamable-http")
+```
+
+在 Terminal 1 切換到 `mcp_server.py` 所在目錄後執行：
 
 ```bash
-python examples/mcp_server.py
+python mcp_server.py
 ```
 
 Server 會監聽：
@@ -109,4 +139,4 @@ Agent 回答
 !!! warning
     MCP Server 可能提供強大的操作能力。只連接信任的 Server，先檢查探索到的工具，盡可能限制網路存取，也不要把秘密放在 Prompt 或工具參數中。
 
-Repository 完整範例是 [`examples/ex_mcp.py`](https://github.com/iii-org/akasha/blob/master/examples/ex_mcp.py)，本機 Server 是 [`examples/mcp_server.py`](https://github.com/iii-org/akasha/blob/master/examples/mcp_server.py)。
+本頁已經包含完整的 Client 與 Server 程式碼，不需要再開啟其他專案檔案。

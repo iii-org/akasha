@@ -66,7 +66,7 @@ Pass Skill directories through `skills`:
 ```python
 agent = akasha.agents(
     model="gemini:gemini-2.5-flash",
-    skills=["examples/examples_skills/hello-skill"],
+    skills=["./hello-skill"],
 )
 ```
 

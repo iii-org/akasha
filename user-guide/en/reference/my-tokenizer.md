@@ -41,4 +41,4 @@ myTokenizer.compute_tokens(
 
 Use the model alias that matches the actual request. The count is useful for input budgeting, but it is not a guarantee of the Provider's final usage or billing count.
 
-The longer project example is [`examples/helper/ex_token_count.py`](https://github.com/iii-org/akasha/blob/master/examples/helper/ex_token_count.py).
+The examples above are complete and can be copied into your own project directly.

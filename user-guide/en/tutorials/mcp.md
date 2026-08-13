@@ -18,12 +18,42 @@ $env:OPENAI_API_KEY = "your_key"
 
 ## 2. Start the local MCP server
 
-The repository includes `examples/mcp_server.py`. It exposes two deterministic tools: `add` and `get_weather`.
+Create a file named `mcp_server.py` with the following complete server. It exposes two deterministic tools: `add` and `get_weather`.
 
-Open Terminal 1 at the repository root and run:
+```python
+import os
+
+from mcp.server.fastmcp import FastMCP
+
+
+mcp = FastMCP(
+    "akasha-example",
+    host="127.0.0.1",
+    port=int(os.getenv("MCP_PORT", "8000")),
+    streamable_http_path="/mcp",
+)
+
+
+@mcp.tool()
+def add(a: int, b: int) -> int:
+    """Add two integers."""
+    return a + b
+
+
+@mcp.tool()
+def get_weather(city: str) -> str:
+    """Return a deterministic weather response for a city."""
+    return f"{city}: sunny"
+
+
+if __name__ == "__main__":
+    mcp.run(transport="streamable-http")
+```
+
+Open Terminal 1 in the directory containing `mcp_server.py` and run:
 
 ```bash
-python examples/mcp_server.py
+python mcp_server.py
 ```
 
 The server listens at:
@@ -109,4 +139,4 @@ This example uses Streamable HTTP. Akasha's MCP integration also supports local 
 !!! warning
     An MCP server can expose powerful capabilities. Only connect to servers you trust, inspect the discovered tools, restrict network access where possible, and never pass secrets in prompts or tool arguments.
 
-The complete repository example is [`examples/ex_mcp.py`](https://github.com/iii-org/akasha/blob/master/examples/ex_mcp.py), and its local server is [`examples/mcp_server.py`](https://github.com/iii-org/akasha/blob/master/examples/mcp_server.py).
+At this point the complete client and server code are both included in this page, so you can run the tutorial without opening another project file.

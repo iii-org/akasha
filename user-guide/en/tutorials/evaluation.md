@@ -61,4 +61,4 @@ questions, answers = evaluator.create_topic_questionset(
 - Do not commit API keys, generated question sets containing private data, or logs containing sensitive content.
 - Treat generated scores as an evaluation signal, not as a complete measure of answer quality.
 
-The repository also contains a longer example in [`examples/ex_eval.py`](https://github.com/iii-org/akasha/blob/master/examples/ex_eval.py).
+The complete workflow is shown above, including dataset creation, evaluation, and result inspection.

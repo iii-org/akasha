@@ -61,4 +61,4 @@ questions, answers = evaluator.create_topic_questionset(
 - 不要提交 API key、含私人資料的問題集，或包含敏感內容的 logs。
 - 評估分數只是觀察模型的其中一種訊號，不代表完整的回答品質。
 
-Repository 中也有較完整的範例：[`examples/ex_eval.py`](https://github.com/iii-org/akasha/blob/master/examples/ex_eval.py)。
+上方已提供完整流程，包含資料集建立、評估執行與結果檢查。
