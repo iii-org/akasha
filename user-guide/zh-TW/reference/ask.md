@@ -44,7 +44,7 @@ answer = asker(
 )
 ```
 
-一般回傳值是完整的 `str`。串流行為請參考 [Streaming 事件](../tutorials/streaming.md)。
+一般回傳值是完整的 `str`。串流行為請參考 [串流事件](../tutorials/streaming.md)。
 
 !!! tip
     如果問題需要支援檔案或 URL，可以使用 `info`。如果需要可重複的文件檢索流程，請使用 `RAG`。

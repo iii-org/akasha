@@ -2,7 +2,7 @@
 
 ## `ModuleNotFoundError: No module named akasha`
 
-Activate the virtual environment where Akasha was installed, then verify:
+Activate the virtual environment where akasha was installed, then verify:
 
 ```bash
 python -c "import akasha; print(akasha.__file__)"
@@ -32,4 +32,4 @@ print(path.resolve(), path.exists())
 
 Model output can vary. Test the behavior you need—such as required facts or a valid event shape—instead of comparing an entire generated answer.
 
-If an issue remains, record the Python version, Akasha version, selected provider, and a redacted error message.
+If an issue remains, record the Python version, akasha version, selected provider, and a redacted error message.

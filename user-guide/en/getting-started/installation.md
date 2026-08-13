@@ -36,7 +36,7 @@ uv pip install "akasha-terminal[full]"
 ## Verify the installation
 
 ```bash
-python -c "import akasha; print('Akasha imported successfully')"
+python -c "import akasha; print('akasha imported successfully')"
 ```
 
 Next: [Configure a model provider](providers.md).

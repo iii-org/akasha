@@ -1,4 +1,4 @@
-# Streaming 事件
+# 串流事件
 
 Streaming 讓應用程式可以在 Agent 執行期間逐步顯示輸出。
 

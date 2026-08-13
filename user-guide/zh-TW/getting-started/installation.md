@@ -1,4 +1,4 @@
-# 安裝
+# 安裝 akasha
 
 ## 系統需求
 
@@ -36,7 +36,7 @@ uv pip install "akasha-terminal[full]"
 ## 確認安裝成功
 
 ```bash
-python -c "import akasha; print('Akasha imported successfully')"
+python -c "import akasha; print('akasha imported successfully')"
 ```
 
 下一步：[設定模型 Provider](providers.md)。

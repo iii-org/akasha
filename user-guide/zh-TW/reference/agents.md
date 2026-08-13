@@ -41,7 +41,7 @@ print(answer)
 answer = await agent.acall("請非同步執行這個任務。")
 ```
 
-使用 `stream=True` 時，呼叫會產生事件字典。請參考 [Streaming 事件](../tutorials/streaming.md)。
+使用 `stream=True` 時，呼叫會產生事件字典。請參考 [串流事件](../tutorials/streaming.md)。
 
 !!! warning
     Tool 是應用程式能力。請驗證輸入，並限制檔案、網路與憑證的存取範圍。

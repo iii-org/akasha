@@ -31,7 +31,7 @@ Common constructor options:
 import akasha
 
 summarizer = akasha.summary(model="gemini:gemini-2.5-flash")
-summary = summarizer("Akasha is a Python toolkit for document-aware AI applications.")
+summary = summarizer("akasha is a Python toolkit for document-aware AI applications.")
 print(summary)
 ```
 

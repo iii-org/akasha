@@ -1,6 +1,6 @@
-# What Akasha provides
+# What akasha provides
 
-Akasha exposes a small set of public entry points for common model workflows:
+akasha exposes a small set of public entry points for common model workflows:
 
 | Capability | Entry point | Use it when... |
 | --- | --- | --- |

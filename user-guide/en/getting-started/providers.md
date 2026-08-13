@@ -1,6 +1,6 @@
 # Configure a model provider
 
-Akasha selects providers through model aliases. Put credentials in your shell environment or a local `.env` file. Never commit API keys.
+akasha selects providers through model aliases. Put credentials in your shell environment or a local `.env` file. Never commit API keys.
 
 ```env
 GEMINI_API_KEY=your_key

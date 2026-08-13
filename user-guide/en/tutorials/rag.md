@@ -1,6 +1,6 @@
 # Build a RAG workflow
 
-RAG retrieves relevant document content before asking the model to answer. Akasha uses a chat model and an embedding model for different parts of this workflow.
+RAG retrieves relevant document content before asking the model to answer. akasha uses a chat model and an embedding model for different parts of this workflow.
 
 ## Complete example
 

@@ -1,5 +1,5 @@
-site_name: Akasha User Guide
-site_description: A practical guide to chat, RAG, agents, streaming, and memory with Akasha.
+site_name: akasha User Guide
+site_description: A practical guide to chat, RAG, agents, streaming, and memory with akasha.
 site_url: https://iii-org.github.io/akasha/
 docs_dir: user-guide
 
@@ -53,13 +53,17 @@ plugins:
             agents: agents
             summary: summary
             MemoryManager: MemoryManager
+            What akasha provides: akasha 功能
+            Choosing an API: 選擇 API 功能
             Installation: 安裝
             Configure a model provider: 設定模型 Provider
             First chat with ask: 第一個 ask 對話
             Build a RAG workflow: 建立 RAG 流程
             Build an agent and use tools: 建立 Agent 與使用工具
-            Streaming events: Streaming 事件
+            Streaming events: 串流事件
             FAQ: 常見問題
+          site_name: akasha 使用說明
+          site_description: akasha 聊天、RAG、Agent、Streaming 與記憶功能的使用指南。
 
 markdown_extensions:
   - admonition
@@ -72,6 +76,9 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.tasklist
 
+extra_css:
+  - stylesheets/extra.css
+
 nav:
   - Home: index.md
   - Getting started:
@@ -79,7 +86,7 @@ nav:
       - Configure a model provider: getting-started/providers.md
       - First chat with ask: getting-started/first-chat.md
   - Core concepts:
-      - What Akasha provides: concepts/overview.md
+      - What akasha provides: concepts/overview.md
       - Choosing an API: concepts/choosing-an-api.md
   - Tutorials:
       - Build a RAG workflow: tutorials/rag.md
@@ -100,4 +107,4 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/iii-org/akasha
 
-copyright: Akasha is released under the MIT License.
+copyright: akasha is released under the MIT License.

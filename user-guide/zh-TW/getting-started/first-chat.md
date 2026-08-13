@@ -24,7 +24,7 @@ print(answer)
 
 - 有文件要搜尋？請閱讀 [RAG](../tutorials/rag.md)。
 - 需要工具或多步驟行動？請閱讀 [Agent](../tutorials/agents.md)。
-- 需要模型產生內容時就逐步顯示？請閱讀 [Streaming 事件](../tutorials/streaming.md)。
+- 需要模型產生內容時就逐步顯示？請閱讀 [串流事件](../tutorials/streaming.md)。
 
 !!! tip
     第一個範例保持簡單，再一次加入一種 Prompt、文件或工具，這樣比較容易找出問題。

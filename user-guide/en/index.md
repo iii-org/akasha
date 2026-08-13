@@ -1,12 +1,12 @@
-# Akasha User Guide
+# akasha User Guide
 
-Akasha is a Python toolkit for chat, document question answering, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
+akasha is a Python toolkit for chat, document question answering, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
 
 ## Start here
 
-If this is your first time using Akasha, follow this path:
+If this is your first time using akasha, follow this path:
 
-1. [Install Akasha](getting-started/installation.md)
+1. [Install akasha](getting-started/installation.md)
 2. [Configure a model provider](getting-started/providers.md)
 3. [Run your first chat](getting-started/first-chat.md)
 4. Choose a [RAG workflow](tutorials/rag.md) or an [agent with tools](tutorials/agents.md)

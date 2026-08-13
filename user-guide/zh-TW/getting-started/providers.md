@@ -1,6 +1,6 @@
 # 設定模型 Provider
 
-Akasha 使用模型別名選擇 Provider。請將憑證放在 shell 環境變數或本機 `.env` 檔案中，絕對不要提交 API key。
+akasha 使用模型別名選擇 Provider。請將憑證放在 shell 環境變數或本機 `.env` 檔案中，絕對不要提交 API key。
 
 ```env
 GEMINI_API_KEY=your_key

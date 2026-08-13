@@ -31,7 +31,7 @@ summarizer = akasha.summary(
 import akasha
 
 summarizer = akasha.summary(model="gemini:gemini-2.5-flash")
-summary = summarizer("Akasha 是一套文件感知 AI 應用程式的 Python 工具。")
+summary = summarizer("akasha 是一套文件感知 AI 應用程式的 Python 工具。")
 print(summary)
 ```
 

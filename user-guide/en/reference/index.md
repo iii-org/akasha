@@ -1,6 +1,6 @@
 # API Reference
 
-This section describes Akasha's public Python entry points. Start with the API overview, then open the page for the feature you need.
+This section describes akasha's public Python entry points. Start with the API overview, then open the page for the feature you need.
 
 ## Public entry points
 
