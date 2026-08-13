@@ -1,0 +1,89 @@
+site_name: Akasha User Guide
+site_description: A practical guide to chat, RAG, agents, streaming, and memory with Akasha.
+site_url: https://iii-org.github.io/akasha/
+docs_dir: user-guide
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      reconfigure_material: true
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: zh-tw
+          name: 繁體中文
+          build: true
+          nav_translations:
+            Home: 首頁
+            Getting started: 開始使用
+            Core concepts: 核心概念
+            Tutorials: 使用教學
+            Troubleshooting: 疑難排解
+            Installation: 安裝
+            Configure a model provider: 設定模型 Provider
+            First chat with ask: 第一個 ask 對話
+            Build a RAG workflow: 建立 RAG 流程
+            Build an agent and use tools: 建立 Agent 與使用工具
+            Streaming events: Streaming 事件
+            FAQ: 常見問題
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+      - Configure a model provider: getting-started/providers.md
+      - First chat with ask: getting-started/first-chat.md
+  - Core concepts:
+      - What Akasha provides: concepts/overview.md
+      - Choosing an API: concepts/choosing-an-api.md
+  - Tutorials:
+      - Build a RAG workflow: tutorials/rag.md
+      - Build an agent and use tools: tutorials/agents.md
+      - Streaming events: tutorials/streaming.md
+  - Troubleshooting:
+      - FAQ: troubleshooting/faq.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/iii-org/akasha
+
+copyright: Akasha is released under the MIT License.
