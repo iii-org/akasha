@@ -1,526 +1,299 @@
-# akasha
+# Akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![pypi package](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
-[![downloads](https://img.shields.io/pypi/dm/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
-[![python version : 3.11%2B](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
-![GitLab CI](https://img.shields.io/badge/gitlab%20ci-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
-akasha simplifies document-based Question Answering (QA) and Retrieval Augmented Generation(RAG) by harnessing the power of Large Language Models to accurately answer your queries while searching through your provided documents.
+[![PyPI](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 
-With akasha, you have the flexibility to choose from a variety of language models, embedding models, and search types. Adjusting these parameters is straightforward, allowing you to optimize your approach and discover the most effective methods for obtaining accurate answers from Large Language Models.
+Akasha is a Python toolkit for document question answering, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
 
-For the chinese manual, please visit [manual](https://tea9297.github.io/akasha/)
+It provides one consistent interface for remote and local model workflows while keeping provider-specific integrations behind model aliases such as `openai:`, `gemini:`, `anthropic:`, and `ollama:`.
 
-## Quick Start (Local Development)
+- Chinese manual: <https://tea9297.github.io/akasha/>
+- Current package version: `1.5`
 
-If you are developing in this repository (instead of only installing from PyPI), use editable install:
+## What Akasha provides
+
+| Capability | Public entry point | Purpose |
+| --- | --- | --- |
+| Chat / QA | `akasha.ask()` | Ask a model a question, optionally with documents or web information |
+| Agents | `akasha.agents()` | Use LangChain-native tool calling, streaming, thinking events, Skills, and MCP tools |
+| RAG | `akasha.RAG()` | Load documents, create embeddings, search Chroma, and generate an answer |
+| Summaries | `akasha.summary()` | Summarize text, files, or URLs with `map_reduce` or `refine` |
+| Long-term memory | `MemoryManager` | Store and retrieve semantic memories with Chroma |
+
+## Installation
+
+Python 3.11 or 3.12 is recommended.
+
+### Lightweight installation
+
+Use `light` for remote chat models and remote embeddings:
 
 ```bash
-cd akasha
 uv venv --python 3.11
-source .venv/bin/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
-uv pip install -e .
-```
 
-Set at least one model API key:
+# macOS / Linux
+source .venv/bin/activate
 
-```bash
-export OPENAI_API_KEY="your_key"
+# Windows PowerShell
+# .venv\Scripts\Activate.ps1
 
-# or
-export GEMINI_API_KEY="your_key"
-```
-
-Run a quick example:
-
-```bash
-python examples/ex_rag.py
-python examples/ex_agent.py
-```
-
-# Change log
-
-- Next
-
-    1. upgraded LangChain baseline to 1.3+
-    2. unified supported providers through LangChain ChatModel integrations
-    3. upgraded agents to LangChain native tool calling
-
-- 1.1
-
-    1. fixed `keep_logs` consistency for `ask`, `RAG`, `summary`, `websearch`, and `eval`
-    2. added INFO-level runtime logging for main execution flows
-    3. improved exception-path logging to ensure ERROR entries are written to log files
-
-- 1.0
-
-    1. bug fixes
-    2. added a lightweight installation option (API-call-only mode)
-    3. upgraded LangChain to 1.2
-
-- 0.9.14
-
-    1. function calling
-    2. MCP agent support
-
-# Installation
-
-We recommend using Python 3.11 to run our akasha package. Supported versions are Python 3.11 and 3.12.
-
-### Standard Installation
-
-```shell!
-###create environment
-$ uv venv --python 3.11
-
-###install akasha
-$ uv pip install akasha-terminal
-```
-
-### Lightweight Installation (API-call-only, v1.0+)
-
-```bash
-### create environment
-uv venv --python 3.11
-source .venv/bin/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
-
-### install lightweight mode (API-call-only)
 uv pip install "akasha-terminal[light]"
 ```
 
-`light` keeps Chroma-backed `RAG` and `MemoryManager`, but uses remote embedding APIs instead of the local HuggingFace/Torch stack.
+`light` keeps Chroma-backed RAG and memory workflows, but does not include the local HuggingFace / Torch model stack.
 
-### Editable Install Commands
+### Full installation
 
-If you are developing in this repository, use one of the following commands.
-
-Base editable install:
+Use `full` when you need local embeddings, local HuggingFace models, local Llama/GPTQ models, reranking, or BERTScore:
 
 ```bash
-uv pip install -e .
+uv pip install "akasha-terminal[full]"
 ```
 
-Editable install with `light` extras:
+The practical difference is:
 
-```bash
-uv pip install -e ".[light]"
-```
+| Installation | Chat models | Embeddings | Vector store | Local ML / rerank |
+| --- | --- | --- | --- | --- |
+| `light` | Remote providers | Remote APIs | Local Chroma | No |
+| `full` | Remote and local providers | Remote and local | Local Chroma | Yes |
 
-Editable install with `light` + development tools:
+`light` does not include Torch, Transformers, Sentence-Transformers, or `onnxruntime`; these local-model dependencies are part of `full`.
+
+### Editable installation for development
 
 ```bash
 uv pip install -e ".[light,dev]"
 ```
 
-Editable install with `full` extras:
-
-```bash
-uv pip install -e ".[full]"
-```
-
-Editable install with `full` + development tools:
+For the complete local-model stack:
 
 ```bash
 uv pip install -e ".[full,dev]"
 ```
 
-If you prefer `uv` extras syntax instead of bracket notation, these are equivalent:
+## Configure a model provider
 
-```bash
-uv pip install -e . --extra light
-uv pip install -e . --extra full
-uv pip install -e . --extra light --extra dev
-uv pip install -e . --extra full --extra dev
-```
-
-Note:
-
-- Use `".[light]"`, not `". [light]"`.
-- `light` = remote-model / remote-embedding path with Chroma retained.
-- `full` = local embedding / rerank / HuggingFace / Torch stack included.
-
-If you need synchronized plain requirements files, regenerate them from `pyproject.toml`:
-
-```bash
-python scripts/sync_requirements.py
-```
-
-## API Keys
-
-### OPENAI
-
-If you want to use openai models or embeddings, go to [openai](https://platform.openai.com/account/api-keys) to get the API key.
-You can either save `OPENAI_API_KEY=your api key` into `.env` file to current working directory or,
-set as a environment variable, using `export` in bash or use `os.environ` in python.
-
-```bash
-
-# set a environment variable
-
-export OPENAI_API_KEY="your api key"
-
-```
-
-### GEMINI
-
-If you want to use Gemini models, set `GEMINI_API_KEY` in your `.env` file or export it in your shell.
-
-`.env` example:
+Set provider credentials in the environment or in a `.env` file. Never commit `.env` files or API keys.
 
 ```env
-GEMINI_API_KEY=your_gemini_api_key
+OPENAI_API_KEY=your_key
+GEMINI_API_KEY=your_key
+ANTHROPIC_API_KEY=your_key
+
+# Optional Azure OpenAI-compatible endpoint
+AZURE_OPENAI_API_KEY=your_key
+AZURE_OPENAI_BASE_URL=https://your-resource.openai.azure.com/
+
+# Optional Ollama endpoint
+OLLAMA_API_BASE=http://localhost:11434
 ```
 
-Shell example:
+Supported chat model aliases include:
 
-```bash
-export GEMINI_API_KEY="your_gemini_api_key"
+```text
+openai:gpt-4o
+gemini:gemini-2.5-flash
+anthropic:claude-3-5-sonnet-latest
+ollama:qwen3:8b
+azure:your-deployment-name
 ```
 
-### ANTHROPIC
+Ollama can also target another host:
 
-For Anthropic models, set `ANTHROPIC_API_KEY` in `.env` or export it in your shell:
-
-```bash
-export ANTHROPIC_API_KEY="your_anthropic_api_key"
+```text
+ollama:http://192.168.1.10:11434@qwen3:8b
 ```
 
-### AZURE OPENAI
+The same public interfaces accept an already configured LangChain ChatModel when provider-specific configuration is needed.
 
-If you want to use azure openai, go to [auzreAI](https://oai.azure.com/portal) and get you own Language API base url and key.
-Also, remember to deploy all the models in [Azure OpenAI Studio](https://oai.azure.com/portal). The deployment name should be used as the model name. Save the Azure OpenAI-compatible endpoint and key separately from regular OpenAI settings.
-
-```sh
-
-## .env file
-AZURE_OPENAI_API_KEY={your azure key}
-AZURE_OPENAI_BASE_URL={your Azure OpenAI-compatible base URL}
-
-```
-And now we can run akasha in python
-
-```python
-#PYTHON3.11+
-import akasha
-
-# simple QA
-ak = akasha.ask(model="gemini:gemini-2.5-flash")
-response = ak(
-    prompt="akasha 是什麼？",
-    info=["https://github.com/iii-org/akasha"],
-)
-
-```
-
-If you want to use a local Ollama server, Akasha supports an `ollama:` model type through Ollama's OpenAI-compatible chat API:
+## Quick start: chat
 
 ```python
 import akasha
 
-qa = akasha.ask(model="ollama:llama3.1")
-response = qa(prompt="請用一句話介紹 Akasha")
+qa = akasha.ask(model="gemini:gemini-2.5-flash")
+answer = qa("What is retrieval-augmented generation?")
+print(answer)
 ```
 
-By default, `ollama:<model>` uses `http://localhost:11434/v1`.
-If your Ollama server is on another host, use `ollama:<base_url>@<model>`:
+`ask(stream=False)` returns a final `str`.
 
-```python
-qa = akasha.ask(model="ollama:http://192.168.1.10:11434@qwen3:8b")
-```
+## Quick start: RAG
 
-You can also set `OLLAMA_API_BASE` to change the default server location.
-
-Akasha uses LangChain 1.3+ ChatModel integrations for the supported providers. The
-same `akasha.ask()` and `akasha.agents()` interfaces can therefore be used with
-OpenAI, Gemini, Anthropic, or Ollama model names:
+RAG uses a local Chroma store and an embedding model selected independently from the chat model:
 
 ```python
 import akasha
 
-models = [
-    "openai:gpt-4o",
-    "gemini:gemini-2.5-flash",
-    "anthropic:claude-3-5-sonnet-latest",
-    "ollama:qwen3:8b",
-]
-
-qa = akasha.ask(model=models[0])
-print(qa("請簡短介紹 Akasha。"))
-```
-
-The model factory also accepts an already configured LangChain ChatModel object
-when provider-specific settings are needed.
-
-`ask()` accepts the same thinking settings. In streaming mode it yields the same
-`thinking` and `answer` event types; without streaming it returns only the final
-answer string:
-
-```python
-qa = akasha.ask(
+rag = akasha.RAG(
     model="gemini:gemini-2.5-flash",
-    stream=True,
-    thinking=True,
-    thinking_budget=1024,
+    embeddings="gemini:gemini-embedding-001",
 )
 
-for event in qa("請分析向量資料庫是否適合這個需求。"):
-    print(event)
+answer = rag("./docs", "What are the main ideas in these documents?")
+print(answer)
 ```
 
-And then run a RAG example:
+Typical embedding aliases include:
 
-```python
-#PYTHON3.11+
-import akasha
-data_source = "doc/mic"
-prompt = "五軸是什麼?"
-ak = akasha.RAG(model="gemini:gemini-2.5-flash")
-response = ak(data_source, prompt)
-
+```text
+openai:text-embedding-3-small
+gemini:gemini-embedding-001
+hf:BAAI/bge-base-en-v1.5       # full installation
 ```
 
-## Some models you can use
+In `light`, use remote embeddings. Local HuggingFace / Sentence-Transformers embeddings require `full`.
 
-Please note that for OpenAI models, you need to set the environment variable 'OPENAI_API_KEY,' and for most Hugging Face models, a GPU is required to run the models. However, for .gguf models, you can use a CPU to run them.
+## Quick start: agents and tools
 
-```python
-openai_model = "openai:gpt-3.5-turbo"  # needs OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
-openai4_model = "openai:gpt-4"  # needs OPENAI_API_KEY or AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
-azure_model = "azure:<deployment-name>"  # needs AZURE_OPENAI_API_KEY + AZURE_OPENAI_BASE_URL
-azure_embedding = "azure:<embedding-deployment-name>"  # Azure embedding deployment
-gemini_flash_model = "gemini:gemini-2.5-flash" # need environment variable "GEMINI_API_KEY"
-ollama_model = "ollama:llama3.1"  # default server: http://localhost:11434/v1
-ollama_remote_model = "ollama:http://192.168.1.10:11434@qwen3:8b"
-huggingface_model = "hf:meta-llama/Llama-2-7b-chat-hf" #need environment variable "HUGGINGFACEHUB_API_TOKEN" to download meta-llama model
-quantized_ch_llama_model = "gptq:FlagAlpha/Llama2-Chinese-13b-Chat-4bit"
-taiwan_llama_gptq = "gptq:weiren119/Taiwan-LLaMa-v1.0-4bits-GPTQ"
-mistral = "hf:Mistral-7B-Instruct-v0.2" 
-mediatek_Breeze = "hf:MediaTek-Research/Breeze-7B-Instruct-64k-v0.1"
-
-### If you want to use llama-cpp to run model on cpu, you can download gguf version of models 
-
-### from https://huggingface.co/TheBloke/Llama-2-7b-Chat-GGUF  and the name behind "llama-gpu:" or "llama-cpu:"
-
-### from https://huggingface.co/TheBloke/CodeUp-Llama-2-13B-Chat-HF-GGUF
-
-### is the path of the downloaded .gguf file
-llama_cpp_model = "llama-cpp:model/llama-2-13b-chat-hf.Q5_K_S.gguf"  
-llama_cpp_model = "llama-cpp:model/llama-2-7b-chat.Q5_K_S.gguf"
-llama_cpp_chinese_alpaca = "llama-cpp:model/chinese-alpaca-2-7b.Q5_K_S.gguf"
-chatglm_model = "chatglm:THUDM/chatglm2-6b"
-
-```
-
-## Some embeddings you can use
-
-Please noted that each embedding model has different window size, texts that over the max seq length will be truncated and won't be represent
-in embedding model.
-
-Rerank_base and rerank_large are not embedding models; instead, they compare the query to each chunk of the documents and return scores that represent the similarity. As a result, they offer higher accuracy compared to embedding models but may be slower.
-
-```python
-openai_emd = "openai:text-embedding-ada-002"  # need environment variable "OPENAI_API_KEY"  # 8192 max seq length
-huggingface_emd = "hf:all-MiniLM-L6-v2" 
-text2vec_ch_emd = "hf:shibing624/text2vec-base-chinese"   # 128 max seq length 
-text2vec_mul_emd = "hf:shibing624/text2vec-base-multilingual"  # 256 max seq length
-text2vec_ch_para_emd = "hf:shibing624/text2vec-base-chinese-paraphrase" # perform better for long text, 256 max seq length
-bge_en_emd = "hf:BAAI/bge-base-en-v1.5"  # 512 max seq length
-bge_ch_emd = "hf:BAAI/bge-base-zh-v1.5"  # 512 max seq length
-
-rerank_base = "rerank:BAAI/bge-reranker-base"    # 512 max seq length
-rerank_large = "rerank:BAAI/bge-reranker-large"  # 512 max seq length
-
-```
-
-## File Summarization
-
-To create a summary of a text file in various formats like `.pdf`, `.txt`, or `.docx`, you can use the `Summary` class. For example, the following code uses the `map_reduce` method to generate a summary.
-
-There are two summary types, `map_reduce` and `refine`. `map_reduce` summarizes each chunk first, then produces a final summary from all chunk summaries. `refine` summarizes chunk-by-chunk and uses the previous summary as context for the next chunk, which often improves consistency.
+Agents use LangChain 1.3+ native tool calling. A custom Python function can be exposed as a tool with `create_tool()`:
 
 ```python
 import akasha
 
-summ = akasha.summary(
-    model="gemini:gemini-2.5-flash",
-    sum_type="map_reduce",
-    chunk_size=1000,
-    sum_len=1000,
-    language="en",
-    keep_logs=True,
-    verbose=True,
-    max_input_tokens=8000,
-)
 
-# Content can be a URL, file, or plain text
-ret = summ(content=["https://github.com/iii-org/akasha"])
-```
+def today_f() -> str:
+    return "The tool was called successfully."
 
-## agent
 
-Akasha agents use LangChain 1.3+'s `create_agent` and native tool calling. The
-agent manages `AIMessage`, `ToolMessage`, tool arguments, and the model/tool loop;
-`akasha.agents(...)` keeps the public non-streaming return value as a plain `str`.
-Models must support native tool calling. OpenAI, Gemini, Anthropic, and compatible
-Ollama models can be used when their selected model exposes that capability.
-
-### Use Built-in Tools
-
-```python
-import akasha.agent.agent_tools as at
-
-# Use built-in web search and JSON save tools
-tool_list = [at.websearch_tool(search_engine="brave"), at.saveJSON_tool()]
-
-agent = akasha.agents(
-    tools=tool_list,
-    model="gemini:gemini-2.5-flash",
-    temperature=1.0,
-    max_input_tokens=8000,
-    verbose=True,
-    keep_logs=True,
-)
-
-# Ask a question and let the agent use tools to answer
-response = agent("Search for Industry 4.0 on the web and save the result to iii.json")
-print(response)
-
-# Save logs
-agent.save_logs("logs.json")
-```
-
-### Define and Use a Custom Tool
-
-```python
-import akasha
-from datetime import datetime
-
-# Define a tool to get today's date
-def today_f():
-    now = datetime.now()
-    return "today's date: " + str(now.strftime("%Y-%m-%d %H:%M:%S"))
-
-# Create the tool
 today_tool = akasha.create_tool(
-    "This is the tool to get today's date, the tool doesn't have any input parameter.",
+    "Return the current date or a short status message.",
     today_f,
-    "today_date_tool",
+    "today_status",
 )
 
-# Create an agent with the tool
 agent = akasha.agents(
-    tools=[today_tool],
     model="gemini:gemini-2.5-flash",
-    temperature=1.0,
-    verbose=True,
-    keep_logs=True,
+    tools=[today_tool],
 )
 
-# Ask a question and let the agent use the tool
-response = agent("What is today's date?")
-print(response)
-
-# Save logs
-agent.save_logs("logs.json")
+print(agent("Use the available tool and report its result."))
 ```
 
-### Thinking model streaming
+Create the agent once and reuse it for multiple questions. Rebuilding an agent for every question repeats provider initialization costs.
 
-Thinking/reasoning content is kept out of the final answer by default. When a
-provider exposes thinking content through LangChain message blocks, it is stored
-in the agent logs. To observe it during streaming, pass `include_thinking=True`.
-The event types are `answer`, `tool`, and optionally `thinking`.
+## Streaming events
+
+Non-streaming calls return a string. Streaming agents return JSON-serializable event dictionaries:
 
 ```python
-import akasha
-from dotenv import load_dotenv
-
-# thinking=True enables provider-specific thinking and automatically exposes
-# thinking events when stream=True.
-load_dotenv(".env")
 agent = akasha.agents(
     model="gemini:gemini-2.5-flash",
     tools=[],
     stream=True,
-    keep_logs=True,
     thinking=True,
-    thinking_budget=1024,
 )
 
-events = agent(
-    "請比較向量資料庫與關聯式資料庫，最後給出建議。",
-)
-
-for event in events:
+for event in agent("Explain the difference between a vector store and an embedding model."):
     if event["type"] == "thinking":
         print("[thinking]", event["data"])
+    elif event["type"] == "tool":
+        print("[tool]", event["data"])
     elif event["type"] == "answer":
         print(event["data"], end="", flush=True)
-    elif event["type"] == "tool":
-        print("\n[tool]", event["data"])
 ```
 
-If the selected provider or model does not return thinking blocks, no `thinking`
-event is emitted; the final answer is still handled normally.
+The event types are:
 
-For provider-specific settings, a configured LangChain ChatModel can still be
-passed directly. The following is equivalent to the convenience configuration
-above:
+| Event | Meaning |
+| --- | --- |
+| `answer` | A chunk of the final answer |
+| `thinking` | Provider reasoning/thinking content, when available and enabled |
+| `tool` | A tool or Skill result |
+
+`ask(stream=True, thinking=False)` currently yields text chunks. `ask(stream=True, thinking=True)` yields `answer` and optional `thinking` events.
+
+## Skills and MCP
+
+Agents can load Skills from a Skill directory containing `SKILL.md`:
 
 ```python
-import akasha
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-thinking_model = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    thinking_budget=1024,
-    include_thoughts=True,
+agent = akasha.agents(
+    model="gemini:gemini-2.5-flash",
+    skills=["examples/examples_skills/python-repl-skill"],
 )
-
-agent = akasha.agents(model=thinking_model, stream=True, keep_logs=True)
-for event in agent("請分析這個問題並提出結論。", include_thinking=True):
-    print(event)
 ```
 
-### Use Tools from MCP Servers
+Skills can provide instructions, resources, and allowlisted tool bundles. Skill tools are surfaced through normal `tool` events.
+
+MCP tools can be discovered with `langchain-mcp-adapters` and passed to `akasha.agents(tools=...)`. A local stdio MCP server is recommended for deterministic tests; external MCP services should not be required for basic CI smoke tests.
+
+## Provider loading
+
+Provider adapters are loaded when their provider is selected:
+
+| Model alias | Adapter |
+| --- | --- |
+| `openai:` / `azure:` | `langchain_openai` |
+| `gemini:` | `langchain_google_genai` |
+| `anthropic:` | `langchain_anthropic` |
+| `ollama:` | `langchain_ollama` |
+
+Embedding adapters follow the same rule: the relevant embedding integration is loaded only when that embedding path is used. Common LangChain core modules are still shared by all providers.
+
+## Local development
+
+Clone the repository and install it in editable mode:
+
+```bash
+git clone https://github.com/iii-org/akasha.git
+cd akasha
+uv venv --python 3.11
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+uv pip install -e ".[light,dev]"
+```
+
+Run examples:
+
+```bash
+python examples/ex_ask.py
+python examples/ex_rag.py
+python examples/ex_agent.py
+```
+
+## Testing
+
+Unit tests do not require provider API keys:
+
+```bash
+python -m pytest tests/unit -m unit
+```
+
+Focused agent and model tests:
+
+```bash
+python -m pytest \
+  tests/unit/test_thinking_model_config.py \
+  tests/unit/test_agents_core.py \
+  tests/unit/test_provider_import_boundaries.py
+```
+
+Live provider tests are opt-in because they use API quota:
+
+```powershell
+$env:RUN_LLM_TESTS = "1"
+$env:ENV_FILE = "tests/.env"
+python -m pytest tests/test_live_gemini_agent.py -q
+```
+
+Live tests validate provider wiring, response types, tool calling, streaming events, and RAG flow. They do not evaluate the quality of model answers.
+
+## API overview
 
 ```python
-import asyncio
-import akasha
-from langchain_mcp_adapters.client import MultiServerMCPClient
-
-MODEL = "gemini:gemini-2.5-flash"
-
-# Define MCP server connection info
-connection_info = {
-    "math": {
-        "command": "python",
-        "args": ["cal_server.py"],
-        "transport": "stdio",
-    },
-    "weather": {
-        "url": "http://localhost:8000/sse",
-        "transport": "sse",
-    },
-}
-prompt = "tell me the weather in Taipei"
-
-async def main():
-    client = MultiServerMCPClient(connection_info)
-    tools = await client.get_tools()
-
-    agent = akasha.agents(
-        model=MODEL,
-        tools=tools,
-        temperature=1.0,
-        verbose=True,
-        keep_logs=True,
-    )
-    response = await agent.acall(prompt)
-    print(response)
-    agent.save_logs("logs_agent.json")
-
-
-asyncio.run(main())
-
+akasha.ask(...)           # document-aware QA and chat
+akasha.agents(...)        # native tool-calling agent
+akasha.RAG(...)           # document ingestion and retrieval
+akasha.summary(...)       # map-reduce or refine summaries
+akasha.MemoryManager(...) # persistent semantic memory
 ```
+
+For detailed design decisions, upgrade notes, testing matrices, Skills, and runtime work, see ``dev_docs/``.
+
+## License
+
+Akasha is released under the MIT License.
