@@ -37,7 +37,7 @@ plugins:
           name: English
           default: true
           build: true
-        - locale: zh-tw
+        - locale: zh-TW
           name: 繁體中文
           build: true
           nav_translations:
