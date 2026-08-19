@@ -1,5 +1,36 @@
 # `handle_embeddings`
 
+## 使用 Ollama embedding model
+
+Akasha 可以使用 Ollama 提供的 embedding model。請先啟動 Ollama，並下載模型：
+
+```bash
+ollama pull nomic-embed-text
+```
+
+接著使用 `ollama:` alias 建立 embedding object：
+
+```python
+import akasha.helper as ah
+
+embedding_model = ah.handle_embeddings("ollama:nomic-embed-text")
+query_vector = embedding_model.embed_query("什麼是檢索？")
+```
+
+預設會連線到 `http://localhost:11434`。如果 Ollama 執行在其他主機，可以設定 `OLLAMA_API_BASE`：
+
+```text
+OLLAMA_API_BASE=http://192.168.1.10:11434
+```
+
+也可以直接在 alias 中指定 endpoint：
+
+```python
+embedding_model = ah.handle_embeddings(
+    "ollama:http://192.168.1.10:11434@nomic-embed-text"
+)
+```
+
 `akasha.helper.handle_embeddings()` 可以根據 Provider 別名、既有 Embedding 物件或自訂 Embedding function 建立 Embedding 物件。
 
 ## 建立 Embedding 物件

@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 # Kept as a patchable sentinel so tests can replace the provider without
 # importing the optional adapter during module import.
 OpenAIEmbeddings = None
+OllamaEmbeddings = None
 
 
 def _get_openai_embeddings_class():
@@ -25,6 +26,32 @@ def _get_openai_embeddings_class():
     from langchain_openai import OpenAIEmbeddings as embeddings_class
 
     return embeddings_class
+
+
+def _get_ollama_embeddings_class():
+    if OllamaEmbeddings is not None:
+        return OllamaEmbeddings
+    from langchain_ollama import OllamaEmbeddings as embeddings_class
+
+    return embeddings_class
+
+
+def _parse_ollama_model_spec(model_spec: str, env_dict: dict) -> Tuple[str, str]:
+    base_url = env_dict.get("OLLAMA_API_BASE", "http://localhost:11434")
+    if "@" in model_spec:
+        explicit_base_url, model_name = model_spec.split("@", 1)
+        base_url = explicit_base_url.strip() or base_url
+    else:
+        model_name = model_spec
+
+    model_name = model_name.strip()
+    if not model_name:
+        raise ValueError(
+            "ollama embedding model name is required. Use "
+            "'ollama:<model>' or 'ollama:<base_url>@<model>'."
+        )
+
+    return base_url, model_name
 
 
 def _get_env_var(env_file: str = "") -> dict:
@@ -176,6 +203,17 @@ def handle_embeddings(
 
         info = "selected Azure OpenAI-compatible embeddings.\n"
 
+    elif embedding_type == "ollama":
+        base_url, ollama_model_name = _parse_ollama_model_spec(
+            embedding_name, env_dict
+        )
+        embeddings_class = _get_ollama_embeddings_class()
+        embeddings = embeddings_class(
+            model=ollama_model_name,
+            base_url=base_url,
+        )
+        info = "selected ollama embeddings.\n"
+
     else:
         embeddings_class = _get_openai_embeddings_class()
         base_url, api_key = _openai_endpoint(env_dict, provider="openai")
@@ -214,6 +252,9 @@ def handle_embeddings_and_name(
         return embeddings, decide_embedding_type(embeddings)
 
     model_obj = handle_embeddings(embeddings, verbose, env_file)
+    embedding_type, _ = separate_name(model_name)
+    if embedding_type == "ollama":
+        model_name = "ollama:" + model_obj.model
 
     return model_obj, model_name
 

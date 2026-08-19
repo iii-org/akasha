@@ -14,6 +14,42 @@ embedding_model = ah.handle_embeddings(
 
 The provider alias selects the embedding integration. You must configure the corresponding provider credentials before making a remote request.
 
+## Use an Ollama embedding model
+
+Akasha can use an embedding model served by Ollama. First make sure Ollama is running and pull the model:
+
+```bash
+ollama pull nomic-embed-text
+```
+
+Create the embedding object with an `ollama:` alias, then use the same `embed_query()` and `embed_documents()` methods:
+
+```python
+import akasha.helper as ah
+
+embedding_model = ah.handle_embeddings("ollama:nomic-embed-text")
+
+query_vector = embedding_model.embed_query("What is retrieval?")
+document_vectors = embedding_model.embed_documents(
+    ["The first document discusses retrieval."]
+)
+
+print("Query dimensions:", len(query_vector))
+print("Document dimensions:", len(document_vectors[0]))
+```
+
+Akasha connects to `http://localhost:11434` by default. For another Ollama server, set `OLLAMA_API_BASE` or include the endpoint in the alias:
+
+```text
+OLLAMA_API_BASE=http://192.168.1.10:11434
+```
+
+```python
+embedding_model = ah.handle_embeddings(
+    "ollama:http://192.168.1.10:11434@nomic-embed-text"
+)
+```
+
 ## Embed one query
 
 ```python
@@ -54,7 +90,7 @@ import akasha
 
 rag = akasha.RAG(
     model="gemini:gemini-2.5-flash",
-    embeddings="gemini:gemini-embedding-001",
+    embeddings="ollama:nomic-embed-text",
 )
 
 answer = rag("./docs", "What is the main topic?")

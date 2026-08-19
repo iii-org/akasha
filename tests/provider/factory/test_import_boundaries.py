@@ -24,7 +24,8 @@ def test_agent_import_does_not_load_provider_adapters():
         "import sys; "
         "import akasha.agent.agents; "
         "assert 'langchain_openai' not in sys.modules; "
-        "assert 'langchain_google_genai' not in sys.modules"
+        "assert 'langchain_google_genai' not in sys.modules; "
+        "assert 'langchain_ollama' not in sys.modules"
     )
     assert output == ""
 

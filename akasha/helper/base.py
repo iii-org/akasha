@@ -48,6 +48,14 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
     Returns:
         str: type:name
     """
+    # Avoid importing provider adapters merely to identify an existing
+    # Ollama instance; those imports are expensive in the Windows environment.
+    if any(
+        cls.__module__.split(".", 1)[0] == "langchain_ollama"
+        for cls in type(embeddings).__mro__
+    ):
+        return "ollama:" + embeddings.model
+
     from langchain_openai import OpenAIEmbeddings, AzureOpenAIEmbeddings
 
     if isinstance(embeddings, OpenAIEmbeddings) or isinstance(
@@ -64,19 +72,17 @@ def decide_embedding_type(embeddings: Embeddings) -> str:
         if isinstance(embeddings, custom_embed):
             return embeddings.model_name
 
-        else:
-            from langchain_huggingface import HuggingFaceEmbeddings
+        from langchain_huggingface import HuggingFaceEmbeddings
 
-            if isinstance(embeddings, HuggingFaceEmbeddings):
-                return "hf:" + embeddings.model_name
+        if isinstance(embeddings, HuggingFaceEmbeddings):
+            return "hf:" + embeddings.model_name
 
-            from langchain_community.embeddings import TensorflowHubEmbeddings
+        from langchain_community.embeddings import TensorflowHubEmbeddings
 
-            if isinstance(embeddings, TensorflowHubEmbeddings):
-                return "tf:" + embeddings.model_url
+        if isinstance(embeddings, TensorflowHubEmbeddings):
+            return "tf:" + embeddings.model_url
 
-            else:
-                raise Exception("can not find the embeddings type.")
+        raise Exception("can not find the embeddings type.")
 
 
 def get_embedding_type_and_name(

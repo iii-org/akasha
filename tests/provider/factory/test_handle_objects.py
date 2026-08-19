@@ -1,5 +1,10 @@
-import pytest
+import sys
+from types import SimpleNamespace
 
+import pytest
+from langchain_core.embeddings import Embeddings
+
+from akasha.helper.base import decide_embedding_type
 from akasha.helper import handle_objects
 
 pytestmark = pytest.mark.unit
@@ -67,6 +72,124 @@ def test_handle_model_supports_ollama_custom_base(monkeypatch):
 def test_handle_model_requires_ollama_model_name():
     with pytest.raises(ValueError):
         handle_objects.handle_model("ollama:")
+
+
+def test_handle_embeddings_supports_ollama_default_base(monkeypatch):
+    captured = {}
+
+    class FakeEmbeddings:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(handle_objects, "_get_env_var", lambda env_file="": {})
+    monkeypatch.setattr(
+        handle_objects, "OllamaEmbeddings", FakeEmbeddings, raising=False
+    )
+
+    result = handle_objects.handle_embeddings("ollama:nomic-embed-text")
+
+    assert isinstance(result, FakeEmbeddings)
+    assert captured == {
+        "model": "nomic-embed-text",
+        "base_url": "http://localhost:11434",
+    }
+
+
+def test_handle_embeddings_supports_ollama_environment_base(monkeypatch):
+    captured = {}
+
+    class FakeEmbeddings:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(
+        handle_objects,
+        "_get_env_var",
+        lambda env_file="": {"OLLAMA_API_BASE": "http://env-host:11434"},
+    )
+    monkeypatch.setattr(
+        handle_objects, "OllamaEmbeddings", FakeEmbeddings, raising=False
+    )
+
+    handle_objects.handle_embeddings("ollama:nomic-embed-text")
+
+    assert captured["base_url"] == "http://env-host:11434"
+
+
+def test_handle_embeddings_supports_ollama_custom_base(monkeypatch):
+    captured = {}
+
+    class FakeEmbeddings:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(
+        handle_objects,
+        "_get_env_var",
+        lambda env_file="": {"OLLAMA_API_BASE": "http://env-host:11434"},
+    )
+    monkeypatch.setattr(
+        handle_objects, "OllamaEmbeddings", FakeEmbeddings, raising=False
+    )
+
+    handle_objects.handle_embeddings(
+        "ollama:http://custom-host:11434@nomic-embed-text"
+    )
+
+    assert captured == {
+        "model": "nomic-embed-text",
+        "base_url": "http://custom-host:11434",
+    }
+
+
+@pytest.mark.parametrize(
+    "embedding_name",
+    ["ollama:", "ollama:http://localhost:11434@"],
+)
+def test_handle_embeddings_requires_ollama_model_name(embedding_name):
+    with pytest.raises(ValueError, match="ollama embedding model name is required"):
+        handle_objects.handle_embeddings(embedding_name)
+
+
+def test_handle_embeddings_and_name_canonicalizes_ollama_endpoint(monkeypatch):
+    class FakeEmbeddings:
+        def __init__(self, **kwargs):
+            self.model = kwargs["model"]
+
+    monkeypatch.setattr(handle_objects, "_get_env_var", lambda env_file="": {})
+    monkeypatch.setattr(
+        handle_objects, "OllamaEmbeddings", FakeEmbeddings, raising=False
+    )
+
+    _, embedding_name = handle_objects.handle_embeddings_and_name(
+        "ollama:http://custom-host:11434@nomic-embed-text"
+    )
+
+    assert embedding_name == "ollama:nomic-embed-text"
+
+
+def test_decide_embedding_type_supports_ollama(monkeypatch):
+    class FakeOllamaEmbeddings(Embeddings):
+        __module__ = "langchain_ollama"
+
+        def __init__(self, model):
+            self.model = model
+
+        def embed_documents(self, texts):
+            return [[] for _ in texts]
+
+        def embed_query(self, text):
+            return []
+
+    monkeypatch.setitem(
+        sys.modules,
+        "langchain_ollama",
+        SimpleNamespace(OllamaEmbeddings=FakeOllamaEmbeddings),
+    )
+
+    embeddings = FakeOllamaEmbeddings(model="nomic-embed-text")
+
+    assert decide_embedding_type(embeddings) == "ollama:nomic-embed-text"
 
 
 def test_handle_model_supports_explicit_azure_alias(monkeypatch):
