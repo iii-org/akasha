@@ -2,7 +2,7 @@ from pathlib import Path
 import time
 import datetime
 
-from typing import Callable, Union, List, Generator
+from typing import Callable, Union, List, Generator, Any
 from langchain_core.language_models.base import BaseLanguageModel
 
 from langchain_core.embeddings import Embeddings
@@ -42,7 +42,7 @@ load_dotenv(pathlib.Path().cwd() / ".env", override=True)
 
 
 class RAG(atman):
-    """class for implement search db based on user prompt and generate response from llm model, include get_response and chain_of_thoughts."""
+    """Document question-answering facade backed by retrieval and an LLM."""
 
     def __init__(
         self,
@@ -63,7 +63,7 @@ class RAG(atman):
         stream: bool = False,
         verbose: bool = False,
         env_file: str = "",
-    ):
+    ) -> None:
         """initials of Doc_QA class
 
         Args:
@@ -198,9 +198,9 @@ class RAG(atman):
         self,
         data_source: Union[List[Union[str, Path]], Path, str, dbs],
         prompt: str,
-        history_messages: list = [],
-        **kwargs,
-    ):
+        history_messages: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> str:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -215,6 +215,7 @@ class RAG(atman):
             Returns:
                 response (str): the response from llm model.
         """
+        history_messages = history_messages or []
         ### set variables ###
 
         self._set_model(**kwargs)
@@ -309,7 +310,7 @@ class RAG(atman):
         return self.response
 
     def reference(self) -> dict:
-        """reference docs after calling the rag function, will return the reference file names of the response."""
+        """Return source files/pages judged relevant to the last response."""
 
         if self.response == "":
             logging.warning("Response empty. Please call the RAG function first.")
@@ -408,8 +409,8 @@ class RAG(atman):
         self,
         data_source: Union[List[Union[str, Path]], Path, str, dbs],
         prompt: str,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> str:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         question will use self-ask with search to solve complex question.

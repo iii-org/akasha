@@ -1,5 +1,15 @@
 from importlib import import_module
 import os
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .RAG.rag import RAG
+    from .agent import Skill, SkillRegistry, agents, create_tool, default_registry, normalize_mcp_result, normalize_mcp_tools
+    from .helper.memory import MemoryManager
+    from .tools.ask import ask
+    from .tools.gen_img import edit_image, gen_image
+    from .tools.summary import summary
+    from .tools.websearch import websearch
 
 # Optional automatic logging configuration.
 # Enable by setting AKASHA_AUTO_CONFIGURE_LOGGING to "1", "true", or "yes".
@@ -46,7 +56,8 @@ _LAZY_IMPORTS = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
+    """Lazily resolve public APIs to defer optional provider imports."""
     if name not in _LAZY_IMPORTS:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

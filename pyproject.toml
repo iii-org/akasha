@@ -89,6 +89,9 @@ Homepage = "https://github.com/iii-org/akasha"
 [tool.setuptools.packages.find]
 include = ["akasha", "akasha.*", "cli"]
 
+[tool.setuptools.package-data]
+akasha = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [

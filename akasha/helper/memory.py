@@ -53,17 +53,15 @@ class MemoryManager:
         memory_dirname: str = "docs",
         env_file: str = "",
     ):
-        """
-        Initializes the MemoryManager.
+        """Create a persistent semantic-memory manager.
 
         Args:
-            model_obj (BaseLanguageModel): The language model object for processing.
-            embeddings (Embeddings): The embedding model for the vector store.
-            chunk_size (int): Size of text chunks for embedding.
-            memory_name (str): Directory to store memory Markdown files.
-            db_path (str): Path to the ChromaDB for searching memories.
-            verbose (bool): Whether to print detailed logs.
-            env_file (str): Path to the .env file.
+            memory_name: Name of the memory collection and Markdown directory.
+            model: Model alias or configured language model.
+            embeddings: Embedding alias or configured embedding model.
+            chunk_size: Size of text chunks used for embedding.
+            memory_dirname: Parent directory for persisted Markdown memories.
+            env_file: Optional dotenv file to load.
         """
         self.model_obj = handle_model(model, verbose, 1.0, 2048, env_file=env_file)
         self.model = handle_model_type(model)
@@ -151,10 +149,8 @@ class MemoryManager:
     def add_memory(self,
                    user_prompt: str,
                    ai_response: str,
-                   language: str = "ch"):
-        """
-        The main pipeline to process a conversation turn and save it to memory.
-        """
+                   language: str = "ch") -> None:
+        """Extract, categorize, and persist one conversation turn."""
         # 1. Extract important information
         extracted_info = self._extract_salient_info(user_prompt, ai_response,
                                                     language)
@@ -218,9 +214,7 @@ class MemoryManager:
         return
 
     def search_memory(self, query: str, top_k: int = 3) -> List[str]:
-        """
-        Searches the vector store for memories relevant to the query.
-        """
+        """Return up to ``top_k`` memories relevant to ``query``."""
         if not self.db:
             print("[Memory] Memory database not available for search.")
             return []
@@ -247,6 +241,7 @@ class MemoryManager:
         return results
 
     def show_memory(self, num: int = 100) -> List[str]:
+        """Return up to ``num`` persisted memory entries."""
         # , self.db.get_ids(), self.db.get_metadatas()
 
         return self.db.get_docs()[:num]
