@@ -18,7 +18,7 @@ from akasha.utils.prompts.format import (
 from akasha.utils.db.load_docs import load_docs_from_info
 from akasha.helper.base import get_doc_length, get_docs_length
 from akasha.helper.run_llm import call_model
-from typing import Union, Tuple
+from typing import Any, Union, Tuple
 from pathlib import Path
 from langchain_core.documents import Document
 import time
@@ -36,6 +36,8 @@ def _get_recursive_character_text_splitter():
 
 
 class summary(basic_llm):
+    """Summarize text, documents, URLs, or LangChain ``Document`` objects."""
+
     def __init__(
         self,
         model: str = DEFAULT_MODEL,
@@ -54,28 +56,21 @@ class summary(basic_llm):
         keep_logs: bool = False,
         verbose: bool = False,
         env_file: str = "",
-    ):
-        """ "initials of Summary class
+    ) -> None:
+        """Configure a reusable summarization client.
 
         Args:
-            **chunk_size (int, optional)**: chunk size of texts from documents. Defaults to 1000.\n
-            **chunk_overlap (int, optional)**: chunk overlap of texts from documents. Defaults to 40.\n
-            **model (str, optional)**: llm model to use. Defaults to "gpt-3.5-turbo".\n
-            **verbose (bool, optional)**: show log texts or not. Defaults to False.\n
-            **threshold (float, optional)**: (deprecated) the similarity threshold of searching. Defaults to 0.2.\n
-            **language (str, optional)**: the language of documents and prompt, use to make sure docs won't exceed
-                max token size of llm input.\n
-            **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set
-                record_exp as experiment name.  default "".\n
-            **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
-                in searching relevant documents. Defaults to "".\n
-            **temperature (float, optional)**: temperature of llm model from 0.0 to 1.0 . Defaults to 0.0.\n
-            **keep_logs (bool, optional)**: record logs or not. Defaults to False.\n
-            **prompt_format_type (str, optional)**: the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
-            **consecutive_merge_failures (int, optional)**: the number of consecutive merge failures before returning the current response list as the summary. Defaults to 5.
-            **max_output_tokens (int, optional)**: max output tokens of llm model. Defaults to 1024.\n
-            **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
-            **env_file (str, optional)**: the path of env file. Defaults to "".\n
+            model: Model alias to use for summarization.
+            max_input_tokens: Maximum input token budget.
+            max_output_tokens: Maximum generated token budget.
+            sum_type: ``"map_reduce"`` or ``"refine"``.
+            sum_len: Target summary length.
+            chunk_size: Input text chunk size.
+            chunk_overlap: Number of overlapping characters between chunks.
+            consecutive_merge_failures: Maximum tolerated merge failures.
+            language: Document/prompt language.
+            system_prompt: Optional system prompt override.
+            env_file: Optional dotenv file to load.
         """
         super().__init__(
             model=model,
@@ -359,8 +354,8 @@ class summary(basic_llm):
 
         return response_list, tokens
 
-    def __call__(self, content: Union[str, list, Path, Document], **kwargs) -> str:
-        """input one or multiple content/source and return a summary of the content
+    def __call__(self, content: Union[str, list, Path, Document], **kwargs: Any) -> str:
+        """Summarize one or more content sources and return the result.
         content can be a string, a list of strings, a path of file, a list of paths of files, a Document object, or a list of Document objects.
         Args:
             **content (Union[str, list, Path, Document])**:  the content you want to summarize, can be '.txt', '.docx', '.pdf' file.\n

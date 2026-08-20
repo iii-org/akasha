@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
 import inspect
 import logging
 
@@ -23,9 +23,11 @@ def get_tool_explaination(tools: List[BaseTool]) -> Dict[str, str]:
 
 
 def create_tool(
-    tool_description: str, func: Callable, tool_name: Union[str, None] = None
-) -> Union[BaseTool, None]:
-    """Create a LangChain structured tool with an inferred argument schema."""
+    tool_description: str,
+    func: Callable[..., Any],
+    tool_name: str | None = None,
+) -> BaseTool:
+    """Create a LangChain structured tool from a typed Python callable."""
     try:
         if tool_name is None:
             tool_name = func.__name__

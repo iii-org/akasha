@@ -23,7 +23,7 @@ from akasha.helper.run_llm import (
     call_image_model,
     check_relevant_answer,
 )
-from typing import Union, List, Tuple, Generator
+from typing import Union, List, Tuple, Generator, Any
 from pathlib import Path
 from langchain_core.documents import Document
 import time
@@ -33,6 +33,7 @@ from akasha.helper.token_counter import myTokenizer
 
 
 class ask(basic_llm):
+    """Single-turn or document-assisted language-model question interface."""
     def __init__(
         self,
         model: str = DEFAULT_MODEL,
@@ -49,8 +50,8 @@ class ask(basic_llm):
         env_file: str = "",
         thinking: bool = False,
         thinking_budget: ThinkingBudget = None,
-    ):
-        """_summary_
+    ) -> None:
+        """Configure a reusable question-answering client.
 
         Args:
             model (str, optional): _description_. Defaults to DEFAULT_MODEL.
@@ -198,8 +199,8 @@ class ask(basic_llm):
         self,
         prompt: str,
         info: Union[str, list, Path, Document] = "",
-        history_messages: List[str] = [],
-        **kwargs,
+        history_messages: List[str] | None = None,
+        **kwargs: Any,
     ) -> str:
         """the function to ask model with prompt and info documents,
         the info can be file path, url, directory path, or list of Document object
@@ -215,6 +216,7 @@ class ask(basic_llm):
             str: the answer from llm
         """
 
+        history_messages = history_messages or []
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.prompt = prompt
@@ -322,15 +324,17 @@ class ask(basic_llm):
         self._upload_logs(end_time - start_time, self.doc_length, self.doc_tokens)
         return self.response
 
-    def vision(self, prompt: str, image_path: Union[List[str], str], **kwargs) -> str:
-        """ask model with image and prompt, image_path can be list of image path or url
+    def vision(
+        self, prompt: str, image_path: Union[List[str], str], **kwargs: Any
+    ) -> str:
+        """Ask a vision-capable model about one or more images.
 
         Args:
             image_path (Union[List[str], str]): image path or url (recommand jpeg or png file)
             prompt (str): user question
 
         Returns:
-            str: _description_
+            str: The model's answer.
         """
         self._set_model(**kwargs)
         self._change_variables(**kwargs)

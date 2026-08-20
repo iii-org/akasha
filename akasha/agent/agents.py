@@ -174,7 +174,7 @@ def _count_tokens(model: Any, text: str) -> int:
 
 
 class agents(basic_llm):
-    """Public Akasha facade over LangChain 1.3+ ``create_agent``."""
+    """Reusable tool-calling agent facade over LangChain ``create_agent``."""
 
     def __init__(
         self,
@@ -198,7 +198,7 @@ class agents(basic_llm):
         thinking: bool = False,
         thinking_budget: ThinkingBudget = None,
         max_resource_bytes: int = 128 * 1024,
-    ):
+    ) -> None:
         super().__init__(
             model=model,
             max_input_tokens=max_input_tokens,
@@ -424,9 +424,9 @@ class agents(basic_llm):
     def __call__(
         self,
         question: str,
-        messages: List[dict] = None,
+        messages: List[dict[str, Any]] | None = None,
         include_thinking: bool | None = None,
-    ):
+    ) -> str | Generator[dict[str, Any], None, None]:
         self.question = question
         if self.stream:
             self._ensure_stream_supported()
@@ -436,9 +436,9 @@ class agents(basic_llm):
     async def acall(
         self,
         question: str,
-        messages: List[dict] = None,
+        messages: List[dict[str, Any]] | None = None,
         include_thinking: bool | None = None,
-    ):
+    ) -> str | Generator[dict[str, Any], None, None]:
         self.question = question
         if self.stream:
             self._ensure_stream_supported()
