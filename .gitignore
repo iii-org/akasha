@@ -43,6 +43,8 @@ test_*.py
 !tests/upgrade_tests/*
 !tests/smoke/
 !tests/smoke/test_*.py
+!tests/vision/
+!tests/vision/test_*.py
 tests/.env
 .vscode/settings.json
 SIMYOU.TTF

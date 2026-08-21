@@ -7,6 +7,9 @@ Start with the smallest API that matches your task.
 | Your task | Start with |
 | --- | --- |
 | Ask a model a question | `akasha.ask()` |
+| Ask questions about an image | `asker.vision()` |
+| Generate a new image | `akasha.gen_image()` |
+| Edit an existing image | `akasha.edit_image()` |
 | Answer questions about local documents | `akasha.RAG()` |
 | Let the model call tools | `akasha.agents()` |
 | Summarize a file or URL | `akasha.summary()` |

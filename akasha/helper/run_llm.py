@@ -336,10 +336,10 @@ def call_image_model(
     keep_logs: bool = False,
 ) -> str:
     """
-    Calls an image generation model with the provided input and returns the response as a string.
+    Calls a multimodal model with image input and returns its text response.
 
     Args:
-        model (BaseLanguageModel): The image generation model to use.
+        model (BaseLanguageModel): The multimodal model to use.
         input_text (Union[str, list]): The input prompt(s) for the model.
         verbose (bool, optional): If True, enables verbose output. Defaults to True.
         keep_logs (bool, optional): If True, keeps logs even if verbose is False. Defaults to False.
@@ -354,7 +354,7 @@ def call_image_model(
         model_type = model._llm_type
         log_enabled = verbose or keep_logs
 
-        if (
+        if isinstance(model, BaseChatModel) or (
             ("openai" in model_type)
             or ("remote" in model_type)
             or ("gemini" in model_type)
@@ -377,7 +377,7 @@ def call_image_model(
         while attempt < max_retries and (response is None or response == ""):
             if log_enabled:
                 logging.warning("LLM response is empty. Retrying image call.")
-            if (
+            if isinstance(model, BaseChatModel) or (
                 ("openai" in model_type)
                 or ("remote" in model_type)
                 or ("gemini" in model_type)

@@ -4,7 +4,7 @@
 [![PyPI](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 
-Akasha is a Python toolkit for document question answering, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
+Akasha is a Python toolkit for document question answering, image understanding, image generation and editing, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
 
 It provides one consistent interface for remote and local model workflows while keeping provider-specific integrations behind model aliases such as `openai:`, `gemini:`, `anthropic:`, and `ollama:`.
 
@@ -16,6 +16,9 @@ It provides one consistent interface for remote and local model workflows while 
 | Capability | Public entry point | Purpose |
 | --- | --- | --- |
 | Chat / QA | `akasha.ask()` | Ask a model a question, optionally with documents or web information |
+| Vision | `asker.vision()` | Ask a question about one or more images and receive a text answer |
+| Image generation | `akasha.gen_image()` | Generate a new image from a text prompt |
+| Image editing | `akasha.edit_image()` | Remove, add, or change content in an existing image |
 | Agents | `akasha.agents()` | Use LangChain-native tool calling, streaming, thinking events, Skills, and MCP tools |
 | RAG | `akasha.RAG()` | Load documents, create embeddings, search Chroma, and generate an answer |
 | Summaries | `akasha.summary()` | Summarize text, files, or URLs with `map_reduce` or `refine` |
@@ -118,6 +121,35 @@ print(answer)
 ```
 
 `ask(stream=False)` returns a final `str`.
+
+## Quick start: vision and image editing
+
+Use `vision()` for image understanding. It accepts an image and a question, then returns text:
+
+```python
+import akasha
+
+qa = akasha.ask(model="gemini:gemini-2.5-flash")
+answer = qa.vision(
+    prompt="What information appears in this image?",
+    image_path="input.png",
+)
+print(answer)
+```
+
+Use `gen_image()` to create a new image, or `edit_image()` to remove, add, or change content in an existing image:
+
+```python
+output_path = akasha.edit_image(
+    prompt="Remove the bicycle and add a green potted plant",
+    images="input.png",
+    model="openai:gpt-image-1",
+    save_path="edited.png",
+)
+print(output_path)
+```
+
+See the [image and vision reference](user-guide/en/reference/vision.md) for multiple-image examples.
 
 ## Quick start: RAG
 
@@ -265,6 +297,12 @@ Unit tests do not require provider API keys:
 
 ```bash
 python -m pytest tests -m unit
+```
+
+Image generation and editing contract tests are grouped by feature:
+
+```bash
+python -m pytest tests/vision -q
 ```
 
 Focused agent and model tests:

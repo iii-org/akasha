@@ -29,6 +29,7 @@ jobs:
       RUN_PROVIDER_SMOKE: "1"
       RUN_RAG_PIPELINE: "1"
       RUN_RAG_SMOKE: "1"
+      RUN_VISION_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -79,5 +80,8 @@ jobs:
           print("Embedding dimension:", len(vector))
           PY
 
+      - name: Run vision integration tests
+        run: pytest tests/vision --maxfail=1 --disable-warnings -vv -s
+
       - name: Run pytest
-        run: pytest --maxfail=1 --disable-warnings -vv -s -k "not ollama"
+        run: pytest --maxfail=1 --disable-warnings -vv -s -k "not ollama" --ignore=tests/vision

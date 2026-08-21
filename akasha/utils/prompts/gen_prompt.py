@@ -867,8 +867,8 @@ def format_image_gemini_prompt(image_path: Union[str, List[str]], prompt: str):
             with open(imgP, "rb") as f:
                 url_content = f.read()
         image_content.append({
-            "type": "image_url",
-            "image_url": url_content,
+            "type": "media",
+            "data": url_content,
             "mime_type": image_media_type,
         })
 

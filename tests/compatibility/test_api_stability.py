@@ -114,10 +114,7 @@ def test_vision_card_recognition(check_env, model_name):
     qa = akasha.ask(model=model_name, verbose=True, env_file=str(ENV_PATH))
     prompt = "這是一張名片。請幫我提取這張名片上的姓名、電話與公司名稱（如果有）。"
     
-    try:
-        response = qa.vision(prompt=prompt, image_path=target_image)
-    except AttributeError:
-        pytest.skip(f"模型 {model_name} 可能在當前版本不支援 vision 方法")
+    response = qa.vision(prompt=prompt, image_path=target_image)
 
     assert isinstance(response, str)
     assert len(response) > 0

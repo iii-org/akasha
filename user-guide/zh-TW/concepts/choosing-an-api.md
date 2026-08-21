@@ -4,6 +4,9 @@
 
 | 你的需求 | 建議入口 |
 | --- | --- |
+| 詢問圖片內容 | `asker.vision()` |
+| 生成新圖片 | `akasha.gen_image()` |
+| 編輯既有圖片 | `akasha.edit_image()` |
 | 直接向模型提問 | `akasha.ask()` |
 | 詢問本機文件內容 | `akasha.RAG()` |
 | 讓模型呼叫工具 | `akasha.agents()` |

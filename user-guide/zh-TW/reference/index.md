@@ -6,6 +6,9 @@
 
 | API | 用途 | 詳細參考 |
 | --- | --- | --- |
+| `asker.vision()` | 詢問圖片內容並取得文字回答。 | [`圖片理解與圖片編輯`](vision.md) |
+| `akasha.gen_image()` | 根據文字描述生成新圖片。 | [`圖片理解與圖片編輯`](vision.md) |
+| `akasha.edit_image()` | 移除、增加或修改既有圖片內容。 | [`圖片理解與圖片編輯`](vision.md) |
 | `akasha.ask()` | 聊天與問答，可選擇加入背景資料。 | [`ask`](ask.md) |
 | `akasha.RAG()` | 載入、檢索文件並回答問題。 | [`RAG`](rag.md) |
 | `akasha.agents()` | 執行可使用 Tools、Skills 或 MCP 工具的 Agent。 | [`agents`](agents.md) |
