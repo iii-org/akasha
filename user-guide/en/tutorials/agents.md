@@ -4,7 +4,7 @@ This tutorial starts with a model-only agent, then adds one application Tool and
 
 ## Before you start
 
-Create and activate a virtual environment, then install Akasha:
+Create and activate a virtual environment, then install akasha:
 
 ```bash
 uv venv --python 3.11

@@ -1,6 +1,6 @@
 # Vision, image generation, and image editing
 
-Akasha exposes three different image workflows. Choose the API based on whether the model should return text or an image.
+akasha exposes three different image workflows. Choose the API based on whether the model should return text or an image.
 
 ## Understand an image with `vision`
 

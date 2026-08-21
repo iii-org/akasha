@@ -4,7 +4,7 @@ A Skill is a directory containing a `SKILL.md` instruction file and optional res
 
 ## Before you start
 
-Create and activate a virtual environment, then install Akasha:
+Create and activate a virtual environment, then install akasha:
 
 ```bash
 uv venv --python 3.11

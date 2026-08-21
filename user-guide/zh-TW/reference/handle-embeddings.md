@@ -2,7 +2,7 @@
 
 ## 使用 Ollama embedding model
 
-Akasha 可以使用 Ollama 提供的 embedding model。請先啟動 Ollama，並下載模型：
+akasha 可以使用 Ollama 提供的 embedding model。請先啟動 Ollama，並下載模型：
 
 ```bash
 ollama pull nomic-embed-text

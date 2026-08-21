@@ -2,7 +2,7 @@
 
 ## 使用 Ollama embedding model
 
-Akasha 可以使用 Ollama 提供的 embedding model。請先啟動 Ollama，並下載模型：
+akasha 可以使用 Ollama 提供的 embedding model。請先啟動 Ollama，並下載模型：
 
 ```bash
 ollama pull nomic-embed-text
@@ -83,7 +83,7 @@ print("向量維度：", len(vectors[0]))
 
 ## RAG 中的 Embedding
 
-通常不需要在 RAG 中直接呼叫 Embedding 方法，只要將 Embedding 別名傳給 `akasha.RAG()`，Akasha 就會自動處理文件與查詢的向量化：
+通常不需要在 RAG 中直接呼叫 Embedding 方法，只要將 Embedding 別名傳給 `akasha.RAG()`，akasha 就會自動處理文件與查詢的向量化：
 
 ```python
 import akasha

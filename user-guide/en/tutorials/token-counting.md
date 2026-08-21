@@ -37,7 +37,7 @@ answer = qa(
 print(answer)
 ```
 
-When the prompt or context is too large, Akasha may split or truncate document context, or raise an input-size error depending on the workflow.
+When the prompt or context is too large, akasha may split or truncate document context, or raise an input-size error depending on the workflow.
 
 ## See token information in logs
 

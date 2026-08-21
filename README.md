@@ -1,28 +1,33 @@
-# Akasha
+# akasha
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/pypi/v/akasha-terminal)](https://pypi.org/project/akasha-terminal/)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/downloads/)
 
-Akasha is a Python toolkit for document question answering, image understanding, image generation and editing, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
+akasha is a Python toolkit for document question answering, image understanding, image generation and editing, retrieval-augmented generation (RAG), native tool-calling agents, summaries, and long-term semantic memory.
 
 It provides one consistent interface for remote and local model workflows while keeping provider-specific integrations behind model aliases such as `openai:`, `gemini:`, `anthropic:`, and `ollama:`.
 
-- Chinese manual: <https://iii-org.github.io/akasha/>
-- Current package version: `1.5`
+- manual: <https://iii-org.github.io/akasha/>
+- Current package version: `1.7.3`
 
-## What Akasha provides
+## What akasha provides
 
-| Capability | Public entry point | Purpose |
-| --- | --- | --- |
-| Chat / QA | `akasha.ask()` | Ask a model a question, optionally with documents or web information |
-| Vision | `asker.vision()` | Ask a question about one or more images and receive a text answer |
-| Image generation | `akasha.gen_image()` | Generate a new image from a text prompt |
-| Image editing | `akasha.edit_image()` | Remove, add, or change content in an existing image |
-| Agents | `akasha.agents()` | Use LangChain-native tool calling, streaming, thinking events, Skills, and MCP tools |
-| RAG | `akasha.RAG()` | Load documents, create embeddings, search Chroma, and generate an answer |
-| Summaries | `akasha.summary()` | Summarize text, files, or URLs with `map_reduce` or `refine` |
-| Long-term memory | `MemoryManager` | Store and retrieve semantic memories with Chroma |
+**Chat / QA** — Use `akasha.ask()` to ask a model a question, optionally with documents or web information.
+
+**Vision** — Use `asker.vision()` to ask questions about one or more images and receive a text answer.
+
+**Image generation** — Use `akasha.gen_image()` to generate a new image from a text prompt.
+
+**Image editing** — Use `akasha.edit_image()` to remove, add, or change content in an existing image.
+
+**Agents** — Use `akasha.agents()` for LangChain-native tool calling, streaming, thinking events, Skills, and MCP tools.
+
+**RAG** — Use `akasha.RAG()` to load documents, create embeddings, search Chroma, and generate an answer.
+
+**Summaries** — Use `akasha.summary()` to summarize text, files, or URLs with `map_reduce` or `refine`.
+
+**Long-term memory** — Use `MemoryManager` to store and retrieve semantic memories with Chroma.
 
 ## Installation
 
@@ -328,6 +333,9 @@ Live tests validate provider wiring, response types, tool calling, streaming eve
 
 ```python
 akasha.ask(...)           # document-aware QA and chat
+asker.vision(...)         # image understanding and visual question answering
+akasha.gen_image(...)     # image generation from a text prompt
+akasha.edit_image(...)    # edit an existing image with a text prompt
 akasha.agents(...)        # native tool-calling agent
 akasha.RAG(...)           # document ingestion and retrieval
 akasha.summary(...)       # map-reduce or refine summaries
@@ -338,4 +346,4 @@ For detailed design decisions, upgrade notes, testing matrices, Skills, and runt
 
 ## License
 
-Akasha is released under the MIT License.
+akasha is released under the MIT License.

@@ -54,7 +54,7 @@ embedding_model = ah.handle_embeddings("ollama:nomic-embed-text")
 query_vector = embedding_model.embed_query("What is retrieval?")
 ```
 
-By default, Akasha connects to `http://localhost:11434`. Set `OLLAMA_API_BASE` to use another Ollama server:
+By default, akasha connects to `http://localhost:11434`. Set `OLLAMA_API_BASE` to use another Ollama server:
 
 ```text
 OLLAMA_API_BASE=http://192.168.1.10:11434

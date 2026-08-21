@@ -4,7 +4,7 @@ MCP (Model Context Protocol) lets an agent discover tools from an external MCP s
 
 ## 1. Install the dependencies
 
-Install Akasha and the MCP server package in the same virtual environment:
+Install akasha and the MCP server package in the same virtual environment:
 
 ```bash
 uv pip install "akasha-terminal[light]" mcp
@@ -134,7 +134,7 @@ Agent answer
 
 ## Local stdio and remote MCP
 
-This example uses Streamable HTTP. Akasha's MCP integration also supports local `stdio` servers. Use stdio when the Agent starts a local process; use Streamable HTTP when a separately managed server exposes an `/mcp` endpoint.
+This example uses Streamable HTTP. akasha's MCP integration also supports local `stdio` servers. Use stdio when the Agent starts a local process; use Streamable HTTP when a separately managed server exposes an `/mcp` endpoint.
 
 !!! warning
     An MCP server can expose powerful capabilities. Only connect to servers you trust, inspect the discovered tools, restrict network access where possible, and never pass secrets in prompts or tool arguments.

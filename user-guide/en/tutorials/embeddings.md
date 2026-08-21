@@ -16,7 +16,7 @@ The provider alias selects the embedding integration. You must configure the cor
 
 ## Use an Ollama embedding model
 
-Akasha can use an embedding model served by Ollama. First make sure Ollama is running and pull the model:
+akasha can use an embedding model served by Ollama. First make sure Ollama is running and pull the model:
 
 ```bash
 ollama pull nomic-embed-text
@@ -38,7 +38,7 @@ print("Query dimensions:", len(query_vector))
 print("Document dimensions:", len(document_vectors[0]))
 ```
 
-Akasha connects to `http://localhost:11434` by default. For another Ollama server, set `OLLAMA_API_BASE` or include the endpoint in the alias:
+akasha connects to `http://localhost:11434` by default. For another Ollama server, set `OLLAMA_API_BASE` or include the endpoint in the alias:
 
 ```text
 OLLAMA_API_BASE=http://192.168.1.10:11434
@@ -83,7 +83,7 @@ print("Dimensions:", len(vectors[0]))
 
 ## Embeddings in RAG
 
-You usually do not need to call the embedding methods directly for RAG. Pass an embedding alias to `akasha.RAG()` and Akasha handles document and query embeddings:
+You usually do not need to call the embedding methods directly for RAG. Pass an embedding alias to `akasha.RAG()` and akasha handles document and query embeddings:
 
 ```python
 import akasha

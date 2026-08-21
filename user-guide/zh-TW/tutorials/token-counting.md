@@ -37,7 +37,7 @@ answer = qa(
 print(answer)
 ```
 
-當 Prompt 或背景資料太大時，Akasha 可能會分割或截斷文件內容；不同流程也可能直接回報輸入大小錯誤。
+當 Prompt 或背景資料太大時，akasha 可能會分割或截斷文件內容；不同流程也可能直接回報輸入大小錯誤。
 
 ## 在 logs 中查看 Token 資訊
 
