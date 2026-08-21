@@ -48,6 +48,7 @@ dependencies = [
   "tavily-python",
   "faiss-cpu",
   "langchain-mcp-adapters>=0.2,<0.3",
+  "mcp>=1.24,<2.0",
   "mlflow",
   "json_repair",
   "jsonpatch>=1.33",
