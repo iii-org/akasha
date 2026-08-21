@@ -5,6 +5,13 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .RAG.rag import RAG
     from .agent import Skill, SkillRegistry, agents, create_tool, default_registry, normalize_mcp_result, normalize_mcp_tools
+    from .embeddings import (
+        create_embeddings,
+        describe_embeddings,
+        embed_documents,
+        embed_query,
+    )
+    from .eval import eval
     from .helper.memory import MemoryManager
     from .tools.ask import ask
     from .tools.gen_img import edit_image, gen_image
@@ -35,6 +42,10 @@ __all__ = [
     "gen_image",
     "edit_image",
     "MemoryManager",
+    "create_embeddings",
+    "describe_embeddings",
+    "embed_documents",
+    "embed_query",
 ]
 
 _LAZY_IMPORTS = {
@@ -53,6 +64,10 @@ _LAZY_IMPORTS = {
     "gen_image": (".tools.gen_img", "gen_image"),
     "edit_image": (".tools.gen_img", "edit_image"),
     "MemoryManager": (".helper.memory", "MemoryManager"),
+    "create_embeddings": (".embeddings", "create_embeddings"),
+    "describe_embeddings": (".embeddings", "describe_embeddings"),
+    "embed_documents": (".embeddings", "embed_documents"),
+    "embed_query": (".embeddings", "embed_query"),
 }
 
 

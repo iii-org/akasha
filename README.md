@@ -8,7 +8,7 @@ Akasha is a Python toolkit for document question answering, retrieval-augmented 
 
 It provides one consistent interface for remote and local model workflows while keeping provider-specific integrations behind model aliases such as `openai:`, `gemini:`, `anthropic:`, and `ollama:`.
 
-- Chinese manual: <https://tea9297.github.io/akasha/>
+- Chinese manual: <https://iii-org.github.io/akasha/>
 - Current package version: `1.5`
 
 ## What Akasha provides

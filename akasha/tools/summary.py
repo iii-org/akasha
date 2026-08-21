@@ -354,20 +354,62 @@ class summary(basic_llm):
 
         return response_list, tokens
 
-    def __call__(self, content: Union[str, list, Path, Document], **kwargs: Any) -> str:
+    def __call__(
+        self,
+        content: Union[str, list, Path, Document],
+        *,
+        model: str | None = None,
+        max_input_tokens: int | None = None,
+        max_output_tokens: int | None = None,
+        sum_type: str | None = None,
+        sum_len: int | None = None,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
+        consecutive_merge_failures: int | None = None,
+        temperature: float | None = None,
+        prompt_format_type: str | None = None,
+        language: str | None = None,
+        record_exp: str | None = None,
+        system_prompt: str | None = None,
+        keep_logs: bool | None = None,
+        verbose: bool | None = None,
+        env_file: str | None = None,
+    ) -> str:
         """Summarize one or more content sources and return the result.
         content can be a string, a list of strings, a path of file, a list of paths of files, a Document object, or a list of Document objects.
         Args:
             **content (Union[str, list, Path, Document])**:  the content you want to summarize, can be '.txt', '.docx', '.pdf' file.\n
             **sum_type (str, optional)**: summary method, "map_reduce" or "refine". Defaults to "map_reduce".\n
             **sum_len (int, optional)**: expected output length. Defaults to 500.\n
-            **kwargs: the arguments you set in the initial of the class, you can change it here. Include:\n
+            Keyword-only options override model, summary method, chunking, token limits, language, logging, and prompt settings for this call.\n
                 chunk_size, chunk_overlap, model, verbose, language , record_exp,
                 system_prompt, max_input_tokens, temperature.
         Returns:
             str: the summary of the content.
         """
 
+        kwargs = {
+            key: value
+            for key, value in {
+                "model": model,
+                "max_input_tokens": max_input_tokens,
+                "max_output_tokens": max_output_tokens,
+                "sum_type": sum_type,
+                "sum_len": sum_len,
+                "chunk_size": chunk_size,
+                "chunk_overlap": chunk_overlap,
+                "consecutive_merge_failures": consecutive_merge_failures,
+                "temperature": temperature,
+                "prompt_format_type": prompt_format_type,
+                "language": language,
+                "record_exp": record_exp,
+                "system_prompt": system_prompt,
+                "keep_logs": keep_logs,
+                "verbose": verbose,
+                "env_file": env_file,
+            }.items()
+            if value is not None
+        }
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
 

@@ -200,8 +200,22 @@ class ask(basic_llm):
         prompt: str,
         info: Union[str, list, Path, Document] = "",
         history_messages: List[str] | None = None,
-        **kwargs: Any,
-    ) -> str:
+        *,
+        model: str | None = None,
+        max_input_tokens: int | None = None,
+        max_output_tokens: int | None = None,
+        temperature: float | None = None,
+        prompt_format_type: str | None = None,
+        language: str | None = None,
+        record_exp: str | None = None,
+        system_prompt: str | None = None,
+        keep_logs: bool | None = None,
+        verbose: bool | None = None,
+        stream: bool | None = None,
+        env_file: str | None = None,
+        thinking: bool | None = None,
+        thinking_budget: ThinkingBudget | None = None,
+    ) -> str | Generator[str, None, None]:
         """the function to ask model with prompt and info documents,
         the info can be file path, url, directory path, or list of Document object
         if the info has too many tokens, it will be separated into multiple documents and ask model batchly
@@ -209,7 +223,7 @@ class ask(basic_llm):
         Args:
             prompt (str): the user question
             info (Union[str, list], optional): the support information for llm to answer the question. Defaults to "".
-            history_messages (list, optional): the chat history, record them and add to here for memory.
+            history_messages: Optional prior turns as alternating user/assistant strings.
             Defaults to []. ex: ["hello! how are you?", "I am fine, thank you!"]
 
         Returns:
@@ -217,6 +231,26 @@ class ask(basic_llm):
         """
 
         history_messages = history_messages or []
+        kwargs = {
+            key: value
+            for key, value in {
+                "model": model,
+                "max_input_tokens": max_input_tokens,
+                "max_output_tokens": max_output_tokens,
+                "temperature": temperature,
+                "prompt_format_type": prompt_format_type,
+                "language": language,
+                "record_exp": record_exp,
+                "system_prompt": system_prompt,
+                "keep_logs": keep_logs,
+                "verbose": verbose,
+                "stream": stream,
+                "env_file": env_file,
+                "thinking": thinking,
+                "thinking_budget": thinking_budget,
+            }.items()
+            if value is not None
+        }
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.prompt = prompt
@@ -325,8 +359,17 @@ class ask(basic_llm):
         return self.response
 
     def vision(
-        self, prompt: str, image_path: Union[List[str], str], **kwargs: Any
-    ) -> str:
+        self,
+        prompt: str,
+        image_path: Union[List[str], str],
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_output_tokens: int | None = None,
+        env_file: str | None = None,
+        verbose: bool | None = None,
+        keep_logs: bool | None = None,
+    ) -> str | Generator[str, None, None]:
         """Ask a vision-capable model about one or more images.
 
         Args:
@@ -336,6 +379,18 @@ class ask(basic_llm):
         Returns:
             str: The model's answer.
         """
+        kwargs = {
+            key: value
+            for key, value in {
+                "model": model,
+                "temperature": temperature,
+                "max_output_tokens": max_output_tokens,
+                "env_file": env_file,
+                "verbose": verbose,
+                "keep_logs": keep_logs,
+            }.items()
+            if value is not None
+        }
         self._set_model(**kwargs)
         self._change_variables(**kwargs)
         self.prompt = prompt

@@ -199,8 +199,25 @@ class RAG(atman):
         data_source: Union[List[Union[str, Path]], Path, str, dbs],
         prompt: str,
         history_messages: list[dict[str, Any]] | None = None,
-        **kwargs: Any,
-    ) -> str:
+        *,
+        model: str | BaseLanguageModel | None = None,
+        embeddings: str | Embeddings | None = None,
+        chunk_size: int | None = None,
+        search_type: str | Callable | None = None,
+        max_input_tokens: int | None = None,
+        max_output_tokens: int | None = None,
+        temperature: float | None = None,
+        threshold: float | None = None,
+        language: str | None = None,
+        record_exp: str | None = None,
+        system_prompt: str | None = None,
+        prompt_format_type: str | None = None,
+        keep_logs: bool | None = None,
+        use_chroma: bool | None = None,
+        stream: bool | None = None,
+        verbose: bool | None = None,
+        env_file: str | None = None,
+    ) -> str | Generator[str, None, None]:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         llm model will use these documents to generate the response of the question.
@@ -208,7 +225,7 @@ class RAG(atman):
             Args:
                 **data_source (Union[List[Union[str, Path]], Path, str, dbs])**: documents directory path\n
                 **prompt (str)**:question you want to ask.\n
-                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                Keyword-only options override model, embeddings, chunking, search, token limits, language, logging, and prompt settings for this call.\n
                 embeddings, chunk_size, model, verbose, topK, language , search_type, record_exp,
                 system_prompt, max_doc_len, temperature.
 
@@ -216,6 +233,29 @@ class RAG(atman):
                 response (str): the response from llm model.
         """
         history_messages = history_messages or []
+        kwargs = {
+            key: value
+            for key, value in {
+                "model": model,
+                "embeddings": embeddings,
+                "chunk_size": chunk_size,
+                "search_type": search_type,
+                "max_input_tokens": max_input_tokens,
+                "max_output_tokens": max_output_tokens,
+                "temperature": temperature,
+                "threshold": threshold,
+                "language": language,
+                "record_exp": record_exp,
+                "system_prompt": system_prompt,
+                "prompt_format_type": prompt_format_type,
+                "keep_logs": keep_logs,
+                "use_chroma": use_chroma,
+                "stream": stream,
+                "verbose": verbose,
+                "env_file": env_file,
+            }.items()
+            if value is not None
+        }
         ### set variables ###
 
         self._set_model(**kwargs)
@@ -409,8 +449,24 @@ class RAG(atman):
         self,
         data_source: Union[List[Union[str, Path]], Path, str, dbs],
         prompt: str,
-        **kwargs: Any,
-    ) -> str:
+        *,
+        model: str | BaseLanguageModel | None = None,
+        embeddings: str | Embeddings | None = None,
+        chunk_size: int | None = None,
+        search_type: str | Callable | None = None,
+        max_input_tokens: int | None = None,
+        max_output_tokens: int | None = None,
+        temperature: float | None = None,
+        threshold: float | None = None,
+        language: str | None = None,
+        record_exp: str | None = None,
+        system_prompt: str | None = None,
+        prompt_format_type: str | None = None,
+        keep_logs: bool | None = None,
+        use_chroma: bool | None = None,
+        verbose: bool | None = None,
+        env_file: str | None = None,
+    ) -> str | Generator[str, None, None]:
         """input the documents directory path and question, will first store the documents
         into vectors db (chromadb), then search similar documents based on the prompt question.
         question will use self-ask with search to solve complex question.
@@ -419,7 +475,7 @@ class RAG(atman):
             Args:
                 **data_source (Union[List[Union[str, Path]], Path, str, dbs])**: documents directory path\n
                 **prompt (str)**:question you want to ask.\n
-                **kwargs**: the arguments you set in the initial of the class, you can change it here. Include:\n
+                Keyword-only options override model, embeddings, chunking, search, token limits, language, logging, and prompt settings for this call.\n
                 embeddings, chunk_size, model, verbose, language , search_type, record_exp,
                 system_prompt, max_input_tokens, temperature.
 
@@ -427,6 +483,28 @@ class RAG(atman):
                 response (str): the response from llm model.
         """
 
+        kwargs = {
+            key: value
+            for key, value in {
+                "model": model,
+                "embeddings": embeddings,
+                "chunk_size": chunk_size,
+                "search_type": search_type,
+                "max_input_tokens": max_input_tokens,
+                "max_output_tokens": max_output_tokens,
+                "temperature": temperature,
+                "threshold": threshold,
+                "language": language,
+                "record_exp": record_exp,
+                "system_prompt": system_prompt,
+                "prompt_format_type": prompt_format_type,
+                "keep_logs": keep_logs,
+                "use_chroma": use_chroma,
+                "verbose": verbose,
+                "env_file": env_file,
+            }.items()
+            if value is not None
+        }
         ### set variables ###
 
         self._set_model(**kwargs)
