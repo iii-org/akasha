@@ -133,6 +133,26 @@ def _last_answer(messages: list) -> str:
     return ""
 
 
+def _loaded_skill_events(messages: list) -> list[dict[str, str]]:
+    """Extract completed ``load_skill`` calls from agent messages."""
+    references: dict[str, str] = {}
+    events = []
+    for message in messages:
+        if isinstance(message, (AIMessage, AIMessageChunk)):
+            for call in getattr(message, "tool_calls", None) or []:
+                if call.get("name") == "load_skill":
+                    reference = call.get("args", {}).get("reference")
+                    if reference:
+                        references[str(call.get("id", ""))] = str(reference)
+        elif isinstance(message, ToolMessage) and getattr(message, "name", None) == "load_skill":
+            reference = references.get(str(getattr(message, "tool_call_id", "")))
+            if reference:
+                events.append(
+                    {"reference": reference, "message": _message_text(message)}
+                )
+    return events
+
+
 def _stream_update_messages(update: Any) -> list:
     """Read messages from LangGraph v1/v2 update stream shapes."""
     payload = update
@@ -383,6 +403,8 @@ class agents(basic_llm):
                     self._display_tool_call(call)
             elif isinstance(message, ToolMessage):
                 self._display_tool_result(message)
+        for event in _loaded_skill_events(messages):
+            self._emit_trace(f"skill loaded: {event['reference']}")
 
     def _record_result(self, timestamp: str, result: Any, elapsed: float) -> None:
         if self.skill_middleware is not None:
@@ -413,6 +435,7 @@ class agents(basic_llm):
                     "provider": self.model.split(":", 1)[0],
                     "tokens": self.tokens,
                     "input_len": self.input_len,
+                    "loaded_skills": _loaded_skill_events(messages),
                 }
             )
 

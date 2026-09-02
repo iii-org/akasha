@@ -80,3 +80,6 @@ summarization/20230531_*.txt
 .agents/
 .claude/
 .codex/skills/
+.codex
+
+

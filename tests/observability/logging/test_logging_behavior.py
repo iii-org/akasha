@@ -171,6 +171,50 @@ def test_agent_verbose_prints_non_stream_tool_trace(monkeypatch, capsys):
     assert "[akasha] tool" not in capsys.readouterr().out
 
 
+def test_agent_logs_skill_load_lifecycle(monkeypatch, capsys):
+    class FakeAgent:
+        async def ainvoke(self, _payload, config=None):
+            return {
+                "messages": [
+                    AIMessage(
+                        content="",
+                        tool_calls=[
+                            {
+                                "name": "load_skill",
+                                "args": {"reference": "python-repl-skill"},
+                                "id": "load-1",
+                            }
+                        ],
+                    ),
+                    ToolMessage(
+                        content="Skill 'python-repl-skill' loaded. Its instructions and resources are now available.",
+                        name="load_skill",
+                        tool_call_id="load-1",
+                    ),
+                    AIMessage(content="The skill is ready."),
+                ]
+            }
+
+    agents_module = _install_fake_agent(monkeypatch, FakeAgent())
+    agent = agents_module.agents(
+        model="fake:model",
+        verbose=True,
+        keep_logs=True,
+    )
+
+    assert agent("prepare") == "The skill is ready."
+
+    output = capsys.readouterr().out
+    assert "skill loaded: python-repl-skill" in output
+    log = agent.logs[agent.timestamp_list[-1]]
+    assert log["loaded_skills"] == [
+        {
+            "reference": "python-repl-skill",
+            "message": "Skill 'python-repl-skill' loaded. Its instructions and resources are now available.",
+        }
+    ]
+
+
 def test_agent_keep_logs_writes_the_same_tool_trace_as_verbose(
     monkeypatch, tmp_path, capsys
 ):
