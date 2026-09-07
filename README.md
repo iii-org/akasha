@@ -97,6 +97,27 @@ AZURE_OPENAI_BASE_URL=https://your-resource.openai.azure.com/
 OLLAMA_API_BASE=http://localhost:11434
 ```
 
+### Gemini backends
+
+The default Gemini Developer API configuration needs only an API key:
+
+```env
+GEMINI_API_KEY=your_key
+```
+
+To use Vertex AI **Express Mode** with an API key rather than Application
+Default Credentials (ADC), use the same key and enable the explicit selector:
+
+```env
+GEMINI_API_KEY=your_key
+GOOGLE_GENAI_USE_VERTEXAI=true
+```
+
+Do not set `GOOGLE_CLOUD_PROJECT` or `GOOGLE_CLOUD_LOCATION` for Express Mode.
+Those variables select the full Vertex AI project/location authentication path,
+which requires ADC and takes precedence over an API key. Full Vertex AI ADC
+configuration is outside Akasha's API-key Express Mode support.
+
 Supported chat model aliases include:
 
 ```text

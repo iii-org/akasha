@@ -17,6 +17,18 @@ import os
 print(bool(os.getenv("GEMINI_API_KEY")))
 ```
 
+### Vertex AI 出現 `DefaultCredentialsError`
+
+若使用 API-key Vertex Express Mode，只設定：
+
+```env
+GEMINI_API_KEY=your_key
+GOOGLE_GENAI_USE_VERTEXAI=true
+```
+
+移除 `GOOGLE_CLOUD_PROJECT` 與 `GOOGLE_CLOUD_LOCATION`；它們會改選需要 ADC 的
+完整 Vertex AI project/location 路徑，且優先於 API key。
+
 ## RAG 找不到文件
 
 請從程式實際執行的工作目錄確認路徑：

@@ -72,6 +72,7 @@ def _get_env_var(env_file: str = "") -> dict:
         "AZURE_OPENAI_BASE_URL",
         "SERPER_API_KEY",
         "GEMINI_API_KEY",
+        "GOOGLE_GENAI_USE_VERTEXAI",
         "HF_TOKEN",
         "HUGGINGFACEHUB_API_TOKEN",
         "ANTHROPIC_API_KEY",

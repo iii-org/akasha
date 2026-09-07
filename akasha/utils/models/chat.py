@@ -1,5 +1,8 @@
 """LangChain ChatModel factory used by the public Akasha model selectors."""
 
+import os
+from contextlib import contextmanager
+from threading import RLock
 from typing import Any, Mapping
 from urllib.parse import urlsplit, urlunsplit
 
@@ -8,6 +11,31 @@ from akasha.utils.models.thinking import (
     normalize_thinking_budget,
     normalize_thinking_level,
 )
+
+
+_VERTEX_EXPRESS_ENV_LOCK = RLock()
+_VERTEX_PROJECT_ENV_NAMES = (
+    "GOOGLE_CLOUD_PROJECT",
+    "GOOGLE_CLOUD_LOCATION",
+)
+
+
+@contextmanager
+def _without_vertex_project_environment():
+    """Prevent ambient ADC settings from overriding a Vertex Express API key."""
+
+    with _VERTEX_EXPRESS_ENV_LOCK:
+        previous_values = {
+            name: os.environ.pop(name, None) for name in _VERTEX_PROJECT_ENV_NAMES
+        }
+        try:
+            yield
+        finally:
+            for name, value in previous_values.items():
+                if value is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
 
 
 def _normalize_openai_base_url(base_url: str) -> str:
@@ -102,16 +130,32 @@ def build_chat_model(
             raise ValueError("can not find the GEMINI_API_KEY in environment variable.\n\n")
         kwargs = {
             "model": model_name,
-            "google_api_key": env["GEMINI_API_KEY"],
+            "api_key": env["GEMINI_API_KEY"],
             "temperature": temperature,
             "max_output_tokens": max_output_tokens,
         }
+        use_vertex = str(env.get("GOOGLE_GENAI_USE_VERTEXAI", "")).lower() in {
+            "true",
+            "1",
+            "yes",
+        }
+        if use_vertex:
+            kwargs.update(
+                vertexai=True,
+                # LangChain otherwise defaults this to ``us-central1``.  An
+                # empty value selects Google GenAI's Vertex Express API-key
+                # path instead of the project/location ADC path.
+                location="",
+            )
         if thinking:
             kwargs["include_thoughts"] = True
             if thinking_level is not None and model_name.lower().startswith("gemini-3"):
                 kwargs["thinking_level"] = thinking_level
             elif normalized_budget is not None:
                 kwargs["thinking_budget"] = normalized_budget
+        if use_vertex:
+            with _without_vertex_project_environment():
+                return ChatGoogleGenerativeAI(**kwargs)
         return ChatGoogleGenerativeAI(**kwargs)
 
     if provider in {"anthropic", "anthropicai", "claude", "anthro"}:

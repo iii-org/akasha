@@ -8,6 +8,27 @@ OPENAI_API_KEY=your_key
 ANTHROPIC_API_KEY=your_key
 ```
 
+## Gemini backend modes
+
+For the Gemini Developer API, set only an API key:
+
+```env
+GEMINI_API_KEY=your_key
+```
+
+To use Vertex AI **Express Mode** with an API key instead of Application
+Default Credentials (ADC), use the same key and explicitly opt in:
+
+```env
+GEMINI_API_KEY=your_key
+GOOGLE_GENAI_USE_VERTEXAI=true
+```
+
+Do not set `GOOGLE_CLOUD_PROJECT` or `GOOGLE_CLOUD_LOCATION` for Express Mode.
+They select the full Vertex AI project/location path, which requires ADC and
+takes precedence over an API key. Akasha's Vertex API-key support is Express
+Mode; it does not configure the full ADC-based Vertex AI path.
+
 Examples of model aliases:
 
 ```text

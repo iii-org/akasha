@@ -17,6 +17,19 @@ import os
 print(bool(os.getenv("GEMINI_API_KEY")))
 ```
 
+### Vertex AI reports `DefaultCredentialsError`
+
+For API-key Vertex AI Express Mode, set only:
+
+```env
+GEMINI_API_KEY=your_key
+GOOGLE_GENAI_USE_VERTEXAI=true
+```
+
+Remove `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`. Those variables
+select the ADC-based full Vertex AI project/location path and take precedence
+over an API key.
+
 ## RAG cannot find documents
 
 Check the path from the same working directory where the program runs:

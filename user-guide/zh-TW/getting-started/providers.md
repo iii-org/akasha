@@ -8,6 +8,26 @@ OPENAI_API_KEY=your_key
 ANTHROPIC_API_KEY=your_key
 ```
 
+## Gemini 後端模式
+
+使用 Gemini Developer API 時，只需設定 API key：
+
+```env
+GEMINI_API_KEY=your_key
+```
+
+若要以 API key 使用 Vertex AI **Express Mode**，使用同一把 key 並開啟 Vertex selector：
+
+```env
+GEMINI_API_KEY=your_key
+GOOGLE_GENAI_USE_VERTEXAI=true
+```
+
+Express Mode 不要設定 `GOOGLE_CLOUD_PROJECT` 或 `GOOGLE_CLOUD_LOCATION`。
+這兩個變數設定的是完整 Vertex AI 的 project/location 認證路徑；該路徑需要
+Application Default Credentials (ADC)，且會優先於 API key。Akasha 的 Vertex
+API-key 支援是 Express Mode，不會設定完整的 ADC 路徑。
+
 模型別名範例：
 
 ```text
