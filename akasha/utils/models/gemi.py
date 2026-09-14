@@ -12,6 +12,56 @@ from pathlib import Path
 import concurrent.futures
 
 
+def _reason_value(reason: Any) -> str:
+    """Return a readable value for SDK enums and test doubles."""
+    if reason is None:
+        return "None"
+    return str(getattr(reason, "value", reason))
+
+
+def _save_generated_image(
+    response: Any, save_path: Union[str, Path], verbose: bool
+) -> Path:
+    """Save Gemini inline image data or raise with the provider's stop reasons."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    output_path = Path(save_path)
+    if output_path.is_dir():
+        output_path /= "image.png"
+
+    candidates = getattr(response, "candidates", None) or []
+    candidate = candidates[0] if candidates else None
+    content = getattr(candidate, "content", None)
+    parts = getattr(content, "parts", None) or []
+    image_saved = False
+
+    for part in parts:
+        text = getattr(part, "text", None)
+        inline_data = getattr(part, "inline_data", None)
+        if text is not None and verbose:
+            print(text)
+        if inline_data is not None:
+            image = Image.open(BytesIO(inline_data.data))
+            image.save(str(output_path))
+            image_saved = True
+            if verbose:
+                print(f"Image saved to {output_path}")
+
+    if not image_saved:
+        finish_reason = _reason_value(getattr(candidate, "finish_reason", None))
+        prompt_feedback = getattr(response, "prompt_feedback", None)
+        block_reason = _reason_value(getattr(prompt_feedback, "block_reason", None))
+        raise RuntimeError(
+            "Gemini image response contained no inline_data "
+            f"(finish_reason={finish_reason}, "
+            f"prompt_feedback.block_reason={block_reason})."
+        )
+
+    return output_path
+
+
 class gemini_model(LLM):
     max_token: int = 4096
     max_output_tokens: int = 1024
@@ -199,28 +249,15 @@ class gemini_model(LLM):
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=prompt,
-            config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+            config=types.GenerateContentConfig(
+                response_modalities=["TEXT", "IMAGE"],
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=True
+                ),
+            ),
         )
 
-        from PIL import Image
-        from io import BytesIO
-
-        path = Path(save_path)
-        if path.is_dir():
-            # If it's a directory, append default filename
-            save_path = path / "image.png"
-
-        for part in response.candidates[0].content.parts:
-            if part.text is not None and verbose:
-                print(part.text)
-            elif part.inline_data is not None:
-                image = Image.open(BytesIO((part.inline_data.data)))
-                image.save(save_path.__str__())
-                # image.show()
-                if verbose:
-                    print(f"Image saved to {save_path.__str__()}")
-
-        return save_path
+        return _save_generated_image(response, save_path, verbose)
 
     def edit(
         self,
@@ -249,28 +286,15 @@ class gemini_model(LLM):
         response = self.client.models.generate_content(
             model=self.model_name,
             contents=images_source,
-            config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+            config=types.GenerateContentConfig(
+                response_modalities=["TEXT", "IMAGE"],
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=True
+                ),
+            ),
         )
 
-        from PIL import Image
-        from io import BytesIO
-
-        path = Path(save_path)
-        if path.is_dir():
-            # If it's a directory, append default filename
-            save_path = path / "image.png"
-
-        for part in response.candidates[0].content.parts:
-            if part.text is not None and verbose:
-                print(part.text)
-            elif part.inline_data is not None:
-                image = Image.open(BytesIO((part.inline_data.data)))
-                image.save(save_path.__str__())
-                # image.show()
-                if verbose:
-                    print(f"Image saved to {save_path.__str__()}")
-
-        return save_path
+        return _save_generated_image(response, save_path, verbose)
 
     def get_num_tokens(self, text: str) -> int:
         try:

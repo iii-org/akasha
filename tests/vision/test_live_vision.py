@@ -13,7 +13,7 @@ RUN_VISION_TESTS = os.getenv("RUN_VISION_TESTS") == "1"
 VISION_CASES = [
     pytest.param(
         "gemini:gemini-2.5-flash",
-        "gemini:gemini-2.5-flash-image",
+        "gemini:gemini-3.1-flash-image",
         "GEMINI_API_KEY",
         id="gemini",
     ),
