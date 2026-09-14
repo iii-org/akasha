@@ -1,4 +1,5 @@
 {
+  "0": "Q: 那沒有local rerank model的話，那light版是如何用llm api運作的呢",
   "124": "Q: 我執行 repl_app.py 然後再看輸出時，看不出是模型自己想的，還是有根據 skill 做的? 能在加上一些過程的訊息嗎?",
   "125": "Q: verbose=True 應由 akasha 內部印出載入 skill 與使用工具的過程，而不是要求範例使用者解析 stream event。"
 }

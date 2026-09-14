@@ -29,6 +29,13 @@ def test_runtime_uses_numpy_2():
     assert int(np.__version__.split(".", maxsplit=1)[0]) == 2
 
 
+def test_core_dependencies_include_pillow_for_public_image_apis():
+    project = _project_metadata()
+    base = {_requirement_name(dep) for dep in project["dependencies"]}
+
+    assert "pillow" in base
+
+
 @pytest.mark.full_only
 def test_installed_local_model_stack_imports_with_numpy_2():
     pytest.importorskip("torch")

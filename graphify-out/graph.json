@@ -112,6 +112,50 @@
       "community": 125,
       "community_name": "Q: verbose=True \u61c9\u7531 akasha \u5167\u90e8\u5370\u51fa\u8f09\u5165 skill \u8207\u4f7f\u7528\u5de5\u5177\u7684\u904e\u7a0b\uff0c\u800c\u4e0d\u662f\u8981\u6c42\u7bc4\u4f8b\u4f7f\u7528\u8005\u89e3\u6790 stream event\u3002",
       "norm_label": "source nodes"
+    },
+    {
+      "label": "query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462",
+      "community": 0,
+      "community_name": "Q: \u90a3\u6c92\u6709local rerank model\u7684\u8a71\uff0c\u90a3light\u7248\u662f\u5982\u4f55\u7528llm api\u904b\u4f5c\u7684\u5462",
+      "norm_label": "query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md"
+    },
+    {
+      "label": "Q: \u90a3\u6c92\u6709local rerank model\u7684\u8a71\uff0c\u90a3light\u7248\u662f\u5982\u4f55\u7528llm api\u904b\u4f5c\u7684\u5462",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_q_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462",
+      "community": 0,
+      "community_name": "Q: \u90a3\u6c92\u6709local rerank model\u7684\u8a71\uff0c\u90a3light\u7248\u662f\u5982\u4f55\u7528llm api\u904b\u4f5c\u7684\u5462",
+      "norm_label": "q: \u90a3\u6c92\u6709local rerank model\u7684\u8a71,\u90a3light\u7248\u662f\u5982\u4f55\u7528llm api\u904b\u4f5c\u7684\u5462"
+    },
+    {
+      "label": "Answer",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_answer",
+      "community": 0,
+      "community_name": "Q: \u90a3\u6c92\u6709local rerank model\u7684\u8a71\uff0c\u90a3light\u7248\u662f\u5982\u4f55\u7528llm api\u904b\u4f5c\u7684\u5462",
+      "norm_label": "answer"
+    },
+    {
+      "label": "Outcome",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_outcome",
+      "community": 0,
+      "community_name": "Q: \u90a3\u6c92\u6709local rerank model\u7684\u8a71\uff0c\u90a3light\u7248\u662f\u5982\u4f55\u7528llm api\u904b\u4f5c\u7684\u5462",
+      "norm_label": "outcome"
     }
   ],
   "links": [
@@ -194,8 +238,38 @@
       "source": "graphify_out_memory_query_20260728_025804_verbose_true_\u61c9\u7531_akasha_\u5167\u90e8\u5370\u51fa\u8f09\u5165_skill_\u8207\u4f7f\u7528\u5de5\u5177\u7684\u904e\u7a0b_\u800c\u4e0d\u662f\u8981\u6c42_q_verbose_true_\u61c9\u7531_akasha_\u5167\u90e8\u5370\u51fa\u8f09\u5165_skill_\u8207\u4f7f\u7528\u5de5\u5177\u7684\u904e\u7a0b_\u800c\u4e0d\u662f\u8981\u6c42\u7bc4\u4f8b\u4f7f\u7528\u8005\u89e3\u6790_stream_event",
       "target": "graphify_out_memory_query_20260728_025804_verbose_true_\u61c9\u7531_akasha_\u5167\u90e8\u5370\u51fa\u8f09\u5165_skill_\u8207\u4f7f\u7528\u5de5\u5177\u7684\u904e\u7a0b_\u800c\u4e0d\u662f\u8981\u6c42_source_nodes",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "source": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462",
+      "target": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_q_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L11",
+      "weight": 1.0,
+      "source": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_q_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462",
+      "target": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_answer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462.md",
+      "source_location": "L15",
+      "weight": 1.0,
+      "source": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_q_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462",
+      "target": "graphify_out_memory_query_20260912_153218_\u90a3\u6c92\u6709local_rerank_model\u7684\u8a71_\u90a3light\u7248\u662f\u5982\u4f55\u7528llm_api\u904b\u4f5c\u7684\u5462_outcome",
+      "confidence_score": 1.0
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4fb684f93de52089576a1f9549c11a51168eb3ef"
+  "built_at_commit": "09aa1aa17c316f4c4aa216ed866e8fafb4da057d"
 }
