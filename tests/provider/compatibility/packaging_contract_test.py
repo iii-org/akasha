@@ -36,6 +36,13 @@ def test_core_dependencies_include_pillow_for_public_image_apis():
     assert "pillow" in base
 
 
+def test_core_dependencies_include_fastapi_stack_for_public_api():
+    project = _project_metadata()
+    base = {_requirement_name(dep) for dep in project["dependencies"]}
+
+    assert {"fastapi", "uvicorn"} <= base
+
+
 @pytest.mark.full_only
 def test_installed_local_model_stack_imports_with_numpy_2():
     pytest.importorskip("torch")
@@ -109,3 +116,12 @@ def test_generated_requirements_match_project_profiles():
         *project["dependencies"],
         *project["optional-dependencies"]["full"],
     ]
+
+
+def test_light_ci_excludes_full_only_tests():
+    root = Path(__file__).parents[3]
+    workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert '-m "not full_only"' in workflow

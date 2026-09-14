@@ -65,3 +65,18 @@ def test_rag_import_does_not_require_optional_feature_stacks():
         "assert 'torch' not in sys.modules"
     )
     assert output == ""
+
+
+def test_api_import_and_cleanup_do_not_require_torch():
+    output = _run_probe(
+        "import builtins, sys; "
+        "original_import = builtins.__import__; "
+        "builtins.__import__ = lambda name, *args, **kwargs: "
+        "(_ for _ in ()).throw(ImportError(name)) "
+        "if name.split('.', 1)[0] == 'torch' "
+        "else original_import(name, *args, **kwargs); "
+        "import akasha.api; "
+        "akasha.api.clean(); "
+        "assert 'torch' not in sys.modules"
+    )
+    assert output == ""

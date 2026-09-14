@@ -3,7 +3,6 @@ from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel
 import akasha
 import gc
-import torch
 import os
 
 app = FastAPI()
@@ -12,6 +11,8 @@ app = FastAPI()
 def clean():
     try:
         gc.collect()
+        import torch
+
         torch.cuda.ipc_collect()
         torch.cuda.empty_cache()
     except Exception:

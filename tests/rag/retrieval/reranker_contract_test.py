@@ -97,6 +97,11 @@ def test_local_bge_reranker_is_lazy_and_reorders_by_score(monkeypatch):
         calls.append((model_name, pairs))
         return [0.1, 0.9]
 
+    monkeypatch.setattr(
+        rerank_module,
+        "validate_reranker_dependencies",
+        lambda _reranker: None,
+    )
     monkeypatch.setattr(rerank_module, "_score_with_local_bge", fake_score)
 
     result = rerank_documents("question", docs, "local:BAAI/bge-reranker-base")

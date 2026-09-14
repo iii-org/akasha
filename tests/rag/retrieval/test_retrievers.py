@@ -17,6 +17,12 @@ class _FakeDB(dbs):
 def test_get_retrievers_builds_expected_retriever_types(monkeypatch):
     calls = []
 
+    monkeypatch.setattr(
+        retriever_base,
+        "validate_search_type_dependencies",
+        lambda _search_type: None,
+    )
+
     def record(name):
         def _factory(*args, **kwargs):
             calls.append((name, args, kwargs))

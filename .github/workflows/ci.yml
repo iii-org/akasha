@@ -90,4 +90,4 @@ jobs:
         run: pytest tests/vision --maxfail=1 --disable-warnings -vv -s
 
       - name: Run pytest
-        run: pytest --maxfail=1 --disable-warnings -vv -s -k "not ollama" --ignore=tests/vision
+        run: pytest --maxfail=1 --disable-warnings -vv -s -m "not full_only" -k "not ollama" --ignore=tests/vision
