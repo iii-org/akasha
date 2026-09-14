@@ -1,20 +1,23 @@
-from typing import Union, List, Tuple, Callable, Optional
+import gc
+import logging
+from collections import defaultdict
 from pathlib import Path
+from typing import Callable, List, Optional, Tuple, Union
+
 from langchain_core.embeddings import Embeddings
-from akasha.utils.db.db_structure import dbs, get_storage_directory, is_url
-from akasha.utils.db.extract_db import extract_db_by_file
+from tqdm import tqdm
+
+from akasha.helper import separate_name
+from akasha.helper.handle_objects import handle_embeddings_and_name
+from akasha.utils.db.chroma_compat import get_chroma_components
 from akasha.utils.db.create_db import (
     create_directory_db,
     create_single_file_db,
     create_webpage_db,
 )
-from akasha.helper import separate_name
-from akasha.helper.handle_objects import handle_embeddings_and_name
-import logging
-import gc
-from collections import defaultdict
-from tqdm import tqdm
-from akasha.utils.db.chroma_compat import get_chroma_components
+from akasha.utils.db.db_structure import dbs, get_storage_directory, is_url
+from akasha.utils.db.extract_db import extract_db_by_file
+from akasha.utils.optional_dependencies import OptionalDependencyError
 
 
 def process_db(
@@ -87,6 +90,8 @@ def process_db(
                     chunk_size,
                 )
                 tot_db.merge(new_dbs)
+        except OptionalDependencyError:
+            raise
         except Exception as e:
             logging.warning(f"Error loading directory {data_path}: {e}")
             print(f"Error loading directory {data_path}: {e}")
@@ -107,6 +112,8 @@ def process_db(
                     suc_files.append(data_path)
                 else:
                     ignored_files.append(data_path)
+            except OptionalDependencyError:
+                raise
             except Exception as e:
                 logging.warning(f"Error loading file {data_path}: {e}")
                 print(f"Error loading file {data_path}: {e}")

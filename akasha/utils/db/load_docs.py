@@ -1,8 +1,11 @@
-from langchain_core.documents import Document
-from typing import Union, List
 from pathlib import Path
+from typing import List, Union
+
+from langchain_core.documents import Document
+
 from akasha.utils.db.db_structure import is_url
-from akasha.utils.db.file_loader import load_file, load_directory, load_url
+from akasha.utils.db.file_loader import load_directory, load_file, load_url
+from akasha.utils.optional_dependencies import OptionalDependencyError
 
 
 def _get_file_dir_docs(s: Union[str, Path]) -> List[Document]:
@@ -23,6 +26,8 @@ def _get_file_dir_docs(s: Union[str, Path]) -> List[Document]:
             return load_directory(s)
         else:
             return [Document(page_content=s.__str__())]
+    except OptionalDependencyError:
+        raise
     except Exception as e:
         print(f"Error loading {s}: {e}")
         return [Document(page_content=s.__str__())]

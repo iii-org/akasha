@@ -1,16 +1,16 @@
+# from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+import os
 import warnings
 from pathlib import Path
-from typing import Callable, Union, Tuple
+from typing import Callable, Tuple, Union
 
-# from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-
-import os
-import traceback
-from langchain_core.language_models.base import BaseLanguageModel
-from langchain_core.embeddings import Embeddings
 from dotenv import dotenv_values
+from langchain_core.embeddings import Embeddings
+from langchain_core.language_models.base import BaseLanguageModel
+
+from akasha.helper.base import decide_embedding_type, separate_name
 from akasha.utils.models.thinking import ThinkingBudget
-from akasha.helper.base import separate_name, decide_embedding_type
+from akasha.utils.optional_dependencies import OptionalDependencyError
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
@@ -162,10 +162,10 @@ def handle_embeddings(
                 model_name=embedding_name, model_kwargs={"trust_remote_code": True}
             )
             info = "selected hugging face embeddings.\n"
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        except OptionalDependencyError:
+            raise
+        except ImportError as exc:
+            raise OptionalDependencyError("Hugging Face embeddings", "full") from exc
 
     elif embedding_type in [
         "tf",
@@ -383,10 +383,10 @@ def handle_model(
                 max_output_tokens=max_output_tokens,
             )
             info = "selected llama-cpp model\n"
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'llama-cpp-python' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        except OptionalDependencyError:
+            raise
+        except ImportError as exc:
+            raise OptionalDependencyError("llama.cpp models", "llama-cpp") from exc
     elif model_type in [
         "huggingface",
         "huggingfacehub",
@@ -405,10 +405,10 @@ def handle_model(
                 max_output_tokens=max_output_tokens,
             )
             info = f"selected huggingface model {model_name}.\n"
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        except OptionalDependencyError:
+            raise
+        except ImportError as exc:
+            raise OptionalDependencyError("Hugging Face models", "full") from exc
 
     elif model_type in ["chatglm", "chatglm2", "glm"]:
         try:
@@ -420,10 +420,10 @@ def handle_model(
                 max_output_tokens=max_output_tokens,
             )
             info = f"selected chatglm model {model_name}.\n"
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        except OptionalDependencyError:
+            raise
+        except ImportError as exc:
+            raise OptionalDependencyError("ChatGLM models", "full") from exc
 
     elif model_type in ["lora", "peft"]:
         try:
@@ -431,10 +431,10 @@ def handle_model(
 
             model = peft_Llama2(model_name_or_path=model_name, temperature=temperature)
             info = f"selected peft model {model_name}.\n"
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'torch/transformers/peft' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        except OptionalDependencyError:
+            raise
+        except ImportError as exc:
+            raise OptionalDependencyError("PEFT models", "peft") from exc
 
     elif model_type in ["gptq"]:
         try:
@@ -455,10 +455,10 @@ def handle_model(
                     max_token=4096,
                 )
             info = f"selected gptq model {model_name}.\n"
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'torch/transformers/auto-gptq' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        except OptionalDependencyError:
+            raise
+        except ImportError as exc:
+            raise OptionalDependencyError("GPTQ models", "gptq") from exc
     else:
         if model_type not in ["openai", "gpt-3.5", "gpt"]:
             info = f"can not find the model {model_type}:{model_name}, use openai as default.\n"

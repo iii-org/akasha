@@ -14,7 +14,7 @@ ak = akasha.ask(
 
 ### use info as reference, could be empty, but not recommand to be large, since llm will use all of the content to answer the question ###
 ### info can be a list of local files, string, directories, or urls ###
-### files includes pdf, docx, txt, md, csv, pptx files ###
+### files include pdf, docx, txt, md, and csv; pptx needs [documents] ###
 res = ak(
     prompt=PROMPT,
     info=["https://github.com/iii-org/akasha"],

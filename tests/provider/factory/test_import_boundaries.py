@@ -5,7 +5,6 @@ import sys
 
 import pytest
 
-
 pytestmark = pytest.mark.unit
 
 
@@ -37,5 +36,32 @@ def test_selected_gemini_adapter_does_not_load_openai_sdk():
         "build_chat_model('gemini', 'gemini-2.5-flash', {'GEMINI_API_KEY': 'test'}); "
         "assert 'langchain_google_genai' in sys.modules; "
         "assert 'langchain_openai' not in sys.modules"
+    )
+    assert output == ""
+
+
+def test_second_stage_reranker_does_not_load_local_model_stack():
+    output = _run_probe(
+        "import sys; "
+        "from akasha.utils.search.rerank import rerank_documents; "
+        "assert 'torch' not in sys.modules; "
+        "assert 'transformers' not in sys.modules; "
+        "assert callable(rerank_documents)"
+    )
+    assert output == ""
+
+
+def test_rag_import_does_not_require_optional_feature_stacks():
+    output = _run_probe(
+        "import builtins, sys; "
+        "original_import = builtins.__import__; "
+        "blocked = {'faiss', 'mlflow', 'streamlit', 'unstructured'}; "
+        "builtins.__import__ = lambda name, *args, **kwargs: "
+        "(_ for _ in ()).throw(ImportError(name)) "
+        "if name.split('.', 1)[0] in blocked "
+        "else original_import(name, *args, **kwargs); "
+        "from akasha.RAG.rag import RAG; "
+        "assert RAG is not None; "
+        "assert 'torch' not in sys.modules"
     )
     assert output == ""

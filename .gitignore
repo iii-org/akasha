@@ -82,4 +82,7 @@ summarization/20230531_*.txt
 .codex/skills/
 .codex
 
+# virtual environment
+.venv
+
 

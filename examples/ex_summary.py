@@ -25,7 +25,7 @@ summ = akasha.summary(
 
 ### use llm to summarize content,  ###
 ### info can be a list of local files, string, directories, or urls ###
-### files includes pdf, docx, txt, md, csv, pptx files ###
+### files include pdf, docx, txt, md, and csv; pptx needs [documents] ###
 ret = summ(content=["https://github.com/iii-org/akasha"])
 
 # save the logs or turn verbose on to see the details

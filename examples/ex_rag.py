@@ -41,7 +41,7 @@ ak = akasha.RAG(
 
 ### use data source as reference and search similar document to answer the query ###
 ### data_source can be a list of local files, directories, or urls ###
-### files includes pdf, docx, txt, md, csv, pptx files ###
+### files include pdf, docx, txt, md, and csv; pptx needs [documents] ###
 res = ak(
     data_source=["docs/mic", "https://github.com/iii-org/akasha"],
     prompt=PROMPT,

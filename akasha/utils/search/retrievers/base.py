@@ -1,3 +1,12 @@
+from typing import Callable, List, Union
+
+from langchain_core.embeddings import Embeddings
+from langchain_core.retrievers import BaseRetriever
+
+from akasha.helper.handle_objects import handle_embeddings_and_name
+from akasha.utils.db.db_structure import dbs
+from akasha.utils.optional_dependencies import require_optional_dependency
+
 from .retri_bm25 import myBM25Retriever
 from .retri_custom import customRetriever
 from .retri_knn import myKNNRetriever
@@ -5,13 +14,40 @@ from .retri_mmr import myMMRRetriever
 from .retri_rerank import myRerankRetriever
 from .retri_svm import mySVMRetriever
 from .retri_tfidf import myTFIDFRetriever
-from .retri_faiss import myFAISSRetriever
 
-from typing import List, Union, Callable
-from akasha.utils.db.db_structure import dbs
-from akasha.helper.handle_objects import handle_embeddings_and_name
-from langchain_core.embeddings import Embeddings
-from langchain_core.retrievers import BaseRetriever
+
+def _get_faiss_retriever_class():
+    """Load the optional FAISS retriever only when it is selected."""
+    require_optional_dependency(
+        "faiss",
+        feature="FAISS retrieval",
+        extra="faiss",
+    )
+    from .retri_faiss import myFAISSRetriever
+
+    return myFAISSRetriever
+
+
+def validate_search_type_dependencies(search_type: str | Callable) -> None:
+    """Fail before database work when a search backend is unavailable."""
+
+    if not isinstance(search_type, str):
+        return
+
+    normalized = search_type.lower()
+    if "rerank" in normalized:
+        for module_name in ("torch", "transformers"):
+            require_optional_dependency(
+                module_name,
+                feature="Local rerank retrieval",
+                extra="full",
+            )
+    elif normalized in {"faiss", "meta", "facebook"}:
+        require_optional_dependency(
+            "faiss",
+            feature="FAISS retrieval",
+            extra="faiss",
+        )
 
 
 def get_retrivers(
@@ -44,21 +80,7 @@ def get_retrivers(
         search_type.lower() if isinstance(search_type, str) else search_type
     )
 
-    if (
-        isinstance(search_type_normalized, str)
-        and search_type_normalized.startswith("rerank")
-        and search_type_normalized not in {"auto_rerank"}
-    ):
-        try:
-            import torch  # noqa: F401
-        except ImportError:
-            print(
-                "\nWarning: Rerank requires local model support (torch/transformers). "
-                "This is only available in the 'full' version.\n"
-                "Please install with: pip install akasha-terminal[full]\n"
-                "Switching to standard retrieval...\n"
-            )
-            raise ValueError(f"cannot find search type {search_type_normalized}, end process\n")
+    validate_search_type_dependencies(search_type_value)
 
     requires_embeddings = callable(search_type_value) or (
         isinstance(search_type_normalized, str)
@@ -93,7 +115,10 @@ def get_retrivers(
             retriver_list.append(tfidf_retriver)
 
         if search_type in ["faiss", "FAISS", "meta", "facebook"]:
-            faiss_retriver = myFAISSRetriever.from_db(db, embeddings, topK, threshold)
+            faiss_retriever_class = _get_faiss_retriever_class()
+            faiss_retriver = faiss_retriever_class.from_db(
+                db, embeddings, topK, threshold
+            )
             retriver_list.append(faiss_retriver)
 
         if search_type in ["knn", "auto", "auto_rerank"]:
@@ -105,24 +130,18 @@ def get_retrivers(
             retriver_list.append(bm25_retriver)
 
         if "rerank" in search_type:
-            try:
-                import torch
-                if ":" in search_type:
-                    search_type, rerank_type = search_type.split(":")
-                else:
-                    rerank_type = "BAAI/bge-reranker-base"
+            if ":" in search_type:
+                search_type, rerank_type = search_type.split(":", maxsplit=1)
+            else:
+                rerank_type = "BAAI/bge-reranker-base"
 
-                rerank_retriver = myRerankRetriever.from_documents(
-                    docs_list, k=topK, relevancy_threshold=threshold, model_name=rerank_type
-                )
-                retriver_list.append(rerank_retriver)
-            except ImportError:
-                print(
-                    "\nWarning: Rerank requires local model support (torch/transformers). "
-                    "This is only available in the 'full' version.\n"
-                    "Please install with: pip install akasha-terminal[full]\n"
-                    "Switching to standard retrieval...\n"
-                )
+            rerank_retriver = myRerankRetriever.from_documents(
+                docs_list,
+                k=topK,
+                relevancy_threshold=threshold,
+                model_name=rerank_type,
+            )
+            retriver_list.append(rerank_retriver)
 
     if len(retriver_list) == 0:
         raise ValueError(f"cannot find search type {search_type}, end process\n")

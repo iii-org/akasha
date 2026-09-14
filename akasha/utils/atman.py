@@ -1,30 +1,35 @@
-from typing import Callable, Union, List
-from akasha.helper import handle_embeddings, handle_model_type, handle_model
-from akasha.utils.prompts.format import (
-    handle_language,
-    language_dict,
-    handle_metrics,
-    handle_params,
-    handle_table,
-)
 import datetime
 import logging
+from typing import Callable, List, Union
+
+from akasha.helper import handle_embeddings, handle_model, handle_model_type
 from akasha.utils.base import (
     DEFAULT_CHUNK_SIZE,
-    DEFAULT_SEARCH_TYPE,
     DEFAULT_EMBED,
-    DEFAULT_MODEL,
-    DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_MAX_INPUT_TOKENS,
+    DEFAULT_MAX_OUTPUT_TOKENS,
+    DEFAULT_MODEL,
+    DEFAULT_RERANK_TOP_K,
+    DEFAULT_RERANKER_MODEL,
+    DEFAULT_SEARCH_TYPE,
 )
 from akasha.utils.db.db_structure import dbs
+from akasha.utils.db.load_db import load_db_by_chroma_name, process_db
 from akasha.utils.logging_config import configure_logging
 from akasha.utils.models.thinking import (
     ThinkingBudget,
     normalize_thinking_budget,
     normalize_thinking_level,
 )
-from akasha.utils.db.load_db import process_db, load_db_by_chroma_name
+from akasha.utils.prompts.format import (
+    handle_language,
+    handle_metrics,
+    handle_params,
+    handle_table,
+    language_dict,
+)
+from akasha.utils.search.rerank import validate_reranker_dependencies
+from akasha.utils.upload import require_mlflow
 
 
 class basic_llm:
@@ -69,6 +74,9 @@ class basic_llm:
         Returns:
             _type_: _description_
         """
+
+        if record_exp:
+            require_mlflow()
 
         self.verbose = verbose
         self.language = handle_language(language)
@@ -163,6 +171,9 @@ class basic_llm:
 
     def _change_variables(self, **kwargs):
         """change other arguments if user use **kwargs to change them."""
+        if kwargs.get("record_exp"):
+            require_mlflow()
+
         ### check input argument is valid or not ###
         prev_verbose = getattr(self, "verbose", None)
         prev_keep_logs = getattr(self, "keep_logs", None)
@@ -362,6 +373,9 @@ class atman(basic_llm):
         verbose: bool = False,
         use_chroma: bool = False,
         env_file: str = "",
+        reranker: str | Callable | None = None,
+        rerank_top_k: int = DEFAULT_RERANK_TOP_K,
+        reranker_model: str | Callable = DEFAULT_RERANKER_MODEL,
     ):
         """initials of atman class
 
@@ -377,6 +391,9 @@ class atman(basic_llm):
                 includes 'merge', 'mmr', 'svm', 'tfidf', also, you can custom your own search_type function, as long as your
                 function input is (query_embeds:np.array, docs_embeds:list[np.array], k:int, relevancy_threshold:float, log:dict)
                 and output is a list [index of selected documents].\n
+            **reranker (str or Callable, optional)**: independent second-stage reranker applied after retrieval.\n
+            **rerank_top_k (int, optional)**: maximum documents retained after reranking. Defaults to 5.\n
+            **reranker_model (str or Callable, optional)**: model used by the LLM reranker. Defaults to "gemini:gemini-2.5-flash".\n
             **record_exp (str, optional)**: use aiido to save running params and metrics to the remote mlflow or not if record_exp not empty, and set
                 record_exp as experiment name.  default "".\n
             **system_prompt (str, optional)**: the system prompt that you assign special instruction to llm model, so will not be used
@@ -387,6 +404,13 @@ class atman(basic_llm):
             **max_input_tokens (int, optional)**: max input tokens of llm model. Defaults to 3000.\n
             **env_file (str, optional)**: the path of the .env file. Defaults to "".\n
         """
+
+        from akasha.utils.search.retrievers.base import (
+            validate_search_type_dependencies,
+        )
+
+        validate_search_type_dependencies(search_type)
+        validate_reranker_dependencies(reranker)
 
         super().__init__(
             model,
@@ -404,6 +428,10 @@ class atman(basic_llm):
         self.chunk_size = chunk_size
         self.threshold = threshold
         self.search_type = handle_model_type(search_type, self.verbose)
+        self.reranker = reranker
+        self.rerank_top_k = rerank_top_k
+        self.reranker_model = reranker_model
+        self._reranker_model_obj = None
         self.use_chroma = use_chroma
 
         if callable(search_type):
@@ -420,6 +448,15 @@ class atman(basic_llm):
     def _set_model(self, **kwargs):
         """change model, embeddings, search_type, temperature if user use **kwargs to change them."""
         ## check if we need to change db, model_obj or embeddings_obj ##
+        if (
+            "reranker_model" in kwargs
+            and kwargs["reranker_model"] != self.reranker_model
+        ) or ("env_file" in kwargs and kwargs["env_file"] != self.env_file) or (
+            "max_output_tokens" in kwargs
+            and kwargs["max_output_tokens"] != self.max_output_tokens
+        ):
+            self._reranker_model_obj = None
+
         super()._set_model(**kwargs)
 
         if "search_type" in kwargs:
@@ -441,6 +478,29 @@ class atman(basic_llm):
                 self.embeddings_obj = handle_embeddings(
                     new_embeddings, self.verbose, new_env_file
                 )
+
+    def _change_variables(self, **kwargs):
+        if "search_type" in kwargs:
+            from akasha.utils.search.retrievers.base import (
+                validate_search_type_dependencies,
+            )
+
+            validate_search_type_dependencies(kwargs["search_type"])
+        if "reranker" in kwargs:
+            validate_reranker_dependencies(kwargs["reranker"])
+        super()._change_variables(**kwargs)
+
+    def _get_reranker_model_obj(self):
+        """Build and cache the model used by ``reranker='llm'`` on first use."""
+        if self._reranker_model_obj is None:
+            self._reranker_model_obj = handle_model(
+                self.reranker_model,
+                verbose=self.verbose,
+                temperature=0.0,
+                max_output_tokens=self.max_output_tokens,
+                env_file=self.env_file,
+            )
+        return self._reranker_model_obj
 
     def _check_doc_path(self, doc_path: Union[List[str], str, dbs]):
         if isinstance(doc_path, dbs):
@@ -489,6 +549,20 @@ class atman(basic_llm):
 
         self.logs[timestamp]["chunk_size"] = self.chunk_size
         self.logs[timestamp]["embeddings"] = self.embeddings
+        self.logs[timestamp]["reranker"] = (
+            handle_model_type(self.reranker, self.verbose)
+            if self.reranker is not None
+            else None
+        )
+        self.logs[timestamp]["rerank_top_k"] = (
+            self.rerank_top_k if self.reranker is not None else None
+        )
+        self.logs[timestamp]["reranker_model"] = (
+            handle_model_type(self.reranker_model, self.verbose)
+            if isinstance(self.reranker, str)
+            and self.reranker.strip().lower() == "llm"
+            else None
+        )
 
         return True
 

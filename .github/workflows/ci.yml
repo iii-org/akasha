@@ -39,6 +39,12 @@ jobs:
       - name: Install dependencies
         run: uv pip install --system -e ".[light,dev]"
 
+      - name: Resolve full dependency profile
+        shell: bash
+        run: |
+          python_version="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+          uv pip compile pyproject.toml --extra full --python-version "${python_version}" --quiet > /dev/null
+
       - name: Create test environment file
         shell: bash
         run: |

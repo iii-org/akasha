@@ -1,19 +1,19 @@
-from langchain_community.document_loaders import (
-    PyPDFLoader,
-    TextLoader,
-    Docx2txtLoader,
-    UnstructuredPowerPointLoader,
-)
-from langchain_community.document_loaders.csv_loader import CSVLoader
-from langchain_core.documents import Document
-from typing import Union, List
-import warnings
 import logging
 import traceback
-from akasha.helper.encoding import detect_encoding
+import warnings
 from pathlib import Path
-from .db_structure import TEXT_EXTENSIONS
+from typing import List, Union
+
+from langchain_core.documents import Document
+
 from akasha.helper.crawler import get_text_from_url
+from akasha.helper.encoding import detect_encoding
+from akasha.utils.optional_dependencies import (
+    OptionalDependencyError,
+    require_optional_dependency,
+)
+
+from .db_structure import TEXT_EXTENSIONS
 
 warnings.filterwarnings("ignore", category=UserWarning, module="pypdf")
 logging.basicConfig(level=logging.ERROR)
@@ -34,23 +34,50 @@ def load_file(file_path: str, extension: str) -> List[Document]:
     """
     try:
         if extension == "pdf" or extension == "PDF":
+            from langchain_community.document_loaders import PyPDFLoader
+
             docs = PyPDFLoader(file_path).load()
         elif extension == "docx" or extension == "DOCX":
+            from langchain_community.document_loaders import Docx2txtLoader
+
             docs = Docx2txtLoader(file_path).load()
             for i in range(len(docs)):
                 docs[i].metadata["page"] = i
 
         elif extension == "csv":
+            from langchain_community.document_loaders.csv_loader import CSVLoader
+
             encoding = detect_encoding(file_path)
             docs = CSVLoader(file_path, encoding=encoding).load()
             for i in range(len(docs)):
                 docs[i].metadata["page"] = docs[i].metadata["row"]
                 del docs[i].metadata["row"]
         elif extension == "pptx":
-            docs = UnstructuredPowerPointLoader(file_path).load()
+            try:
+                require_optional_dependency(
+                    "unstructured",
+                    feature="PPTX loading",
+                    extra="documents",
+                )
+                require_optional_dependency(
+                    "pptx",
+                    feature="PPTX loading",
+                    extra="documents",
+                )
+                from langchain_community.document_loaders import (
+                    UnstructuredPowerPointLoader,
+                )
+
+                docs = UnstructuredPowerPointLoader(file_path).load()
+            except OptionalDependencyError:
+                raise
+            except ImportError as exc:
+                raise OptionalDependencyError("PPTX loading", "documents") from exc
             for i in range(len(docs)):
                 docs[i].metadata["page"] = i
         else:
+            from langchain_community.document_loaders import TextLoader
+
             docs = TextLoader(file_path, encoding="utf-8").load()
             for i in range(len(docs)):
                 docs[i].metadata["page"] = i
@@ -58,6 +85,8 @@ def load_file(file_path: str, extension: str) -> List[Document]:
             raise Exception
 
         return docs
+    except OptionalDependencyError:
+        raise
     except Exception as err:
         try:
             trace_text = traceback.format_exc()
@@ -94,14 +123,27 @@ def load_directory(directory_path: Union[str, Path]) -> List[Document]:
     for extension in TEXT_EXTENSIONS:
         files.extend(get_load_file_list(directory_path, extension))
 
+    optional_errors = []
     for file in files:
         whole_file_path = directory_path / file
-        file_doc = load_file(whole_file_path, file.split(".")[-1])
+        try:
+            file_doc = load_file(whole_file_path, file.split(".")[-1])
+        except OptionalDependencyError as exc:
+            optional_errors.append(exc)
+            warnings.warn(
+                f"Skipped {file}: {exc}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            continue
         if file_doc == "" or len(file_doc) == 0:
             logging.warning(f"file {file} load failed or empty.\n\n")
             print(f"file {file} load failed or empty.\n\n")
 
         docs.extend(file_doc)
+
+    if not docs and optional_errors:
+        raise optional_errors[0]
     return docs
 
 

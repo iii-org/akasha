@@ -1,5 +1,6 @@
 import click
 import uvicorn
+
 import akasha as ak
 
 
@@ -135,8 +136,9 @@ def keep_rag(
     system_prompt: str,
     max_input_tokens: int,
 ):
-    import akasha.helper as helper
     from langchain.chains.question_answering import load_qa_chain
+
+    import akasha.helper as helper
     import akasha.utils.db as dd
     from akasha.utils.search.retrievers.base import get_retrivers
     from akasha.utils.search.search_doc import search_docs
@@ -359,10 +361,17 @@ def evaluation(
 @click.command("toy", short_help="simple toy for akasha")
 def ui():
     import os
-    import sys
     import site
-    from streamlit import config as _config
-    from streamlit.web import cli as stcli
+    import sys
+
+    from akasha.utils.optional_dependencies import OptionalDependencyError
+
+    try:
+        from streamlit import config as _config
+        from streamlit.web import cli as stcli
+    except ImportError as exc:
+        error = OptionalDependencyError("The toy UI", "ui")
+        raise click.ClickException(str(error)) from exc
 
     # make a folder `docs/Default`
     if not os.path.exists("docs") or not os.path.exists(

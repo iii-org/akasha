@@ -1,16 +1,20 @@
 # coding:utf-8
-from rouge import Rouge
-import rouge_chinese
+import importlib
+import re
 import warnings
-from .base import jieba_tokenizer
-from akasha.utils.prompts.gen_prompt import format_sys_prompt, format_llm_score
+from typing import Union
+
+import rouge_chinese
+from langchain_core.language_models.base import BaseLanguageModel
+from rouge import Rouge
+
+from akasha.utils.optional_dependencies import OptionalDependencyError
 from akasha.utils.prompts.format import language_dict
+from akasha.utils.prompts.gen_prompt import format_llm_score, format_sys_prompt
+
+from .base import jieba_tokenizer
 from .handle_objects import handle_model_and_name
 from .run_llm import call_model
-import re
-from langchain_core.language_models.base import BaseLanguageModel
-from typing import Union
-import importlib
 
 warnings.filterwarnings("ignore")
 
@@ -19,10 +23,8 @@ def get_bert_pack():
     try:
         bert_score = importlib.import_module("bert_score")
         return bert_score.score
-    except ImportError:
-        raise ImportError(
-            "Feature requiring 'bert-score' is not installed. Please install with: pip install akasha-terminal[full]"
-        )
+    except ImportError as exc:
+        raise OptionalDependencyError("BERTScore", "full") from exc
 
 
 def get_bert_score(candidate_str: str,
@@ -142,10 +144,8 @@ def get_toxic_score(texts: str, round_digit: int = 3):
     """
     try:
         from transformers import pipeline
-    except ImportError:
-        raise ImportError(
-            "Feature requiring 'transformers' is not installed. Please install with: pip install akasha-terminal[full]"
-        )
+    except ImportError as exc:
+        raise OptionalDependencyError("Toxicity scoring", "full") from exc
 
     pipe = pipeline("text-classification",
                     model="martin-ha/toxic-comment-model")

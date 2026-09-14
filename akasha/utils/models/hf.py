@@ -1,7 +1,9 @@
-from typing import List, Any, Optional, Generator, Union
+from typing import Any, Generator, List, Optional, Union
+
 from langchain_core.language_models import LLM
+
 try:
-    from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+    from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
 except ImportError:
     AutoTokenizer = None
     AutoModelForCausalLM = None
@@ -14,11 +16,13 @@ try:
 except ImportError:
     torch = None
 
-import requests
 from threading import Thread
 
+import requests
 from PIL import Image
 from pydantic import Field
+
+from akasha.utils.optional_dependencies import OptionalDependencyError
 
 
 class hf_model(LLM):
@@ -48,10 +52,8 @@ class hf_model(LLM):
         else:
             self.hf_token = None
 
-        if torch is None:
-            raise ImportError(
-                "Feature requiring 'torch' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        if torch is None or AutoTokenizer is None or AutoModelForCausalLM is None:
+            raise OptionalDependencyError("Hugging Face models", "full")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if temperature == 0.0:
             temperature = 0.01
@@ -93,7 +95,7 @@ class hf_model(LLM):
             model_name (str): model name
         """
         try:
-            from transformers import MllamaForConditionalGeneration, AutoProcessor
+            from transformers import AutoProcessor, MllamaForConditionalGeneration
 
             self.model = MllamaForConditionalGeneration.from_pretrained(
                 self.model_id,

@@ -1,35 +1,37 @@
-from typing import Any, Union, List, Tuple, Callable
-from langchain_core.embeddings import Embeddings
-from langchain_core.documents import Document
-from pathlib import Path
+import datetime
+import gc
 import json
 import logging
-import datetime
-import time
-import shutil
-import gc
 import re
+import shutil
+import time
+import warnings
+from pathlib import Path
+from typing import Any, Callable, List, Tuple, Union
+
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 from tqdm import tqdm
+
 from akasha.helper import get_mac_address, separate_name
 from akasha.helper.crawler import get_text_from_url
 from akasha.helper.handle_objects import handle_embeddings_and_name
-from akasha.utils.db.file_loader import load_file, get_load_file_list
+from akasha.utils.db.chroma_compat import get_chroma_components
 from akasha.utils.db.db_structure import (
+    ALREADY_BUILT,
+    FILE_LAST_CHANGE_FILE_NAME,
+    HNSW_THRESHOLD,
+    NOT_BUILT,
+    OLD_BUILT,
     TEXT_EXTENSIONS,
     get_storage_directory,
-    FILE_LAST_CHANGE_FILE_NAME,
-)
-from akasha.utils.db.db_structure import (
-    OLD_BUILT,
-    NOT_BUILT,
-    ALREADY_BUILT,
-    HNSW_THRESHOLD,
 )
 from akasha.utils.db.delete_db import (
-    delete_documents_from_chroma_by_file_name,
     delete_documents_by_directory,
+    delete_documents_from_chroma_by_file_name,
 )
-from akasha.utils.db.chroma_compat import get_chroma_components
+from akasha.utils.db.file_loader import get_load_file_list, load_file
+from akasha.utils.optional_dependencies import OptionalDependencyError
 
 
 def _get_recursive_character_text_splitter():
@@ -96,6 +98,7 @@ def create_directory_db(
         collection_metadata={"hnsw:sync_threshold": HNSW_THRESHOLD},
     )
 
+    optional_errors = []
     for file in files:
         progress.update(1)
         whole_file_path = directory_path / file
@@ -107,7 +110,17 @@ def create_directory_db(
         elif is_doc_b == OLD_BUILT:
             delete_documents_from_chroma_by_file_name(docsearch, file)
 
-        file_doc = load_file(whole_file_path, file.split(".")[-1])
+        try:
+            file_doc = load_file(whole_file_path, file.split(".")[-1])
+        except OptionalDependencyError as exc:
+            optional_errors.append(exc)
+            db_path_names.append(file)
+            warnings.warn(
+                f"Skipped {file}: {exc}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            continue
         if file_doc == "" or len(file_doc) == 0:
             logging.warning(f"file {file} load failed or empty.\n\n")
             print(f"file {file} load failed or empty.\n\n")
@@ -140,6 +153,8 @@ def create_directory_db(
         logging.warning(f"can no create any vector from {directory_path}.\n\n")
         print(f"can no create any vector from {directory_path}.\n\n")
         shutil.rmtree(storage_directory)
+        if optional_errors:
+            raise optional_errors[0]
         return False, db_path_names
 
     #### write the last modified time of the files into json file ####

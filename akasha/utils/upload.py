@@ -1,8 +1,20 @@
-from typing import Optional, Union, Dict, Sequence
 import os
-from pathlib import Path
 from datetime import datetime
 from importlib import metadata
+from pathlib import Path
+from typing import Dict, Optional, Sequence, Union
+
+from akasha.utils.optional_dependencies import require_optional_dependency
+
+
+def require_mlflow():
+    """Return MLflow when the tracking feature is available."""
+
+    return require_optional_dependency(
+        "mlflow",
+        feature="MLflow experiment tracking",
+        extra="tracking",
+    )
 
 
 def aiido_upload(
@@ -20,12 +32,7 @@ def aiido_upload(
         **metrics (dict, optional)**: metrics dictionary. Defaults to {}.\n
         **table (dict, optional)**: table dictionary, used to compare text context between different runs in the experiment. Defaults to {}.\n
     """
-    try:
-        import mlflow
-
-    except ImportError as e:
-        print("mlflow is not installed. Please install it with 'pip install mlflow'.")
-        raise e
+    mlflow = require_mlflow()
 
     time_now = datetime.now().strftime("%Y%m%d%H%M%S")
 
@@ -54,10 +61,10 @@ def mlflow_init(
     experiment: Optional[str] = None,
     run: Optional[str] = None,
     load_config_from_dotenv: Union[bool, str] = False,
-    do_not_raise: bool = True,
+    do_not_raise: bool = False,
 ):
     try:
-        import mlflow
+        mlflow = require_mlflow()
 
         try:
             __version__ = metadata.version("akasha-terminal")
@@ -65,7 +72,6 @@ def mlflow_init(
             __version__ = "dev"
 
     except ImportError:
-        print("package is not installed. Please install it with 'pip install mlflow'.")
         if not do_not_raise:
             raise
         return
@@ -126,8 +132,7 @@ def log_params_and_metrics(params: Dict, metrics: Union[Dict, Sequence[Dict]]):
     metrics : Dict
         Evaluation metrics, such as accuracy, top-5 accuracy, etc. or a list of such metrics
     """
-    # Check if mlflow is installed
-    import mlflow
+    mlflow = require_mlflow()
 
     try:
         time_now = datetime.now().strftime("%Y%m%d%H%M%S")

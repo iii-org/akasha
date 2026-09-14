@@ -25,36 +25,33 @@ docx2txt==0.8
 rouge==1.0.1
 rouge-chinese==1.0.3
 click
-streamlit>=1.33.0
-streamlit_option_menu>=0.3.6
 rank_bm25
-unstructured
-python-pptx
 wikipedia
-numpy<2
+numpy>=2,<3
 google-genai>=1.15.0
 anthropic
 tavily-python
-faiss-cpu
 langchain-mcp-adapters>=0.2,<0.3
-mlflow
+mcp>=1.24,<2.0
 json_repair
 jsonpatch>=1.33
 python-dotenv
 pyyaml>=6.0,<7.0
-langchain-huggingface>=0.1.2
-onnxruntime<=1.20.0
-sentence-transformers>=3.1.1
-transformers>=4.50.0
-accelerate>=1.7.0
+streamlit>=1.33.0
+streamlit_option_menu>=0.3.6
+mlflow
+unstructured
+python-pptx
+faiss-cpu
+langchain-huggingface>=1.0,<2.0
+onnxruntime>=1.20,<2.0
+sentence-transformers>=6.0,<7.0
+transformers>=5.0,<6.0
+accelerate>=1.7,<2.0
 bert-score==0.3.13
-tokenizers>=0.22.0,<=0.23.0
 sentencepiece
-torch==2.2.0; platform_system == 'Windows'
-torch==2.0.1; platform_system == 'Darwin'
-torch==2.2.0; platform_system == 'Linux'
-torchvision==0.17.0; platform_system == 'Windows'
-torchvision==0.15.2; platform_system == 'Darwin'
-torchvision==0.17.0; platform_system == 'Linux'
-llama-cpp-python>=0.3.8
-auto-gptq==0.3.1
+torch>=2.4,<3.0
+torchvision>=0.19,<1.0
+llama-cpp-python==0.3.8
+peft>=0.17,<1.0
+gptqmodel>=7.0,<8.0

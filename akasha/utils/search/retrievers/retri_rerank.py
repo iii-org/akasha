@@ -1,7 +1,28 @@
 from typing import Any, List, Optional, Tuple
-from pydantic import Field
-from langchain_core.retrievers import BaseRetriever
+
 from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+from pydantic import Field
+
+from akasha.utils.optional_dependencies import require_optional_dependency
+
+
+def _load_rerank_dependencies():
+    torch = require_optional_dependency(
+        "torch",
+        feature="Local rerank retrieval",
+        extra="full",
+    )
+    transformers = require_optional_dependency(
+        "transformers",
+        feature="Local rerank retrieval",
+        extra="full",
+    )
+    return (
+        torch,
+        transformers.AutoModelForSequenceClassification,
+        transformers.AutoTokenizer,
+    )
 
 
 class myRerankRetriever(BaseRetriever):
@@ -64,13 +85,9 @@ class myRerankRetriever(BaseRetriever):
 
 
 def rerank(query: str, docs: list, threshold: float, model_name: str):
-    try:
-        import torch
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    except ImportError:
-        raise ImportError(
-            "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
-        )
+    torch, AutoModelForSequenceClassification, AutoTokenizer = (
+        _load_rerank_dependencies()
+    )
     import gc
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -123,13 +140,9 @@ def rerank(query: str, docs: list, threshold: float, model_name: str):
 
 
 def rerank_reduce(query, docs, topK):
-    try:
-        import torch
-        from transformers import AutoModelForSequenceClassification, AutoTokenizer
-    except ImportError:
-        raise ImportError(
-            "Feature requiring 'torch/transformers' is not installed. Please install with: pip install akasha-terminal[full]"
-        )
+    torch, AutoModelForSequenceClassification, AutoTokenizer = (
+        _load_rerank_dependencies()
+    )
     import gc
 
     model_name = "BAAI/bge-reranker-large"  # BAAI/bge-reranker-base

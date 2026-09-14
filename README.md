@@ -9,7 +9,7 @@ akasha is a Python toolkit for document question answering, image understanding,
 It provides one consistent interface for remote and local model workflows while keeping provider-specific integrations behind model aliases such as `openai:`, `gemini:`, `anthropic:`, and `ollama:`.
 
 - manual: <https://iii-org.github.io/akasha/>
-- Current package version: `1.7.3`
+- Current package version: `1.8.0`
 
 ## What akasha provides
 
@@ -35,7 +35,7 @@ Python 3.11 or 3.12 is recommended.
 
 ### Lightweight installation
 
-Use `light` for remote chat models and remote embeddings:
+Use `light` for service-backed chat models, remote embeddings, and LLM reranking:
 
 ```bash
 uv venv --python 3.11
@@ -49,11 +49,32 @@ source .venv/bin/activate
 uv pip install "akasha-terminal[light]"
 ```
 
-`light` keeps Chroma-backed RAG and memory workflows, but does not include the local HuggingFace / Torch model stack.
+`light` keeps Chroma-backed RAG and memory workflows. It can use cloud APIs,
+Ollama, vLLM, or another OpenAI-compatible service, but it does not load model
+weights in the Akasha process. It includes PDF, DOCX, CSV, Markdown, and text
+loading, but leaves the UI, MLflow tracking, PPTX/Unstructured parsing, and
+FAISS backend out of the default environment.
+
+Add only the optional feature you need:
+
+```bash
+uv pip install "akasha-terminal[light,ui]"         # Streamlit toy UI
+uv pip install "akasha-terminal[light,tracking]"   # MLflow experiment tracking
+uv pip install "akasha-terminal[light,documents]"  # PPTX and Unstructured parsing
+uv pip install "akasha-terminal[light,faiss]"      # search_type="faiss"
+```
+
+Optional features are checked only when selected, so a light installation can
+always import Akasha. A missing extra raises `OptionalDependencyError` before
+model inference or retrieval starts and shows both `uv add` and `pip install`
+commands. Directory imports are the exception: unsupported files are skipped
+with a warning when other files load successfully, but an all-skipped directory
+raises the same actionable error.
 
 ### Full installation
 
-Use `full` when you need local embeddings, local HuggingFace models, local Llama/GPTQ models, reranking, or BERTScore:
+Use `full` when you also need in-process Hugging Face embeddings/models, local
+BGE reranking, BERTScore, PEFT, GPTQ, or llama.cpp:
 
 ```bash
 uv pip install "akasha-terminal[full]"
@@ -63,10 +84,29 @@ The practical difference is:
 
 | Installation | Chat models | Embeddings | Vector store | Local ML / rerank |
 | --- | --- | --- | --- | --- |
-| `light` | Remote providers | Remote APIs | Local Chroma | No |
-| `full` | Remote and local providers | Remote and local | Local Chroma | Yes |
+| `light` | Cloud, Ollama, vLLM, OpenAI-compatible | Remote APIs | Local Chroma | LLM reranker |
+| `full` | Everything in `light`, plus in-process HF | Remote and local | Local Chroma | BGE, BERTScore, PEFT, GPTQ, llama.cpp |
 
-`light` does not include Torch, Transformers, Sentence-Transformers, or `onnxruntime`; these local-model dependencies are part of `full`.
+`full` remains the one-command compatibility profile and also contains the
+`ui`, `tracking`, `documents`, and `faiss` feature stacks.
+
+All installation profiles require Python `>=3.11,<3.13` and NumPy `>=2,<3`.
+`light` does not directly install Torch, Transformers, Sentence-Transformers,
+or BERTScore; those local-model dependencies are part of `full`.
+
+`full` pins `llama-cpp-python==0.3.8`: newer source archives currently exceed
+the traditional Windows path limit during pip's unpack step. The package still
+normally builds its native runtime from source when installed from PyPI, so
+`full` needs a C/C++ build toolchain unless you configure the project's
+CPU/CUDA/Metal wheel index first. This is a native build requirement, not a
+Python or NumPy resolver conflict.
+
+On Windows, GPTQModel 7.x also pulls the native `pypcre` build. A plain
+zero-toolchain `pip install "akasha-terminal[full]"` therefore still requires
+Visual Studio C++ Build Tools; the upstream Windows/Python 3.12 limitation is
+tracked in [GPTQModel issue #2425](https://github.com/ModelCloud/GPTQModel/issues/2425).
+Use `light` when a compiler-free install is required, or prepare the native
+toolchain before installing `full`.
 
 ### Editable installation for development
 
@@ -192,6 +232,42 @@ rag = akasha.RAG(
 answer = rag("./docs", "What are the main ideas in these documents?")
 print(answer)
 ```
+
+First-stage retrieval and second-stage reranking are configured independently:
+
+```python
+# light/full: ask the configured service-backed LLM to rank retrieved documents
+rag = akasha.RAG(
+    model="ollama:qwen3:8b",
+    embeddings="openai:text-embedding-3-small",
+    search_type="auto",
+    reranker="llm",
+    reranker_model="gemini:gemini-2.5-flash",  # default
+    rerank_top_k=5,                             # default
+)
+
+# full only: run a BGE cross-encoder in the Akasha process
+rag = akasha.RAG(
+    model="ollama:qwen3:8b",
+    embeddings="hf:BAAI/bge-base-en-v1.5",
+    search_type="auto",
+    reranker="local:BAAI/bge-reranker-base",
+    rerank_top_k=5,
+)
+```
+
+`rerank_top_k` keeps only the highest-ranked documents after the second-stage
+reranker; it has no effect when `reranker` is not configured. For
+`reranker="llm"`, `reranker_model` defaults to
+`"gemini:gemini-2.5-flash"` and is created lazily, so merely constructing a RAG
+instance does not require Gemini credentials. The answer model and reranker
+model are configured independently. The first LLM reranking call requires
+`GEMINI_API_KEY` unless `reranker_model` is overridden with another configured
+provider or model object.
+
+A custom reranker may also be a callable with the signature
+`(query, documents) -> reordered_documents`. It must return every candidate
+document exactly once.
 
 Typical embedding aliases include:
 

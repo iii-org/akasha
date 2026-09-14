@@ -1,11 +1,13 @@
-from typing import List, Optional
-from langchain_core.language_models import LLM
+import atexit
 
 # from langchain.callbacks.manager import CallbackManager
 # from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
-from typing import Generator, Union  # noqa: F811
+from typing import Generator, List, Optional, Union  # noqa: F811
+
+from langchain_core.language_models import LLM
 from pydantic import Field
-import atexit
+
+from akasha.utils.optional_dependencies import require_optional_dependency
 
 
 class LlamaCPP(LLM):
@@ -24,12 +26,12 @@ class LlamaCPP(LLM):
             **func (Callable)**: the function return response from llm\n
         """
         super().__init__(model_id=model_name)
-        try:
-            from llama_cpp import Llama
-        except ImportError:
-            raise ImportError(
-                "Feature requiring 'llama-cpp-python' is not installed. Please install with: pip install akasha-terminal[full]"
-            )
+        llama_cpp = require_optional_dependency(
+            "llama_cpp",
+            feature="llama.cpp models",
+            extra="llama-cpp",
+        )
+        Llama = llama_cpp.Llama
 
         if temperature == 0.0:
             temperature = 0.01

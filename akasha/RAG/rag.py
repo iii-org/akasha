@@ -14,6 +14,8 @@ from akasha.utils.base import (
     DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_MODEL,
     DEFAULT_SEARCH_TYPE,
+    DEFAULT_RERANK_TOP_K,
+    DEFAULT_RERANKER_MODEL,
 )
 
 from akasha.utils.atman import atman
@@ -31,6 +33,7 @@ from akasha.utils.prompts.gen_prompt import (
 )
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
+from akasha.utils.search.rerank import rerank_documents
 import pathlib
 from dotenv import load_dotenv
 import warnings
@@ -63,6 +66,9 @@ class RAG(atman):
         stream: bool = False,
         verbose: bool = False,
         env_file: str = "",
+        reranker: str | Callable | None = None,
+        rerank_top_k: int = DEFAULT_RERANK_TOP_K,
+        reranker_model: Union[str, BaseLanguageModel, Callable] = DEFAULT_RERANKER_MODEL,
     ) -> None:
         """initials of Doc_QA class
 
@@ -74,6 +80,9 @@ class RAG(atman):
             threshold (float, optional): (deprecated) threshold of similarity for searching relavant documents. Defaults to 0.2.
             language (str, optional): "ch" chinese or "en" english. Defaults to "ch".
             search_type (Union[str, Callable], optional): _description_. Defaults to "auto".
+            reranker (str or Callable, optional): independent second-stage reranker. Use "llm", "local:<model>", or a callable.
+            rerank_top_k (int, optional): maximum documents retained after reranking. Defaults to 5.
+            reranker_model (str or model, optional): model used when reranker="llm". Defaults to "gemini:gemini-2.5-flash".
             record_exp (str, optional): experiment name of aiido. Defaults to "".
             system_prompt (str, optional): the prompt you want llm to output in certain format. Defaults to "".
             prompt_format_type (str, optional): the prompt and system prompt format for the language model, including auto, gpt, llama, chat_gpt, chat_mistral, chat_gemini . Defaults to "auto".
@@ -102,6 +111,9 @@ class RAG(atman):
             verbose,
             use_chroma,
             env_file,
+            reranker,
+            rerank_top_k,
+            reranker_model,
         )
         ### set argruments ###
         self.data_source = ""
@@ -204,6 +216,9 @@ class RAG(atman):
         embeddings: str | Embeddings | None = None,
         chunk_size: int | None = None,
         search_type: str | Callable | None = None,
+        reranker: str | Callable | None = None,
+        rerank_top_k: int | None = None,
+        reranker_model: str | BaseLanguageModel | Callable | None = None,
         max_input_tokens: int | None = None,
         max_output_tokens: int | None = None,
         temperature: float | None = None,
@@ -240,6 +255,9 @@ class RAG(atman):
                 "embeddings": embeddings,
                 "chunk_size": chunk_size,
                 "search_type": search_type,
+                "reranker": reranker,
+                "rerank_top_k": rerank_top_k,
+                "reranker_model": reranker_model,
                 "max_input_tokens": max_input_tokens,
                 "max_output_tokens": max_output_tokens,
                 "temperature": temperature,
@@ -305,6 +323,29 @@ class RAG(atman):
             self.search_type,
             self.language,
         )
+        self.docs = rerank_documents(
+            self.prompt,
+            self.docs,
+            self.reranker,
+            model_obj=(
+                self._get_reranker_model_obj()
+                if isinstance(self.reranker, str)
+                and self.reranker.strip().lower() == "llm"
+                else None
+            ),
+            top_k=self.rerank_top_k,
+            verbose=self.verbose,
+            keep_logs=self.keep_logs,
+        )
+        if self.reranker is not None:
+            self.doc_length = sum(
+                get_doc_length(self.language, document.page_content)
+                for document in self.docs
+            )
+            self.doc_tokens = sum(
+                myTokenizer.compute_tokens(document.page_content, self.model)
+                for document in self.docs
+            )
         if self.keep_logs:
             logging.info("Retrieved docs: %s", len(self.docs))
         if self.doc_tokens == 0:
@@ -454,6 +495,9 @@ class RAG(atman):
         embeddings: str | Embeddings | None = None,
         chunk_size: int | None = None,
         search_type: str | Callable | None = None,
+        reranker: str | Callable | None = None,
+        rerank_top_k: int | None = None,
+        reranker_model: str | BaseLanguageModel | Callable | None = None,
         max_input_tokens: int | None = None,
         max_output_tokens: int | None = None,
         temperature: float | None = None,
@@ -490,6 +534,9 @@ class RAG(atman):
                 "embeddings": embeddings,
                 "chunk_size": chunk_size,
                 "search_type": search_type,
+                "reranker": reranker,
+                "rerank_top_k": rerank_top_k,
+                "reranker_model": reranker_model,
                 "max_input_tokens": max_input_tokens,
                 "max_output_tokens": max_output_tokens,
                 "temperature": temperature,
