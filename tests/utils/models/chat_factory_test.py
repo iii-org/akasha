@@ -5,6 +5,7 @@ import sys
 from types import ModuleType
 
 import pytest
+from langchain_core.messages import HumanMessage
 
 from akasha.helper.handle_objects import _get_env_var
 from akasha.utils.models.chat import build_chat_model
@@ -44,6 +45,18 @@ def test_gemini_defaults_to_developer_api_with_api_key(google_adapter):
         "temperature": 0.25,
         "max_output_tokens": 256,
     }
+
+
+def test_gemini_request_config_disables_sdk_afc():
+    model = build_chat_model(
+        "gemini",
+        "gemini-2.5-flash",
+        {"GEMINI_API_KEY": "unused"},
+    )
+
+    request = model._prepare_request([HumanMessage(content="hello")])
+
+    assert request["config"].automatic_function_calling.disable is True
 
 
 def test_gemini_uses_vertex_express_mode_when_explicitly_enabled(

@@ -223,14 +223,14 @@ class MemoryManager:
             self.db,
             self.embeddings_obj,
             0.0,
-            "faiss",
+            "auto",
             "",
         )
 
         searched_docs = retri_docs(
             retrivers_list,
             query,
-            "faiss",
+            "auto",
             top_k,
         )
 

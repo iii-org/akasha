@@ -125,6 +125,17 @@ def build_chat_model(
 
     if provider in {"google", "gemini", "gemi"}:
         from langchain_google_genai import ChatGoogleGenerativeAI
+        from google.genai import types
+
+        class AkashaChatGoogleGenerativeAI(ChatGoogleGenerativeAI):
+            """Disable SDK-managed tool loops so LangChain remains the orchestrator."""
+
+            def _prepare_request(self, *args, **kwargs):
+                request = super()._prepare_request(*args, **kwargs)
+                request["config"].automatic_function_calling = (
+                    types.AutomaticFunctionCallingConfig(disable=True)
+                )
+                return request
 
         if not env.get("GEMINI_API_KEY"):
             raise ValueError("can not find the GEMINI_API_KEY in environment variable.\n\n")
@@ -155,8 +166,8 @@ def build_chat_model(
                 kwargs["thinking_budget"] = normalized_budget
         if use_vertex:
             with _without_vertex_project_environment():
-                return ChatGoogleGenerativeAI(**kwargs)
-        return ChatGoogleGenerativeAI(**kwargs)
+                return AkashaChatGoogleGenerativeAI(**kwargs)
+        return AkashaChatGoogleGenerativeAI(**kwargs)
 
     if provider in {"anthropic", "anthropicai", "claude", "anthro"}:
         from langchain_anthropic import ChatAnthropic
