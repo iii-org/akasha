@@ -50,3 +50,8 @@ requiring hashes because the project is installed editable.
 
 See the [validation report](../dev_docs/2026-09-httpx2-dependency-baseline.md)
 for fresh-environment, provider and Linux resolver results and remaining limits.
+
+To validate without modifying the baseline, run
+`python scripts/check_dependency_baseline.py`. This performs real locked exports,
+compares their contents, and restores the original files. It works in source
+archives without `.git` and ignores only LF/CRLF checkout differences.

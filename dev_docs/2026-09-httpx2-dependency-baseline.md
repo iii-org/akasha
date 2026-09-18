@@ -47,3 +47,22 @@ to the new environment and version constraints.
 
 GitHub Actions itself and the full native-model installation/runtime have not
 been executed locally. The full CI job retains those checks. No commit was made.
+
+## Follow-up: checkout-independent export validation
+
+CI later reported `Could not access constraints/uv.lock` after both exports
+succeeded. The exact message was reproduced by running the old two-path
+`git diff` command outside a Git worktree. This establishes a failure mode,
+not the precise reason the CI checkout was not recognized as a worktree.
+The provided log does not distinguish missing metadata, repository trust or
+working-directory issues.
+
+Both CI jobs now call `scripts/check_dependency_baseline.py`. It runs the same
+locked exports, compares file contents and restores originals in a finally
+block, without requiring Git metadata. Only LF/CRLF differences are normalized;
+stale exports still fail. Missing files and export failures also return nonzero.
+
+Validation: the real baseline check passed; 17 relevant tests passed, including
+six cases for valid/stale light/stale full exports with LF and CRLF in a copied
+checkout without `.git`. CI YAML and whitespace checks passed. The hosted
+GitHub Actions run has not been rerun here.

@@ -36,10 +36,7 @@ jobs:
         run: uv pip install --system "uv==0.12.13"
 
       - name: Verify dependency baseline exports
-        run: |
-          uv export --locked --extra light --extra dev --no-emit-project --no-hashes -o constraints/light-dev.txt > /dev/null
-          uv export --locked --extra full --extra dev --no-emit-project --no-hashes -o constraints/full-dev.txt > /dev/null
-          git diff --exit-code -- uv.lock constraints/
+        run: python scripts/check_dependency_baseline.py
 
       - name: Install dependencies
         run: uv pip install --system -e ".[light,dev]" -c constraints/light-dev.txt
@@ -82,10 +79,7 @@ jobs:
         run: uv pip install --system "uv==0.12.13"
 
       - name: Verify dependency baseline exports
-        run: |
-          uv export --locked --extra light --extra dev --no-emit-project --no-hashes -o constraints/light-dev.txt > /dev/null
-          uv export --locked --extra full --extra dev --no-emit-project --no-hashes -o constraints/full-dev.txt > /dev/null
-          git diff --exit-code -- uv.lock constraints/
+        run: python scripts/check_dependency_baseline.py
 
       - name: Install full dependencies
         run: uv pip install --system -e ".[full,dev]" -c constraints/full-dev.txt
