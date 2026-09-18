@@ -10,6 +10,7 @@ import time
 from typing import Any, Generator, List, Sequence, Union
 
 from langchain.agents import create_agent
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_core.tools import BaseTool
 
@@ -30,6 +31,16 @@ from akasha.utils.base import (
 )
 
 logger = logging.getLogger("akasha.agent")
+
+_PROGRESS_PROMPT = """User-visible progress reporting:
+When calling tools, include a brief explanation of the operation's purpose in
+the same assistant message as the tool calls. After receiving tool results,
+briefly state verified findings and the next operation if more tools are needed.
+Use the user's language. Describe observable actions, not private reasoning.
+Do not invent results or claim success before a tool completes. Keep progress
+concise, and put the final answer in a separate message without tool calls.
+These reporting instructions do not change the user's task or output constraints.
+"""
 
 
 def _message_text(message: Any) -> str:
@@ -122,6 +133,8 @@ def _extract_messages(result: Any) -> list:
 
 def _last_answer(messages: list) -> str:
     for message in reversed(messages):
+        if getattr(message, "tool_calls", None):
+            return ""
         if isinstance(message, (AIMessage, AIMessageChunk)):
             text = _message_text(message)
             if text:
@@ -193,6 +206,52 @@ def _count_tokens(model: Any, text: str) -> int:
         return len(text)
 
 
+class _ProgressCallbacks(BaseCallbackHandler):
+    """Observe completed agent model turns before LangGraph executes tools."""
+
+    run_inline = True
+
+    def __init__(self, agent, history=None):
+        self.agent = agent
+        self.model_runs = set()
+        self.calls = set()
+        self.results = set()
+        for message in _as_message_list(history):
+            for call in getattr(message, "tool_calls", None) or []:
+                self.calls.add(call.get("id"))
+            if isinstance(message, ToolMessage):
+                self.results.add(message.tool_call_id)
+
+    def on_chat_model_start(self, serialized, messages, *, run_id, metadata=None, **kwargs):
+        if (metadata or {}).get("langgraph_node") == "model":
+            self.model_runs.add(run_id)
+
+    def on_llm_end(self, response, *, run_id, **kwargs):
+        if run_id not in self.model_runs:
+            return
+        self.model_runs.discard(run_id)
+        for generations in response.generations:
+            for generation in generations:
+                self.message(getattr(generation, "message", None))
+
+    def message(self, message):
+        calls = getattr(message, "tool_calls", None) or []
+        fresh = [call for call in calls if call.get("id") not in self.calls]
+        if fresh:
+            for text in self.agent._progress_for_message(message):
+                self.agent._display_progress(text)
+            for call in fresh:
+                self.calls.add(call.get("id"))
+                self.agent._display_tool_call(call)
+        if isinstance(message, ToolMessage) and message.tool_call_id not in self.results:
+            self.results.add(message.tool_call_id)
+            self.agent._display_tool_result(message)
+
+    def on_tool_end(self, output, **kwargs):
+        if isinstance(output, ToolMessage):
+            self.message(output)
+
+
 class agents(basic_llm):
     """Reusable tool-calling agent facade over LangChain ``create_agent``."""
 
@@ -240,6 +299,7 @@ class agents(basic_llm):
         self.retri_observation = retri_observation
         self.messages: list = []
         self.thoughts: list = []
+        self.progress: list[str] = []
         self.tool_calls: list = []
         self.tokens = 0
         self.input_len = 0
@@ -279,6 +339,9 @@ class agents(basic_llm):
         return bool(skills)
 
     def _build_agent(self):
+        effective_prompt = "\n\n".join(
+            part for part in (self.system_prompt.strip(), _PROGRESS_PROMPT) if part
+        )
         kwargs = {
             "model": self.model_obj,
             "tools": list(self.tools.values()),
@@ -291,15 +354,15 @@ class agents(basic_llm):
             )
             self.skill_middleware = DynamicSkillMiddleware(
                 self.skill_references,
-                base_prompt=self.system_prompt,
+                base_prompt=effective_prompt,
                 tool_context=self.skill_tool_context,
                 existing_tools=list(self.tools.values()),
                 max_resource_bytes=self.max_resource_bytes,
             )
             self.skill_context = self.skill_middleware.available_context
             kwargs["middleware"] = [self.skill_middleware]
-        elif self.system_prompt.strip():
-            kwargs["system_prompt"] = self.system_prompt
+        else:
+            kwargs["system_prompt"] = effective_prompt
         return create_agent(**kwargs)
     def _display_thinking_info(self) -> None:
         message = (
@@ -384,15 +447,28 @@ class agents(basic_llm):
             else "unknown"
         )
         args = call.get("args", {}) if isinstance(call, dict) else call
-        self._emit_trace(f"tool call: {name}\n  args: {_trace_text(args)}")
+        self._emit_trace(f"tool call: {name}\n[tool] 呼叫 {name}\n  args: {_trace_text(args)}")
 
     def _display_tool_result(self, message: ToolMessage) -> None:
         if not (self.verbose or self.keep_logs):
             return
         name = getattr(message, "name", None) or "unknown"
         self._emit_trace(
-            f"tool result: {name}\n  result: {_trace_text(_message_text(message))}"
+            f"tool result: {name}\n[tool] {name} 回傳結果\n  result: {_trace_text(_message_text(message))}"
         )
+
+    def _progress_for_message(self, message: Any) -> list[str]:
+        calls = getattr(message, "tool_calls", None) or []
+        if not calls:
+            return []
+        text = _message_text(message).strip()
+        return [text] if text else [
+            f"準備呼叫工具 {call['name']}。" for call in calls
+        ]
+
+    def _display_progress(self, text: str) -> None:
+        self.progress.append(text)
+        self._emit_trace(f"[progress] {text}")
 
     def _display_tool_trace(self, messages: list) -> None:
         if not (self.verbose or self.keep_logs):
@@ -431,6 +507,7 @@ class agents(basic_llm):
                     "tool_calls": _json_safe(self.tool_calls),
                     "thinking": "".join(thinking),
                     "response": self.response,
+                    "progress": list(self.progress),
                     "model": self.model,
                     "provider": self.model.split(":", 1)[0],
                     "tokens": self.tokens,
@@ -469,6 +546,8 @@ class agents(basic_llm):
         return await self._ainvoke(question, messages)
 
     async def _ainvoke(self, question: str, messages: List[dict] | None):
+        self.progress = []
+        callbacks = _ProgressCallbacks(self, messages)
         self._display_thinking_info()
         started_at = datetime.datetime.now()
         start = time.time()
@@ -493,9 +572,16 @@ class agents(basic_llm):
         self.tokens = _count_tokens(self.model_obj, question)
         result = await self._agent.ainvoke(
             self._payload(question, messages),
-            config={"recursion_limit": max(3, self.max_round * 2 + 1)},
+            config={
+                "recursion_limit": max(3, self.max_round * 2 + 1),
+                "callbacks": [callbacks],
+            },
         )
-        self._display_tool_trace(_extract_messages(result))
+        result_messages = _extract_messages(result)
+        for message in result_messages:
+            callbacks.message(message)
+        for event in _loaded_skill_events(result_messages):
+            self._emit_trace(f"skill loaded: {event['reference']}")
         elapsed = time.time() - start
         ended_at = datetime.datetime.now()
         self._record_result(timestamp, result, elapsed)
@@ -503,6 +589,8 @@ class agents(basic_llm):
         self._display_timing("end", ended_at, elapsed)
         if not self.response:
             raise RuntimeError("LangChain agent returned no final answer")
+        if self.verbose:
+            print(f"[answer] {self.response}")
         return self.response
 
     def _stream(
@@ -516,7 +604,32 @@ class agents(basic_llm):
         collected = []
         answer_parts = []
         thinking_parts = []
-        displayed_tool_calls = set()
+        self.progress = []
+        pending = None
+
+        def finish_turn():
+            nonlocal pending
+            if pending is None:
+                return
+            message, pending = pending, None
+            collected.append(message)
+            calls = getattr(message, "tool_calls", None) or []
+            if calls:
+                for text in self._progress_for_message(message):
+                    self._display_progress(text)
+                    yield {"type": "progress", "data": text}
+                for call in calls:
+                    self._display_tool_call(call)
+            else:
+                text = _message_text(message)
+                if text:
+                    if self.verbose:
+                        print("\033[33m[agent.answer] [answer]\033[0m ", end="", flush=True)
+                    answer_parts.append(text)
+                    self._display_stream_event("answer", text)
+                    if self.verbose:
+                        print()
+                    yield {"type": "answer", "data": text}
         include_thinking = self.thinking if include_thinking is None else include_thinking
         if self.keep_logs:
             self.timestamp_list.append(timestamp)
@@ -542,38 +655,40 @@ class agents(basic_llm):
                 stream_mode=stream_kwargs["stream_mode"],
             )
 
-            # ``messages`` yields AIMessageChunk/ToolMessage chunks, so
-            # callers receive token-level answer/thinking events.
+            # Buffer assistant text until tool-call intent is known. Reasoning
+            # events remain incremental and independent from progress.
             for update in updates:
                 message = _stream_message_chunk(update)
                 messages = [message] if message is not None else _stream_update_messages(update)
                 for message in messages:
                     if isinstance(message, ToolMessage):
+                        yield from finish_turn()
                         collected.append(message)
                         self._display_tool_result(message)
                         yield {"type": "tool", "data": _message_dump(message)}
                         continue
-                    collected.append(message)
-                    for call in getattr(message, "tool_calls", None) or []:
-                        safe_call = _json_safe(call)
-                        identity = json.dumps(
-                            safe_call, ensure_ascii=False, sort_keys=True
-                        )
-                        if identity not in displayed_tool_calls:
-                            displayed_tool_calls.add(identity)
-                            self._display_tool_call(call)
+                    if not isinstance(message, (AIMessage, AIMessageChunk)):
+                        continue
+                    if (
+                        isinstance(update, tuple) and len(update) > 1
+                        and isinstance(update[1], dict)
+                        and update[1].get("langgraph_node", "model") != "model"
+                    ):
+                        continue
+                    if pending is not None and (
+                        not isinstance(message, AIMessageChunk)
+                        or (message.id and pending.id and message.id != pending.id)
+                    ):
+                        yield from finish_turn()
+                    pending = message if pending is None else pending + message
                     thinking = _thinking_text(message)
                     if include_thinking and thinking:
                         thinking_parts.append(thinking)
                         self._display_stream_event("thinking", thinking)
                         yield {"type": "thinking", "data": thinking}
-                    text = _message_text(message)
-                    if text:
-                        if self.verbose and not answer_parts:
-                            print("\033[33m[agent.answer]\033[0m ", end="", flush=True)
-                        answer_parts.append(text)
-                        self._display_stream_event("answer", text)
-                        yield {"type": "answer", "data": text}
+                    if not isinstance(message, AIMessageChunk) or getattr(message, "chunk_position", None) == "last":
+                        yield from finish_turn()
+            yield from finish_turn()
             result = {"messages": collected}
             elapsed = time.time() - start
             ended_at = datetime.datetime.now()

@@ -1,6 +1,11 @@
 """Public MCP result normalization contract tests."""
 
+import pytest
+
 from akasha.agent.mcp import normalize_mcp_result
+
+
+pytestmark = [pytest.mark.unit, pytest.mark.contract]
 
 
 def test_normalize_mcp_result_decodes_one_json_text_block():

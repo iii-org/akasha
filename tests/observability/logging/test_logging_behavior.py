@@ -298,7 +298,7 @@ def test_agent_verbose_prints_stream_tool_trace(monkeypatch, capsys):
 
     events = list(agent("calculate"))
     output = capsys.readouterr().out
-    assert [event["type"] for event in events] == ["tool", "answer"]
+    assert [event["type"] for event in events] == ["progress", "tool", "answer"]
     assert output.count("[akasha] tool call: python_execute") == 1
     assert "[akasha] tool result: python_execute" in output
     assert "execution: repl" in output

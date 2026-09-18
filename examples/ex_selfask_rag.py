@@ -1,36 +1,27 @@
-import akasha
+"""Decompose a question and retrieve evidence for its subquestions."""
+from pathlib import Path
+import sys
 
-DEFAULT_MODEL = "openai:gpt-3.5-turbo"
-DEFAULT_EMBED = "openai:text-embedding-ada-002"
-DEFAULT_MAX_INPUT_TOKENS = 3000
-DEFAULT_MAX_OUTPUT_TOKENS = 1024
-DEFAULT_CHUNK_SIZE = 1000
-DEFAULT_SEARCH_TYPE = "auto"
-PROMPT = "akasha是甚麼?"
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from examples._common import DATA, configure, parser, print_response, workspace, copy_documents
 
-#### create a RAG object and call it ###
-ak = akasha.RAG(
-    embeddings="openai:text-embedding-3-small",
-    model="openai:gpt-4o",
-    max_input_tokens=DEFAULT_MAX_INPUT_TOKENS,
-    keep_logs=True,
-    verbose=True,
-)
-### selfask_RAG is a function that will first use llm to separate user question into several prompts,
-### then use RAG to search for the answer. ###
-### use data source as reference and search similar document to answer the query ###
-### data_source can be a list of local files, directories, or urls ###
-### files include pdf, docx, txt, md, and csv; pptx needs [documents] ###
-res = ak.selfask_RAG(
-    data_source=["docs/mic", "https://github.com/iii-org/akasha"],
-    prompt=PROMPT,
-)
+def main(argv=None):
+    cli = parser(__doc__)
+    cli.add_argument("--stream", action="store_true", help="Set streaming on the RAG instance")
+    args = configure(cli, argv)
+    import akasha
+    with workspace(args, "selfask"):
+        source = copy_documents()
+        client = akasha.RAG(model=args.model, embeddings=args.embeddings,
+                            env_file=args.env_file, search_type="knn",
+                            stream=args.stream, keep_logs=True)
+        # selfask_RAG has no stream keyword; it uses the instance setting.
+        response = client.selfask_RAG(data_source=source,
+                                     prompt="How do sensors and predictive maintenance work together?")
+        print_response(response)
+        client.save_logs("selfask.json")
 
-# save the logs or turn verbose on to see the details
-ak.save_logs("logs.json")
 
-### you can set stream to True to get the response in stream ###
-st = ak.selfask_RAG("docs/mic", PROMPT, stream=True)
-full_response = ""
-for s in st:
-    full_response += s
+if __name__ == "__main__":
+    main()

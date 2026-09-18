@@ -5,6 +5,9 @@ from unittest.mock import patch, MagicMock
 from akasha.utils.optional_dependencies import OptionalDependencyError
 
 
+pytestmark = pytest.mark.unit
+
+
 def test_torch_missing_hf_model():
     """Test that hf_model points users to the full extra when torch is missing."""
     with patch.dict(sys.modules, {'torch': None, 'transformers': None}):

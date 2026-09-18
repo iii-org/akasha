@@ -1,21 +1,20 @@
-import akasha.helper as ah
+"""Count tokens and words, convert Chinese, and extract JSON without a model API."""
+from pathlib import Path
+import sys
 
-DEFAULT_MODEL = "openai:gpt-3.5-turbo"
-TEXT = "工業4.0是甚麼?"
-TEXT2 = """工業4.0是甚麼? 
-{
-  "title": "工業4.0",
-  "description": "工業4.0是一場製造業的數位轉型，融合了物聯網、人工智慧與自動化技術，提升生產效率與靈活性。" 
-}
-"""
-### compute the tokens of the text by the model ###
-tokens = ah.myTokenizer.compute_tokens(TEXT, DEFAULT_MODEL)
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from examples._common import DATA, configure, parser, print_response, workspace
 
-### compute the length of the text by jieba ###
-doc_length = ah.get_doc_length(TEXT)
+def main(argv=None):
+    args = configure(parser(__doc__), argv)
+    import akasha.helper as ah
+    text = "Industry 4.0 connects industrial sensors and information systems."
+    print("Tokens:", ah.myTokenizer.compute_tokens(text, args.model))
+    print("Words:", ah.get_doc_length("en", text))
+    print("Traditional Chinese:", ah.sim_to_trad("工业数据"))
+    print("JSON:", ah.extract_json('Example: {"title": "Industry 4.0", "connected": true}'))
 
-### translate simplified chinese to traditional chinese ###
-ret = ah.sim_to_trad(TEXT)
 
-### get the json format dictionary from the text ###
-json_str = ah.extract_json(TEXT2)
+if __name__ == "__main__":
+    main()

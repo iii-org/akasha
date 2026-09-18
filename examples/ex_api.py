@@ -1,80 +1,52 @@
-import requests
+"""Call a running Akasha HTTP API with real environment settings."""
+from pathlib import Path
+import sys
+
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from examples._common import DATA, configure, parser, print_response, workspace
+
 import os
 
-### use akasha api in terminal to start the api server ###
-### use -p port -h host to specify the port and host ###
-HOST = os.getenv("API_HOST", "http://127.0.0.1")
-PORT = os.getenv("API_PORT", "8000")
-urls = {
-    "summary": f"{HOST}:{PORT}/summary",
-    "rag": f"{HOST}:{PORT}/RAG",
-    "ask": f"{HOST}:{PORT}/ask",
-    "websearch": f"{HOST}:{PORT}/websearch",
-}
+def build_payload(args):
+    keys = ("OPENAI_API_KEY", "OPENAI_BASE_URL", "AZURE_OPENAI_API_KEY",
+            "AZURE_OPENAI_BASE_URL", "GEMINI_API_KEY", "ANTHROPIC_API_KEY",
+            "SERPER_API_KEY", "BRAVE_API_KEY")
+    common = {"model": args.model,
+              "env_config": {key: os.environ[key] for key in keys if os.environ.get(key)}}
+    if args.action == "summary":
+        return {**common, "content": (DATA / "industry.txt").read_text(encoding="utf-8"),
+                "summary_type": "map_reduce", "summary_len": 150}
+    if args.action == "rag":
+        return {**common, "data_source": args.data_source or str(DATA),
+                "prompt": "How can predictive maintenance reduce downtime?",
+                "embedding_model": args.embeddings, "search_type": "knn"}
+    if args.action == "websearch":
+        return {**common, "prompt": "What is Industry 4.0?",
+                "search_engine": args.engine, "search_num": 3}
+    return {**common, "prompt": "What is Industry 4.0?",
+            "info": (DATA / "industry.txt").read_text(encoding="utf-8")}
 
-env_config = {
-    "AZURE_OPENAI_API_KEY": "your azure key",
-    "AZURE_OPENAI_BASE_URL": "your azure openai base url",
-    "OPENAI_API_KEY": "your openai key",
-    "SERPER_API_KEY": "your serper key",
-    "BRAVE_API_KEY": "your brave key",
-    "ANTHROPIC_API_KEY": "your anthropic key",
-    "GEMINI_API_KEY": "your gemini key",
-}
+def main(argv=None):
+    cli = parser(__doc__)
+    cli.add_argument("--action", choices=["ask", "rag", "summary", "websearch"], default="ask")
+    cli.add_argument("--base-url", help="API_BASE_URL or API_HOST:API_PORT (default localhost:8000)")
+    cli.add_argument("--data-source", help="RAG path as seen by the API server")
+    cli.add_argument("--engine", choices=["wiki", "serper", "brave"], default="wiki")
+    args = configure(cli, argv)
+    import requests
+    base = args.base_url or os.getenv("API_BASE_URL")
+    if not base:
+        base = os.getenv("API_HOST", "http://127.0.0.1").rstrip("/") + ":" + os.getenv("API_PORT", "8000")
+    route = "RAG" if args.action == "rag" else args.action
+    response = requests.post(base.rstrip("/") + "/" + route,
+                             json=build_payload(args), timeout=180)
+    response.raise_for_status()
+    result = response.json()
+    if isinstance(result, dict) and result.get("status") not in (None, "success"):
+        raise RuntimeError(f"Akasha API returned status: {result.get('status')}")
+    print(result)
 
-ask_data = {
-    "prompt": "太陽能電池技術?",
-    "info": "太陽能電池技術5塊錢",
-    "model": "openai:gpt-3.5-turbo",
-    "system_prompt": "",
-    "temperature": 0.0,
-    "env_config": env_config,
-}
 
-rag_data = {
-    "data_source": "docs/mic/",
-    "prompt": "工業4.0",
-    "chunk_size": 1000,
-    "model": "openai:gpt-3.5-turbo",
-    "embedding_model": "openai:text-embedding-ada-002",
-    "threshold": 0.1,
-    "search_type": "auto",
-    "system_prompt": "",
-    "max_input_tokens": 3000,
-    "temperature": 0.0,
-    "env_config": env_config,
-}
-summary_data = {
-    "content": "docs/2.pdf",
-    "model": "openai:gpt-3.5-turbo",
-    "summary_type": "reduce_map",
-    "summary_len": 500,
-    "system_prompt": "用中文做500字摘要",
-    "env_config": env_config,
-}
-
-websearch_data = {
-    "prompt": "太陽能電池技術?",
-    "model": "openai:gpt-3.5-turbo",
-    "system_prompt": "",
-    "temperature": 0.0,
-    "env_config": env_config,
-    "search_engine": "serper",
-    "search_num": 5,
-}
-
-ask_response = requests.post(urls["ask"], json=ask_data).json()
-print(ask_response)
-# rag_response = requests.post(urls["rag"], json=rag_data).json()
-# print(rag_response)
-
-# sum_response = requests.post(
-#     urls["summary"],
-#     json=summary_data,
-# ).json()
-
-# print(sum_response)
-
-# websearch_response = requests.post(urls["websearch"],
-#                                    json=websearch_data).json()
-# print(websearch_response)
+if __name__ == "__main__":
+    main()

@@ -1,21 +1,13 @@
 import pytest
 import akasha
-import os
 from typing import Tuple
-from pathlib import Path
-from dotenv import load_dotenv
-import importlib.util
-from tests.support.paths import TEST_ENV_FILE
-
-ENV_FILE = TEST_ENV_FILE
-load_dotenv(ENV_FILE, override=True)
-
-if not ENV_FILE.exists() or not os.getenv("GEMINI_API_KEY"):
-    pytest.skip("GEMINI_API_KEY is required for evaluation integration tests", allow_module_level=True)
+import importlib
+from tests.support.live import load_test_env, require_keys
 
 
 @pytest.fixture
 def base_line():
+    require_keys("GEMINI_API_KEY")
     eva = akasha.eval(
         embeddings="gemini:gemini-embedding-001",
         model="gemini:gemini-2.5-flash",
@@ -25,18 +17,21 @@ def base_line():
         max_input_tokens=2468,
         temperature=0.15,
         keep_logs=True,
-        env_file=str(ENV_FILE),
+        env_file=load_test_env(),
     )
     doc_path = "./docs/mic/"
     return eva, doc_path
 
 
 @pytest.mark.eval
-@pytest.mark.integration
+@pytest.mark.live
 @pytest.mark.requires_api
-def test_Model_Eval(base_line: Tuple[akasha.eval, str]):
-    if importlib.util.find_spec("bert_score") is None:
-        pytest.skip("bert_score not installed")
+@pytest.mark.full_only
+def test_model_eval(base_line: Tuple[akasha.eval, str]):
+    try:
+        importlib.import_module("bert_score")
+    except ImportError as exc:
+        pytest.fail(f"full installation is missing bert_score: {exc}")
     eva, doc_path = base_line
 
     assert eva.verbose is True

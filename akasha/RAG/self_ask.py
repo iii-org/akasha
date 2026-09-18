@@ -73,16 +73,21 @@ def self_ask_f(self: atman, start_time: float, timestamp: str) -> str:
     tot_prompt_len, tot_prompt_tokens = self.prompt_length, self.prompt_tokens
     tot_doc_len, tot_doc_tokens = 0, 0
 
-    for each_fol_up in self.follow_up:
-        if self.keep_logs:
-            logging.info("Self-ask: resolving follow-up question: %s", each_fol_up)
-        each_fol_ans = self(self.db, each_fol_up)
-        inter_q.append(each_fol_up)
-        inter_a.append(each_fol_ans)
-        tot_prompt_len += self.prompt_length
-        tot_prompt_tokens += self.prompt_tokens
-        tot_doc_len += self.doc_length
-        tot_doc_tokens += self.doc_tokens
+    stream = self.stream
+    try:
+        for each_fol_up in self.follow_up:
+            if self.keep_logs:
+                logging.info("Self-ask: resolving follow-up question: %s", each_fol_up)
+            # The final synthesis needs completed evidence, not generators.
+            each_fol_ans = self(self.db, each_fol_up, stream=False)
+            inter_q.append(each_fol_up)
+            inter_a.append(each_fol_ans)
+            tot_prompt_len += self.prompt_length
+            tot_prompt_tokens += self.prompt_tokens
+            tot_doc_len += self.doc_length
+            tot_doc_tokens += self.doc_tokens
+    finally:
+        self.stream = stream
 
     inter_info = get_inter_info(inter_q, inter_a)
 

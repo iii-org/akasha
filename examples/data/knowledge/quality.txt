@@ -1,0 +1,6 @@
+Manufacturing quality control checks whether produced items meet defined requirements.
+Inspection can combine human review, measurement equipment, and machine vision.
+A vision system can flag visible defects, but its results must be validated against representative samples.
+Teams record defect rates and investigate changes in raw materials, machine settings, and environmental conditions.
+Traceability links each product batch to its inputs and production history.
+Quality data and maintenance data can be compared to investigate whether equipment condition affects defect rates.

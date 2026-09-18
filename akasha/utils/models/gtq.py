@@ -42,7 +42,21 @@ def _load_quantized_model(model_name_or_path: str, **legacy_kwargs):
             from gptqmodel import GPTQModel
         except ImportError as error:
             raise OptionalDependencyError("GPTQ models", "gptq") from error
-        return GPTQModel.load(model_name_or_path), "gptqmodel"
+        supported_keys = {
+            "cache_dir",
+            "device",
+            "device_map",
+            "local_files_only",
+            "revision",
+            "trust_remote_code",
+            "use_safetensors",
+        }
+        gptqmodel_kwargs = {
+            key: value
+            for key, value in legacy_kwargs.items()
+            if key in supported_keys and value is not None
+        }
+        return GPTQModel.load(model_name_or_path, **gptqmodel_kwargs), "gptqmodel"
 
     return (
         AutoGPTQForCausalLM.from_quantized(model_name_or_path, **legacy_kwargs),
@@ -66,6 +80,7 @@ class gptq(LLM):
     tokenizer: Any = Field(default=None)
     model: Any = Field(default=None)
     quant_backend: str = Field(default="")
+    quant_device: str = Field(default="")
 
     def __init__(
         self,
@@ -73,18 +88,27 @@ class gptq(LLM):
         temperature: float = 0.01,
         bit4: bool = True,
         max_token: int = 4096,
+        device: str | None = None,
+        revision: str | None = None,
     ):
         super().__init__()
         if torch is None or AutoTokenizer is None:
             raise OptionalDependencyError("GPTQ models", "gptq")
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model_name_or_path, use_fast=False, max_length=max_token, truncation=True
+            model_name_or_path,
+            use_fast=False,
+            max_length=max_token,
+            truncation=True,
+            revision=revision,
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.max_token = max_token
         self.temperature = temperature
         if self.temperature == 0.0:
             self.temperature = 0.01
+        self.quant_device = device or (
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+        )
         if bit4 is False:
             from transformers import AutoModelForCausalLM
 
@@ -93,13 +117,15 @@ class gptq(LLM):
                 device_map="auto",
                 torch_dtype=torch.float16,
                 load_in_8bit=True,
+                revision=revision,
             )
             self.model.eval()
         else:
             self.model, self.quant_backend = _load_quantized_model(
                 model_name_or_path,
                 low_cpu_mem_usage=True,
-                device="cuda:0",
+                device=self.quant_device,
+                revision=revision,
                 use_triton=False,
                 inject_fused_attention=False,
                 inject_fused_mlp=False,
@@ -120,7 +146,7 @@ class gptq(LLM):
         if self.quant_backend == "gptqmodel":
             result = self.model.generate(
                 prompt,
-                max_new_tokens=1024,
+                max_new_tokens=self.max_token,
                 do_sample=True,
                 top_k=50,
                 top_p=self.top_p,
@@ -136,7 +162,7 @@ class gptq(LLM):
         ).input_ids.to("cuda")
         generate_input = {
             "input_ids": input_ids,
-            "max_new_tokens": 1024,
+            "max_new_tokens": self.max_token,
             "do_sample": True,
             "top_k": 50,
             "top_p": self.top_p,

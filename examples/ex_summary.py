@@ -1,32 +1,23 @@
-import akasha
+"""Summarize the bundled reference documents."""
+from pathlib import Path
+import sys
 
-DEFAULT_MODEL = "openai:gpt-3.5-turbo"
-DEFAULT_MAX_INPUT_TOKENS = 3000
-DEFAULT_MAX_OUTPUT_TOKENS = 1024
-DEFAULT_CHUNK_SIZE = 1000
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from examples._common import DATA, configure, parser, print_response, workspace
 
-#### create a summary object and call it ###
-### sum_type is the summarization method, could be "map_reduce" or "refine" ###
-### sum_len is the length of the final summary you suggest llm should be ###
-### it will first split the content into chunks based on chunk_size, and then summarize several chunks at a time(depend on the llm window size/max_input_tokens),
-### and finally merge them together. ###
-### language is the language of the content, could be "en" or "zh" ###
+def main(argv=None):
+    cli = parser(__doc__)
+    cli.add_argument("--method", choices=["map_reduce", "refine"], default="map_reduce")
+    args = configure(cli, argv)
+    import akasha
+    with workspace(args, "summary"):
+        client = akasha.summary(model=args.model, sum_type=args.method,
+                                sum_len=150, language="en", env_file=args.env_file,
+                                max_input_tokens=8000, keep_logs=True)
+        print(client(content=str(DATA)))
+        client.save_logs("summary.json")
 
-summ = akasha.summary(
-    "openai:gpt-4o",
-    sum_type="map_reduce",
-    chunk_size=DEFAULT_CHUNK_SIZE,
-    sum_len=1000,
-    language="en",
-    keep_logs=True,
-    verbose=True,
-    max_input_tokens=8000,
-)
 
-### use llm to summarize content,  ###
-### info can be a list of local files, string, directories, or urls ###
-### files include pdf, docx, txt, md, and csv; pptx needs [documents] ###
-ret = summ(content=["https://github.com/iii-org/akasha"])
-
-# save the logs or turn verbose on to see the details
-summ.save_logs("sumlog.json")
+if __name__ == "__main__":
+    main()

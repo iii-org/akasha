@@ -307,6 +307,14 @@ print(agent("Use the available tool and report its result."))
 
 Create the agent once and reuse it for multiple questions. Rebuilding an agent for every question repeats provider initialization costs.
 
+Set `verbose=True` to display `[progress]` (progress), `[tool]` (tool activity),
+and `[answer]` (final answer). Akasha automatically adds progress instructions to
+the effective system prompt while preserving your `system_prompt` and Skills.
+This works with thinking enabled or disabled, including non-streaming calls.
+When the model omits a progress explanation, Akasha reports the tool name without
+inventing a reason or result. `agent.progress` and each saved log's `progress`
+field contain the progress messages; `agent.response` contains only the answer.
+
 ## Streaming events
 
 Non-streaming calls return a string. Streaming agents return JSON-serializable event dictionaries:
@@ -324,6 +332,8 @@ for event in agent("Explain the difference between a vector store and an embeddi
         print("[thinking]", event["data"])
     elif event["type"] == "tool":
         print("[tool]", event["data"])
+    elif event["type"] == "progress":
+        print("[progress]", event["data"])
     elif event["type"] == "answer":
         print(event["data"], end="", flush=True)
 ```
@@ -332,9 +342,16 @@ The event types are:
 
 | Event | Meaning |
 | --- | --- |
-| `answer` | A chunk of the final answer |
+| `answer` | Final-answer text, released after the model turn is classified |
+| `progress` | User-visible operation explanation, independent of thinking |
 | `thinking` | Provider reasoning/thinking content, when available and enabled |
 | `tool` | A tool or Skill result |
+
+Agent text is buffered until the model turn ends, because tool calls can arrive
+after text chunks. This prevents progress from leaking into `answer` events;
+answer text is no longer displayed token by token. Thinking events remain
+incremental. With `verbose=True`, Akasha prints the events itself, so consume the
+generator without printing each event again unless you want duplicate output.
 
 `ask(stream=True, thinking=False)` currently yields text chunks. `ask(stream=True, thinking=True)` yields `answer` and optional `thinking` events.
 
@@ -419,7 +436,7 @@ python -m pytest \
 Live provider tests are opt-in because they use API quota:
 
 ```powershell
-$env:RUN_LLM_TESTS = "1"
+$env:RUN_LIVE_TESTS = "1"
 $env:ENV_FILE = "tests/.env"
 python -m pytest tests/agent/stream/test_live_gemini.py -q
 ```

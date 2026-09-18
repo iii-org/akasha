@@ -1,0 +1,6 @@
+Predictive maintenance uses measurements and historical records to identify signs of equipment deterioration.
+For example, a sustained increase in vibration can indicate that a machine bearing needs inspection.
+A maintenance team investigates the alert and schedules a repair before an unexpected breakdown.
+Planned repairs can reduce unplanned downtime, but the system does not guarantee that every failure will be detected.
+False alarms and missed faults should be monitored. Engineers periodically validate alarm thresholds.
+The approach depends on reliable sensors, contextual information, and a clear maintenance workflow.

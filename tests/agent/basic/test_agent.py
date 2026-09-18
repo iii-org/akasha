@@ -1,12 +1,6 @@
 import pytest
 import akasha
-import os
-from pathlib import Path
-from dotenv import load_dotenv
-from tests.support.paths import TEST_ENV_FILE
-
-ENV_FILE = TEST_ENV_FILE
-load_dotenv(ENV_FILE, override=True)
+from tests.support.live import load_test_env, require_keys
 
 
 def today_f():
@@ -25,21 +19,18 @@ today_tool = akasha.create_tool(
 
 
 @pytest.mark.agent
-@pytest.mark.integration
+@pytest.mark.live
 @pytest.mark.requires_api
 @pytest.mark.smoke
-@pytest.mark.skipif(
-    not ENV_FILE.exists() or not os.getenv("GEMINI_API_KEY"),
-    reason="GEMINI_API_KEY is required for this live agent test",
-)
 def test_agent():
+    require_keys("GEMINI_API_KEY")
     agent = akasha.agents(
         model="gemini:gemini-2.5-flash",
         tools=[today_tool],
         temperature=1.0,
         verbose=True,
         keep_logs=True,
-        env_file=str(ENV_FILE),
+        env_file=load_test_env(),
     )
 
     res = agent("今天幾月幾號?")

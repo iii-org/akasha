@@ -198,6 +198,7 @@ class RAG(atman):
     def _display_stream(
         self, text_input: Union[str, List[str]]
     ) -> Generator[str, None, None]:
+        self.response = ""
         ret = call_stream_model(
             self.model_obj, text_input, self.verbose, keep_logs=self.keep_logs
         )
@@ -576,11 +577,22 @@ class RAG(atman):
             print("\n\nThe tokens of prompt is larger than max_input_tokens.\n\n")
             raise ValueError("The tokens of prompt is larger than max_input_tokens.")
 
-        self.response = self_ask_f(self, start_time, timestamp)
-        if self.keep_logs:
-            logging.info("Self-ask RAG request finished")
+        response = self_ask_f(self, start_time, timestamp)
+        if isinstance(response, str):
+            self.response = response
+            if self.keep_logs:
+                logging.info("Self-ask RAG request finished")
+            return response
 
-        return self.response
+        def completed_stream():
+            yield from response
+            elapsed = time.time() - start_time
+            self._add_result_log(timestamp, elapsed)
+            self._upload_logs(elapsed, self.doc_length, self.doc_tokens)
+            if self.keep_logs:
+                logging.info("Self-ask RAG request finished")
+
+        return completed_stream()
 
 
 # Importing the namespace package ``akasha.RAG`` can otherwise leave the

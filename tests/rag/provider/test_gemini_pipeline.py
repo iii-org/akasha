@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import gc
-import os
-from pathlib import Path
 
 import pytest
 import yaml
-from dotenv import dotenv_values, load_dotenv
 
 import akasha
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
@@ -18,31 +15,22 @@ from akasha.utils.db.load_db import load_db_by_chroma_name
 from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
 from akasha.helper.base import separate_name
-from tests.support.paths import REPO_ROOT, TEST_ENV_FILE, RAG_DATA_ROOT
+from tests.support.live import load_test_env, require_keys
+from tests.support.paths import REPO_ROOT, RAG_DATA_ROOT
 
 
-ENV_FILE = TEST_ENV_FILE
 MODEL_MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
 RAG_FILE = RAG_DATA_ROOT / "single_fact.txt"
-RUN_LIVE = os.getenv("RUN_GEMINI_RAG", "").lower() in {"1", "true", "yes"}
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.live,
     pytest.mark.requires_api,
     pytest.mark.smoke,
-    pytest.mark.skipif(
-        not RUN_LIVE,
-        reason="set RUN_GEMINI_RAG=1 to enable the live Gemini RAG pipeline",
-    ),
 ]
 
 
 def test_gemini_embedding_chroma_search_and_answer():
-    values = dotenv_values(ENV_FILE) if ENV_FILE.exists() else {}
-    if not (os.getenv("GEMINI_API_KEY") or values.get("GEMINI_API_KEY")):
-        pytest.skip("GEMINI_API_KEY is not configured")
-    if ENV_FILE.exists():
-        load_dotenv(ENV_FILE, override=False)
+    require_keys("GEMINI_API_KEY")
 
     manifest = yaml.safe_load(MODEL_MANIFEST.read_text(encoding="utf-8"))
     embedding_name = next(
@@ -59,7 +47,7 @@ def test_gemini_embedding_chroma_search_and_answer():
         search_type="auto",
         max_output_tokens=128,
         keep_logs=True,
-        env_file="",
+        env_file=load_test_env(),
     )
 
     print("[gemini stage 1] real embedding output -> Chroma", flush=True)

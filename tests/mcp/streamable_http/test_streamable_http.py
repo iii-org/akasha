@@ -11,10 +11,12 @@ import time
 from pathlib import Path
 
 import akasha
+import pytest
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from tests.support.paths import FIXTURES_ROOT, REPO_ROOT
 
 SERVER = FIXTURES_ROOT / "mcp" / "streamable_http_server.py"
+pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
 
 def _free_port() -> int:

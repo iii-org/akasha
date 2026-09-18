@@ -112,23 +112,6 @@ include = ["akasha", "akasha.*", "cli"]
 [tool.setuptools.package-data]
 akasha = ["py.typed"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = [
-  "unit: fast unit tests without network or provider dependencies",
-  "integration: broader tests that may touch real package integrations",
-  "upgrade: smoke tests used before and after dependency upgrades",
-  "requires_api: tests that require external provider API keys",
-  "full_only: tests that require full local-model dependencies",
-  "smoke: minimal end-to-end validation for critical paths",
-  "agent: agent-related tests",
-  "akasha: legacy top-level Akasha integration tests",
-  "db: database and persistence tests",
-  "eval: evaluation tests",
-  "summary: summary tests",
-  "helper: shared test helper and coverage utilities",
-]
-
 [tool.coverage.run]
 source = [
   "akasha.helper",
@@ -149,6 +132,10 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 80
+# The unit suite's measured September 2026 baseline is 48.72%. Raise this
+# threshold as deterministic coverage grows; do not claim the retired manual
+# subset measurement as repository-wide coverage.
+fail_under = 48
+precision = 2
 show_missing = true
 skip_covered = false

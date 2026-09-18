@@ -1,42 +1,33 @@
-import akasha.utils.db as adb
+"""Build and reload a Chroma index, then load source documents directly."""
+from pathlib import Path
+import sys
 
-DEFAULT_MODEL = "openai:gpt-3.5-turbo"
-DEFAULT_EMBED = "openai:text-embedding-3-small"
-DEFAULT_CHUNK_SIZE = 1000
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from examples._common import DATA, configure, parser, print_response, workspace
 
-### you can use the process_db function to create chromadb of datasource and load it to dbs object(db) ###
-### if the saved file and parameters are the same, the function will load the existing chromadb ###
-## data_source can be file name, directory name, or url ##
-data_source = ["docs/mic", "docs/1.pdf", "https://github.com/iii-org/akasha"]
-db, ignore_files = adb.process_db(
-    data_source=data_source,
-    embeddings=DEFAULT_EMBED,
-    chunk_size=DEFAULT_CHUNK_SIZE,
-    verbose=True,
-)
+def main(argv=None):
+    args = configure(parser(__doc__), argv)
+    import akasha.utils.db as adb
+    from akasha.helper import separate_name
+    from examples._common import require_documents, copy_documents
+    with workspace(args, "load-db"):
+        source = copy_documents()
+        db, ignored = adb.process_db(data_source=source, embeddings=args.embeddings,
+                                      chunk_size=500, env_file=args.env_file)
+        require_documents(db, ignored)
+        print("Documents:", len(db.get_docs()))
+        print("Embedding count:", len(db.get_embeds()))
+        print("Metadata:", db.get_metadatas())
+        print("IDs:", db.get_ids())
+        embed_type, embed_name = separate_name(args.embeddings)
+        directory = adb.get_storage_directory(source, 500, embed_type, embed_name)
+        reloaded, ignored = adb.load_db_by_chroma_name(chroma_name_list=[directory])
+        require_documents(reloaded, ignored)
+        print("Reloaded:", len(reloaded.get_docs()))
+        docs = adb.load_docs_from_info(info=source)
+        print("First source document:", docs[0].page_content)
 
-### dbs object is a class that stores all information of the chromadb ###
-db.get_docs()
-db.get_embeds()
-db.get_metadatas
-db.get_ids()
 
-### for each string in data_source, you can use get_storage_directory to get the storage directory of the chromadb ###
-embed_type, embed_name = DEFAULT_EMBED.split(":")
-chromadb_mic_dir = adb.get_storage_directory(
-    "docs/mic", DEFAULT_CHUNK_SIZE, embed_type, embed_name
-)
-
-### after you created the chromadb, you can also load it by chroma_name ###
-chroma_list = [chromadb_mic_dir]
-db, ignore_files = adb.load_db_by_chroma_name(chroma_name_list=chroma_list)
-#
-#
-#
-#
-### if you don't want to create chromadb, you can directly load the documents files and get the
-### list of Document object(page_content=str, metadata=dict) ###
-### info can be string text, file name, directory name, or url ###
-docs = adb.load_docs_from_info(info=data_source, verbose=True)
-
-print(docs[0].page_content)
+if __name__ == "__main__":
+    main()

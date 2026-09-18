@@ -2,20 +2,15 @@
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import pytest
 import yaml
-from dotenv import dotenv_values, load_dotenv
-from tests.support.paths import REPO_ROOT, TEST_ENV_FILE
+from tests.support.live import load_test_env, require_keys
+from tests.support.paths import REPO_ROOT
 
 from akasha.helper.handle_objects import handle_embeddings
 
 
-ENV_FILE = TEST_ENV_FILE
 MODEL_MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
-RUN_LIVE = os.getenv("RUN_EMBEDDING_SMOKE", "").lower() in {"1", "true", "yes"}
 
 
 def _required_key(provider: str) -> str:
@@ -31,26 +26,19 @@ PROVIDERS = [
 ]
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.live,
+    pytest.mark.contract,
     pytest.mark.requires_api,
     pytest.mark.smoke,
-    pytest.mark.skipif(
-        not RUN_LIVE,
-        reason="set RUN_EMBEDDING_SMOKE=1 to enable live embedding checks",
-    ),
 ]
 
 
 @pytest.mark.parametrize("provider,embedding_name,required_key", PROVIDERS)
 def test_embedding_provider_returns_vectors(provider, embedding_name, required_key):
-    values = dotenv_values(ENV_FILE) if ENV_FILE.exists() else {}
-    if not (os.getenv(required_key) or values.get(required_key)):
-        pytest.skip(f"{required_key} is not configured")
-    if ENV_FILE.exists():
-        load_dotenv(ENV_FILE, override=False)
+    require_keys(required_key)
 
     print(f"[embedding] {provider}: initialize {embedding_name}", flush=True)
-    embeddings = handle_embeddings(embedding_name, env_file="")
+    embeddings = handle_embeddings(embedding_name, env_file=load_test_env())
     vectors = embeddings.embed_documents(["Akasha embedding contract check."])
     print(
         f"[embedding] {provider}: vectors={len(vectors)}, dimension={len(vectors[0])}",

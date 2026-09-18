@@ -2,10 +2,11 @@ import pytest
 
 from akasha.agent.base import create_tool
 from akasha.agent.skills import Skill, default_tool_registry
+from tests.support.fakes import FakeChatModel
 from tests.support.paths import FIXTURES_ROOT
 
 
-pytestmark = [pytest.mark.unit, pytest.mark.integration]
+pytestmark = [pytest.mark.unit, pytest.mark.contract]
 
 
 def test_agent_defers_skill_tools_until_skill_is_loaded(monkeypatch):
@@ -47,8 +48,6 @@ def test_agent_defers_skill_tools_until_skill_is_loaded(monkeypatch):
 
 
 def _fake_model():
-    from tests.agent.contracts.test_public_api_contracts import FakeChatModel
-
     return FakeChatModel(chunks=[])
 
 def test_loaded_filesystem_skill_exposes_automatic_script_execution():

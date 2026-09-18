@@ -5,38 +5,25 @@ The test intentionally calls the real Gemini API and fetches the URLs in
 network access or spend provider quota.
 """
 
-import os
-from pathlib import Path
-from tests.support.paths import TEST_ENV_FILE
-
 import pytest
 
 import akasha
+from tests.support.live import load_test_env, require_keys
 
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.live,
     pytest.mark.requires_api,
     pytest.mark.smoke,
-    pytest.mark.skipif(
-        os.getenv("RUN_LLM_TESTS", "").lower() not in {"1", "true", "yes"},
-        reason="set RUN_LLM_TESTS=1 to enable live API tests",
-    ),
 ]
 
 
 def _env_file() -> str:
-    configured = os.getenv("ENV_FILE")
-    if configured:
-        return configured
-
-    root_env = TEST_ENV_FILE
-    return str(root_env) if root_env.exists() else ".env"
+    return load_test_env()
 
 
 def _require_gemini_key() -> None:
-    if not os.getenv("GEMINI_API_KEY") and not Path(_env_file()).exists():
-        pytest.skip("GEMINI_API_KEY or a readable ENV_FILE is required")
+    require_keys("GEMINI_API_KEY")
 
 
 def test_gemini_ask_answers_from_web_info():

@@ -1,13 +1,9 @@
-import os
 from pathlib import Path
 
 import akasha
 import pytest
 
-from tests.support.paths import TEST_ENV_FILE
-
-
-RUN_VISION_TESTS = os.getenv("RUN_VISION_TESTS") == "1"
+from tests.support.live import load_test_env, require_keys
 
 
 VISION_CASES = [
@@ -27,13 +23,9 @@ VISION_CASES = [
 
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.live,
     pytest.mark.requires_api,
     pytest.mark.smoke,
-    pytest.mark.skipif(
-        not RUN_VISION_TESTS,
-        reason="RUN_VISION_TESTS=1 is required for live vision tests",
-    ),
 ]
 
 
@@ -48,10 +40,8 @@ def test_live_vision_generate_understand_and_edit(
     required_key: str,
 ):
     """Verify each provider's real image generation, vision, and editing path."""
-    if not TEST_ENV_FILE.exists() and not os.getenv(required_key):
-        pytest.skip(f"{required_key} or {TEST_ENV_FILE} is required")
-
-    env_file = str(TEST_ENV_FILE) if TEST_ENV_FILE.exists() else ""
+    require_keys(required_key)
+    env_file = load_test_env()
     generated_path = tmp_path / "generated.png"
     edited_path = tmp_path / "edited.png"
 

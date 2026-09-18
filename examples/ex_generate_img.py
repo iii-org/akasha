@@ -1,23 +1,34 @@
-import akasha
+"""Generate an image; optionally edit it with the same configured image model."""
+from pathlib import Path
+import sys
 
-### currently only support openai/azure openai  and gemini (model="gemini:gemini-2.0-flash-preview-image-generation") ###
-# please noted that your openai account may need verification to use protected model like "gpt-image-1"
-# If using an Azure OpenAI-compatible endpoint, set AZURE_OPENAI_API_KEY and
-# AZURE_OPENAI_BASE_URL in your .env file.
-###  generate image with prompt, you can select "high", "medium", "low" quality or size like "256x256", "512x512", "1024x1024"
-save_path = akasha.gen_image(
-    prompt="一隻可愛的絨毛娃娃，是北海道的長尾山雀，坐在白雪的樹枝上唱歌",
-    model="gemini:gemini-2.0-flash-preview-image-generation",
-    save_path="長尾山雀.png",
-    env_file=".env3",
-)
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from examples._common import DATA, configure, parser, print_response, workspace
+
+def main(argv=None):
+    cli = parser(__doc__)
+    cli.add_argument("--image-model", help="Defaults to AKASHA_IMAGE_MODEL or openai:gpt-image-1")
+    cli.add_argument("--edit", action="store_true", help="Make a second image API call to edit the result")
+    args = configure(cli, argv)
+    import os
+    import akasha
+    image_model = args.image_model or os.getenv("AKASHA_IMAGE_MODEL", "openai:gpt-image-1")
+    with workspace(args, "images") as output:
+        generated = akasha.gen_image(prompt="A friendly white rabbit sitting in a sunny garden.",
+                                     model=image_model, save_path=str(output / "rabbit.png"),
+                                     env_file=args.env_file)
+        if not generated or not Path(generated).is_file():
+            raise RuntimeError("The image provider did not produce an image.")
+        print(generated)
+        if args.edit:
+            edited = akasha.edit_image(prompt="Add a small blue butterfly beside the rabbit.",
+                                       images=generated, model=image_model,
+                                       save_path=str(output / "rabbit-edited.png"), env_file=args.env_file)
+            if not edited or not Path(edited).is_file():
+                raise RuntimeError("The image provider did not produce an edited image.")
+            print(edited)
 
 
-### edit the source image with the prompt, can based on a list of image or a single image
-save_path = akasha.edit_image(
-    model="openai:gpt-image-1",
-    prompt="增加一隻可愛的鯊魚娃娃在旁邊",
-    images="長尾山雀.png",
-    save_path="鯊鯊.png",
-    env_file=".env3",
-)
+if __name__ == "__main__":
+    main()

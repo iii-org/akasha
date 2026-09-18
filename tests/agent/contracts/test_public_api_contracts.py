@@ -4,33 +4,13 @@ import asyncio
 import json
 
 import pytest
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
 
 from akasha.agent.base import create_tool
 from akasha.helper.run_llm import call_stream_events
+from tests.support.fakes import FakeChatModel
 
-pytestmark = [pytest.mark.unit, pytest.mark.integration]
-
-
-class FakeChatModel(BaseChatModel):
-    """Small chat-model double for testing event normalization only."""
-
-    chunks: list
-
-    @property
-    def _llm_type(self):
-        return "fake-chat-model"
-
-    def _generate(self, messages, stop=None, run_manager=None, **kwargs):
-        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=""))])
-
-    def stream(self, _messages):
-        yield from self.chunks
-
-    def get_num_tokens(self, text):
-        return len(text)
+pytestmark = [pytest.mark.unit, pytest.mark.contract]
 
 
 def test_ask_stream_events_have_stable_json_contract(capsys):
@@ -131,7 +111,7 @@ def test_agents_stream_normalizes_tool_thinking_and_answer_events(monkeypatch):
     )
     events = list(agent("calculate 2 + 3"))
 
-    assert [event["type"] for event in events] == ["tool", "thinking", "answer"]
+    assert [event["type"] for event in events] == ["progress", "tool", "thinking", "answer"]
     assert events[-2:] == [
         {"type": "thinking", "data": "use tool result"},
         {"type": "answer", "data": "5"},

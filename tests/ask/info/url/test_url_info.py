@@ -1,30 +1,22 @@
 """Live contract test for ``ask(..., info=[url, url])``."""
 
-import os
-from pathlib import Path
-
 import pytest
 
 import akasha
-from tests.support.paths import TEST_ENV_FILE
+from tests.support.live import load_test_env, require_keys
 
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.live,
     pytest.mark.requires_api,
     pytest.mark.smoke,
-    pytest.mark.skipif(
-        os.getenv("RUN_LLM_TESTS", "").lower() not in {"1", "true", "yes"},
-        reason="set RUN_LLM_TESTS=1 to enable live API tests",
-    ),
 ]
 
 
 def test_gemini_ask_with_two_url_info_items():
     """The public callable API accepts two URL references in ``info``."""
-    env_file = os.getenv("ENV_FILE", str(TEST_ENV_FILE))
-    if not os.getenv("GEMINI_API_KEY") and not Path(env_file).exists():
-        pytest.skip("GEMINI_API_KEY or a readable ENV_FILE is required")
+    require_keys("GEMINI_API_KEY")
+    env_file = load_test_env()
 
     qa = akasha.ask("gemini:gemini-2.5-flash", 
                     env_file=env_file)

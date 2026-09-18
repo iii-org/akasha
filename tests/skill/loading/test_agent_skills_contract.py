@@ -5,9 +5,10 @@ import pytest
 from langchain_core.messages import AIMessage
 
 from akasha.agent.skills import Skill
+from tests.support.fakes import FakeChatModel
 
 
-pytestmark = [pytest.mark.unit, pytest.mark.integration]
+pytestmark = [pytest.mark.unit, pytest.mark.contract]
 
 
 def test_agents_keep_tools_and_add_skill_middleware(monkeypatch):
@@ -48,6 +49,4 @@ def test_agents_keep_tools_and_add_skill_middleware(monkeypatch):
 
 
 def _fake_model():
-    from tests.agent.contracts.test_public_api_contracts import FakeChatModel
-
     return FakeChatModel(chunks=[])

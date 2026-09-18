@@ -4,25 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import sys
-from urllib.error import URLError
-from urllib.request import Request, urlopen
-from pathlib import Path
 
 import pytest
 import yaml
-from dotenv import dotenv_values, load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from tests.support.paths import FIXTURES_ROOT, REPO_ROOT, TEST_ENV_FILE
+from tests.support.live import load_test_env, require_keys, require_ollama
+from tests.support.paths import FIXTURES_ROOT, REPO_ROOT
 
 import akasha
 
 
-ENV_FILE = TEST_ENV_FILE
 MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
 SERVER = FIXTURES_ROOT / "mcp" / "echo_server.py"
-RUN_LIVE = os.getenv("RUN_MCP_SMOKE", "").lower() in {"1", "true", "yes"}
 
 REQUIRED_KEYS = {
     "openai": "OPENAI_API_KEY",
@@ -43,34 +37,16 @@ MODEL_CASES = [
     for item in _manifest["models"]
 ]
 
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.requires_api,
-    pytest.mark.smoke,
-    pytest.mark.skipif(
-        not RUN_LIVE,
-        reason="set RUN_MCP_SMOKE=1 to enable MCP live agent smoke tests",
-    ),
-]
-
-
 def _load_test_env(required_key: str | None = None) -> None:
-    values = dotenv_values(ENV_FILE) if ENV_FILE.exists() else {}
-    if required_key and not (os.getenv(required_key) or values.get(required_key)):
-        pytest.skip(f"{required_key} is not configured")
-    if ENV_FILE.exists():
-        load_dotenv(ENV_FILE, override=False)
+    if required_key:
+        require_keys(required_key)
+    else:
+        load_test_env()
 
 
 def _ollama_is_available() -> bool:
-    """Check the configured Ollama endpoint before starting an agent call."""
-    base_url = os.getenv("OLLAMA_API_BASE") or "http://localhost:11434"
-    probe_url = base_url.rstrip("/") + "/api/version"
-    try:
-        with urlopen(Request(probe_url, method="GET"), timeout=5) as response:
-            return 200 <= response.status < 300
-    except (OSError, URLError):
-        return False
+    require_ollama()
+    return True
 
 
 def _client() -> MultiServerMCPClient:
@@ -91,6 +67,8 @@ async def _discover_tools():
     return client, {tool.name: tool for tool in tools}
 
 
+@pytest.mark.integration
+@pytest.mark.contract
 def test_mcp_discovery_and_direct_invocation():
     """The local stdio server exposes stable tools and callable schemas."""
     _load_test_env()
@@ -112,6 +90,9 @@ def test_mcp_discovery_and_direct_invocation():
 
 
 @pytest.mark.parametrize("provider,model,required_key", MODEL_CASES)
+@pytest.mark.live
+@pytest.mark.requires_api
+@pytest.mark.smoke
 def test_mcp_tools_are_executed_by_real_agent_non_stream(
     provider, model, required_key
 ):
@@ -140,6 +121,8 @@ def test_mcp_tools_are_executed_by_real_agent_non_stream(
     json.dumps(agent.logs, ensure_ascii=False)
 
 
+@pytest.mark.integration
+@pytest.mark.contract
 def test_mcp_tools_require_non_stream_mode():
     """MCP agents use ainvoke and reject the sync stream facade explicitly."""
     _load_test_env("OPENAI_API_KEY")

@@ -1,40 +1,28 @@
 """Opt-in live tests for the LangChain-native Gemini Agent path.
 
 These tests intentionally call the real Gemini API. They are skipped unless
-``RUN_LLM_TESTS=1`` is set, so normal unit/CI runs never spend API quota.
+``RUN_LIVE_TESTS=1`` is set, so normal local runs never spend API quota.
 """
-
-import os
-from pathlib import Path
 
 import pytest
 
 import akasha
-from tests.support.paths import TEST_ENV_FILE
+from tests.support.live import load_test_env, require_keys
 
 
 pytestmark = [
-    pytest.mark.integration,
+    pytest.mark.live,
     pytest.mark.requires_api,
     pytest.mark.smoke,
-    pytest.mark.skipif(
-        os.getenv("RUN_LLM_TESTS", "").lower() not in {"1", "true", "yes"},
-        reason="set RUN_LLM_TESTS=1 to enable live API tests",
-    ),
 ]
 
 
 def _env_file() -> str:
-    configured = os.getenv("ENV_FILE")
-    if configured:
-        return configured
-    root_env = TEST_ENV_FILE
-    return str(root_env) if root_env.exists() else ".env"
+    return load_test_env()
 
 
 def _require_key() -> None:
-    if not os.getenv("GEMINI_API_KEY") and not Path(_env_file()).exists():
-        pytest.skip("GEMINI_API_KEY or a readable ENV_FILE is required")
+    require_keys("GEMINI_API_KEY")
 
 
 def test_live_gemini_agent_returns_final_answer():

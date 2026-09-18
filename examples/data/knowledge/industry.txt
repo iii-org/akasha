@@ -1,0 +1,6 @@
+Industry 4.0 connects manufacturing equipment, industrial sensors, and information systems.
+Sensors collect operating measurements such as temperature, vibration, and energy use.
+An industrial network transfers those measurements to systems used by operators and engineers.
+Operators use dashboards to compare current measurements with expected operating ranges.
+Connecting equipment allows teams to identify interruptions and coordinate production.
+Data quality, access control, and equipment compatibility are important implementation concerns.

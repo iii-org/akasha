@@ -67,7 +67,7 @@ Date: 2026-07-14
 - 沒有 thinking event assertions
 - 沒有多 tool / 多 provider smoke
 
-### `tests/integration/test_live_gemini_agent.py`
+### `tests/agent/stream/test_live_gemini.py`
 
 目前覆蓋：
 

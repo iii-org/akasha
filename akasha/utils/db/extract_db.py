@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 
-def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
+def extract_db_by_file(db: dbs, file_name_list: List[Union[str, Path]]) -> dbs:
     """extract db from dbs based on file_name_list
 
     Args:
@@ -17,7 +17,7 @@ def extract_db_by_file(db: dbs, file_name_list: List[str]) -> dbs:
     ret_db = dbs()
     file_set = set()
     for file_name in file_name_list:
-        file_name = file_name.replace("\\", "/")
+        file_name = str(file_name).replace("\\", "/")
         file_name = file_name.lstrip("./")
         file_name = file_name.split("/")[-1]
         file_set.add(file_name)

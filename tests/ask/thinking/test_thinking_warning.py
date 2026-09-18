@@ -1,4 +1,9 @@
+import pytest
+
 from akasha.tools.ask import ask
+
+
+pytestmark = pytest.mark.unit
 
 
 def _ask_for_display(**overrides):
@@ -38,9 +43,10 @@ def test_verbose_does_not_warn_when_gemini_budget_is_set(capsys):
         effective_thinking_budget=8192,
     )._display_info()
 
-    assert "Warning: Gemini thinking is enabled" not in capsys.readouterr().out
+    assert "Info: Gemini thinking_budget is not set" not in capsys.readouterr().out
 
 
 def test_verbose_does_not_warn_when_thinking_is_disabled(capsys):
     _ask_for_display(thinking=False)._display_info()
 
+    assert "Info: Gemini thinking_budget is not set" not in capsys.readouterr().out

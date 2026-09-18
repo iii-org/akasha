@@ -31,6 +31,8 @@ Akasha 將 Agent 從自製 JSON ReAct loop 升級為 LangChain 1.3+ `create_agen
 
 ## Streaming contract
 
+2026-09 更新：Agent 新增獨立 `progress` 事件與內建進度提示；一般文字會等模型該輪結束後分類為進度或答案，不再逐 token 顯示。thinking 仍可逐段輸出。以下為原始介面設計，最新契約見 [Agent progress contract](2026-09-agent-progress.md)。
+
 `agents(..., stream=True)` 與 `ask(..., stream=True, thinking=True)` 使用固定事件格式。Agent 底層使用 LangGraph `stream_mode="messages"`，因此 answer/thinking 是逐 chunk 產生；實際網路傳輸仍可能將多個 chunk 批次送回。
 
 ```python
@@ -87,4 +89,4 @@ ChatGoogleGenerativeAI(
 
 - unit tests：`41 passed`
 - Gemini live integration tests：`3 passed`
-- live tests 需要 `RUN_LLM_TESTS=1`，會實際呼叫 API 並產生費用；測試案例位於 `tests/integration/test_live_gemini_agent.py`。
+- live tests 需要 `RUN_LIVE_TESTS=1`，會實際呼叫 API 並產生費用；Gemini Agent 測試位於 `tests/agent/stream/test_live_gemini.py`。

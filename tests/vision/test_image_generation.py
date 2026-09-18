@@ -6,6 +6,9 @@ import pytest
 from akasha.utils.models.gemi import gemini_model
 
 
+pytestmark = pytest.mark.unit
+
+
 class FakeImageClient:
     def __init__(self):
         self.generate_calls = []

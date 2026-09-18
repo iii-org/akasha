@@ -1,36 +1,27 @@
-# --coding: utf-8--
-
+"""Run the bundled hello-skill with automatic Agent progress."""
 from pathlib import Path
 import sys
 
-import akasha
-
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from examples._common import DATA, configure, parser, print_response, workspace
 
 BASE_DIR = Path(__file__).resolve().parent
 
+def main(argv=None):
+    cli = parser(__doc__)
+    cli.add_argument("--thinking", action="store_true", help="Requires a model with thinking support")
+    args = configure(cli, argv)
+    import akasha
+    with workspace(args, "app_stream"):
+        agent = akasha.agents(model=args.model, skills=[str(BASE_DIR / "hello-skill")],
+                              env_file=args.env_file, stream=True,
+                              thinking=args.thinking, verbose=True, keep_logs=True)
+        response = agent("Use the hello skill to greet Alice. Execute the bundled script and return its output.")
+        for _event in response:
+            pass  # verbose already prints progress, tools, thinking and answer.
+        agent.save_logs("app_stream.json")
 
-def main() -> None:
-    agent = akasha.agents(
-        model="gemini:gemini-2.5-flash",
-        skills=[str(BASE_DIR / "hello-skill")],
-        env_file=str(BASE_DIR / ".env"),
-        stream=True,
-        thinking=True,
-        temperature=0.0,
-        verbose=True,
-        keep_logs=True,
-    )
-    response = agent(
-        "Use the hello skill to greet Alice. Follow the skill's bundled "
-        "script instructions and return its output."
-    )
-
-    # The package consumes and displays stream events when verbose=True.
-    # This loop only keeps the generator flowing; a FastAPI/SSE adapter can
-    # instead forward each yielded event to the frontend.
-    for _event in response:
-        pass
-    return None
 
 if __name__ == "__main__":
     main()

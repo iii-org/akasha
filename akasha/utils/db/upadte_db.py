@@ -58,7 +58,8 @@ def update_db(
 
         ## update the db with the new metadata
         docsearch._collection.update(ids=doc_search_data["ids"], metadatas=cur_meta)
-        docsearch._client._system.stop()
+        # Chroma caches this system by persistence directory. Stopping it here
+        # also invalidates other clients and prevents a subsequent reload.
         docsearch = None
         del docsearch
 

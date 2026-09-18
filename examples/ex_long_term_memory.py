@@ -1,22 +1,36 @@
-import akasha
+"""Store and retrieve a conversation with a persistent memory collection."""
+from pathlib import Path
+import sys
 
-ak = akasha.ask(model="openai:gpt-4o",
-                max_input_tokens=8000,
-                keep_logs=True,
-                verbose=True)
+# Support both python path/to/example.py and python -m examples.<module>.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from examples._common import DATA, configure, parser, print_response, workspace
 
-mem = akasha.MemoryManager(
-    memory_name="test_memory",
-    model="openai:gpt-4o",
-    embeddings="openai:text-embedding-3-small",
-    verbose=True,
-)
-mem.add_memory("Hi, 我的名字是小宋", "Hello, 小宋! 很高興認識你。")
+def main(argv=None):
+    cli = parser(__doc__)
+    cli.add_argument("--memory-name", default="demo-memory")
+    args = configure(cli, argv)
+    import akasha
+    # Keep a stable dedicated directory so memory survives subsequent runs.
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    import os
+    previous = Path.cwd()
+    memory_root = args.output_dir / "memory"
+    memory_root.mkdir(exist_ok=True)
+    try:
+        os.chdir(memory_root)
+        memory = akasha.MemoryManager(memory_name=args.memory_name, model=args.model,
+                                      embeddings=args.embeddings, env_file=args.env_file,
+                                      memory_dirname="documents")
+        memory.add_memory("My name is Alice.", "Hello, Alice!")
+        prompt = "What is my name?"
+        history = memory.search_memory(prompt, top_k=3)
+        client = akasha.ask(model=args.model, env_file=args.env_file)
+        print(client(prompt=prompt, history_messages=history))
+    finally:
+        os.chdir(previous)
+    print(f"Memory: {memory_root}")
 
-prompt = "我的名字是什麼?"
-history_msg = mem.search_memory(prompt, top_k=3)
 
-response = ak(
-    prompt=prompt,
-    history_messages=history_msg,
-)
+if __name__ == "__main__":
+    main()

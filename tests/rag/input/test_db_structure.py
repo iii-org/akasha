@@ -1,7 +1,8 @@
 import pytest
-from pathlib import PureWindowsPath
+from pathlib import Path, PureWindowsPath
 from langchain_core.documents import Document
 
+from akasha.utils.db.extract_db import extract_db_by_file
 from akasha.utils.db.db_structure import (
     NO_PARENT_DIR_NAME,
     _sanitize_path_part,
@@ -98,6 +99,24 @@ def test_get_documents_returns_langchain_documents():
     docs = store.get_Documents()
 
     assert docs == [Document(page_content="hello", metadata={"topic": "demo"})]
+
+
+def test_extract_db_by_file_accepts_path_objects():
+    store = dbs()
+    store.ids = ["one", "two"]
+    store.embeds = [[0.1], [0.2]]
+    store.metadatas = [
+        {"source": "docs/mic/one.pdf"},
+        {"source": "docs/mic/two.pdf"},
+    ]
+    store.docs = ["first", "second"]
+    store.vis = {"one", "two"}
+
+    extracted = extract_db_by_file(store, [Path("docs/mic/two.pdf")])
+
+    assert extracted.get_ids() == ["two"]
+    assert extracted.get_docs() == ["second"]
+    assert extracted.get_metadatas() == [{"source": "docs/mic/two.pdf"}]
 
 
 def test_storage_directory_handles_path_dot_and_url():
