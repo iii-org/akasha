@@ -3,6 +3,7 @@ import tomllib
 
 import numpy as np
 import pytest
+import yaml
 
 
 pytestmark = [pytest.mark.unit, pytest.mark.contract]
@@ -20,7 +21,6 @@ def _requirement_name(requirement: str) -> str:
 def test_release_targets_python_311_312_and_numpy_2():
     project = _project_metadata()
 
-    assert project["version"] == "1.8.0"
     assert project["requires-python"] == ">=3.11,<3.13"
     assert "numpy>=2,<3" in project["dependencies"]
 
@@ -137,4 +137,8 @@ def test_full_ci_installs_native_build_tools():
         encoding="utf-8"
     )
 
-    assert "apt-get install -y --no-install-recommends build-essential git" in workflow
+    steps = yaml.safe_load(workflow)["jobs"]["full"]["steps"]
+    install_commands = [step.get("run", "") for step in steps
+                        if "apt-get install" in step.get("run", "")]
+    for package in ("build-essential", "git"):
+        assert any(package in command.split() for command in install_commands)

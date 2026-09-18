@@ -5,14 +5,17 @@ This is the canonical guide for the Akasha test suite. The short
 
 ## Environment
 
-Use the shared virtual environment one directory above this checkout:
+Use the project-local environment installed from the committed dependency baseline:
 
 ```powershell
-$python = "..\.venv\Scripts\python.exe"
+uv venv .venv --python 3.11
+uv pip install --python .venv/Scripts/python.exe -e ".[light,dev]" -c constraints/light-dev.txt
+$python = ".venv\Scripts\python.exe"
 ```
 
-The accidental repository-local `.venv` is not supported. Pytest sets
-`pythonpath = .`, so local deterministic tests exercise the current source
+See [constraints/README.md](../constraints/README.md) for full mode and controlled
+updates. The older parent-directory environment is not the CI baseline. Pytest
+sets `pythonpath = .`, so local deterministic tests exercise the current source
 tree. Packaging contract tests separately verify installed dependency profiles.
 
 ## Layout
@@ -78,7 +81,7 @@ pytestmark = [
 ## Common commands
 
 ```powershell
-$python = "..\.venv\Scripts\python.exe"
+$python = ".venv\Scripts\python.exe"
 
 # Collection and naming/marker validation
 & $python -m pytest --collect-only -q
@@ -138,7 +141,7 @@ its API failure is a real failure, not a skip. Live tests may incur charges.
 A full installation treats missing full-profile packages as a packaging error:
 
 ```powershell
-uv pip install -e ".[full,dev]" --python $python
+uv pip install -e ".[full,dev]" -c constraints/full-dev.txt --python $python
 & $python -m pytest -m full_only -q
 ```
 

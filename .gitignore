@@ -8,7 +8,6 @@ __pycache__/
 build/
 dist/
 .venv/
-uv.lock
 
 # Secrets and local configuration
 .env

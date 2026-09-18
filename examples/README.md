@@ -10,11 +10,13 @@ outside this checkout.
 Install the project in your environment:
 
 ```powershell
-python -m pip install -e ".[light]"
+uv venv .venv --python 3.11
+uv pip install --python .venv -e ".[light,dev]" -c constraints/light-dev.txt
 ```
 
-For this checkout, the documented shared interpreter is
-`..\.venv\Scripts\python.exe`.
+For this checkout, the baseline interpreter is
+`.venv\Scripts\python.exe`. Activate it with `.\.venv\Scripts\Activate.ps1`
+before using the `python` commands below.
 
 Put credentials in the repository-root `.env` (see [.env.example](.env.example)),
 set them in the process environment, or pass `--env-file PATH`.

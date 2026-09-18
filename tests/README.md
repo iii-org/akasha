@@ -4,10 +4,11 @@ The suite is organized by product feature. See
 [TESTING_GUIDE.md](TESTING_GUIDE.md) for marker rules, live-service behavior,
 CI policy, and the coverage map.
 
+Install the [shared dependency baseline](../constraints/README.md) first.
 From the repository root in PowerShell:
 
 ```powershell
-$python = "..\.venv\Scripts\python.exe"
+$python = ".venv\Scripts\python.exe"
 
 & $python -m pytest --collect-only -q
 & $python -m pytest -m unit -q

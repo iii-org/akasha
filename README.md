@@ -110,14 +110,18 @@ toolchain before installing `full`.
 
 ### Editable installation for development
 
+Use uv `0.12.13` and the committed [dependency baseline](constraints/README.md)
+for the same resolved versions as CI. Create a project-local environment with
+`uv venv .venv --python 3.11` before installing.
+
 ```bash
-uv pip install -e ".[light,dev]"
+uv pip install --python .venv -e ".[light,dev]" -c constraints/light-dev.txt
 ```
 
 For the complete local-model stack:
 
 ```bash
-uv pip install -e ".[full,dev]"
+uv pip install --python .venv -e ".[full,dev]" -c constraints/full-dev.txt
 ```
 
 ## Configure a model provider
@@ -399,7 +403,7 @@ uv venv --python 3.11
 # Windows PowerShell
 .venv\Scripts\Activate.ps1
 
-uv pip install -e ".[light,dev]"
+uv pip install --python .venv -e ".[light,dev]" -c constraints/light-dev.txt
 ```
 
 Run examples:

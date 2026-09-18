@@ -24,19 +24,34 @@ jobs:
       BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
       RUN_LIVE_TESTS: "1"
     steps:
+      - name: Install Git and system CA certificates
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+
       - uses: actions/checkout@v4
 
       - name: Show Python version
         run: python -V
 
+      - name: Use the baseline resolver
+        run: uv pip install --system "uv==0.12.13"
+
+      - name: Verify dependency baseline exports
+        run: |
+          uv export --locked --extra light --extra dev --no-emit-project --no-hashes -o constraints/light-dev.txt > /dev/null
+          uv export --locked --extra full --extra dev --no-emit-project --no-hashes -o constraints/full-dev.txt > /dev/null
+          git diff --exit-code -- uv.lock constraints/
+
       - name: Install dependencies
-        run: uv pip install --system -e ".[light,dev]"
+        run: uv pip install --system -e ".[light,dev]" -c constraints/light-dev.txt
+
+      - name: Check installed dependencies
+        run: uv pip check --system
 
       - name: Resolve full dependency profile
         shell: bash
         run: |
           python_version="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-          uv pip compile pyproject.toml --extra full --python-version "${python_version}" --quiet > /dev/null
+          uv pip compile pyproject.toml --extra full --extra dev -c constraints/full-dev.txt --python-version "${python_version}" --quiet > /dev/null
 
       - name: Run light, integration, and available live tests
         run: pytest --maxfail=1 --disable-warnings -vv -s -m "not full_only"
@@ -49,10 +64,13 @@ jobs:
       RUN_LIVE_TESTS: "1"
       HF_HOME: /tmp/huggingface
     steps:
+      - name: Install Git and system CA certificates
+        run: apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+
       - uses: actions/checkout@v4
 
       - name: Install native build tools
-        run: apt-get update && apt-get install -y --no-install-recommends build-essential git
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential
 
       - name: Cache Hugging Face models
         uses: actions/cache@v4
@@ -60,8 +78,20 @@ jobs:
           path: /tmp/huggingface
           key: gptq-cpu-${{ runner.os }}-python311-v1
 
+      - name: Use the baseline resolver
+        run: uv pip install --system "uv==0.12.13"
+
+      - name: Verify dependency baseline exports
+        run: |
+          uv export --locked --extra light --extra dev --no-emit-project --no-hashes -o constraints/light-dev.txt > /dev/null
+          uv export --locked --extra full --extra dev --no-emit-project --no-hashes -o constraints/full-dev.txt > /dev/null
+          git diff --exit-code -- uv.lock constraints/
+
       - name: Install full dependencies
-        run: uv pip install --system -e ".[full,dev]"
+        run: uv pip install --system -e ".[full,dev]" -c constraints/full-dev.txt
+
+      - name: Check installed dependencies
+        run: uv pip check --system
 
       - name: Run full-only tests
         run: pytest --maxfail=1 --disable-warnings -vv -s -m "full_only"

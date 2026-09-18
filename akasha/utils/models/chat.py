@@ -71,6 +71,13 @@ def build_chat_model(
 
     if provider in {"openai", "azure"}:
         from langchain_openai import ChatOpenAI
+        from openai import DefaultAsyncHttpxClient
+
+        def async_http_client():
+            # Sync agents use a fresh asyncio.run() loop for each call. Do not
+            # retain loop-bound idle sockets or share LangChain's cached client.
+            # Leave the synchronous client and its connection pooling unchanged.
+            return DefaultAsyncHttpxClient(headers={"Connection": "close"})
 
         azure_key = env.get("AZURE_OPENAI_API_KEY")
         azure_base_url = env.get("AZURE_OPENAI_BASE_URL")
@@ -97,7 +104,7 @@ def build_chat_model(
                     kwargs["reasoning_effort"] = thinking_level
             else:
                 kwargs["max_tokens"] = max_output_tokens
-            return ChatOpenAI(**kwargs)
+            return ChatOpenAI(**kwargs, http_async_client=async_http_client())
 
         if provider == "azure":
             raise ValueError(
@@ -121,6 +128,7 @@ def build_chat_model(
             kwargs["max_tokens"] = max_output_tokens
         return ChatOpenAI(
             **kwargs,
+            http_async_client=async_http_client(),
         )
 
     if provider in {"google", "gemini", "gemi"}:
