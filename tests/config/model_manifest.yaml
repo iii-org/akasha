@@ -16,7 +16,10 @@ models:
   - id: "gemini:gemini-3.5-flash"
     provider: "gemini"
     test_group: "pr"
-    capabilities: {}
+    capabilities:
+      # Includes thinking tokens; verified against Google docs on 2026-09-19.
+      # https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash
+      output_token_limit: 65536
 
   - id: "anthropic:claude-sonnet-4-6"
     provider: "anthropic"

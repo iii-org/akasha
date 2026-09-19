@@ -32,6 +32,7 @@ MODEL_CASES = [
         item["provider"],
         item["id"],
         REQUIRED_KEYS.get(item["provider"]),
+        item.get("capabilities", {}).get("output_token_limit", 2048),
         id=item["id"],
     )
     for item in _manifest["models"]
@@ -89,12 +90,12 @@ def test_mcp_discovery_and_direct_invocation():
     assert version_result[0]["text"] == "akasha: MCP_TEST_VERSION_1.2.3"
 
 
-@pytest.mark.parametrize("provider,model,required_key", MODEL_CASES)
+@pytest.mark.parametrize("provider,model,required_key,max_output_tokens", MODEL_CASES)
 @pytest.mark.live
 @pytest.mark.requires_api
 @pytest.mark.smoke
 def test_mcp_tools_are_executed_by_real_agent_non_stream(
-    provider, model, required_key
+    provider, model, required_key, max_output_tokens
 ):
     """Every manifest model must select MCP and record its tool call."""
     _load_test_env(required_key)
@@ -107,7 +108,9 @@ def test_mcp_tools_are_executed_by_real_agent_non_stream(
         stream=False,
         thinking=False,
         keep_logs=True,
-        max_output_tokens=128,
+        # Use the documented model ceiling when available. Gemini's cap includes
+        # reasoning even with thinking=False; 2048 is the fallback test budget.
+        max_output_tokens=max_output_tokens,
         max_round=3,
     )
 
@@ -115,9 +118,24 @@ def test_mcp_tools_are_executed_by_real_agent_non_stream(
         "You must use the mcp_add tool. Add 20 and 22, then reply with the result."
     )
 
-    assert isinstance(response, str) and response.strip(), f"{provider} returned no answer"
-    assert "42" in response, f"{provider} did not use the MCP result: {response!r}"
-    assert any(call.get("name") == "mcp_add" for call in agent.tool_calls)
+    diagnostics = {
+        "model_turns": [
+            {
+                "finish_reason": message.get("response_metadata", {}).get("finish_reason"),
+                "usage": message.get("usage_metadata"),
+            }
+            for message in agent.messages
+            if isinstance(message, dict) and message.get("type") == "ai"
+        ],
+        "tool_names": [call.get("name") for call in agent.tool_calls],
+    }
+    assert isinstance(response, str) and response.strip(), (
+        f"{provider} returned no answer; {diagnostics}"
+    )
+    assert "42" in response, (
+        f"{provider} did not use the MCP result: {response!r}; {diagnostics}"
+    )
+    assert "mcp_add" in diagnostics["tool_names"], diagnostics
     json.dumps(agent.logs, ensure_ascii=False)
 
 
