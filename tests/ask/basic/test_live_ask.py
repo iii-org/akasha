@@ -3,6 +3,7 @@
 import pytest
 
 import akasha
+from tests.support.model_limits import output_token_budget
 from tests.support.live import load_test_env, require_keys
 
 
@@ -19,7 +20,7 @@ def test_gemini_ask_returns_visible_text_and_serializable_logs():
     qa = akasha.ask(
         model="gemini:gemini-2.5-flash",
         keep_logs=True,
-        max_output_tokens=64,
+        max_output_tokens=output_token_budget("gemini:gemini-2.5-flash"),
         env_file=load_test_env(),
     )
 

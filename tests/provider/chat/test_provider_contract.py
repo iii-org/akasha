@@ -15,6 +15,7 @@ from tests.support.live import load_test_env, require_keys, require_ollama
 from tests.support.paths import REPO_ROOT
 
 import akasha
+from tests.support.model_limits import output_token_budget
 
 
 MODEL_MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
@@ -67,7 +68,7 @@ def test_provider_ask_non_stream_contract(provider, model, required_key):
         thinking=False,
         keep_logs=True,
         temperature=0.0,
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
     )
 
@@ -91,7 +92,7 @@ def test_provider_ask_stream_contract(provider, model, required_key):
         thinking=False,
         keep_logs=True,
         temperature=0.0,
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
     )
 
@@ -116,7 +117,7 @@ def test_provider_agents_non_stream_contract(provider, model, required_key):
         thinking=False,
         keep_logs=True,
         temperature=0.0,
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
         max_round=2,
     )
@@ -139,7 +140,7 @@ def test_provider_agents_stream_contract(provider, model, required_key):
         thinking=False,
         keep_logs=True,
         temperature=0.0,
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
         max_round=2,
     )
@@ -171,7 +172,7 @@ def test_gemini_thinking_true_ask_contract():
         thinking_budget="medium",
         keep_logs=True,
         temperature=0.0,
-        max_output_tokens=256,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
     )
 
@@ -199,7 +200,7 @@ def test_gemini_thinking_true_agents_contract():
         thinking_budget="medium",
         keep_logs=True,
         temperature=0.0,
-        max_output_tokens=256,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
         max_round=2,
     )
@@ -225,7 +226,7 @@ def test_provider_thinking_true_ask_contract(provider, model, required_key):
         model=model,
         thinking=True,
         thinking_budget="medium",
-        max_output_tokens=256,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
         keep_logs=True,
     )
@@ -245,7 +246,7 @@ def test_provider_thinking_true_stream_contract(provider, model, required_key):
         stream=True,
         thinking=True,
         thinking_budget="medium",
-        max_output_tokens=256,
+        max_output_tokens=output_token_budget(model),
         env_file=env_file,
         keep_logs=True,
     )

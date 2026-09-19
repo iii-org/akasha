@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 import akasha
+from tests.support.model_limits import output_token_budget
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.helper.run_llm import call_model
 from akasha.utils.db.db_structure import get_storage_directory
@@ -45,7 +46,7 @@ def test_gemini_embedding_chroma_search_and_answer():
         embeddings=embedding_name,
         chunk_size=1000,
         search_type="auto",
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget("gemini:gemini-2.5-flash"),
         keep_logs=True,
         env_file=load_test_env(),
     )

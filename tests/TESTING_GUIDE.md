@@ -177,3 +177,11 @@ cache, and runs `full_only`. Ollama is not assumed to exist in CI.
 
 The reorganization decisions and test evidence are recorded in
 `dev_docs/2026-09-test-suite-reorganization-worklog.md`.
+
+## Model output limits
+
+The model manifest records official output ceilings with source URLs and dates,
+and separate test_max_output_tokens budgets. Live provider, MCP and RAG tests
+read tests.support.model_limits.output_token_budget instead of using tiny fixed
+caps. See [the provider limit audit](../dev_docs/2026-09-provider-output-limits.md)
+for model-specific values, reasoning-token accounting and Ollama limitations.

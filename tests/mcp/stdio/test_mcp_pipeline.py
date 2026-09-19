@@ -13,6 +13,7 @@ from tests.support.live import load_test_env, require_keys, require_ollama
 from tests.support.paths import FIXTURES_ROOT, REPO_ROOT
 
 import akasha
+from tests.support.model_limits import output_token_budget
 
 
 MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
@@ -32,7 +33,7 @@ MODEL_CASES = [
         item["provider"],
         item["id"],
         REQUIRED_KEYS.get(item["provider"]),
-        item.get("capabilities", {}).get("output_token_limit", 2048),
+        output_token_budget(item["id"]),
         id=item["id"],
     )
     for item in _manifest["models"]
@@ -108,8 +109,7 @@ def test_mcp_tools_are_executed_by_real_agent_non_stream(
         stream=False,
         thinking=False,
         keep_logs=True,
-        # Use the documented model ceiling when available. Gemini's cap includes
-        # reasoning even with thinking=False; 2048 is the fallback test budget.
+        # Use the manifest test budget, validated against the official ceiling.
         max_output_tokens=max_output_tokens,
         max_round=3,
     )

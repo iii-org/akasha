@@ -7,6 +7,7 @@ These tests intentionally call the real Gemini API. They are skipped unless
 import pytest
 
 import akasha
+from tests.support.model_limits import output_token_budget
 from tests.support.live import load_test_env, require_keys
 
 
@@ -34,7 +35,7 @@ def test_live_gemini_agent_returns_final_answer():
         keep_logs=True,
         thinking=True,
         thinking_budget=512,
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget("gemini:gemini-2.5-flash"),
         env_file=_env_file(),
     )
 
@@ -54,7 +55,7 @@ def test_live_gemini_agent_streams_thinking_and_answer_events():
         keep_logs=True,
         thinking=True,
         thinking_budget=512,
-        max_output_tokens=128,
+        max_output_tokens=output_token_budget("gemini:gemini-2.5-flash"),
         env_file=_env_file(),
     )
 
@@ -78,7 +79,7 @@ def test_live_gemini_ignores_budget_when_thinking_disabled():
         stream=False,
         thinking=False,
         thinking_budget=8192,
-        max_output_tokens=64,
+        max_output_tokens=output_token_budget("gemini:gemini-2.5-flash"),
         env_file=_env_file(),
     )
 
