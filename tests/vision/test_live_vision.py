@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from PIL import Image
+
 import akasha
 import pytest
 
@@ -51,7 +53,10 @@ def test_live_vision_generate_understand_and_edit(
         save_path=str(generated_path),
         env_file=env_file,
     )
-    assert Path(generated).exists()
+    assert Path(generated).resolve() == generated_path.resolve()
+    with Image.open(generated_path) as image:
+        image.load()
+        assert image.width > 0 and image.height > 0
 
     asker = akasha.ask(
         model=understanding_model,
@@ -71,4 +76,7 @@ def test_live_vision_generate_understand_and_edit(
         save_path=str(edited_path),
         env_file=env_file,
     )
-    assert Path(edited).exists()
+    assert Path(edited).resolve() == edited_path.resolve()
+    with Image.open(edited_path) as image:
+        image.load()
+        assert image.width > 0 and image.height > 0
