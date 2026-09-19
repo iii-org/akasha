@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from PIL import Image
 
 import akasha.tools.gen_img as gen_img_module
 import pytest
@@ -16,11 +17,18 @@ class FakeImageClient:
 
     def generate(self, **kwargs):
         self.generate_calls.append(kwargs)
-        return "generated.png"
+        return self._save_image(kwargs["save_path"])
 
     def edit(self, **kwargs):
         self.edit_calls.append(kwargs)
-        return "edited.png"
+        return self._save_image(kwargs["save_path"])
+
+
+    @staticmethod
+    def _save_image(save_path):
+        with Image.new("RGB", (2, 2), "white") as image:
+            image.save(save_path, format="PNG")
+        return str(save_path)
 
 
 class FakeGeminiModels:
@@ -120,7 +128,7 @@ def test_gemini_edit_raises_for_no_image_and_disables_afc(tmp_path):
     assert config.automatic_function_calling.disable is True
 
 
-def test_gen_image_delegates_generation_options(monkeypatch, tmp_path):
+def test_gen_image_delegates_generation_options(monkeypatch, tmp_path, capsys, previewed_images):
     client = FakeImageClient()
     monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
 
@@ -135,7 +143,9 @@ def test_gen_image_delegates_generation_options(monkeypatch, tmp_path):
         env_file="tests/.env",
     )
 
-    assert result == "generated.png"
+    assert "Failed to open image" not in capsys.readouterr().out
+    assert previewed_images == [(str(save_path), (2, 2))]
+    assert result == str(save_path)
     assert client.generate_calls == [
         {
             "prompt": "a red bicycle",
@@ -149,7 +159,7 @@ def test_gen_image_delegates_generation_options(monkeypatch, tmp_path):
     ]
 
 
-def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path):
+def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path, capsys, previewed_images):
     client = FakeImageClient()
     monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
 
@@ -167,7 +177,9 @@ def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path):
         verbose=True,
     )
 
-    assert result == "edited.png"
+    assert "Failed to open image" not in capsys.readouterr().out
+    assert previewed_images == [(str(save_path), (2, 2))]
+    assert result == str(save_path)
     assert client.edit_calls == [
         {
             "prompt": "remove the bicycle",
@@ -193,5 +205,18 @@ def test_edit_image_preserves_multiple_sources(monkeypatch, tmp_path):
         save_path=str(tmp_path / "combined.png"),
     )
 
-    assert result == "edited.png"
+    assert result == str(tmp_path / "combined.png")
     assert client.edit_calls[0]["images"] == sources
+
+
+@pytest.fixture
+def previewed_images(monkeypatch):
+    """Keep real PNG decoding, but do not launch a desktop viewer in CI."""
+    shown = []
+
+    def record_preview(image, *args, **kwargs):
+        image.load()
+        shown.append((str(image.filename), image.size))
+
+    monkeypatch.setattr(Image.Image, "show", record_preview)
+    return shown
