@@ -33,12 +33,15 @@ from akasha.utils.base import (
 logger = logging.getLogger("akasha.agent")
 
 _PROGRESS_PROMPT = """User-visible progress reporting:
-When calling tools, include a brief explanation of the operation's purpose in
-the same assistant message as the tool calls. After receiving tool results,
-briefly state verified findings and the next operation if more tools are needed.
+When using tools, you may briefly explain the purpose of the operation.
 Use the user's language. Describe observable actions, not private reasoning.
-Do not invent results or claim success before a tool completes. Keep progress
-concise, and put the final answer in a separate message without tool calls.
+Do not invent results or claim success before a tool completes.
+Your answer may include concise progress and verified findings together with
+the requested result. Directly answer the user's question in the current
+response; do not merely announce completion or promise to answer later.
+Do not split an otherwise complete answer into separate messages just to
+separate progress from the answer. Akasha handles progress, tool, and answer
+labels; do not add these labels yourself.
 These reporting instructions do not change the user's task or output constraints.
 """
 

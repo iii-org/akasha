@@ -11,6 +11,7 @@ from langchain_core.tools import tool
 
 import akasha
 from akasha.agent.skills import Skill
+from tests.support.model_limits import model_settings
 
 pytestmark = [pytest.mark.integration, pytest.mark.contract]
 
@@ -57,11 +58,12 @@ def install_model(monkeypatch, replies):
     return model
 
 
+@pytest.mark.parametrize("model_id", list(model_settings()))
 @pytest.mark.parametrize("with_skill", [False, True])
-def test_progress_instructions_are_automatic_and_preserve_user_prompt(monkeypatch, with_skill):
+def test_progress_instructions_are_automatic_and_preserve_user_prompt(monkeypatch, with_skill, model_id):
     model = install_model(monkeypatch, [AIMessage(content="完成")])
     agent = akasha.agents(
-        model="fake:model", system_prompt="只使用繁體中文。",
+        model=model_id, system_prompt="只使用繁體中文。",
         skills=[Skill(name="research", instructions="Use reliable sources.")]
         if with_skill else None,
         keep_logs=False,
@@ -262,3 +264,30 @@ def test_fragmented_tool_arguments_are_assembled_once_with_thinking(monkeypatch)
     assert agent.tool_calls == [{"name": "lookup", "args": {"sku": "A123"}, "id": "l1", "type": "tool_call"}]
     assert agent.thoughts == ["分析請求"]
     assert agent.response == "庫存 3 件。"
+
+
+@pytest.mark.parametrize("stream", [False, True])
+@pytest.mark.parametrize("thinking", [False, True])
+def test_answer_preserves_findings_and_result_together(monkeypatch, stream, thinking):
+    @tool
+    def add_numbers() -> str:
+        """Add the requested numbers."""
+        return "42"
+
+    answer = "I verified the addition result: 20 + 22 = 42."
+    install_model(monkeypatch, [
+        AIMessage(content="", tool_calls=[
+            {"name": "add_numbers", "args": {}, "id": "add-1"}
+        ]),
+        AIMessage(content=answer),
+    ])
+    agent = akasha.agents(model="fake:model", tools=[add_numbers],
+                          stream=stream, thinking=thinking)
+    result = agent("Add 20 and 22.")
+    if stream:
+        events = list(result)
+        assert "".join(e["data"] for e in events if e["type"] == "answer") == answer
+        assert any(e["type"] == "progress" for e in events)
+    else:
+        assert result == answer
+    assert agent.response == answer
