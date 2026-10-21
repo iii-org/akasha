@@ -254,3 +254,11 @@ manifest now explicitly selects embedding-001 for Vertex Express and retains
 embedding-2 for Developer API. This is test-fixture selection, not automatic
 model fallback in the library. See the official text embedding model reference:
 https://docs.cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings
+
+After selecting backend-specific embedding fixtures, the Python 3.12 CI passed
+388 checks before the Gemini image-edit live case failed: Vertex clients reject
+the Developer-only Files API used by `gemini_model.edit`. Image generation and
+image understanding had succeeded. A public `edit_image` regression reproduced
+the same error for PNG/JPEG inputs supplied as strings and Paths (four failures
+before the fix). Vertex image editing now sends inline bytes with MIME detected
+from the actual image. Developer API uploads retain their previous behavior.

@@ -270,18 +270,23 @@ class gemini_model(LLM):
         ## process the image list
         images_source = [prompt]
         for image in images:
-            if isinstance(image, str):
-                # use Path to check if the image is exist
-                image_path = Path(image)
-                if not image_path.exists():
-                    raise ValueError(f"Image {image} does not exist.")
-                images_source.append(self.client.files.upload(file=image))
-            elif isinstance(image, Path):
-                if not image.exists():
-                    raise ValueError(f"Image {image} does not exist.")
-                images_source.append(self.client.files.upload(file=image.__str__()))
-            else:
+            if not isinstance(image, (str, Path)):
                 raise ValueError(f"Image {image} is not a valid path or file object.")
+            image_path = Path(image)
+            if not image_path.exists():
+                raise ValueError(f"Image {image} does not exist.")
+            if getattr(self.client, "vertexai", False):
+                # The Files API is Developer-only. Vertex accepts inline image
+                # parts; infer MIME from the image itself, not its filename.
+                from PIL import Image
+
+                with Image.open(image_path) as source:
+                    mime_type = Image.MIME.get(source.format, "application/octet-stream")
+                images_source.append(types.Part.from_bytes(
+                    data=image_path.read_bytes(), mime_type=mime_type,
+                ))
+            else:
+                images_source.append(self.client.files.upload(file=str(image_path)))
 
         response = self.client.models.generate_content(
             model=self.model_name,
