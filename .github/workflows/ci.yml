@@ -10,6 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      # Both Python versions share the configured provider quotas. Keep all
+      # live checks, but avoid competing image requests from the two jobs.
+      max-parallel: 1
+      fail-fast: false
       matrix:
         python-image:
           - ghcr.io/astral-sh/uv:0.6.13-python3.11-bookworm-slim
