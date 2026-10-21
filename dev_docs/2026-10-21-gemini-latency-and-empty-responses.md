@@ -245,3 +245,12 @@ The smoke tests now specify an unambiguous system instruction consistent with
 their exact English-token request, for both sync and streaming calls. Product
 default prompts are unchanged. A whitespace-only STOP response remains an
 `EmptyResponseError` after one generation and is covered by a regression case.
+
+The next CI run passed 238 checks before the Gemini embedding fixture returned
+404 for `gemini-embedding-2` under Vertex Express. Two direct probes per SDK
+(2.18.0 and 2.32.0) reproduced the 404, while `gemini-embedding-001` succeeded
+with 3072-dimensional vectors using the same API key and backend. The CI model
+manifest now explicitly selects embedding-001 for Vertex Express and retains
+embedding-2 for Developer API. This is test-fixture selection, not automatic
+model fallback in the library. See the official text embedding model reference:
+https://docs.cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings

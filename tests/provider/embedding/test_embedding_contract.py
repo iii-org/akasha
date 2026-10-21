@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import yaml
+import os
 from tests.support.live import load_test_env, require_keys
 from tests.support.paths import REPO_ROOT
 
@@ -21,7 +22,8 @@ def _required_key(provider: str) -> str:
 
 _manifest = yaml.safe_load(MODEL_MANIFEST.read_text(encoding="utf-8"))
 PROVIDERS = [
-    (item["provider"], item["id"], _required_key(item["provider"]))
+    (item["provider"], item["id"], _required_key(item["provider"]),
+     item.get("vertex_express_id"))
     for item in _manifest["embeddings"]
 ]
 
@@ -33,9 +35,12 @@ pytestmark = [
 ]
 
 
-@pytest.mark.parametrize("provider,embedding_name,required_key", PROVIDERS)
-def test_embedding_provider_returns_vectors(provider, embedding_name, required_key):
+@pytest.mark.parametrize("provider,embedding_name,required_key,vertex_express_id", PROVIDERS)
+def test_embedding_provider_returns_vectors(provider, embedding_name, required_key, vertex_express_id):
     require_keys(required_key)
+    if (provider == "gemini" and vertex_express_id
+            and os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in {"true", "1", "yes"}):
+        embedding_name = vertex_express_id
 
     print(f"[embedding] {provider}: initialize {embedding_name}", flush=True)
     embeddings = handle_embeddings(embedding_name, env_file=load_test_env())
