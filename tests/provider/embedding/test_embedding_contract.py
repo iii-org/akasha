@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import yaml
+from tests.support.model_limits import embedding_model
 from tests.support.live import load_test_env, require_keys
 from tests.support.paths import REPO_ROOT
 
@@ -36,6 +37,7 @@ pytestmark = [
 @pytest.mark.parametrize("provider,embedding_name,required_key", PROVIDERS)
 def test_embedding_provider_returns_vectors(provider, embedding_name, required_key):
     require_keys(required_key)
+    embedding_name = embedding_model(provider)
 
     print(f"[embedding] {provider}: initialize {embedding_name}", flush=True)
     embeddings = handle_embeddings(embedding_name, env_file=load_test_env())

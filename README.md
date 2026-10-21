@@ -9,7 +9,7 @@ akasha is a Python toolkit for document question answering, image understanding,
 It provides one consistent interface for remote and local model workflows while keeping provider-specific integrations behind model aliases such as `openai:`, `gemini:`, `anthropic:`, and `ollama:`.
 
 - manual: <https://iii-org.github.io/akasha/>
-- Current package version: `1.8.0`
+- Current package version: `1.8.4`
 
 ## What akasha provides
 

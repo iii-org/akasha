@@ -2,13 +2,22 @@ from akasha.utils.prompts.format import language_dict
 from langchain_core.embeddings import Embeddings
 from typing import Union, Callable, Tuple, List, Dict, Any
 from langchain_core.documents import Document
-import jieba3
 import json
 import re
-import opencc
 
-cc = opencc.OpenCC("s2twp")
-jieba_tokenizer = jieba3.jieba3()
+
+def __getattr__(name):
+    # Preserve legacy resource imports without initializing them on import.
+    if name not in {"cc", "jieba_tokenizer"}:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from .chinese import get_converter, get_tokenizer
+
+    if name == "cc":
+        value = get_converter()
+    elif name == "jieba_tokenizer":
+        value = get_tokenizer()
+    globals()[name] = value
+    return value
 
 
 def separate_name(name: str):
@@ -110,8 +119,10 @@ def sim_to_trad(text: str) -> str:
     Returns:
         str: traditional chinese
     """
-    global cc
-    return cc.convert(text)
+    from .chinese import get_converter
+
+    converter = globals().get("cc")
+    return (converter if converter is not None else get_converter()).convert(text)
 
 
 def get_doc_length(language: str, text: str) -> int:
@@ -126,7 +137,12 @@ def get_doc_length(language: str, text: str) -> int:
     """
 
     if "chinese" in language_dict[language]:
-        doc_length = len(jieba_tokenizer.cut_text(text))
+        from .chinese import get_tokenizer
+
+        tokenizer = globals().get("jieba_tokenizer")
+        if tokenizer is None:
+            tokenizer = get_tokenizer()
+        doc_length = len(tokenizer.cut_text(text))
     else:
         doc_length = len(text.split())
     return doc_length

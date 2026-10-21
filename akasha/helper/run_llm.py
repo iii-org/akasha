@@ -11,6 +11,66 @@ from akasha.helper.base import sim_to_trad, extract_json, extract_multiple_json
 from akasha.utils.prompts.gen_prompt import format_sys_prompt, default_translate_prompt
 
 
+class EmptyResponseError(RuntimeError):
+    """A generation completed without visible text; no automatic regeneration.
+
+    ``diagnostics`` contains only status/count fields, never response text,
+    reasoning, tool arguments, or arbitrary provider metadata.
+    """
+
+    def __init__(self, response):
+        self.diagnostics = _empty_response_diagnostics(response)
+        fields = ", ".join(f"{key}={value}" for key, value in self.diagnostics.items())
+        super().__init__(f"LLM response contains no visible text ({fields}).")
+
+
+def _empty_response_diagnostics(response) -> dict:
+    """Keep a small allowlist so malformed metadata cannot leak answer content."""
+    metadata = getattr(response, "response_metadata", {}) or {}
+    usage = getattr(response, "usage_metadata", {}) or {}
+    known_statuses = {
+        "STOP", "MAX_TOKENS", "SAFETY", "RECITATION", "LANGUAGE", "OTHER",
+        "BLOCKLIST", "PROHIBITED_CONTENT", "SPII", "MALFORMED_FUNCTION_CALL",
+        "IMAGE_SAFETY", "IMAGE_PROHIBITED_CONTENT", "IMAGE_OTHER", "NO_IMAGE",
+        "IMAGE_RECITATION", "UNEXPECTED_TOOL_CALL", "TOO_MANY_TOOL_CALLS",
+        "MISSING_THOUGHT_SIGNATURE", "FINISH_REASON_UNSPECIFIED",
+        "BLOCKED_REASON_UNSPECIFIED", "BLOCK_REASON_UNSPECIFIED",
+        "CONTENT_FILTER", "LENGTH", "TOOL_CALLS", "FUNCTION_CALL", "END_TURN",
+        "STOP_SEQUENCE", "PAUSE_TURN", "REFUSAL", "MODEL_CONTEXT_WINDOW_EXCEEDED",
+    }
+
+    def status(value):
+        value = getattr(value, "name", value)
+        if isinstance(value, str) and value.upper() in known_statuses:
+            return value.upper()
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        return "unknown"
+
+    feedback = metadata.get("prompt_feedback") or {}
+    content = getattr(response, "content", response)
+    block_types = []
+    known_types = {"text", "thinking", "reasoning", "tool_use", "image", "audio", "file"}
+    if isinstance(content, list):
+        block_types = sorted({
+            block.get("type") if isinstance(block, dict)
+            and isinstance(block.get("type"), str) and block["type"] in known_types
+            else "other" for block in content
+        })
+    diagnostics = {
+        "finish_reason": status(metadata.get("finish_reason") or metadata.get("stop_reason")),
+        "block_reason": status(feedback.get("block_reason") if isinstance(feedback, dict) else None),
+        "content_types": block_types,
+        "tool_calls": len(getattr(response, "tool_calls", []) or []),
+        "attempts": 1,
+    }
+    for name in ("input_tokens", "output_tokens", "total_tokens"):
+        value = usage.get(name)
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            diagnostics[name] = value
+    return diagnostics
+
+
 def call_model(
     model: BaseLanguageModel,
     input_text: Union[str, list],
@@ -28,69 +88,26 @@ def call_model(
         str: llm response
     """
 
-    ### for openai, change system prompt and prompt into system meg and human meg ###
+    model, _ = handle_model_and_name(model)
 
-    response = ""
+    if isinstance(model, BaseChatModel):
+        raw_response = model.invoke(normalize_chat_input(input_text))
+    else:
+        raw_response = model._call(input_text, verbose=verbose)
 
-    model, model_name = handle_model_and_name(model)
+    response = raw_response
+    if isinstance(response, (AIMessage, AIMessageChunk)):
+        response = content_to_text(response.content)
+    elif isinstance(response, dict):
+        response = str(response)
+    elif isinstance(response, list):
+        response = content_to_text(response)
 
-    try:
-        try:
-            model_type = model._llm_type
-        except Exception:
-            model_type = "unknown"
-
-        response = None
-        log_enabled = verbose or keep_logs
-        max_retries = 20
-        attempt = 0
-        def normalize_response(value):
-            if isinstance(value, (AIMessage, AIMessageChunk)):
-                value = content_to_text(value.content)
-            elif isinstance(value, dict):
-                value = str(value)
-            elif isinstance(value, list):
-                value = content_to_text(value)
-            return value
-
-        def is_empty_response(value):
-            if value is None:
-                return True
-            if isinstance(value, str):
-                return value.strip() == ""
-            return not bool(value)
-
-        while attempt < max_retries and is_empty_response(response):
-            if isinstance(model, BaseChatModel):
-                response = model.invoke(normalize_chat_input(input_text))
-            elif "remote" in model_type:
-                response = model._call(input_text, verbose=verbose)
-            else:
-                response = model._call(input_text, verbose=verbose)
-
-            response = normalize_response(response)
-            if is_empty_response(response):
-                if log_enabled:
-                    logging.warning(
-                        "LLM response is empty. Retrying call_model. response_type=%s",
-                        type(response).__name__,
-                    )
-                attempt += 1
-
-        if is_empty_response(response):
-            error_message = "LLM response is empty after max retries; giving up."
-            if log_enabled:
-                logging.error(error_message)
-            raise Exception(error_message)
-
-    except Exception as e:
-        trace_text = traceback.format_exc()
-        logging.error(
-            trace_text
-            + "\n\nText generation encountered an error.\
-            Please check your model setting.\n\n"
-        )
-        raise e
+    if response is None or (not response.strip() if isinstance(response, str) else not response):
+        error = EmptyResponseError(raw_response)
+        if verbose or keep_logs:
+            logging.warning("%s", error)
+        raise error
 
     if isinstance(response, str):
         response = sim_to_trad(response)

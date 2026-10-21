@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from PIL import Image
 
 import akasha.tools.gen_img as gen_img_module
+from akasha.helper import handle_objects
 import pytest
 
 from akasha.utils.models.gemi import gemini_model
@@ -39,6 +40,53 @@ class FakeGeminiModels:
     def generate_content(self, **kwargs):
         self.generate_calls.append(kwargs)
         return self.response
+
+
+@pytest.mark.parametrize("use_string", [False, True])
+@pytest.mark.parametrize("image_format,mime", [("PNG", "image/png"), ("JPEG", "image/jpeg")])
+def test_vertex_edit_sends_inline_image_without_developer_files_api(
+    monkeypatch, tmp_path, use_string, image_format, mime
+):
+    from io import BytesIO
+
+    source_path = tmp_path / ("source.png" if image_format == "PNG" else "source.jpg")
+    with Image.new("RGB", (2, 2), "white") as source:
+        source.save(source_path, format=image_format)
+        output = BytesIO()
+        source.save(output, format="PNG")
+    response = SimpleNamespace(
+        candidates=[SimpleNamespace(
+            content=SimpleNamespace(parts=[SimpleNamespace(
+                text=None, inline_data=SimpleNamespace(data=output.getvalue()),
+            )]), finish_reason="STOP",
+        )], prompt_feedback=None,
+    )
+    models = FakeGeminiModels(response)
+    client = gemini_model(model_name="gemini-3.1-flash-image", api_key="unused")
+
+    def forbidden_upload(**kwargs):
+        raise ValueError("This method is only supported in the Gemini Developer client.")
+
+    client.client = SimpleNamespace(
+        vertexai=True, models=models, files=SimpleNamespace(upload=forbidden_upload),
+    )
+    monkeypatch.setattr(handle_objects, "handle_client", lambda *a, **k: client)
+    result_path = tmp_path / "edited.png"
+    result = gen_img_module.edit_image(
+        prompt="add another bird", images=str(source_path) if use_string else source_path,
+        model="gemini:gemini-3.1-flash-image", save_path=str(result_path),
+    )
+    assert result == result_path
+    with Image.open(result) as image:
+        image.load()
+        assert image.size == (2, 2)
+    assert len(models.generate_calls) == 1
+    request = models.generate_calls[0]
+    assert request["model"] == "gemini-3.1-flash-image"
+    assert request["contents"][0] == "add another bird"
+    assert request["contents"][1].inline_data.mime_type == mime
+    assert request["contents"][1].inline_data.data == source_path.read_bytes()
+    assert request["config"].automatic_function_calling.disable is True
 
 
 def test_gemini_generate_raises_clear_error_for_no_image_response(tmp_path):
@@ -130,7 +178,7 @@ def test_gemini_edit_raises_for_no_image_and_disables_afc(tmp_path):
 
 def test_gen_image_delegates_generation_options(monkeypatch, tmp_path, capsys, previewed_images):
     client = FakeImageClient()
-    monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
+    monkeypatch.setattr(handle_objects, "handle_client", lambda model, env_file: client)
 
     save_path = tmp_path / "generated.png"
     result = gen_img_module.gen_image(
@@ -161,7 +209,7 @@ def test_gen_image_delegates_generation_options(monkeypatch, tmp_path, capsys, p
 
 def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path, capsys, previewed_images):
     client = FakeImageClient()
-    monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
+    monkeypatch.setattr(handle_objects, "handle_client", lambda model, env_file: client)
 
     source_path = tmp_path / "source.png"
     save_path = tmp_path / "edited.png"
@@ -196,7 +244,7 @@ def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path, 
 
 def test_edit_image_preserves_multiple_sources(monkeypatch, tmp_path):
     client = FakeImageClient()
-    monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
+    monkeypatch.setattr(handle_objects, "handle_client", lambda model, env_file: client)
 
     sources = [tmp_path / "first.png", tmp_path / "second.png"]
     result = gen_img_module.edit_image(

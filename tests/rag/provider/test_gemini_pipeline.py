@@ -5,10 +5,9 @@ from __future__ import annotations
 import gc
 
 import pytest
-import yaml
 
 import akasha
-from tests.support.model_limits import output_token_budget
+from tests.support.model_limits import embedding_model, output_token_budget
 from akasha.helper.preprocess_prompts import merge_history_and_prompt
 from akasha.helper.run_llm import call_model
 from akasha.utils.db.db_structure import get_storage_directory
@@ -17,10 +16,9 @@ from akasha.utils.search.retrievers.base import get_retrivers
 from akasha.utils.search.search_doc import search_docs
 from akasha.helper.base import separate_name
 from tests.support.live import load_test_env, require_keys
-from tests.support.paths import REPO_ROOT, RAG_DATA_ROOT
+from tests.support.paths import RAG_DATA_ROOT
 
 
-MODEL_MANIFEST = REPO_ROOT / "tests" / "config" / "model_manifest.yaml"
 RAG_FILE = RAG_DATA_ROOT / "single_fact.txt"
 
 pytestmark = [
@@ -33,12 +31,9 @@ pytestmark = [
 def test_gemini_embedding_chroma_search_and_answer():
     require_keys("GEMINI_API_KEY")
 
-    manifest = yaml.safe_load(MODEL_MANIFEST.read_text(encoding="utf-8"))
-    embedding_name = next(
-        item["id"] for item in manifest["embeddings"] if item["provider"] == "gemini"
-    )
-    embedding_type, embedding_model = separate_name(embedding_name)
-    assert embedding_name == "gemini:gemini-embedding-2"
+    embedding_name = embedding_model("gemini")
+    embedding_type, selected_embedding_model = separate_name(embedding_name)
+    assert embedding_type == "gemini"
 
     print("[gemini setup] initialize RAG", flush=True)
     rag = akasha.RAG(
@@ -60,7 +55,7 @@ def test_gemini_embedding_chroma_search_and_answer():
         RAG_FILE.parent,
         rag.chunk_size,
         embedding_type,
-        embedding_model,
+        selected_embedding_model,
     )
     print(f"[gemini stage 2] reload Chroma: {storage_dir}", flush=True)
     reloaded_db, ignored = load_db_by_chroma_name(storage_dir)

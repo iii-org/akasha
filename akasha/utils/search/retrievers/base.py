@@ -7,14 +7,6 @@ from akasha.helper.handle_objects import handle_embeddings_and_name
 from akasha.utils.db.db_structure import dbs
 from akasha.utils.optional_dependencies import require_optional_dependency
 
-from .retri_bm25 import myBM25Retriever
-from .retri_custom import customRetriever
-from .retri_knn import myKNNRetriever
-from .retri_mmr import myMMRRetriever
-from .retri_rerank import myRerankRetriever
-from .retri_svm import mySVMRetriever
-from .retri_tfidf import myTFIDFRetriever
-
 
 def _get_faiss_retriever_class():
     """Load the optional FAISS retriever only when it is selected."""
@@ -91,6 +83,8 @@ def get_retrivers(
         embeddings, _embed_name = handle_embeddings_and_name(embeddings, False, env_file)
 
     if callable(search_type_value):
+        from .retri_custom import customRetriever
+
         custom_retriver = customRetriever.from_db(
             db, embeddings, search_type, topK, threshold
         )
@@ -103,14 +97,20 @@ def get_retrivers(
             docs_list = db.get_Documents()
 
         if search_type in ["mmr", "merge"]:
+            from .retri_mmr import myMMRRetriever
+
             mmr_retriver = myMMRRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(mmr_retriver)
 
         if search_type in ["svm", "merge"]:
+            from .retri_svm import mySVMRetriever
+
             svm_retriver = mySVMRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(svm_retriver)
 
         if search_type in ["tfidf", "merge"]:
+            from .retri_tfidf import myTFIDFRetriever
+
             tfidf_retriver = myTFIDFRetriever.from_documents(docs_list, k=topK)
             retriver_list.append(tfidf_retriver)
 
@@ -122,14 +122,20 @@ def get_retrivers(
             retriver_list.append(faiss_retriver)
 
         if search_type in ["knn", "auto", "auto_rerank"]:
+            from .retri_knn import myKNNRetriever
+
             knn_retriver = myKNNRetriever.from_db(db, embeddings, topK, threshold)
             retriver_list.append(knn_retriver)
 
         if search_type in ["bm25", "auto", "auto_rerank"]:
+            from .retri_bm25 import myBM25Retriever
+
             bm25_retriver = myBM25Retriever.from_documents(docs_list, topK, threshold)
             retriver_list.append(bm25_retriver)
 
         if "rerank" in search_type:
+            from .retri_rerank import myRerankRetriever
+
             if ":" in search_type:
                 search_type, rerank_type = search_type.split(":", maxsplit=1)
             else:

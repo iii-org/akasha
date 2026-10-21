@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import akasha
 import gc
 import os
+import sys
 
 app = FastAPI()
 
@@ -11,10 +12,10 @@ app = FastAPI()
 def clean():
     try:
         gc.collect()
-        import torch
-
-        torch.cuda.ipc_collect()
-        torch.cuda.empty_cache()
+        torch = sys.modules.get("torch")
+        if torch is not None and torch.cuda.is_available():
+            torch.cuda.ipc_collect()
+            torch.cuda.empty_cache()
     except Exception:
         pass
 

@@ -227,7 +227,7 @@ def test_rag_use_chroma_loads_existing_store(monkeypatch, tmp_path):
         calls.append(name)
         return loaded_db, ["ignored.txt"]
 
-    monkeypatch.setattr(atman_module, "load_db_by_chroma_name", fake_load)
+    monkeypatch.setattr("akasha.utils.db.load_db.load_db_by_chroma_name", fake_load)
 
     source = tmp_path / "existing-chroma"
     rag._get_db(source)

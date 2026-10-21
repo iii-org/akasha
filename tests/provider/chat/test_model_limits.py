@@ -40,6 +40,25 @@ def test_ollama_does_not_confuse_context_with_output_limit():
     assert output_token_budget(entry["id"]) == entry["test_max_output_tokens"]
 
 
+@pytest.mark.parametrize("selector,expected", [
+    (None, "gemini:gemini-embedding-2"),
+    ("false", "gemini:gemini-embedding-2"),
+    ("true", "gemini:gemini-embedding-001"),
+    ("TRUE", "gemini:gemini-embedding-001"),
+    ("1", "gemini:gemini-embedding-001"),
+    ("yes", "gemini:gemini-embedding-001"),
+])
+def test_live_embedding_fixture_follows_backend_without_changing_other_providers(monkeypatch, selector, expected):
+    from tests.support.model_limits import embedding_model
+
+    if selector is None:
+        monkeypatch.delenv("GOOGLE_GENAI_USE_VERTEXAI", raising=False)
+    else:
+        monkeypatch.setenv("GOOGLE_GENAI_USE_VERTEXAI", selector)
+    assert embedding_model("gemini") == expected
+    assert embedding_model("openai") == "openai:text-embedding-3-small"
+
+
 @pytest.mark.parametrize("budget", [0, True, 10001])
 def test_invalid_or_excessive_budget_fails_before_network(monkeypatch, budget):
     import tests.support.model_limits as limits

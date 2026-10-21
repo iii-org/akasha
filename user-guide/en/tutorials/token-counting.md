@@ -22,6 +22,12 @@ Use the same model alias that you plan to use for the request. Different model f
 
 `ask`, `RAG`, `summary`, and related APIs count input tokens internally. Use `max_input_tokens` to limit the input accepted by a request:
 
+For Gemini, internal budgeting uses local estimates by default and makes no
+remote `count_tokens` request. Document splitting and input limits still apply
+to those estimates. Leave room below the model's context limit; the provider
+validates the actual request. See [`myTokenizer`](../reference/my-tokenizer.md)
+for explicit remote counting with `exact=True`.
+
 ```python
 import akasha
 

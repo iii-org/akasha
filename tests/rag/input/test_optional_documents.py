@@ -79,7 +79,7 @@ def test_direct_file_loading_does_not_turn_optional_error_into_text(
     pptx_path = tmp_path / "slides.pptx"
     pptx_path.touch()
     monkeypatch.setattr(
-        load_docs,
+        file_loader,
         "load_file",
         lambda *_args: (_ for _ in ()).throw(
             OptionalDependencyError("PPTX loading", "documents")

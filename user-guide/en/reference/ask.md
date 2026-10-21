@@ -46,5 +46,28 @@ answer = asker(
 
 The normal return value is a final `str`. For streaming behavior, see [Streaming events](../tutorials/streaming.md).
 
+## Empty single-pass answers
+
+Non-streaming single-pass text generation raises `EmptyResponseError` when the
+provider returns no visible text. Akasha does not automatically regenerate the
+answer. This also applies to other APIs using the shared `call_model` helper;
+provider SDK retries remain separate. Batch and streaming helpers retain their
+existing behavior.
+
+```python
+from akasha.helper import EmptyResponseError
+
+try:
+    answer = asker("What is a vector store?")
+except EmptyResponseError as error:
+    print(error.diagnostics)
+```
+
+Diagnostics include recognized finish/block reasons, available token counts,
+content types, tool-call count, and attempt count. They exclude answer text,
+reasoning, tool arguments, and arbitrary provider metadata. A thinking-only or
+tool-only response is not a text answer. Visible partial text is still returned
+when the provider reports truncation.
+
 !!! tip
     Use `info` when the question needs supporting files or URLs. Use `RAG` when you need a repeatable document retrieval workflow.

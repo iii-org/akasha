@@ -270,18 +270,23 @@ class gemini_model(LLM):
         ## process the image list
         images_source = [prompt]
         for image in images:
-            if isinstance(image, str):
-                # use Path to check if the image is exist
-                image_path = Path(image)
-                if not image_path.exists():
-                    raise ValueError(f"Image {image} does not exist.")
-                images_source.append(self.client.files.upload(file=image))
-            elif isinstance(image, Path):
-                if not image.exists():
-                    raise ValueError(f"Image {image} does not exist.")
-                images_source.append(self.client.files.upload(file=image.__str__()))
-            else:
+            if not isinstance(image, (str, Path)):
                 raise ValueError(f"Image {image} is not a valid path or file object.")
+            image_path = Path(image)
+            if not image_path.exists():
+                raise ValueError(f"Image {image} does not exist.")
+            if getattr(self.client, "vertexai", False):
+                # The Files API is Developer-only. Vertex accepts inline image
+                # parts; infer MIME from the image itself, not its filename.
+                from PIL import Image
+
+                with Image.open(image_path) as source:
+                    mime_type = Image.MIME.get(source.format, "application/octet-stream")
+                images_source.append(types.Part.from_bytes(
+                    data=image_path.read_bytes(), mime_type=mime_type,
+                ))
+            else:
+                images_source.append(self.client.files.upload(file=str(image_path)))
 
         response = self.client.models.generate_content(
             model=self.model_name,
@@ -359,13 +364,31 @@ def check_format_prompt(prompts: list):
 def calculate_token(
     prompt: str,
     model_name: str = "gemini-1.5-flash",
+    *,
+    timeout: float = 10.0,
 ):
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    num_tokens = client.models.count_tokens(
-        model=model_name, contents=prompt
-    ).total_tokens
+    """Explicit remote text count; close the client and bound its request."""
+    from contextlib import nullcontext
+    from akasha.utils.models.chat import _without_vertex_project_environment
 
-    return num_tokens
+    if timeout <= 0:
+        raise ValueError("timeout must be positive")
+    use_vertex = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in {
+        "true", "1", "yes",
+    }
+    context = _without_vertex_project_environment() if use_vertex else nullcontext()
+    with context:
+        client = genai.Client(
+            api_key=os.environ["GEMINI_API_KEY"], vertexai=use_vertex,
+            http_options=types.HttpOptions(
+                timeout=max(1, int(timeout * 1000)),
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
+    try:
+        return client.models.count_tokens(model=model_name, contents=prompt).total_tokens
+    finally:
+        client.close()
 
 
 class gemini_embed(BaseModel, Embeddings):

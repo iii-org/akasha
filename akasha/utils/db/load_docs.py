@@ -4,7 +4,6 @@ from typing import List, Union
 from langchain_core.documents import Document
 
 from akasha.utils.db.db_structure import is_url
-from akasha.utils.db.file_loader import load_directory, load_file, load_url
 from akasha.utils.optional_dependencies import OptionalDependencyError
 
 
@@ -21,8 +20,12 @@ def _get_file_dir_docs(s: Union[str, Path]) -> List[Document]:
 
     try:
         if s.is_file():
+            from akasha.utils.db.file_loader import load_file
+
             return load_file(s, s.__str__().split(".")[-1])
         elif s.is_dir():
+            from akasha.utils.db.file_loader import load_directory
+
             return load_directory(s)
         else:
             return [Document(page_content=s.__str__())]
@@ -51,6 +54,8 @@ def load_docs_from_info(info: Union[str, list, Path, Document]) -> List[Document
             if si == "":
                 continue
             if is_url(si):
+                from akasha.utils.db.file_loader import load_url
+
                 docs.append(load_url(si))
             else:
                 docs.extend(_get_file_dir_docs(si))

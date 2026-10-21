@@ -68,6 +68,10 @@ embeddings:
     provider: "gemini"
     test_group: "pr"
     dimensions: "discover"
+    # Express API-key probes return 404 for embedding-2; embedding-001 was
+    # verified on 2026-10-21 with SDK 2.18.0 and 2.32.0 (3072 dimensions).
+    # This selects the CI fixture only, never substitutes a user's model.
+    vertex_express_id: "gemini:gemini-embedding-001"
 
 # 初始只需填 model ID；capabilities 會在後續 probe/測試建置時補齊。
 # dimensions 使用 discover，讓測試實際取得並驗證 embedding 維度。
