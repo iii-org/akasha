@@ -200,3 +200,28 @@ artifact directory (`before.json`, `verification.json`). A read-only
 wheel with registry 1.8.3. For this local test build, invoke the venv Python
 directly or use `uv run --no-sync ...`; project dependency configuration was
 deliberately preserved.
+
+## v1.8.4 release validation
+
+PR #30 includes the pending feature-loading changes and the Gemini changes.
+The repository already had secrets named `GOOGLE_GENAI_USE_VERTEXAI` and
+`OLLAMA_API_BASE`, but CI did not forward them. The release adds that wiring;
+`PYPI_API_TOKEN` also exists (only names were inspected, not secret values).
+
+The first PR CI attempt passed 184 checks before the Gemini live smoke test
+received an empty normalized answer with `finish_reason=STOP`, 57 input tokens,
+334 output tokens, and 391 total tokens. Vertex mode was enabled. This is a
+normal-ceiling empty answer, distinct from the controlled one-token truncation
+experiment. The available log does not establish whether the SDK response was
+already empty or its conversion lost text. The live smoke test now records
+raw SDK character counts, part counts, finish reasons, and usage to distinguish
+those cases, without logging answer or reasoning text. No library retry was
+reintroduced. A subsequent commit starts one bounded new CI attempt because
+the available API credentials cannot invoke the Actions rerun endpoint.
+
+Local release checks: wheel/sdist build and `twine check` passed; wheel/sdist
+boundaries passed; dependency baseline exports match the lock after changing
+only the project version to 1.8.4. The broad offline run passed 329 tests with
+one skipped; one caller-runtime test could not find pytest in its child process
+because the test interpreter borrowed pytest through the parent process's
+`sys.path`. That case is rerun with the same pytest path inherited by the child.

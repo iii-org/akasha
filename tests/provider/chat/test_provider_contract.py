@@ -8,6 +8,7 @@ server.  They do not exercise RAG, embeddings, or MCP.
 from __future__ import annotations
 
 import json
+import logging
 
 import pytest
 import yaml
@@ -58,9 +59,38 @@ def _assert_json_safe(value) -> None:
 
 
 @pytest.mark.parametrize("provider,model,required_key", PROVIDER_MODELS)
-def test_provider_ask_non_stream_contract(provider, model, required_key):
+def test_provider_ask_non_stream_contract(provider, model, required_key, monkeypatch):
     """A real provider must accept a short request and return visible text."""
     _skip_if_provider_unconfigured(provider, required_key)
+    if provider == "gemini":
+        # Observe the SDK boundary without retaining answer/reasoning text. A
+        # STOP response can still be empty; distinguish that from conversion loss.
+        from google.genai.models import Models
+
+        original_generate = Models.generate_content
+
+        def traced_generate(self, *args, **kwargs):
+            response = original_generate(self, *args, **kwargs)
+            candidates = []
+            for candidate in response.candidates or []:
+                parts = candidate.content.parts if candidate.content else []
+                candidates.append({
+                    "finish_reason": getattr(candidate.finish_reason, "name", None),
+                    "visible_chars": sum(len(p.text or "") for p in parts or [] if not p.thought),
+                    "thinking_chars": sum(len(p.text or "") for p in parts or [] if p.thought),
+                    "parts": len(parts or []),
+                })
+            usage = response.usage_metadata
+            logging.info("Gemini SDK response diagnostics: %s", json.dumps({
+                "candidates": candidates,
+                "usage": {name: getattr(usage, name, None) for name in (
+                    "prompt_token_count", "candidates_token_count",
+                    "thoughts_token_count", "total_token_count",
+                )} if usage else None,
+            }))
+            return response
+
+        monkeypatch.setattr(Models, "generate_content", traced_generate)
     env_file = _load_test_env()
     qa = akasha.ask(
         model=model,
