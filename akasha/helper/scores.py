@@ -4,15 +4,12 @@ import re
 import warnings
 from typing import Union
 
-import rouge_chinese
 from langchain_core.language_models.base import BaseLanguageModel
-from rouge import Rouge
 
 from akasha.utils.optional_dependencies import OptionalDependencyError
 from akasha.utils.prompts.format import language_dict
 from akasha.utils.prompts.gen_prompt import format_llm_score, format_sys_prompt
 
-from .base import jieba_tokenizer
 from .handle_objects import handle_model_and_name
 from .run_llm import call_model
 
@@ -80,15 +77,23 @@ def get_rouge_score(candidate_str: str,
     """
     try:
         if "chinese" in language_dict[language]:
+            import rouge_chinese
+            from .chinese import get_tokenizer
+
+            jieba_tokenizer = get_tokenizer()
             rouge = rouge_chinese.Rouge(metrics=["rouge-l"])
             cand = " ".join(jieba_tokenizer.cut_text(candidate_str))
             ref = " ".join(jieba_tokenizer.cut_text(reference_str))
         else:
+            from rouge import Rouge
+
             rouge = Rouge(metrics=["rouge-l"])
             cand = candidate_str
             ref = reference_str
 
         F1 = rouge.get_scores(cand, ref)[0]["rouge-l"]["f"]
+    except ImportError:
+        raise
     except Exception:
         F1 = 0.0
     F1 = round(F1, round_digit)

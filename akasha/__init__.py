@@ -54,7 +54,7 @@ _LAZY_IMPORTS = {
     "summary": (".tools.summary", "summary"),
     "websearch": (".tools.websearch", "websearch"),
     "eval": (".eval", "eval"),
-    "agents": (".agent", "agents"),
+    "agents": (".agent.agents", "agents"),
     "create_tool": (".agent", "create_tool"),
     "normalize_mcp_result": (".agent", "normalize_mcp_result"),
     "normalize_mcp_tools": (".agent", "normalize_mcp_tools"),

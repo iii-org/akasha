@@ -7,19 +7,18 @@ import datetime
 import json
 import logging
 import time
-from typing import Any, Generator, List, Sequence, Union
+from typing import TYPE_CHECKING, Any, Generator, List, Sequence, Union
 
-from langchain.agents import create_agent
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langchain_core.tools import BaseTool
 
 from akasha.agent.skills import (
-    DynamicSkillMiddleware,
     Skill,
     SkillContext,
     SkillToolContext,
 )
+
 from akasha.helper.base import get_doc_length
 from akasha.helper.run_llm import content_to_text, content_to_thinking
 from akasha.utils.atman import basic_llm
@@ -30,7 +29,18 @@ from akasha.utils.base import (
     DEFAULT_MODEL,
 )
 
+if TYPE_CHECKING:
+    from akasha.agent.skills import DynamicSkillMiddleware
+
 logger = logging.getLogger("akasha.agent")
+
+
+def create_agent(**kwargs):
+    """Load the LangChain graph runtime only when constructing an agent."""
+    from langchain.agents import create_agent as factory
+
+    return factory(**kwargs)
+
 
 _PROGRESS_PROMPT = """User-visible progress reporting:
 When using tools, you may briefly explain the purpose of the operation.
@@ -350,6 +360,8 @@ class agents(basic_llm):
             "tools": list(self.tools.values()),
         }
         if self._skills_enabled:
+            from akasha.agent.skills import DynamicSkillMiddleware
+
             self.skill_tool_context = SkillToolContext(
                 env_file=self.env_file,
                 language=self.language,

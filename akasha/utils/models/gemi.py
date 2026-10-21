@@ -359,13 +359,31 @@ def check_format_prompt(prompts: list):
 def calculate_token(
     prompt: str,
     model_name: str = "gemini-1.5-flash",
+    *,
+    timeout: float = 10.0,
 ):
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    num_tokens = client.models.count_tokens(
-        model=model_name, contents=prompt
-    ).total_tokens
+    """Explicit remote text count; close the client and bound its request."""
+    from contextlib import nullcontext
+    from akasha.utils.models.chat import _without_vertex_project_environment
 
-    return num_tokens
+    if timeout <= 0:
+        raise ValueError("timeout must be positive")
+    use_vertex = os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in {
+        "true", "1", "yes",
+    }
+    context = _without_vertex_project_environment() if use_vertex else nullcontext()
+    with context:
+        client = genai.Client(
+            api_key=os.environ["GEMINI_API_KEY"], vertexai=use_vertex,
+            http_options=types.HttpOptions(
+                timeout=max(1, int(timeout * 1000)),
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
+        )
+    try:
+        return client.models.count_tokens(model=model_name, contents=prompt).total_tokens
+    finally:
+        client.close()
 
 
 class gemini_embed(BaseModel, Embeddings):

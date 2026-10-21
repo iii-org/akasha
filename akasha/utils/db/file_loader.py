@@ -6,7 +6,6 @@ from typing import List, Union
 
 from langchain_core.documents import Document
 
-from akasha.helper.crawler import get_text_from_url
 from akasha.helper.encoding import detect_encoding
 from akasha.utils.optional_dependencies import (
     OptionalDependencyError,
@@ -156,6 +155,8 @@ def load_url(url: str) -> Document:
     Returns:
         Document: Document object
     """
+    from akasha.helper.crawler import get_text_from_url
+
     url_title, url_text = get_text_from_url(url)
 
     return Document(page_content=url_text, metadata={"title": url_title, "url": url})

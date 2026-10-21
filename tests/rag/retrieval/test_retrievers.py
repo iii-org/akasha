@@ -3,6 +3,12 @@ import pytest
 from akasha.utils.db.db_structure import dbs
 from akasha.utils.optional_dependencies import OptionalDependencyError
 from akasha.utils.search.retrievers import base as retriever_base
+from akasha.utils.search.retrievers.retri_bm25 import myBM25Retriever
+from akasha.utils.search.retrievers.retri_custom import customRetriever
+from akasha.utils.search.retrievers.retri_knn import myKNNRetriever
+from akasha.utils.search.retrievers.retri_mmr import myMMRRetriever
+from akasha.utils.search.retrievers.retri_svm import mySVMRetriever
+from akasha.utils.search.retrievers.retri_tfidf import myTFIDFRetriever
 
 pytestmark = pytest.mark.unit
 
@@ -35,14 +41,14 @@ def test_get_retrievers_builds_expected_retriever_types(monkeypatch):
         "handle_embeddings_and_name",
         lambda embeddings, _verbose, _env_file: ("embed-obj", "fake:embed"),
     )
-    monkeypatch.setattr(retriever_base.myMMRRetriever, "from_db", record("mmr"))
-    monkeypatch.setattr(retriever_base.mySVMRetriever, "from_db", record("svm"))
+    monkeypatch.setattr(myMMRRetriever, "from_db", record("mmr"))
+    monkeypatch.setattr(mySVMRetriever, "from_db", record("svm"))
     monkeypatch.setattr(
-        retriever_base.myTFIDFRetriever, "from_documents", record("tfidf")
+        myTFIDFRetriever, "from_documents", record("tfidf")
     )
-    monkeypatch.setattr(retriever_base.myKNNRetriever, "from_db", record("knn"))
+    monkeypatch.setattr(myKNNRetriever, "from_db", record("knn"))
     monkeypatch.setattr(
-        retriever_base.myBM25Retriever, "from_documents", record("bm25")
+        myBM25Retriever, "from_documents", record("bm25")
     )
     fake_faiss_retriever = type(
         "FakeFaissRetriever",
@@ -81,7 +87,7 @@ def test_get_retrievers_supports_custom_callable(monkeypatch):
         lambda embeddings, _verbose, _env_file: ("embed-obj", "fake:embed"),
     )
     monkeypatch.setattr(
-        retriever_base.customRetriever,
+        customRetriever,
         "from_db",
         lambda db_obj, embeddings, search_type, topK, threshold: (
             db_obj,

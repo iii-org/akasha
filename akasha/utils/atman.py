@@ -14,7 +14,6 @@ from akasha.utils.base import (
     DEFAULT_SEARCH_TYPE,
 )
 from akasha.utils.db.db_structure import dbs
-from akasha.utils.db.load_db import load_db_by_chroma_name, process_db
 from akasha.utils.logging_config import configure_logging
 from akasha.utils.models.thinking import (
     ThinkingBudget,
@@ -525,8 +524,12 @@ class atman(basic_llm):
             self.db = data
             self.ignored_files = []
         elif self.use_chroma:
+            from akasha.utils.db.load_db import load_db_by_chroma_name
+
             self.db, self.ignored_files = load_db_by_chroma_name(data)
         else:
+            from akasha.utils.db.load_db import process_db
+
             self.db, self.ignored_files = process_db(
                 data_source=data,
                 embeddings=self.embeddings_obj,

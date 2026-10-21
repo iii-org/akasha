@@ -128,39 +128,26 @@ class myTokenizer(object):
         return num_tokens
 
     @staticmethod
-    def compute_tokens_gemini(text: str, model_name: str) -> int:
+    def compute_tokens_gemini(
+        text: str, model_name: str, *, exact: bool = False
+    ) -> int:
+        """Estimate Gemini input locally, or explicitly count it remotely.
+
+        Local estimates preserve input budgeting without a separate API request.
+        They are not Gemini-exact counts. With ``exact=True``, provider errors
+        propagate instead of silently substituting an estimate.
         """
-        Compute the number of tokens in a given text using Google Vertex AI.
-
-        Args:
-            text (str): The text to be tokenized.
-            model_name (str): The name of the Gemini model. ex. 'gemini:gemini-1.5-flash'
-
-
-        Returns:
-            int: The number of tokens in the text.
-
-        Raises:
-            ValueError: If the model_id is not a valid Gemini model.
-        """
-        try:
+        if exact:
             from akasha.utils.models.gemi import calculate_token
 
-            if "/" in model_name:
-                model_name = model_name.split("/")[-1]
-            if model_name.lower().startswith("gemini:"):
-                model_name = model_name.lower().lstrip("gemini:")
-            # tokenizer = tokenization.get_tokenizer_for_model(model_name)
-            # num_tokens = tokenizer.count_tokens(text).total_tokens
-            num_tokens = calculate_token(text, model_name=model_name)
-        except Exception:
-            import tiktoken
+            model_name = model_name.rsplit("/", 1)[-1]
+            if model_name.split(":", 1)[0].lower() in {"gemini", "google", "gemi"}:
+                model_name = model_name.split(":", 1)[1]
+            return calculate_token(text, model_name=model_name)
 
-            encoding = tiktoken.get_encoding("cl100k_base")
-            num_tokens = len(encoding.encode(text))
-            return num_tokens
+        import tiktoken
 
-        return num_tokens
+        return len(tiktoken.get_encoding("cl100k_base").encode(text, disallowed_special=()))
 
     @classmethod
     def compute_tokens(
@@ -169,6 +156,8 @@ class myTokenizer(object):
         model_id: str,
         model_path: str = "./tokenizers",
         save_tokenizer: bool = True,
+        *,
+        exact: bool = False,
     ) -> int:
         """
         Compute the number of tokens in a given text using either huggingface or OpenAI tiktoken.
@@ -181,16 +170,21 @@ class myTokenizer(object):
             model_id (str): The name of the model. ex. 'gpt-2', 'openai:gpt-3.5-turbo'
             model_path (str, optional): The path to the tokenizer. Defaults to './tokenizers'.
             save_tokenizer (bool, optional): Whether to save the tokenizer locally. Defaults to True.
+            exact (bool, optional): For Gemini, opt into a remote count_tokens
+                request. The default uses a local estimate. Provider errors in
+                exact mode propagate. Other model families do not support this flag.
 
         Returns:
             int: The number of tokens in the text.
 
         """
         model_type, model_name = separate_name(model_id)
+        if exact and model_type not in {"gemini", "google", "gemi"}:
+            raise ValueError("exact=True is supported only for Gemini model aliases.")
         if model_type in ["openai", "gpt-3.5", "gpt"]:
             return cls.compute_tokens_openai(text, model_name)
-        elif model_type in ["gemini", "google"]:
-            return cls.compute_tokens_gemini(text, model_name)
+        elif model_type in ["gemini", "google", "gemi"]:
+            return cls.compute_tokens_gemini(text, model_name, exact=exact)
         elif model_type in [
             "huggingface",
             "huggingfacehub",

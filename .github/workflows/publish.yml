@@ -30,8 +30,25 @@ jobs:
       - name: Verify tag and project version
         env:
           RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a vX.Y.Z release tag"
+            exit 1
+          fi
+
+          git fetch origin master --tags
+          tag_sha="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
+          if [ "$tag_sha" != "$TESTED_SHA" ] || [ "$(git rev-parse HEAD)" != "$TESTED_SHA" ]; then
+            echo "Release tag does not point at the commit tested by CI"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$tag_sha" origin/master; then
+            echo "Release commit must be merged into master"
+            exit 1
+          fi
 
           tag_version="${RELEASE_TAG#v}"
           project_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"

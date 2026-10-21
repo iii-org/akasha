@@ -1,7 +1,5 @@
-from akasha.helper.handle_objects import handle_client
 from pathlib import Path
 from typing import Union
-from PIL import Image
 
 IMAGE_DEFAULT_MODEL = "openai:gpt-image-1"
 
@@ -27,6 +25,8 @@ def gen_image(
         env_file (str, optional): env file path. Defaults to "".
     """
 
+    from akasha.helper.handle_objects import handle_client
+
     model_obj = handle_client(model, env_file)
 
     print(
@@ -44,6 +44,8 @@ def gen_image(
 
     if verbose and ret:
         try:
+            from PIL import Image
+
             img = Image.open(ret)
             img.show()
         except Exception as e:
@@ -75,6 +77,8 @@ def edit_image(
         env_file (str, optional): env file path. Defaults to "".
     """
 
+    from akasha.helper.handle_objects import handle_client
+
     model_obj = handle_client(model, env_file)
 
     ### check if images is a list
@@ -98,6 +102,8 @@ def edit_image(
 
     if verbose and ret:
         try:
+            from PIL import Image
+
             img = Image.open(ret)
             img.show()
         except Exception as e:

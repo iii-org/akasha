@@ -22,6 +22,11 @@ print(f"Token 數量：{tokens}")
 
 `ask`、`RAG`、`summary` 與相關 API 會在內部自動計算輸入 Token。可以使用 `max_input_tokens` 限制請求接受的輸入量：
 
+Gemini 預設改用本機估算，不會另外呼叫遠端 `count_tokens`。
+文件分段與輸入限制仍依估算值運作；接近模型 context 上限時應保留餘裕，
+實際請求長度由 Provider 驗證。需要明確的遠端文字計數時，
+請參考 [`myTokenizer`](../reference/my-tokenizer.md) 的 `exact=True`。
+
 ```python
 import akasha
 

@@ -46,7 +46,7 @@ def test_rag_db_loader_receives_file_directory_and_windows_paths(monkeypatch, da
         received.update(kwargs)
         return dbs(), ["ignored.txt"]
 
-    monkeypatch.setattr("akasha.utils.atman.process_db", fake_process_db)
+    monkeypatch.setattr("akasha.utils.db.load_db.process_db", fake_process_db)
 
     atman._get_db(rag, data_source)
 

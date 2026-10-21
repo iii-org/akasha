@@ -9,7 +9,7 @@ import os
 import subprocess
 import sys
 from threading import RLock
-from typing import Any, NotRequired
+from typing import TYPE_CHECKING, Any, NotRequired
 
 from langchain.agents.middleware import (
     AgentMiddleware,
@@ -20,7 +20,6 @@ from langchain.agents.middleware import (
 )
 from langchain.tools import ToolRuntime, tool
 from langchain_core.messages import SystemMessage, ToolMessage
-from langchain_experimental.tools import PythonAstREPLTool
 from langgraph.types import Command
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,6 +28,9 @@ from .models import Skill, SkillContext
 from .registry import SkillRegistry, default_registry
 from .resolver import resolve_skill_tools
 from .tool_registry import SkillToolContext, ToolRegistry, default_tool_registry
+
+if TYPE_CHECKING:
+    from langchain_experimental.tools import PythonAstREPLTool
 
 
 @dataclass(frozen=True)
@@ -348,6 +350,8 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
             repl = self._python_repls.get(key)
             if repl is None:
                 namespace = {"__name__": "__main__"}
+                from langchain_experimental.tools import PythonAstREPLTool
+
                 repl = PythonAstREPLTool()
                 repl.globals = namespace
                 repl.locals = namespace

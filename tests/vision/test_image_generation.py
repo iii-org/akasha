@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from PIL import Image
 
 import akasha.tools.gen_img as gen_img_module
+from akasha.helper import handle_objects
 import pytest
 
 from akasha.utils.models.gemi import gemini_model
@@ -130,7 +131,7 @@ def test_gemini_edit_raises_for_no_image_and_disables_afc(tmp_path):
 
 def test_gen_image_delegates_generation_options(monkeypatch, tmp_path, capsys, previewed_images):
     client = FakeImageClient()
-    monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
+    monkeypatch.setattr(handle_objects, "handle_client", lambda model, env_file: client)
 
     save_path = tmp_path / "generated.png"
     result = gen_img_module.gen_image(
@@ -161,7 +162,7 @@ def test_gen_image_delegates_generation_options(monkeypatch, tmp_path, capsys, p
 
 def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path, capsys, previewed_images):
     client = FakeImageClient()
-    monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
+    monkeypatch.setattr(handle_objects, "handle_client", lambda model, env_file: client)
 
     source_path = tmp_path / "source.png"
     save_path = tmp_path / "edited.png"
@@ -196,7 +197,7 @@ def test_edit_image_normalizes_single_path_and_delegates(monkeypatch, tmp_path, 
 
 def test_edit_image_preserves_multiple_sources(monkeypatch, tmp_path):
     client = FakeImageClient()
-    monkeypatch.setattr(gen_img_module, "handle_client", lambda model, env_file: client)
+    monkeypatch.setattr(handle_objects, "handle_client", lambda model, env_file: client)
 
     sources = [tmp_path / "first.png", tmp_path / "second.png"]
     result = gen_img_module.edit_image(
