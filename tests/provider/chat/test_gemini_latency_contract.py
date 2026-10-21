@@ -83,7 +83,7 @@ def test_local_count_handles_special_token_text_and_aliases(monkeypatch, alias):
 
 
 @pytest.mark.parametrize("reason,content", [
-    ("STOP", ""), ("MAX_TOKENS", " "), ("SAFETY", []),
+    ("STOP", ""), ("STOP", "\n"), ("MAX_TOKENS", " "), ("SAFETY", []),
     ("STOP", [{"type": "thinking", "thinking": "PRIVATE_REASONING"}]),
 ])
 def test_empty_response_preserves_status_without_private_payload(monkeypatch, reason, content):

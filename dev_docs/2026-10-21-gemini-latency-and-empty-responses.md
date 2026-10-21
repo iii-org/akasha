@@ -225,3 +225,23 @@ only the project version to 1.8.4. The broad offline run passed 329 tests with
 one skipped; one caller-runtime test could not find pytest in its child process
 because the test interpreter borrowed pytest through the parent process's
 `sys.path`. That case is rerun with the same pytest path inherited by the child.
+
+That caller-runtime rerun passed (330 distinct offline checks passed, one
+skipped). The second PR attempt reproduced the Gemini failure. Its raw SDK
+diagnostics showed one whitespace character, `STOP`, one candidate token,
+333 thinking tokens: no answer text was lost in conversion.
+
+A four-call local comparison held model, Vertex mode, output ceiling and user
+prompt constant, changing only the system prompt and dependency versions.
+With the default Chinese QA prompt, current SDK 2.32.0/LangChain 4.4.2 returned
+the same whitespace-only response and 333 thinking tokens; baseline SDK
+2.18.0/LangChain 4.3.3 returned the requested token with 327 thinking tokens.
+Both dependency versions returned the requested token with 53 thinking tokens
+under an explicit English echo instruction. Thus the failure is reproducible
+at the provider boundary and is not confined to the old dependency versions.
+This small comparison does not establish a universal upstream cause.
+
+The smoke tests now specify an unambiguous system instruction consistent with
+their exact English-token request, for both sync and streaming calls. Product
+default prompts are unchanged. A whitespace-only STOP response remains an
+`EmptyResponseError` after one generation and is covered by a regression case.
