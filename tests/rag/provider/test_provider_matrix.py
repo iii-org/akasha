@@ -8,7 +8,7 @@ import json
 import pytest
 
 import akasha
-from tests.support.model_limits import output_token_budget
+from tests.support.model_limits import embedding_model, output_token_budget
 from tests.support.live import load_test_env, require_keys
 from tests.support.paths import RAG_DATA_ROOT
 
@@ -64,7 +64,7 @@ def test_rag_provider_returns_grounded_serializable_result(case: RAGProviderCase
     require_keys(*case.required_keys)
     rag = akasha.RAG(
         model=case.model,
-        embeddings=case.embeddings,
+        embeddings=embedding_model("gemini") if case.embeddings.startswith("gemini:") else case.embeddings,
         keep_logs=True,
         max_output_tokens=output_token_budget(case.model),
         env_file=load_test_env(),

@@ -1,9 +1,21 @@
 """Model limits and execution budgets for live tests, not library defaults."""
 from functools import lru_cache
+import os
 import yaml
 from tests.support.paths import REPO_ROOT
 
 DEFAULT_TEST_OUTPUT_TOKENS = 8192
+
+
+def embedding_model(provider):
+    """Resolve the live fixture for the configured backend, not a library default."""
+    path = REPO_ROOT / "tests/config/model_manifest.yaml"
+    entries = yaml.safe_load(path.read_text(encoding="utf-8"))["embeddings"]
+    entry = next(item for item in entries if item["provider"] == provider)
+    if (provider == "gemini"
+            and os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in {"true", "1", "yes"}):
+        return entry.get("vertex_express_id", entry["id"])
+    return entry["id"]
 
 
 @lru_cache(maxsize=1)
