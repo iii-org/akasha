@@ -20,6 +20,15 @@ those requirements. Installing a full profile into a former light environment
 adds optional packages; use separate environments to test the light boundary.
 The older `..\.venv` environment is preserved but is no longer the CI baseline.
 
+The 2026-11-05 Ollama/LangChain refresh uses `langchain-ollama==1.1.0`
+(already the latest release), `ollama==0.6.3`, `langchain==1.4.9`, and
+`langchain-core==1.7.6`, with their resolved LangGraph/LangSmith dependencies.
+This refresh keeps the official `ChatOllama` integration. Its native tool
+calling still requires a model that supports Ollama's `tools` API; updating
+the Python packages does not add that capability to a completion-only model.
+Akasha's Agent separately uses the official structured-chat decision factory
+for Ollama tools; see [the Agent tutorial](../user-guide/en/tutorials/agents.md#ollama-tool-calling).
+
 The SDK baseline is OpenAI 3.16.2, langchain-openai 1.6.2, HTTPX2 2.13.0 and
 HTTPCore2 2.13.0. Legacy HTTPX remains installed for other dependencies; its
 presence is not an error. Model construction uses the SDK's compatible
