@@ -199,3 +199,28 @@ for event in agent("請使用 hello-skill 向 Alice 打招呼。"):
 - 找不到 Skill：確認 `hello-skill/SKILL.md` 存在，並改用絕對 Skill 路徑。
 - Tool 沒有被使用：確認 `create_tool()` 有回傳 Tool，並且傳入 `tools` 清單。
 - Tool 行為不符合預期：改善函式的型別註記與說明，再把 Prompt 寫得更清楚。
+
+## Ollama 工具呼叫
+
+`akasha.agents(model="ollama:<base_url>@<model>", tools=[...])` 會自動使用
+LangChain 官方 `create_structured_chat_agent` 產生工具說明並解析 JSON 動作。
+既有 `create_agent` 流程繼續負責工具執行、參數驗證、輪數限制與動態載入 Skills。
+不會先送出原生工具請求，也不會先失敗一次才切換。
+
+新增工具仍使用 `akasha.create_tool(...)` 並加入 `tools=[...]`；工具名稱、
+說明與參數 schema 自動產生，不需逐一修改 JSON 提示詞或新增驗證分支。
+工具特有的使用規則放在工具說明中。一般 Ollama `ask`、沒有工具或 Skills
+的 Agent，以及其他供應商維持原流程。
+
+此路徑支援 `agent(...)`、`await agent.acall(...)` 與 `stream=True`。
+每輪會先收齊模型動作，再產生既有的 progress、tool、thinking、answer 事件；
+不會將內部 JSON 當作答案顯示。工具選擇仍取決於模型能力。JSON 解析錯誤及
+供應商錯誤會直接回報，不會隱藏重試。非同步專用工具仍需使用 `stream=False`。
+
+可透過公開 Agent 介面執行真實模型驗收：
+
+```powershell
+$env:RUN_LIVE_TESTS = "1"
+$env:AKASHA_OLLAMA_AGENT_MODEL = "ollama:https://your-server@your-model"
+python -m pytest tests/agent/basic/test_live_ollama_json.py -q
+```

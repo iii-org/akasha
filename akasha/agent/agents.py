@@ -378,6 +378,15 @@ class agents(basic_llm):
             kwargs["middleware"] = [self.skill_middleware]
         else:
             kwargs["system_prompt"] = effective_prompt
+        if self.model.split(":", 1)[0].lower() == "ollama" and (
+            self.tools or self._skills_enabled
+        ):
+            from langchain_ollama import ChatOllama
+
+            if isinstance(self.model_obj, ChatOllama):
+                from akasha.agent.ollama_json import OllamaJSONModel
+
+                kwargs["model"] = OllamaJSONModel(client=self.model_obj)
         return create_agent(**kwargs)
     def _display_thinking_info(self) -> None:
         message = (

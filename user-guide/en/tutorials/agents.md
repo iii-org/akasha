@@ -196,6 +196,34 @@ For the event meanings, see [Streaming events](streaming.md).
 
 ## Troubleshooting
 
+### Ollama tool calling
+
+`akasha.agents(model="ollama:<base_url>@<model>", tools=[...])` automatically
+uses LangChain's official `create_structured_chat_agent` to render tool
+definitions and parse JSON decisions. The existing `create_agent` runtime
+continues to execute and validate tools, apply round limits, and load Skills.
+No native Ollama tool request or failed capability probe is sent first.
+
+Add tools with `akasha.create_tool(...)` and `tools=[...]` as usual. Names,
+descriptions, and parameter schemas are generated automatically. Keep any
+tool-specific usage rules in its description. Plain Ollama `ask`, agents
+without tools or Skills, and other model providers retain their existing path.
+
+The Ollama JSON path supports `agent(...)`, `await agent.acall(...)`, and
+`stream=True`. Each complete model decision is buffered before emitting the
+usual progress, tool, thinking, and answer events; internal JSON is not
+displayed as answer text. Tool selection still depends on the model. JSON
+parse errors and provider failures propagate without a hidden retry. As with
+other providers, async-only tools require `stream=False`.
+
+For opt-in acceptance through the public Agent interface:
+
+```powershell
+$env:RUN_LIVE_TESTS = "1"
+$env:AKASHA_OLLAMA_AGENT_MODEL = "ollama:https://your-server@your-model"
+python -m pytest tests/agent/basic/test_live_ollama_json.py -q
+```
+
 - `GEMINI_API_KEY` missing: set the environment variable in the same terminal that runs Python.
 - Skill not found: check that `hello-skill/SKILL.md` exists and use an absolute Skill path.
 - Tool is ignored: check that `create_tool()` returned a Tool and that it is passed in the `tools` list.
