@@ -71,7 +71,7 @@ def skill_prompt_middleware(skill_context: SkillContext, base_prompt: str = ""):
 
 
 class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
-    """Expose load_skill first, then route loaded skill tools and resources."""
+    """Route loaded Skill instructions, tools and resources."""
 
     state_schema = SkillAgentState
     _default_script_timeout = 120.0
@@ -87,6 +87,9 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
         tool_context: SkillToolContext | None = None,
         existing_tools: Sequence[Any] = (),
         max_resource_bytes: int = 128 * 1024,
+        preload_skills: bool = False,
+        include_skill_instructions: bool = True,
+        enable_skill_tools: bool = True,
     ) -> None:
         if not isinstance(max_resource_bytes, int) or max_resource_bytes <= 0:
             raise ValueError("max_resource_bytes must be a positive integer")
@@ -97,6 +100,8 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
         self.tool_context = tool_context or SkillToolContext()
         self.existing_tools = tuple(existing_tools)
         self.max_resource_bytes = max_resource_bytes
+        self.include_skill_instructions = include_skill_instructions
+        self.enable_skill_tools = enable_skill_tools
         self._available = self._load_available(references)
         self._loaded_contexts: dict[tuple[str, ...], SkillContext] = {}
         self._loaded_tools: dict[str, Any] = {}
@@ -105,7 +110,10 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
         self._python_repl_lock = RLock()
         self._resource_tool = self._make_resource_tool()
         self._python_tool = self._make_python_tool()
-        self.tools = [self._make_load_skill_tool()]
+        self.preloaded_references = tuple(item.reference for item in self._available) if preload_skills else ()
+        self.tools = [] if self.preloaded_references else [self._make_load_skill_tool()]
+        if self.preloaded_references:
+            self._loaded(self.preloaded_references)
 
     @property
     def available_context(self) -> SkillContext:
@@ -430,16 +438,17 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
                 self._load_full_skill(self._find_available(ref)) for ref in key
             )
             context = SkillContext(skills)
-            resolved = resolve_skill_tools(
-                context,
-                self.existing_tools,
-                tool_registry=self.tool_registry,
-                tool_context=self.tool_context,
-            )
+            if self.enable_skill_tools:
+                resolved = resolve_skill_tools(
+                    context,
+                    self.existing_tools,
+                    tool_registry=self.tool_registry,
+                    tool_context=self.tool_context,
+                )
+                for tool_instance in resolved.tools:
+                    self._loaded_tools[tool_instance.name] = tool_instance
+                self._loaded_skill_tools.update(resolved.skill_tool_names)
             self._loaded_contexts[key] = context
-            for tool_instance in resolved.tools:
-                self._loaded_tools[tool_instance.name] = tool_instance
-            self._loaded_skill_tools.update(resolved.skill_tool_names)
         return self._loaded_contexts[key], self._loaded_tools
 
     def _resource_available(self, references: Sequence[str]) -> bool:
@@ -447,7 +456,7 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
 
     def _dynamic_tools(self, loaded_refs: Sequence[str]) -> dict[str, Any]:
         tools = dict(self._loaded_tools)
-        if loaded_refs and self._resource_available(loaded_refs):
+        if self.enable_skill_tools and loaded_refs and self._resource_available(loaded_refs):
             tools[self._resource_tool.name] = self._resource_tool
             tools[self._python_tool.name] = self._python_tool
         return tools
@@ -473,7 +482,7 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
             for item in self._available
         ]
         sections = [self.base_prompt.strip()] if self.base_prompt.strip() else []
-        if available:
+        if available and not self.preloaded_references:
             sections.append(
                 "Available skills:"
                 + chr(10)
@@ -481,9 +490,9 @@ class DynamicSkillMiddleware(AgentMiddleware[SkillAgentState, None]):
                 + chr(10)
                 + "Use the load_skill tool before using a skill's instructions or resources."
             )
-        if loaded_context.instructions:
+        if self.include_skill_instructions and loaded_context.instructions:
             sections.append(loaded_context.instructions)
-        if loaded_refs and self._resource_available(loaded_refs):
+        if self.enable_skill_tools and loaded_refs and self._resource_available(loaded_refs):
             sections.append(
                 "Use read_skill_resource(skill, path) to read referenced UTF-8 files "
                 "under a loaded skill directory."

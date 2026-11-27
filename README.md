@@ -372,6 +372,14 @@ agent = akasha.agents(
 
 Skills can provide instructions, resources, and allowlisted tool bundles. Skill tools are surfaced through normal `tool` events.
 
+Set `preload_skills=True` to activate the supplied Skills before the first model
+turn. This is useful when your application has already selected the Skill. The
+default uses the model's `load_skill` tool. Applications that supply their own
+stage prompt can set `include_skill_instructions=False`. Set
+`enable_skill_tools=False` to restrict the Agent to the application's
+`tools` while keeping the Skill active. Use `middleware=[...]` to compose
+additional LangChain middleware with the Skill runtime.
+
 MCP tools can be discovered with `langchain-mcp-adapters`, normalized with `akasha.normalize_mcp_tools()`, and passed to `akasha.agents(tools=...)`. The supported transports are local `stdio` and remote Streamable HTTP. New integrations should use one Streamable HTTP `/mcp` endpoint; the older HTTP+SSE transport is deprecated.
 
 The complete example is in [`examples/ex_mcp.py`](examples/ex_mcp.py), with its server in [`examples/mcp_server.py`](examples/mcp_server.py). It uses `tool_name_prefix=True` when aggregating servers, preserves structured MCP results, and uses `stream=False` because MCP tools may be async-only.
