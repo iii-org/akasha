@@ -31,6 +31,7 @@ from akasha.utils.base import (
 
 if TYPE_CHECKING:
     from akasha.agent.skills import DynamicSkillMiddleware
+    from langchain.agents.middleware import AgentMiddleware
 
 logger = logging.getLogger("akasha.agent")
 
@@ -290,6 +291,11 @@ class agents(basic_llm):
         thinking: bool = False,
         thinking_budget: ThinkingBudget = None,
         max_resource_bytes: int = 128 * 1024,
+        *,
+        preload_skills: bool = False,
+        include_skill_instructions: bool = True,
+        enable_skill_tools: bool = True,
+        middleware: Sequence[AgentMiddleware] = (),
     ) -> None:
         super().__init__(
             model=model,
@@ -330,6 +336,10 @@ class agents(basic_llm):
         }
         self.max_resource_bytes = max_resource_bytes
         self.skill_references = skills
+        self.preload_skills = preload_skills
+        self.include_skill_instructions = include_skill_instructions
+        self.enable_skill_tools = enable_skill_tools
+        self.middleware = tuple(middleware)
         self._skills_enabled = self._has_skill_references(skills)
         self.skill_context: SkillContext = SkillContext()
         self.skill_tools = ()
@@ -373,11 +383,16 @@ class agents(basic_llm):
                 tool_context=self.skill_tool_context,
                 existing_tools=list(self.tools.values()),
                 max_resource_bytes=self.max_resource_bytes,
+                preload_skills=self.preload_skills,
+                include_skill_instructions=self.include_skill_instructions,
+                enable_skill_tools=self.enable_skill_tools,
             )
             self.skill_context = self.skill_middleware.available_context
-            kwargs["middleware"] = [self.skill_middleware]
+            kwargs["middleware"] = [self.skill_middleware, *self.middleware]
         else:
             kwargs["system_prompt"] = effective_prompt
+            if self.middleware:
+                kwargs["middleware"] = list(self.middleware)
         if self.model.split(":", 1)[0].lower() == "ollama" and (
             self.tools or self._skills_enabled
         ):
@@ -539,11 +554,16 @@ class agents(basic_llm):
                     "loaded_skills": _loaded_skill_events(messages),
                 }
             )
+            if self.skill_middleware is not None and self.skill_middleware.preloaded_references:
+                self.logs[timestamp]["preloaded_skills"] = self.skill_middleware.loaded_skill_names
 
     def _payload(self, question: str, messages: List[dict] | None) -> dict:
         history = _as_message_list(messages)
         history.append({"role": "user", "content": question})
-        return {"messages": history}
+        payload = {"messages": history}
+        if self.skill_middleware is not None and self.skill_middleware.preloaded_references:
+            payload["loaded_skills"] = list(self.skill_middleware.preloaded_references)
+        return payload
 
     def __call__(
         self,
